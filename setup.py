@@ -7,7 +7,10 @@ setup(
     author='Sefi Erlich',
     author_email='erlichsefi@gmail.com',
     # Needed to actually package something
-    packages=['il_supermarket_scarper'],
+    packages=['il_supermarket_scarper',
+                'il_supermarket_scarper.engines',
+                'il_supermarket_scarper.scrappers',
+                'il_supermarket_scarper.utils'],
     # Needed for dependencies
     install_requires=['retry==0.9.2',
                         "mock==4.0.3",
