@@ -5,7 +5,7 @@ from distutils.util import strtobool
 from .utils.status import get_all_listed_scarpers_class_names,get_scraper_by_class
 from .utils import Logger,summerize_dump_folder_contant,clean_dump_folder
 
-class ScrapperRunner:
+class MainScrapperRunner:
     
     def __init__(self,size_estimation_mode=False,enabled_scrapers=None,dump_folder_name=None) -> None:
         assert type(enabled_scrapers) == list or enabled_scrapers == None

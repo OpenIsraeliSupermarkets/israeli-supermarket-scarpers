@@ -1,12 +1,12 @@
 
 import os,shutil,time
-from il_supermarket_scarper.main import Main
+from il_supermarket_scarper.main import ScarpingTask
 from il_supermarket_scarper.utils.status import get_all_listed_scarpers_class_names,get_output_folder
 
 def test_main_with_limit():
     expected = get_all_listed_scarpers_class_names()
     output_folder = "test_dump"
-    scrapper_done = Main().start(limit=1,dump_folder_name=output_folder)
+    scrapper_done = ScarpingTask().start(limit=1,dump_folder_name=output_folder)
 
     folders_from_scraper = list(map(lambda x:x.split("/")[1],scrapper_done))
 
