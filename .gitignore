@@ -4,3 +4,4 @@ env/
 .vscode/
 dist/
 il_supermarket_scraper.egg-info/
+build/
