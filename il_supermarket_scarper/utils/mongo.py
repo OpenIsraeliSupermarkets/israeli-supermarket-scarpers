@@ -70,7 +70,7 @@ class ScraperStatus(DataBase):
         self._insert_an_update(ScraperStatus.DOWNLOADED,**additional_info)
 
     def on_scrape_completed(self,folder_name):
-        from utils.status import log_folder_details
+        from il_supermarket_scarper.utils.status import log_folder_details
         self._insert_an_update(ScraperStatus.ESTIMATED_SIZE,folder_size=log_folder_details(folder_name))
     
     def _insert_an_update(self,status,**additional_info):

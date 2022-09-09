@@ -40,8 +40,8 @@ def get_status_date():
 
 
 def get_all_listed_scarpers():
-    from engines.engine import Engine
-    import scrappers
+    from il_supermarket_scarper.engines.engine import Engine
+    import il_supermarket_scarper.scrappers as scrappers
     all_scrapers = list()
     for _,value in scrappers.__dict__.items():
         if callable(value) and isinstance(value(),Engine):
@@ -85,7 +85,7 @@ def convert_unit(size_in_bytes, unit):
        return str(size_in_bytes) + " Byte"
 
 def log_folder_details(folder):
-    from utils import Logger
+    from .logger import Logger
     for path, dirs, files in os.walk(folder):
         # summerize all files
         Logger.info("Found the following files in {}:".format(path))
@@ -104,7 +104,7 @@ def log_folder_details(folder):
         return convert_unit(size,SIZE_UNIT.MB)
 
 def summerize_dump_folder_contant():
-    from utils import Logger
+    from .logger import Logger
     import os
 
     Logger.info(" == Starting summerize dump folder == ")
@@ -119,7 +119,7 @@ def summerize_dump_folder_contant():
 
 
 def clean_dump_folder():
-    from utils import Logger
+    from .logger import Logger
     import os
 
     dump_folder = _get_dump_folder()

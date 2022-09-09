@@ -7,10 +7,13 @@ setup(
     author='Sefi Erlich',
     author_email='erlichsefi@gmail.com',
     # Needed to actually package something
-    packages=['il-supermarket-scraper'],
+    packages=['il_supermarket_scarper'],
     # Needed for dependencies
     install_requires=['retry==0.9.2',
-                        "mock==4.0.3","requests==2.27.1","lxml==4.8.0","beautifulsoup4==4.10.0"],
+                        "mock==4.0.3",
+                        "requests==2.27.1",
+                        "lxml==4.8.0",
+                        "beautifulsoup4==4.10.0"],
     # *strongly* suggested for sharing
     version='0.1',
     # The license can be anything you like

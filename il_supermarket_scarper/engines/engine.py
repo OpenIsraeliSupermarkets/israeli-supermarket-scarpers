@@ -168,7 +168,7 @@ class Engine(ScraperStatus,FileTypesFilters,ABC):
         Logger.info("Downloading {} to {}".format(file_link,file_save_path))
         downloaded,extract_succefully,error = self._save_and_extract(file_link,file_save_path)
 
-        if error and "Remote end closed connection without response" in error:
+        if error and ("Remote end closed connection without response" in error or "426 File transfer failed" in error):
             time.sleep(2)
             downloaded,extract_succefully,error = self._save_and_extract(file_link,file_save_path)
         

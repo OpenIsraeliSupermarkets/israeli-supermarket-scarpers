@@ -82,7 +82,7 @@ def make_test_case(scraperInit):
             self._clean_scarpe_delete(scraperInit,self.get_temp_folder(),limit=1,file_type="price_file")
     
         def test_scrape_all_no_failures(self):
-            with mock.patch("utils.mongo.ScraperStatus.on_download_completed") as mongo:
+            with mock.patch("il_supermarket_scarper.utils.mongo.ScraperStatus.on_download_completed") as mongo:
                 self._clean_scarpe_delete(scraperInit,self.get_temp_folder())
 
             for call in mongo.call_args_list:

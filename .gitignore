@@ -1,2 +1,6 @@
 __pycache__/
 env/
+*_cookies.txt
+.vscode/
+dist/
+il_supermarket_scraper.egg-info/
