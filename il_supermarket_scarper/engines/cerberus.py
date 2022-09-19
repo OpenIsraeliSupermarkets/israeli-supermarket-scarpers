@@ -34,7 +34,7 @@ class Cerberus(Engine,FileTypesFilters):
 
     def collect_details_from_site(self,limit=None,files_types=None,filter_null=False,filter_zero=False):
         Logger.info("Open connection to FTP server with {} , username: {} , password: {}".format(self.ftp_host, self.ftp_username, self.ftp_password))
-        self.ftp = FTP_TLS(self.ftp_host, self.ftp_username, self.ftp_password)
+        self.ftp = FTP_TLS(self.ftp_host, self.ftp_username, self.ftp_password,timeout=60*5)
         self.ftp.cwd(self.ftp_path)
         files = self.ftp.nlst()
         self.ftp.quit()
