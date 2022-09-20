@@ -27,6 +27,6 @@ class Gzip:
                     file_contant = file.readlines()
                 file_size  = os.path.getsize(file_save_path)
                 os.remove(file_save_path)
-                raise ValueError('Error decoding file:' + file_save_path + "with error:" + str(e) + " file size "+str(file_size) + ",file_contant "+file_contant)
+                raise ValueError('Error decoding file:' + file_save_path + "with error:" + str(e) + " file size "+str(file_size) + ",file_contant "+str(file_contant))
         
         

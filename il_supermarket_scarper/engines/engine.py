@@ -73,7 +73,7 @@ class Engine(ScraperStatus,FileTypesFilters,ABC):
         return req_res
 
     def post(self):
-        cookie_file = "{self.chain}_cookies.txt"
+        cookie_file = f"{self.chain}_cookies.txt"
         if os.path.exists(cookie_file):
             os.remove(cookie_file)
         
