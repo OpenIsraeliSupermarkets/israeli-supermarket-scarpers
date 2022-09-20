@@ -1,9 +1,9 @@
 Israel Supermarket Scraper: Clients to download the data published by the supermarkets.
 =======================================
-שקיפות מחירים (השוואת מחירים)
+שקיפות מחירים (השוואת מחירים) - https://www.gov.il/he/departments/legalInfo/cpfta_prices_regulations
 
 
-https://www.gov.il/he/departments/legalInfo/cpfta_prices_regulations
+
 
 Got a question?
 ---------------
@@ -14,14 +14,14 @@ If you think you've found a bug:
 
 - Create issue in [issue tracker](https://github.com/erlichsefi/il_supermarket_scarper/issues) to see if
   it's already been reported
-- consider asking offering creating a pull request.
+- Please consider solving the issue by yourself and creating a pull request.
 
 What is il_supermarket_scarper?
 -------------
 
-There are alot of projects in github tring to scrape the supermarket data, must of them are not stable or wasn't updated of a while, it's about time there will be one codebase the those the work completely. 
+There are alot of projects in github tring to scrape the supermarket data, must of them are not stable or wasn't updated of a while, it's about time there will be one codebase that those the work completely. 
 
-You only need to run the following code to get all the data currently shared by the supermarkets, please notice that since new files are constantly uploaded by the supermarket, you will need to run this code more the one time to get the newly uploaded files. 
+You only need to run the following code to get all the data currently shared by the supermarkets.
 
 ```python
 from il_supermarket_scarper import MainScrapperRunner
@@ -30,6 +30,10 @@ scraper = MainScrapperRunner()
 scraper.run()
 
 ```
+
+
+Please notice!
+since new files are constantly uploaded by the supermarket to their site, you will only get the current snapshot. In order to keep geting data, you will need to run this code more the one time to get the newly uploaded files. 
 
 Quick start
 -----------
