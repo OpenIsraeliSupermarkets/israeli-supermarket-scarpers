@@ -26,6 +26,8 @@ class MultiPageWeb(WebBase):
         url = url[0]
 
         html = lxml.html.parse(url)
+        #    possible need:     html = lxml.html.fromstring(self.session_with_cookies(url).text)
+
         
         total_pages = self.get_total_pages(html)
         Logger.info("Found {} pages".format(total_pages))

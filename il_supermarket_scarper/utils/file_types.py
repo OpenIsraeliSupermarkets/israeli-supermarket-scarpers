@@ -15,7 +15,21 @@ class FileTypesFilters:
         """Returns a list of all the enum keys."""
         return ['promo_file',
                 "store_file",
-                "price_file",]
+                "price_file"]
+    
+    @classmethod
+    def only_promo(cls):
+        return ['promo_file']
+
+    @classmethod
+    def only_store(cls):
+        return ['store_file']
+
+    @classmethod
+    def only_price(cls):
+        return ['price_file']
+
+
     @classmethod
     def all_large(cls):
         return cls.all_types()
