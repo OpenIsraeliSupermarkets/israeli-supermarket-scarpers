@@ -57,9 +57,7 @@ Help in testing, development, documentation and other tasks is
 highly appreciated and useful to the project. There are tasks for
 contributors of all experience levels.
 
-To get started with developing mypy, see [CONTRIBUTING.md](CONTRIBUTING.md).
-
-If you need help getting started, don't hesitate to ask contact me.
+If you need help getting started, don't hesitate to contact me.
 
 
 Development status
