@@ -38,7 +38,7 @@ since new files are constantly uploaded by the supermarket to their site, you wi
 Quick start
 -----------
 
-Mypy can be installed using pip:
+il_supermarket_scarper can be installed using pip:
 
     python3 -m pip install -U il_supermarket_scarper
 

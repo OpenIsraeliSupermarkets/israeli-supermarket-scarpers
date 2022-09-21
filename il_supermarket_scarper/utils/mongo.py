@@ -4,51 +4,20 @@ import uuid
 
 
 class DataBase:
-    collection_status = False
-    URL = os.environ.get('XML_STORE_PATH',"localhost:27017")
-    myclient = None
-    if collection_status:
-        import pymongo
-        myclient = pymongo.MongoClient(f"mongodb://{URL}/")
-    
 
-    
-class ScrapingStatus(DataBase):
-    CREATED = "CREATED"
-    DOWNLOADED = "DOWNLOADED"
-    FAILURE = "FAILURE"
-    SKIPPED = "SKIPPED"
-
-
-    # @staticmethod
-    # def on_created(folder_name,filename,url,**additional_info):
-    #     ScrapingStatus._insert_an_update(folder_name,filename,url,ScrapingStatus.CREATED,**additional_info)
-
-    # @staticmethod
-    # def on_download(folder_name,filename,url,**additional_info):
-    #     ScrapingStatus._insert_an_update(folder_name,filename,url,ScrapingStatus.DOWNLOADED,**additional_info)
-
-    # @staticmethod
-    # def on_failure(folder_name,filename,url,**additional_info):
-    #     ScrapingStatus._insert_an_update(folder_name,filename,url,ScrapingStatus.FAILURE,**additional_info)
-
-    # @staticmethod
-    # def on_skipped(folder_name,filename,url,**additional_info):
-    #     ScrapingStatus._insert_an_update(folder_name,filename,url,ScrapingStatus.SKIPPED,**additional_info)
-
-
-    # @staticmethod
-    # def _insert_an_update(folder_name,filename,url,status,**additional_info):
-    #     store_db = self.myclient[folder_name]
-    #     store_db["scrapings"].insert_one({
-    #         "date": datetime.datetime.now(),
-    #         "status": status,
-    #         "filename": filename,
-    #         "url": url,
-    #         "additional_info": additional_info
-    #     })
-
-
+    def __init__(self,collection_status=False) -> None:
+        self.myclient = None
+        self.collection_status = collection_status
+        try:
+            if collection_status:
+                import pymongo     
+                url = os.environ.get('MONGO_URL',"localhost")
+                port = os.environ.get('MONGO_PORT',"27017")
+                self.myclient = pymongo.MongoClient(f"mongodb://{url}:{port}/")
+                self.collection_status = True
+        except Exception:
+            collection_status = False
+        
 
 class ScraperStatus(DataBase):
     STARTED = "started"
@@ -56,7 +25,8 @@ class ScraperStatus(DataBase):
     DOWNLOADED = "downloaded"
     ESTIMATED_SIZE = "estimated_size"
 
-    def __init__(self,database) -> None:
+    def __init__(self,database,collection_status=False) -> None:
+        super().__init__(collection_status=collection_status)
         self.database = database.replace(" ","_").lower()
         self.instance_id = uuid.uuid4().hex
 
@@ -68,6 +38,34 @@ class ScraperStatus(DataBase):
 
     def on_download_completed(self,**additional_info):   
         self._insert_an_update(ScraperStatus.DOWNLOADED,**additional_info)
+        self._add_downloaded_files_to_list(**additional_info)
+
+    def filter_already_downloaded(self,storage_path,filelist,by=None):
+        if self.collection_status:
+            # filter according to database
+            store_db = self.myclient[self.database]
+
+            new_filelist = list()
+            by_function = by if by else lambda x:x
+            for file in filelist:
+                if not store_db["scraper_download"].find_one({"file_name":by_function(file)}):
+                    new_filelist.append(file)
+            return new_filelist
+        else:
+            # filter according to disk
+            exits_on_disk = os.listdir(storage_path)
+            return list(filter(lambda x:x not in exits_on_disk,filelist))
+
+    def _add_downloaded_files_to_list(self,results,**_):
+        if self.collection_status:
+            when = datetime.datetime.now()
+            store_db = self.myclient[self.database]
+            for res in results:
+                if res['downloaded'] and res['extract_succefully']:        
+                    store_db["scraper_download"].insert_one({
+                        "file_name":res['file_name'],
+                        "when":when
+                    })
 
     def on_scrape_completed(self,folder_name):
         from il_supermarket_scarper.utils.status import log_folder_details
@@ -76,11 +74,9 @@ class ScraperStatus(DataBase):
     def _insert_an_update(self,status,**additional_info):
         if self.collection_status:
             store_db = self.myclient[self.database]
-            store_db["scraper_status"].update_one(
-                {"instance_id":self.instance_id},
-                {"$set":{
-                status: datetime.datetime.now(),
+            store_db["scraper_status"].insert_one(
+                {
+                "status": status,
+                "when":datetime.datetime.now(),
                 **additional_info
-                 }
-                 },
-            upsert=True)
+                })
