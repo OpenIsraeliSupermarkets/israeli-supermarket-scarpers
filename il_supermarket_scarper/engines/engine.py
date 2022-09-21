@@ -10,7 +10,7 @@ from il_supermarket_scarper.utils import get_output_folder,FileTypesFilters,Logg
 class Engine(ScraperStatus,FileTypesFilters,ABC):
 
     def __init__(self,chain,chain_id,folder_name=None):
-        super().__init__(chain)
+        super().__init__(chain,collection_status=True)
         self.chain = chain
         self.chain_id = chain_id
         if folder_name:
@@ -26,7 +26,8 @@ class Engine(ScraperStatus,FileTypesFilters,ABC):
         return True
 
     def _apply_limit(self,intreable,limit=None,files_types=None,by=None):
-        intreable_ = self.unique(intreable,by=by)
+        intreable_ = self.filter_already_downloaded(self.storage_path,intreable,by=by)
+        intreable_ = self.unique(intreable_,by=by)
         if files_types:
             intreable_ = list()
             for type_ in files_types:
