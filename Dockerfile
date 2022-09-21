@@ -1,8 +1,12 @@
-FROM python:3.8.3-slim
+FROM python:3.7-alpine3.15
 
 WORKDIR /usr/src/app
 
-RUN python3 -m pip install -U git+https://github.com/erlichsefi/il_supermarket_scarper.git
+COPY . .
+
+
+RUN apk add --update --no-cache g++ gcc libxml2-dev libxslt-dev
+RUN python3 setup.py install
 
 VOLUME ["/usr/src/app/dumps"]
 
