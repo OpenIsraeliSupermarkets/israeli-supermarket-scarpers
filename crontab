@@ -1,2 +1,1 @@
-*/5 * * * * python3 /usr/src/app/example.py >> /logfile
- 
+*/2 * * * *  root python3 /usr/src/app/example.py >> /var/log/cron.log 2>&1
