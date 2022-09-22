@@ -9,8 +9,8 @@ from il_supermarket_scarper.utils import get_output_folder,FileTypesFilters,Logg
 
 class Engine(ScraperStatus,FileTypesFilters,ABC):
 
-    def __init__(self,chain,chain_id,folder_name=None):
-        super().__init__(chain,collection_status=True)
+    def __init__(self,chain,chain_id,folder_name=None,):
+        super().__init__(chain)
         self.chain = chain
         self.chain_id = chain_id
         if folder_name:
@@ -18,6 +18,8 @@ class Engine(ScraperStatus,FileTypesFilters,ABC):
         else:
             self.storage_path = get_output_folder(self.chain)
         Logger.info("Storage path: {}".format(self.storage_path))
+
+
 
     def get_storage_path(self):
         return self.storage_path
