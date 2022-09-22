@@ -14,7 +14,6 @@ class DataBase:
                 url = os.environ.get('MONGO_URL',"localhost")
                 port = os.environ.get('MONGO_PORT',"27017")
                 self.myclient = pymongo.MongoClient(f"mongodb://{url}:{port}/")
-                self.myclient.list_database_names() # use to check connection
                 self.collection_status = True
         except Exception:
             collection_status = False
@@ -73,11 +72,16 @@ class ScraperStatus(DataBase):
         self._insert_an_update(ScraperStatus.ESTIMATED_SIZE,folder_size=log_folder_details(folder_name))
     
     def _insert_an_update(self,status,**additional_info):
+        from pymongo.errors import ServerSelectionTimeoutError
         if self.collection_status:
-            store_db = self.myclient[self.database]
-            store_db["scraper_status"].insert_one(
-                {
-                "status": status,
-                "when":datetime.datetime.now(),
-                **additional_info
-                })
+            try:
+                store_db = self.myclient[self.database]
+                store_db["scraper_status"].insert_one(
+                    {
+                    "status": status,
+                    "when":datetime.datetime.now(),
+                    **additional_info
+                    })
+
+            except ServerSelectionTimeoutError:
+                self.collection_status = False

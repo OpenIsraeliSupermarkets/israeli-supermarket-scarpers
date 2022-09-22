@@ -91,10 +91,11 @@ def log_folder_details(folder):
         Logger.info("Found the following files in {}:".format(path))
         size = 0
         for f in files:
-            fp = os.path.join(path, f)
-            fp_size = os.path.getsize(fp)
-            size += fp_size
-            Logger.info("- file {}: size {}".format(fp, size))
+            if "xml" in f:
+                fp = os.path.join(path, f)
+                fp_size = os.path.getsize(fp)
+                size += fp_size
+                Logger.info("- file {}: size {}".format(fp, size))
         
         Logger.info("Total size of {}: {}".format(path, size))
         
