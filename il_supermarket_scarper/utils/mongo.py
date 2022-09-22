@@ -5,19 +5,19 @@ import uuid
 
 class DataBase:
 
-    def __init__(self,collection_status=False) -> None:
+    def __init__(self) -> None:
         self.myclient = None
-        self.collection_status = collection_status
+        self.collection_status = False
         try:
-            if collection_status:
-                import pymongo     
-                url = os.environ.get('MONGO_URL',"localhost")
-                port = os.environ.get('MONGO_PORT',"27017")
-                self.myclient = pymongo.MongoClient(f"mongodb://{url}:{port}/")
-                self.collection_status = True
+            import pymongo     
+            url = os.environ.get('MONGO_URL',"localhost")
+            port = os.environ.get('MONGO_PORT',"27017")
+            self.myclient = pymongo.MongoClient(f"mongodb://{url}:{port}/")
         except Exception:
-            collection_status = False
-        
+            pass
+
+    def enable_collection_status(self):
+        self.collection_status = True
 
 class ScraperStatus(DataBase):
     STARTED = "started"
@@ -25,8 +25,8 @@ class ScraperStatus(DataBase):
     DOWNLOADED = "downloaded"
     ESTIMATED_SIZE = "estimated_size"
 
-    def __init__(self,database,collection_status=False) -> None:
-        super().__init__(collection_status=collection_status)
+    def __init__(self,database) -> None:
+        super().__init__()
         self.database = database.replace(" ","_").lower()
         self.instance_id = uuid.uuid4().hex
 

@@ -8,7 +8,7 @@ from .utils import Logger,summerize_dump_folder_contant,clean_dump_folder
 
 class MainScrapperRunner:
     
-    def __init__(self,size_estimation_mode=False,enabled_scrapers=None,dump_folder_name=None,multiprocessing=5) -> None:
+    def __init__(self,size_estimation_mode=False,enabled_scrapers=None,dump_folder_name=None,multiprocessing=5,lookup_in_db=False):
         assert type(enabled_scrapers) == list or enabled_scrapers == None
         self.size_estimation_mode = size_estimation_mode or strtobool(os.getenv("SE_MODE","False"))
         Logger.info("size_estimation_mode: {}".format(self.size_estimation_mode))
@@ -20,6 +20,7 @@ class MainScrapperRunner:
         Logger.info("Enabled scrapers: {}".format(self.enabled_scrapers))
         self.dump_folder_name = dump_folder_name
         self.multiprocessing = multiprocessing
+        self.lookup_in_db = lookup_in_db
 
         
     def run(self,limit=None,files_types=None): 
@@ -41,6 +42,8 @@ class MainScrapperRunner:
         chain_name = scraper.get_chain_name()
 
         Logger.info(f"scraping {chain_name}") 
+        if self.lookup_in_db:
+            scraper.enable_collection_status()
         scraper.scrape(limit=limit,files_types=files_types)
         Logger.info(f"done scraping {chain_name}") 
         
