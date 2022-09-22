@@ -8,13 +8,14 @@ services:
       - MONGO_URL=localhost
       - MONGO_PORT=27017
     container_name: kniot-scrapper
+    network_mode: "host"
     hostname: kniot-scrapper
     restart: unless-stopped
     volumes:
       - dumps:/usr/src/app/dumps
-  mongodb:
+  mongodb-scrapper:
     image : mongo
-    container_name: mongodb
+    container_name: mongodb-scrapper
     environment:
         - PUID=1000
         - PGID=1000
