@@ -14,6 +14,7 @@ class DataBase:
                 url = os.environ.get('MONGO_URL',"localhost")
                 port = os.environ.get('MONGO_PORT',"27017")
                 self.myclient = pymongo.MongoClient(f"mongodb://{url}:{port}/")
+                self.myclient.list_database_names() # use to check connection
                 self.collection_status = True
         except Exception:
             collection_status = False
