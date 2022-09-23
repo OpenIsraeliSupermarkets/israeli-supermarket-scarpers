@@ -30,4 +30,4 @@ def test_main_with_one_scarper():
 
 def test_main_with_size_estimation_mode():
     scrapper_done = ScarpingTask().start(limit=1,size_estimation_mode=True,enabled_scrapers=["DorAlon"])
-    assert len(scrapper_done) == 0
+    assert len(scrapper_done) == 1
