@@ -47,10 +47,11 @@ class MainScrapperRunner:
         scraper.scrape(limit=limit,files_types=files_types)
         Logger.info(f"done scraping {chain_name}") 
         
+        folder_with_files = scraper.get_storage_path()
         if self.size_estimation_mode:
             Logger.info("Summrize test data for {}".format(chain_name))
-            summerize_dump_folder_contant()
+            summerize_dump_folder_contant(folder_with_files)
 
             Logger.info("Cleaning dump folder for {}".format(chain_name))
-            clean_dump_folder()
-        return scraper.get_storage_path()
+            clean_dump_folder(folder_with_files)
+        return folder_with_files

@@ -1,9 +1,7 @@
-
-from asyncio.log import logger
+import logging
 
 
 def set_logger():
-    import logging
     from sys import stdout
 
     # Define logger
@@ -17,14 +15,19 @@ def set_logger():
         consoleHandler.setFormatter(logFormatter)
         logger.addHandler(consoleHandler)
 
+        fileHandler = logging.FileHandler("logging.log")
+        fileHandler.setFormatter(logFormatter)
+        logger.addHandler(fileHandler)
+
+
     return logger
 class Logger:
     logger = set_logger()
 
-    @staticmethod
-    def info(msg, *args, **kwargs):
-        logger.info(msg, *args, **kwargs)
+    @classmethod
+    def info(cls,msg, *args, **kwargs):
+       cls.logger.info(msg, *args, **kwargs)
 
-    @staticmethod
-    def error(msg, *args, **kwargs):
-        logger.error(msg, *args, **kwargs)
+    @classmethod
+    def error(cls,msg, *args, **kwargs):
+        cls.logger.error(msg, *args, **kwargs)

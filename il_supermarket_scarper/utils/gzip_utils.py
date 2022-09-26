@@ -22,11 +22,15 @@ class Gzip:
                                 f_out.write(the_file.read())
                 
             except Exception as e:
-                file_contant = ""
-                with open(file_save_path,'r') as file:
-                    file_contant = file.readlines()
-                file_size  = os.path.getsize(file_save_path)
-                os.remove(file_save_path)
-                raise ValueError('Error decoding file:' + file_save_path + "with error:" + str(e) + " file size "+str(file_size) + ",file_contant "+str(file_contant))
+                Gzip.report_failed_zip(e,file_save_path)
         
-        
+        except Exception as e:
+            Gzip.report_failed_zip(e,file_save_path)
+    
+    def report_failed_zip(e,file_save_path):
+        file_contant = ""
+        with open(file_save_path,'r') as file:
+            file_contant = file.readlines()
+        file_size  = os.path.getsize(file_save_path)
+        os.remove(file_save_path)
+        raise ValueError('Error decoding file:' + file_save_path + "with error:" + str(e) + " file size "+str(file_size) + ",file_contant "+str(file_contant))

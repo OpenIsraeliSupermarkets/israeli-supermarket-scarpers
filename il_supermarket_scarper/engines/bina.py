@@ -1,10 +1,11 @@
 import json
+
 import requests
 from retry import retry
 from urllib.request import urlretrieve
 
 from .apsx import Aspx
-from il_supermarket_scarper.utils import Logger
+from il_supermarket_scarper.utils import Logger,download_connection_retry,url_connection_retry
 class Bina(Aspx):
     # possibly can support historical search: as a date search menu
     
@@ -21,7 +22,7 @@ class Bina(Aspx):
     def get_file_name_no_ext(self,x):
         return x.split(self.download_postfix)[-1].split(".")[0]
 
-    @retry(ConnectionError, delay=5, tries=6)
+    @url_connection_retry()
     def session_and_check_status(self,url):
         Logger.info("On a new Session: calling {}".format(url))
         session = requests.Session()
@@ -39,6 +40,7 @@ class Bina(Aspx):
         
         return spath[0]['SPath']
 
+    @download_connection_retry()
     def retrieve_file(self,file_link, file_save_path):
         url = self.session_and_check_status(file_link)
 

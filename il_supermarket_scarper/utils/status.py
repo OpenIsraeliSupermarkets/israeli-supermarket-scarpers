@@ -69,23 +69,24 @@ def _get_dump_folder():
 import enum
 # Enum for size units
 class SIZE_UNIT(enum.Enum):
-   BYTES = 1
-   KB = 2
-   MB = 3
-   GB = 4
+   BYTES = "Bytes"
+   KB = "Kb"
+   MB = "Mb"
+   GB = "Gb"
 def convert_unit(size_in_bytes, unit):
    """ Convert the size from bytes to other units like KB, MB or GB"""
    if unit == SIZE_UNIT.KB: 
-       return str(size_in_bytes/1024)  + " KB"
+       return size_in_bytes/1024  
    elif unit == SIZE_UNIT.MB:
-       return str(size_in_bytes/(1024*1024)) + " MB"
+       return size_in_bytes/(1024*1024)
    elif unit == SIZE_UNIT.GB:
-       return str(size_in_bytes/(1024*1024*1024)) + " GB"
+       return size_in_bytes/(1024*1024*1024)
    else:
-       return str(size_in_bytes) + " Byte"
+       return size_in_bytes
 
-def log_folder_details(folder):
+def log_folder_details(folder,unit=SIZE_UNIT.MB):
     from .logger import Logger
+    unit_size = 0
     for path, dirs, files in os.walk(folder):
         # summerize all files
         Logger.info("Found the following files in {}:".format(path))
@@ -97,19 +98,21 @@ def log_folder_details(folder):
                 size += fp_size
                 Logger.info("- file {}: size {}".format(fp, size))
         
-        Logger.info("Total size of {}: {}".format(path, size))
-        
+        unit_size = convert_unit(size,unit)
         Logger.info("Found the following folders in {}:".format(path))
         for folder in dirs:
-            size += log_folder_details(os.path.join(path, folder))
-        return convert_unit(size,SIZE_UNIT.MB)
+            unit_size += log_folder_details(os.path.join(path, folder),unit)
 
-def summerize_dump_folder_contant():
+    Logger.info("Total size of {}: {} {}".format(path, unit_size, unit.name))
+    
+    return {"size":unit_size,
+            "unit":unit.name}
+
+def summerize_dump_folder_contant(dump_folder):
     from .logger import Logger
     import os
 
     Logger.info(" == Starting summerize dump folder == ")
-    dump_folder = _get_dump_folder()
     Logger.info("dump_folder = {}".format(dump_folder))
     for any_file in os.listdir(dump_folder):
         current_file = os.path.join(dump_folder,any_file)
@@ -119,11 +122,10 @@ def summerize_dump_folder_contant():
             Logger.info("- file {}".format(current_file))
 
 
-def clean_dump_folder():
+def clean_dump_folder(dump_folder):
     from .logger import Logger
     import os
 
-    dump_folder = _get_dump_folder()
     for any_file in os.listdir(dump_folder):
         current_file = os.path.join(dump_folder,any_file)
         if os.path.isdir(current_file):
