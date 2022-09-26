@@ -1,10 +1,12 @@
 
+import socket
 import ntpath
 import os
 from ftplib import FTP_TLS
+from retry import retry
 
 
-from il_supermarket_scarper.utils import Gzip,Logger,FileTypesFilters
+from il_supermarket_scarper.utils import Gzip,Logger,FileTypesFilters,download_connection_retry
 from .engine import Engine
 class Cerberus(Engine,FileTypesFilters):
     # seems like can't support historical data
@@ -79,6 +81,7 @@ class Cerberus(Engine,FileTypesFilters):
             Logger.info("Done persisting file {}".format(file_name))
             extract_succefully = True
         except Exception as e:
+            Logger.error("Error downloading {},extract_succefully={},downloaded={}".format(file_name,extract_succefully,downloaded))
             Logger.error(e)
             additionl_info = {"error":str(e)}
         
@@ -93,6 +96,7 @@ class Cerberus(Engine,FileTypesFilters):
                 **additionl_info
             }
 
+    @download_connection_retry()#retry(exceptions=(socket.gaierror,socket.timeout),delay=2,backoff=2,max_delay=30)
     def fetch_temporary_gz_file(self, temporary_gz_file_path):
         with open(temporary_gz_file_path, 'wb') as file_ftp:
             file_name = ntpath.basename(temporary_gz_file_path)

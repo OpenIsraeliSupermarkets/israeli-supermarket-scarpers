@@ -1,11 +1,13 @@
 import os,time
+
+import socket 
 import requests
 from retry import retry
 from abc import ABC
 import asyncio
 import concurrent.futures
 from urllib.request import urlretrieve 
-from il_supermarket_scarper.utils import get_output_folder,FileTypesFilters,Logger,ScraperStatus,Gzip
+from il_supermarket_scarper.utils import get_output_folder,FileTypesFilters,Logger,ScraperStatus,Gzip,download_connection_retry,url_connection_retry
 
 class Engine(ScraperStatus,FileTypesFilters,ABC):
 
@@ -13,6 +15,7 @@ class Engine(ScraperStatus,FileTypesFilters,ABC):
         super().__init__(chain)
         self.chain = chain
         self.chain_id = chain_id
+        self.max_workers = 5
         if folder_name:
             self.storage_path = os.path.join(folder_name,self.chain)
         else:
@@ -63,7 +66,7 @@ class Engine(ScraperStatus,FileTypesFilters,ABC):
                 
         return result
 
-    @retry(ConnectionError, delay=5, tries=6)
+    @url_connection_retry()
     def request_and_check_status(self,url):
 
         Logger.info("Requesting url: {}".format(url))
@@ -80,7 +83,7 @@ class Engine(ScraperStatus,FileTypesFilters,ABC):
         if os.path.exists(cookie_file):
             os.remove(cookie_file)
         
-    @retry(ConnectionError, delay=5, tries=6)
+    @url_connection_retry()
     def session_with_cookies(self,url):
 
         from http.cookiejar import MozillaCookieJar
@@ -126,7 +129,11 @@ class Engine(ScraperStatus,FileTypesFilters,ABC):
     def defualt_aggregtion_function(all_done):
         result = [] 
         for response in all_done:
-            result.append(response.result())
+            
+            _response = response
+            if hasattr(_response,"result"):
+                _response = _response.result()
+            result.append(_response)
         return result
 
     def get_event_loop(self):
@@ -144,25 +151,36 @@ class Engine(ScraperStatus,FileTypesFilters,ABC):
     async def run_task_async(self,function_to_execute,iterable,aggregtion_function=defualt_aggregtion_function):
         loop = self.get_event_loop()
         
-        futures = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+
+        if self.max_workers:
+            futures = []
+            with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+                for arg in iterable:
+                    futures.append(loop.run_in_executor(
+                        executor, 
+                        function_to_execute, 
+                        arg
+                    ))
+
+            all_done,not_done = await asyncio.wait(futures)
+            assert len(not_done) == 0, "Not all tasks are done, should be blocking."
+        else:
+            all_done = list()
             for arg in iterable:
-                futures.append(loop.run_in_executor(
-                    executor, 
-                    function_to_execute, 
+                all_done.append(function_to_execute( 
                     arg
                 ))
-
-        all_done,not_done = await asyncio.wait(futures)
-        assert len(not_done) == 0, "Not all tasks are done, should be blocking."
         all_done = aggregtion_function(list(all_done))
         
         Logger.info("Done with {len} files".format(len=len(all_done)))
         return all_done
-               
+    
+    @download_connection_retry()
     def retrieve_file(self,file_link, file_save_path):
         file_save_path_res = file_save_path +"."+ file_link.split("?")[0].split(".")[-1]
-        urlretrieve(file_link,file_save_path_res )
+        import socket
+        socket.setdefaulttimeout(15)
+        urlretrieve(file_link,file_save_path_res)
         return file_save_path_res
 
     def save_and_extract(self,arg):
@@ -199,7 +217,7 @@ class Engine(ScraperStatus,FileTypesFilters,ABC):
             Logger.info("Done downloading {}".format(file_link))
          
         except Exception as e:
-            Logger.error("Error downloading {}".format(file_link))
+            Logger.error("Error downloading {},extract_succefully={},downloaded={}".format(file_link,extract_succefully,downloaded))
             Logger.error(e)
             error = str(e)
 

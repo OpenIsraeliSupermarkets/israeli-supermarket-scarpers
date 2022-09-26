@@ -1,7 +1,8 @@
 from il_supermarket_scarper.engines import MultiPageWeb
-from il_supermarket_scarper.utils import Logger
+from il_supermarket_scarper.utils import Logger,download_connection_retry
 import re,json
 from pathlib import Path
+from urllib.error import URLError
 class SuperPharm(MultiPageWeb):
 
     def __init__(self,folder_name=None):
@@ -21,7 +22,7 @@ class SuperPharm(MultiPageWeb):
             filenames.append(element.xpath("./td[2]")[0].text.split(".")[0])
         return links,filenames
 
-
+    @download_connection_retry()
     def retrieve_file(self,file_link, file_save_path):
         Logger.info("On a new Session: calling {}".format(file_link))
 
