@@ -52,7 +52,7 @@ repo directly:
 
 Running Docker
 -----------
-The docker is designed to run the scaper every 6 hours, (you change the cron expression if you would like, checkout the file 'crontab'), in every itreation the scraper will collect the file avaliabe to download and check if the file alreay exists before fetching it, either by scaning the dump folder, or checking the mongo.
+The docker is designed to run the scaper every 6 hours, (you change the cron expression if you would like, checkout the file 'crontab'), in every itreation the scraper will collect the files avaliabe to download and check if the file alreay exists before fetching it, either by scaning the dump folder, or checking the mongo.
 
 
     docker-compose up -d
