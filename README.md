@@ -12,7 +12,7 @@ You can email me at erlichsefi@gmail.com
 
 If you think you've found a bug:
 
-- Create issue in [issue tracker](https://github.com/erlichsefi/il_supermarket_scarper/issues) to see if
+- Create issue in [issue tracker](https://github.com/erlichsefi/israeli-supermarket-scarpers/issues) to see if
   it's already been reported
 - Please consider solving the issue by yourself and creating a pull request.
 
@@ -45,9 +45,9 @@ il_supermarket_scarper can be installed using pip:
 If you want to run the latest version of the code, you can install from the
 repo directly:
 
-    python3 -m pip install -U git+https://github.com/erlichsefi/il_supermarket_scarper.git
+    python3 -m pip install -U git+https://github.com/erlichsefi/israeli-supermarket-scarpers.git
     # or if you don't have 'git' installed
-    python3 -m pip install -U https://github.com/erlichsefi/il_supermarket_scarper/master
+    python3 -m pip install -U https://github.com/erlichsefi/israeli-supermarket-scarpers/master
 
 
 Running Docker
