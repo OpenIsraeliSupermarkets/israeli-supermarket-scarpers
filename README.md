@@ -50,6 +50,13 @@ repo directly:
     python3 -m pip install -U https://github.com/erlichsefi/il_supermarket_scarper/master
 
 
+Running Docker
+-----------
+The docker is designed to run the scaper every 6 hours, (you change the cron expression if you would like, checkout the file 'crontab'), in every itreation the scraper will collect the file avaliabe to download and check if the file alreay exists before fetching it, either by scaning the dump folder, or checking the mongo.
+
+
+    docker-compose up -d
+
 Contributing
 ------------
 
