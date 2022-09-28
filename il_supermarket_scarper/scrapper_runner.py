@@ -26,9 +26,13 @@ class MainScrapperRunner:
     def run(self,limit=None,files_types=None): 
         Logger.info("Limit is {}".format(limit))
         Logger.info("files_types is {}".format(files_types))         
+        Logger.info("Start scraping all supermarkets.")
         
         with Pool(self.multiprocessing) as p:
             result = p.map(self.scrape_one_wrap, list(map(lambda chainScrapperClass:(chainScrapperClass,{"limit":limit,"files_types":files_types}),self.enabled_scrapers)))
+        
+        Logger.info("Done scraping all supermarkets.")
+
         return result
 
     def scrape_one_wrap(self,arg):

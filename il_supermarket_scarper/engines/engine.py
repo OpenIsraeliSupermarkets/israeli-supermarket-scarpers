@@ -1,6 +1,5 @@
-import os,time
-
-import socket 
+import os
+import time
 import requests
 from retry import retry
 from abc import ABC
@@ -178,8 +177,6 @@ class Engine(ScraperStatus,FileTypesFilters,ABC):
     @download_connection_retry()
     def retrieve_file(self,file_link, file_save_path):
         file_save_path_res = file_save_path +"."+ file_link.split("?")[0].split(".")[-1]
-        import socket
-        socket.setdefaulttimeout(15)
         urlretrieve(file_link,file_save_path_res)
         return file_save_path_res
 

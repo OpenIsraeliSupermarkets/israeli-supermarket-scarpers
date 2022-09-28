@@ -10,7 +10,7 @@ RETRIVE_EXECPTION = (URLError,RemoteDisconnected,ConnectionResetError,socket.gai
 def download_connection_retry():
     def wrapper(func):
 
-        @retry(exceptions=RETRIVE_EXECPTION,delay=2,backoff=2,max_delay=30)
+        @retry(exceptions=RETRIVE_EXECPTION,tries=5,delay=2,backoff=2,max_delay=30)
         def inner(*args, **kwargs):
             import socket
             socket.setdefaulttimeout(15)
