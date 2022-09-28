@@ -12,7 +12,7 @@ services:
     hostname: kniot-scrapper
     restart: unless-stopped
     volumes:
-      - dumps:/usr/src/app/dumps
+      - ./dumps:/usr/src/app/dumps
   mongodb-scrapper:
     image : mongo
     container_name: mongodb-scrapper
@@ -20,21 +20,21 @@ services:
         - PUID=1000
         - PGID=1000
     volumes:
-        - database:/data/db
+        - ./database:/data/db
     ports:
         - 27017:27017
     restart: unless-stopped
 
-volumes:
-  dumps:
-    driver: local
-    driver_opts:
-      o: bind
-      type: none
-      device: ./dumps
-  database:
-    driver: local
-    driver_opts:
-      o: bind
-      type: none
-      device: ./database
+# volumes:
+#   dumps:
+#     driver: local
+#     driver_opts:
+#       o: bind
+#       type: none
+#       device: ./dumps
+#   database:
+#     driver: local
+#     driver_opts:
+#       o: bind
+#       type: none
+#       device: ./database
