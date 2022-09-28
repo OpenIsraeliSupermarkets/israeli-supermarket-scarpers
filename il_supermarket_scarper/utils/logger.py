@@ -31,3 +31,7 @@ class Logger:
     @classmethod
     def error(cls,msg, *args, **kwargs):
         cls.logger.error(msg, *args, **kwargs)
+
+    @classmethod
+    def warning(cls,msg, *args, **kwargs):
+        cls.logger.warning(msg, *args, **kwargs)

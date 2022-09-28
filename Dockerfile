@@ -14,4 +14,4 @@ RUN chmod 0644 /etc/cron.d/crontab
 RUN crontab /etc/cron.d/crontab
 RUN touch /var/log/cron.log
 
-CMD cron && tail -f /var/log/cron.log
+CMD python3 example.py && cron & tail -f /var/log/cron.log
