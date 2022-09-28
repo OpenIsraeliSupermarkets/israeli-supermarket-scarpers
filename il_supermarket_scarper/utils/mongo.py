@@ -1,7 +1,7 @@
 import datetime
 import os
 import uuid
-
+from .logger import Logger
 
 class DataBase:
 
@@ -50,6 +50,8 @@ class ScraperStatus(DataBase):
             for file in filelist:
                 if not store_db["scraper_download"].find_one({"file_name":by_function(file)}):
                     new_filelist.append(file)
+                else:
+                    Logger.info(f"filtered file {file} since it already was downloaded and extracted")
             return new_filelist
         else:
             # filter according to disk

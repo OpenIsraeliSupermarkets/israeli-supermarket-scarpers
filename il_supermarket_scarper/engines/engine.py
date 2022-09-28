@@ -31,6 +31,7 @@ class Engine(ScraperStatus,FileTypesFilters,ABC):
 
     def _apply_limit(self,intreable,limit=None,files_types=None,by=None):
         intreable_ = self.filter_already_downloaded(self.storage_path,intreable,by=by)
+        exists_new_files_to_download = len(intreable) != 0
         intreable_ = self.unique(intreable_,by=by)
         if files_types:
             intreable_ = list()
@@ -46,7 +47,7 @@ class Engine(ScraperStatus,FileTypesFilters,ABC):
             intreable_ = intreable_[:min(limit,len(intreable_))]
         Logger.info("Result length {}".format(len(intreable_))) 
 
-        if len(intreable_) == 0 and self._validate_scraper_found_no_files():
+        if exists_new_files_to_download and len(intreable_) == 0 and self._validate_scraper_found_no_files():
             raise ValueError("No files to download for file {}".format(files_types))
         return intreable_
 

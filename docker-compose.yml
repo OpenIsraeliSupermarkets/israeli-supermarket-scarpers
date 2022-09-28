@@ -7,12 +7,15 @@ services:
       - XML_STORE_PATH=dumps/
       - MONGO_URL=localhost
       - MONGO_PORT=27017
+      - SE_MODE=False
     container_name: kniot-scrapper
     network_mode: "host"
     hostname: kniot-scrapper
     restart: unless-stopped
     volumes:
       - ./dumps:/usr/src/app/dumps
+      - "/etc/timezone:/etc/timezone:ro"
+      - "/etc/localtime:/etc/localtime:ro"
   mongodb-scrapper:
     image : mongo
     container_name: mongodb-scrapper
@@ -21,6 +24,8 @@ services:
         - PGID=1000
     volumes:
         - ./database:/data/db
+        - "/etc/timezone:/etc/timezone:ro"
+        - "/etc/localtime:/etc/localtime:ro"
     ports:
         - 27017:27017
     restart: unless-stopped

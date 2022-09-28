@@ -10,7 +10,13 @@ class MainScrapperRunner:
     
     def __init__(self,size_estimation_mode=False,enabled_scrapers=None,dump_folder_name=None,multiprocessing=5,lookup_in_db=False):
         assert type(enabled_scrapers) == list or enabled_scrapers == None
-        self.size_estimation_mode = size_estimation_mode or strtobool(os.getenv("SE_MODE","False"))
+        
+        env_size_estimation_mode = os.getenv("SE_MODE",None)
+        if env_size_estimation_mode:
+            Logger.info(f"Setting size estimation mode from enviroment. value={env_size_estimation_mode}")
+            self.size_estimation_mode = bool(strtobool(env_size_estimation_mode))
+        else:
+            self.size_estimation_mode = size_estimation_mode
         Logger.info("size_estimation_mode: {}".format(self.size_estimation_mode))
 
         if not enabled_scrapers:
