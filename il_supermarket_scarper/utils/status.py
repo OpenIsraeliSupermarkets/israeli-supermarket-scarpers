@@ -25,8 +25,7 @@ def get_status():
 def get_status_date():
     url = "https://www.gov.il/he/departments/legalInfo/cpfta_prices_regulations"
     #Create a handle, page, to handle the contents of the website\
-    s = requests.Session()
-    page = s.get(url)
+    page = requests.get(url)
 
     if page.status_code != 200:
         Logger.error(f"request as failed, page body is {page}.")

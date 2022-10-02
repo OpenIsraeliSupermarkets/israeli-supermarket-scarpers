@@ -1,7 +1,8 @@
 from il_supermarket_scarper.utils.status import get_status,get_all_listed_scarpers
+from il_supermarket_scarper.utils.connection import disable_when_outside_israel
 
 
-
+@disable_when_outside_israel
 def test_scrapers_are_updated():
     num_of_scarper_listed = len(get_all_listed_scarpers())
     num_of_scarper_on_gov_site = get_status()
