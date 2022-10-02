@@ -26,8 +26,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
       with:
-        fetch-depth: 0
-
+        path: /usr/src/app
     - name: Test with pytest
       run: |
         pytest
