@@ -24,9 +24,13 @@ def get_status():
 
 def get_status_date():
     url = "https://www.gov.il/he/departments/legalInfo/cpfta_prices_regulations"
-    #Create a handle, page, to handle the contents of the website
-    page = requests.get(url)
+    #Create a handle, page, to handle the contents of the website\
+    s = requests.Session()
+    page = s.get(url)
 
+    if page.status_code != 200:
+        Logger.error(f"request as failed, page body is {page}.")
+        raise ValueError(f"Failed reading site {url}.")
     line_with_date = lh.fromstring(page.content).xpath('/html/body/section/div/div[3]/div/span')[0].text
     Logger.info("line_with_date: {}".format(line_with_date))
     
