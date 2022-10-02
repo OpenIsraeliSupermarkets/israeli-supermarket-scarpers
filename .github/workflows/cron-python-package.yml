@@ -16,17 +16,17 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
-    container:
-      image: docker://erlichsefi/israeli-supermarket-scarpers:test
+#   container:
+#       image: docker://erlichsefi/israeli-supermarket-scarpers:test
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.8"]
 
     steps:
-    - uses: actions/checkout@v3
-      with:
-        path: /usr/src/app
+    - name: Checkout
+      uses: actions/checkout@v3
+    - name: Build with Docker
+      run: docker build -t erlichsefi/israeli-supermarket-scarpers:test --target test .
     - name: Test with pytest
-      run: |
-        pytest
+      run: docker run -it --rm --name test-run erlichsefi/israeli-supermarket-scarpers:test
