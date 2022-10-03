@@ -22,13 +22,13 @@ class Bina(Aspx):
     def get_data_from_page(self,req_res):
         return json.loads(req_res.text)
 
-    def get_href_from_entry(self,x):
+    def get_href_from_entry(self,entry):
         """ get download link for entry (tr) """
-        return self.download_postfix+x['FileNm']
+        return self.download_postfix+entry['FileNm']
 
-    def get_file_name_no_ext_from_entry(self,x):
+    def get_file_name_no_ext_from_entry(self,entry):
         """ get the file name without extensions from entey (tr) """
-        return x.split(self.download_postfix)[-1].split(".")[0]
+        return entry.split(self.download_postfix)[-1].split(".")[0]
 
     @download_connection_retry()
     def retrieve_file(self,file_link, file_save_path):

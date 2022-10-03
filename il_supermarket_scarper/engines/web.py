@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
+from il_supermarket_scarper.utils import Logger,execute_in_event_loop,request_and_check_status
+
 from .engine import Engine
-from il_supermarket_scarper.utils import Logger,execute_in_event_loop
 
 
 class WebBase(Engine):
@@ -32,7 +33,7 @@ class WebBase(Engine):
 
         all_trs = list()
         for url in urls_to_collect_link_from:
-            req_res = self.request_and_check_status(url)
+            req_res = request_and_check_status(url)
             trs = self.get_data_from_page(req_res)
             all_trs.extend(trs)
 

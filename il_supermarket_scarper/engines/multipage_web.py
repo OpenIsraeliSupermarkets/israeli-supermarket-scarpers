@@ -25,29 +25,31 @@ class MultiPageWeb(WebBase):
     def collect_files_details_from_site(self,limit=None,files_types=None):
         self.post_scraping()
         url = self.get_request_url()
-        assert len(url) == 1, "should be only one url"
-        url = url[0]
 
-        html = lxml.html.parse(url)
-        #    possible need:     html = lxml.html.fromstring(self.session_with_cookies(url).text)
+
+        assert len(url) == 1, "should be only one url"
+        html = lxml.html.parse(url[0])
 
 
         total_pages = self.get_total_pages(html)
         Logger.info(f"Found {total_pages} pages")
 
         pages_to_scrape = list(map(lambda page_number: self.url + '?page=' + str(page_number)
-                                                                    ,range(1, total_pages + 1)))
-        #pages_to_scrape = self._apply_limit(pages_to_scrape,limit=limit,files_types=files_types)
-    
+                                                                    ,range(1, total_pages + 1)))    
 
-        download_urls,file_names = execute_in_event_loop(self.collect_links,pages_to_scrape,aggregtion_function=multiple_page_aggregtion,max_workers=self.max_workers)
-
-        #download_urls = self._apply_limit(,limit=limit,files_types=files_types)
-        file_names,download_urls = list(zip(*self._apply_limit(list(zip(file_names,download_urls)),limit=limit,files_types=files_types,by=lambda x:x[0])))
+        download_urls,file_names = execute_in_event_loop(
+                                                            self.process_links_before_download,
+                                                            pages_to_scrape,
+                                                            aggregtion_function=multiple_page_aggregtion,
+                                                            max_workers=self.max_workers
+                                                        )
+        file_names,download_urls = list(zip(*self._apply_limit(list(zip(file_names,download_urls)),
+                                            limit=limit,files_types=files_types,by=lambda x:x[0])))
 
         return download_urls,file_names
 
-    def collect_file_links(self, html):
+    def collect_files_details_from_page(self, html):
+        """ collect the details deom one page """
         links = []
         filenames = []
         for link in html.xpath('//*[@id="gridContainer"]/table/tbody/tr/td[1]/a/@href'):
@@ -55,17 +57,20 @@ class MultiPageWeb(WebBase):
             filenames.append(ntpath.basename(urlsplit(link).path).split(".")[0])
         return links,filenames
 
-    def collect_links(self,page,limit=None,files_types=None):
+    def process_links_before_download(self,page,limit=None,files_types=None):
+        """ additional processing to the links before download """
+        response = self.session_with_cookies_by_chain(page)
 
-        response = self.session_with_cookies(page)
-        
         html = lxml.html.fromstring(response.text)
 
-        file_links,filenames = self.collect_file_links(html)
-        Logger.info("Page {}: Found {} files".format(page,len(file_links)))
+        file_links,filenames = self.collect_files_details_from_page(html)
+        Logger.info(f"Page {page}: Found {len(file_links)} files")
 
-        filenames,file_links = list(zip(*self._apply_limit(list(zip(filenames,file_links)),limit=limit,files_types=files_types,by=lambda x:x[0])))
-        Logger.info("After applying limit: Page {}: Found {} line and {} files".format(page,len(file_links),len(filenames)))
-        
+        filenames,file_links = list(zip(*self._apply_limit(list(zip(filenames,file_links)),
+                                        limit=limit,files_types=files_types,
+                                        by=lambda x:x[0])))
+        Logger.info(f"After applying limit: Page {page}: "
+                    f"Found {len(file_links)} line and {len(filenames)} files")
+
         return file_links,filenames
-            
+       

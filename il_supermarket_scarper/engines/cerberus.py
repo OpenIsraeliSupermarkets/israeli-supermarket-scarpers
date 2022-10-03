@@ -1,14 +1,13 @@
 import ntpath
 import os
 from ftplib import FTP_TLS
-from abc import abstractmethod
 
 
-from il_supermarket_scarper.utils import (Gzip,Logger,FileTypesFilters,
+from il_supermarket_scarper.utils import (extract_xml_file_from_gz_file,Logger,FileTypesFilters,
                                             download_connection_retry,
                                             execute_in_event_loop)
 from .engine import Engine
-class Cerberus(Engine,FileTypesFilters):
+class Cerberus(Engine):
     """ scraper for all Cerberus base site. (seems like can't support historical data) """
     target_file_extensions = ['xml','gz']
 
@@ -23,12 +22,12 @@ class Cerberus(Engine,FileTypesFilters):
         self.ftp_session = False
 
     def scrape(self,limit=None,files_types=None):
-        super(Cerberus, self).scrape(limit=limit,files_types=files_types)    
+        super(Cerberus, self).scrape(limit=limit,files_types=files_types)
         files = self.collect_files_details_from_site(limit=limit,files_types=files_types,
                                                 filter_null=True,filter_zero=True)
         self.on_collected_details(url_to_download=files)
 
-        results = execute_in_event_loop(self.persist_file,files,max_workers=self.max_workers)
+        results = execute_in_event_loop(self.persist_from_ftp,files,max_workers=self.max_workers)
         self.on_download_completed(results=results)
         self.on_scrape_completed(self.get_storage_path())
 
@@ -67,7 +66,17 @@ class Cerberus(Engine,FileTypesFilters):
 
         return files
 
-    def persist_file(self, file_name):
+    @download_connection_retry()
+    def fetch_temporary_gz_file_from_ftp(self, temporary_gz_file_path):
+        """ download a file from a cerberus base site. """
+        with open(temporary_gz_file_path, 'wb') as file_ftp:
+            file_name = ntpath.basename(temporary_gz_file_path)
+            ftp = FTP_TLS(self.ftp_host, self.ftp_username, self.ftp_password)
+            ftp.cwd(self.ftp_path)
+            ftp.retrbinary('RETR ' + file_name, file_ftp.write)
+            ftp.quit()
+
+    def persist_from_ftp(self, file_name):
         """ download file to hard drive and extract it."""
         downloaded = False
         extract_succefully = False
@@ -80,11 +89,11 @@ class Cerberus(Engine,FileTypesFilters):
             Logger.info(f"Start persisting file {file_name}")
             temporary_gz_file_path = os.path.join(self.storage_path, file_name)
 
-            self.fetch_temporary_gz_file(temporary_gz_file_path)
+            self.fetch_temporary_gz_file_from_ftp(temporary_gz_file_path)
             downloaded = True
 
             if ext == '.gz':
-                Gzip.extract_xml_file_from_gz_file(temporary_gz_file_path)
+                extract_xml_file_from_gz_file(temporary_gz_file_path)
 
             Logger.info(f"Done persisting file {file_name}")
             extract_succefully = True
@@ -105,12 +114,4 @@ class Cerberus(Engine,FileTypesFilters):
                 **additionl_info
             }
 
-    @download_connection_retry()
-    def fetch_temporary_gz_file(self, temporary_gz_file_path):
-        """ download a file from a cerberus base site. """
-        with open(temporary_gz_file_path, 'wb') as file_ftp:
-            file_name = ntpath.basename(temporary_gz_file_path)
-            ftp = FTP_TLS(self.ftp_host, self.ftp_username, self.ftp_password)
-            ftp.cwd(self.ftp_path)
-            ftp.retrbinary('RETR ' + file_name, file_ftp.write)
-            ftp.quit()
+

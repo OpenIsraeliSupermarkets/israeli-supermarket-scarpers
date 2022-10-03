@@ -15,11 +15,13 @@ class Matrix(Aspx):
         self.chain_hebrew_name = chain_hebrew_name
 
 
-    def get_href_from_entry(self,x):
-        return x.a.attrs['href']
+    def get_href_from_entry(self,entry):
+        """ get download link for entry (tr) """
+        return entry.a.attrs['href']
 
-    def get_file_name_no_ext_from_entry(self,x):
-        return x.split("/")[-1].split(".gz")[0].split(".")[0]
+    def get_file_name_no_ext_from_entry(self,entry):
+        """ get the file name without extensions from entey (tr) """
+        return entry.split("/")[-1].split(".gz")[0].split(".")[0]
 
     def get_data_from_page(self,req_res):
         soup = BeautifulSoup(req_res.text, features='lxml')

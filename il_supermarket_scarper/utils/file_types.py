@@ -1,48 +1,41 @@
+from enum import Enum
 
-
-
-
-class FileTypesFilters:
-    promo_file = lambda x: "promo" in x.lower() and "null" not in x.lower()
-    #large_promo_file = lambda x: "promo" in x.lower() and "full" in x.lower()
-    store_file = lambda x: "store" in x.lower() and "null" not in x.lower()
-    #large_store_file = lambda x: "store" in x.lower() and "full" in x.lower()
-    price_file = lambda x: "price" in x.lower()  and "null" not in x.lower()
-    #large_price_file = lambda x: "price" in x.lower() and "full" in x.lower()
+class FileTypesFilters(Enum):
+    """ type of files avaliable to download """
+    PROMO_FILE = "promo"
+    STORE_FILE = "store"
+    PRICE_FILE = "price"
 
     @classmethod
     def all_types(cls):
         """Returns a list of all the enum keys."""
-        return ['promo_file',
-                "store_file",
-                "price_file"]
-    
+        return [e.name for e in FileTypesFilters]
+
     @classmethod
     def only_promo(cls):
-        return ['promo_file']
+        """ only files with promotion date """
+        return [FileTypesFilters.PROMO_FILE.name]
 
     @classmethod
     def only_store(cls):
-        return ['store_file']
+        """ only files with stores date """
+        return [FileTypesFilters.STORE_FILE.name]
 
     @classmethod
     def only_price(cls):
-        return ['price_file']
+        """ only files with prices date """
+        return [FileTypesFilters.PRICE_FILE.name]
 
-
-    @classmethod
-    def all_large(cls):
-        return cls.all_types()
+    @staticmethod
+    def filter_file(file_name,key_name):
+        """ fillter function """
+        return key_name in file_name.lower() and "null" not in file_name.lower()
 
     @classmethod
     def filter(cls, file_type, iterable,by=None):
         """Returns the type of the file."""
-        lambda_ = getattr(cls,file_type)
-        if by:
-            iner_lambda = getattr(cls,file_type)
-            lambda_ = lambda x: iner_lambda(by(x))
-        return list(filter(lambda_,iterable))
-
-
-
-
+        string_to_look_in = getattr(cls,file_type).value
+        if not by:
+            by = lambda x:x
+        return list(filter(lambda filename: cls.filter_file(by(filename),
+                                            string_to_look_in),iterable))
