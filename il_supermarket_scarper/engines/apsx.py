@@ -38,11 +38,11 @@ class Aspx(WebBase,ABC):
         return result
 
     @abstractmethod
-    def get_href_from_entry(self,x):
+    def get_href_from_entry(self,entry):
         """ get download link for entry (tr) """
         raise ValueError("abstract")
 
     @abstractmethod
-    def get_file_name_no_ext_from_entry(self,x):
+    def get_file_name_no_ext_from_entry(self,entry):
         """ get the file name without extensions from entey (tr) """
         raise ValueError("abstract")

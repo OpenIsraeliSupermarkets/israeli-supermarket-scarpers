@@ -2,8 +2,10 @@ import datetime
 import os
 import uuid
 from .logger import Logger
+from .status import log_folder_details
 
 class DataBase:
+    """ a class represnt a database"""
 
     def __init__(self) -> None:
         self.myclient = None
@@ -20,6 +22,7 @@ class DataBase:
         self.collection_status = True
 
 class ScraperStatus(DataBase):
+    """ class that abstract the database interface """
     STARTED = "started"
     COLLECTED = "collected"
     DOWNLOADED = "downloaded"
@@ -31,16 +34,20 @@ class ScraperStatus(DataBase):
         self.instance_id = uuid.uuid4().hex
 
     def on_scraping_start(self,**additional_info):
+        """ report scrap start """
         self._insert_an_update(ScraperStatus.STARTED,**additional_info)
 
     def on_collected_details(self,**additional_info):
+        """ report file details collected """
         self._insert_an_update(ScraperStatus.COLLECTED,**additional_info)
 
-    def on_download_completed(self,**additional_info):   
+    def on_download_completed(self,**additional_info):
+        """ report file downloaded """
         self._insert_an_update(ScraperStatus.DOWNLOADED,**additional_info)
         self._add_downloaded_files_to_list(**additional_info)
 
     def filter_already_downloaded(self,storage_path,filelist,by=None):
+        """ filter files already exists in long term memory or was downloaded before """
         if self.collection_status:
             # filter according to database
             store_db = self.myclient[self.database]
@@ -51,7 +58,8 @@ class ScraperStatus(DataBase):
                 if not store_db["scraper_download"].find_one({"file_name":by_function(file)}):
                     new_filelist.append(file)
                 else:
-                    Logger.info(f"filtered file {file} since it already was downloaded and extracted")
+                    Logger.info(f"filtered file {file} since it already "
+                                            "was downloaded and extracted")
             return new_filelist
         else:
             # filter according to disk
@@ -70,9 +78,10 @@ class ScraperStatus(DataBase):
                     })
 
     def on_scrape_completed(self,folder_name):
-        from il_supermarket_scarper.utils.status import log_folder_details
-        self._insert_an_update(ScraperStatus.ESTIMATED_SIZE,folder_size=log_folder_details(folder_name))
-    
+        """ report when scarpe is completed """
+        self._insert_an_update(ScraperStatus.ESTIMATED_SIZE,
+                                folder_size=log_folder_details(folder_name))
+
     def _insert_an_update(self,status,**additional_info):
         from pymongo.errors import ServerSelectionTimeoutError
         if self.collection_status:

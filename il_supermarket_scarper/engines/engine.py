@@ -1,5 +1,4 @@
 from urllib.request import urlretrieve
-from http.cookiejar import MozillaCookieJar
 from abc import ABC
 import os
 import requests
@@ -7,11 +6,11 @@ import requests
 
 
 from il_supermarket_scarper.utils import (get_output_folder,FileTypesFilters,
-                                            Logger,ScraperStatus,Gzip,download_connection_retry,
-                                            url_connection_retry)
+                                            Logger,ScraperStatus,extract_xml_file_from_gz_file,download_connection_retry,
+                                            session_with_cookies)
 
 
-class Engine(ScraperStatus,FileTypesFilters,ABC):
+class Engine(ScraperStatus,ABC):
     """ base engine for scraping """
     def __init__(self,chain,chain_id,folder_name=None,):
         super().__init__(chain)
@@ -38,7 +37,7 @@ class Engine(ScraperStatus,FileTypesFilters,ABC):
         if files_types:
             intreable_ = list()
             for type_ in files_types:
-                type_files = self.filter(type_,intreable,by=by)
+                type_files = FileTypesFilters.filter(type_,intreable,by=by)
                 if limit:
                     type_files = type_files[:min(limit,len(type_files))]
                 intreable_.extend(type_files)
@@ -68,49 +67,15 @@ class Engine(ScraperStatus,FileTypesFilters,ABC):
 
         return result
 
-    @url_connection_retry()
-    def request_and_check_status(self,url):
-
-        """ request resource and check the output """
-        Logger.info(f"Requesting url: {url}")
-        req_res = requests.get(url)
-
-        if req_res.status_code != 200:
-            Logger.info(f"Got status code: {req_res.status_code}, body is {req_res.text}")
-            raise ConnectionError(f"response for {url}, returned with status {req_res.status_code}")
-
-        return req_res
+    def session_with_cookies_by_chain(self,url):
+        """ request resource with cookie by chain name """
+        return session_with_cookies(self.chain,url)
 
     def post_scraping(self):
         """ job to do post scraping """
         cookie_file = f"{self.chain}_cookies.txt"
         if os.path.exists(cookie_file):
             os.remove(cookie_file)
-
-    @url_connection_retry()
-    def session_with_cookies(self,url):
-        """ request resource with cookies enabled """
-
-        session = requests.Session()
-        session.cookies = MozillaCookieJar(f"{self.chain}_cookies.txt")
-        try:
-            session.cookies.load()
-        except FileNotFoundError:
-            Logger.info("didn't find cookie file")
-
-        Logger.info(f"On a new Session requesting url: {url}")
-
-        response_content = session.get(url)
-
-        if response_content.status_code != 200:
-            Logger.info(f"On Session, Got status code: {response_content.status_code}"
-                                                f", body is {response_content.text} ")
-            raise ConnectionError(f"response for {url}, returned with status"
-                                                f" {response_content.status_code}")
-
-        if not os.path.exists(f"{self.chain}_cookies.txt"):
-            session.cookies.save()
-        return response_content
 
     def scrape(self,limit=None,files_types=None):
         """ run the scraping logic """
@@ -164,7 +129,7 @@ class Engine(ScraperStatus,FileTypesFilters,ABC):
             downloaded = True
 
             if file_save_path_with_ext.endswith("gz"):
-                Gzip.extract_xml_file_from_gz_file(file_save_path_with_ext)
+                extract_xml_file_from_gz_file(file_save_path_with_ext)
 
                 os.remove(file_save_path_with_ext)
             extract_succefully = True

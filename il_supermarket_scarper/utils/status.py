@@ -14,7 +14,7 @@ def get_status():
     #Store the contents of the website under doc
     doc = BeautifulSoup(page.content, features='lxml')
     #Parse data that are stored between <tr>..</tr> of HTML
-    count = 0 
+    count = 0
     for element in doc.find_all('strong'):
         if "לצפייה במחירים" in str(element):
             count +=1

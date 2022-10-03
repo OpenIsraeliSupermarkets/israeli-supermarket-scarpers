@@ -29,14 +29,17 @@ def make_test_case(scraperInit):
                     "files_types":None
                 }
                 if file_type:
-                    kwarg["files_types"]= [file_type]
+                    kwarg["files_types"]= file_type
                 folder = scraper.get_storage_path()
                 scraper.scrape(**kwarg)
 
                 
                 files_found = os.listdir(folder)
                 if file_type:
-                    assert len(files_found) == len(FileTypesFilters.filter(file_type,files_found))
+                    filtered_files = 0
+                    for f_type in file_type:
+                        filtered_files+= len(FileTypesFilters.filter(f_type,files_found))
+                    assert len(files_found) == filtered_files
                 for file in files_found:
                     found_chain_id = False
                     file_ext = file.split(".")[-1]
@@ -73,14 +76,14 @@ def make_test_case(scraperInit):
             self._clean_scarpe_delete(scraperInit,self.get_temp_folder(),limit=10)
 
         def test_scrape_promo(self):
-            self._clean_scarpe_delete(scraperInit,self.get_temp_folder(),limit=1,file_type="promo_file")
-    
+            self._clean_scarpe_delete(scraperInit,self.get_temp_folder(),limit=1,file_type=FileTypesFilters.only_promo())
+
         def test_scrape_store(self):
-            self._clean_scarpe_delete(scraperInit,self.get_temp_folder(),limit=1,file_type="store_file")
-    
+            self._clean_scarpe_delete(scraperInit,self.get_temp_folder(),limit=1,file_type=FileTypesFilters.only_store())
+
         def test_scrape_price(self):
-            self._clean_scarpe_delete(scraperInit,self.get_temp_folder(),limit=1,file_type="price_file")
-    
+            self._clean_scarpe_delete(scraperInit,self.get_temp_folder(),limit=1,file_type=FileTypesFilters.only_price())
+
         # def test_scrape_all_no_failures(self):
         #     with mock.patch("il_supermarket_scarper.utils.mongo.ScraperStatus.on_download_completed") as mongo:
         #         self._clean_scarpe_delete(scraperInit,self.get_temp_folder())
