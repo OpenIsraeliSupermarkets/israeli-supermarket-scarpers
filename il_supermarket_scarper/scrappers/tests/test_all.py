@@ -1,4 +1,5 @@
 import pytest
+
 from il_supermarket_scarper.scrappers import *
 from  .test_cases import make_test_case
 
