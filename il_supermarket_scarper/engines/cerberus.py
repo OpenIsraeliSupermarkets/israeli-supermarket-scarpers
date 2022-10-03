@@ -3,7 +3,7 @@ import os
 from ftplib import FTP_TLS
 
 
-from il_supermarket_scarper.utils import (extract_xml_file_from_gz_file,Logger,FileTypesFilters,
+from il_supermarket_scarper.utils import (extract_xml_file_from_gz_file,Logger,
                                             download_connection_retry,
                                             execute_in_event_loop)
 from .engine import Engine
@@ -31,10 +31,6 @@ class Cerberus(Engine):
         self.on_download_completed(results=results)
         self.on_scrape_completed(self.get_storage_path())
 
-    # @abstractmethod
-    # def get_data_from_page(self,_):
-    #     """ given a page """
-    #     assert False, "shouldn't be in use."
 
     def collect_files_details_from_site(self,limit=None,files_types=None,
                                        filter_null=False,filter_zero=False):
@@ -113,5 +109,3 @@ class Cerberus(Engine):
                 "extract_succefully":extract_succefully,
                 **additionl_info
             }
-
-
