@@ -62,3 +62,19 @@ def disable_when_outside_israel(function):
         return _decorator
     else:
         return function
+
+
+@url_connection_retry()
+def session_and_check_status(url):
+    """ use a session to load the response and check status"""
+    Logger.info(f"On a new Session: calling {url}")
+    session = requests.Session()
+
+    # get the download link
+    response_content = session.get(url)
+    if response_content.status_code != 200:
+        Logger.info(f"Got status code: {response_content.status_code}"
+                                f"body is {response_content.text}")
+        raise ConnectionError(f"response for {url}, returned with "
+                                "status {response_content.status_code}")
+    return response_content
