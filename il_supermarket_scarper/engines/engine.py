@@ -27,12 +27,12 @@ class Engine(ScraperStatus,ABC):
         """ the the storage page of the files downloaded """
         return self.storage_path
 
-    def _validate_scraper_found_no_files(self):
-        return True
+    def is_validate_scraper_found_no_files(self,limit=None,files_types=None):
+        return limit == 0
 
     def _apply_limit(self,intreable,limit=None,files_types=None,by=None):
         intreable_ = self.filter_already_downloaded(self.storage_path,intreable,by=by)
-        exists_new_files_to_download = len(intreable) != 0
+        files_was_filtered_since_already_download = len(list(intreable)) != 0 and len(list(intreable_)) == 0
         intreable_ = self.unique(intreable_,by=by)
         if files_types:
             intreable_ = list()
@@ -45,11 +45,14 @@ class Engine(ScraperStatus,ABC):
         elif limit:
             assert limit > 0, "Limit must be greater than 0"
             Logger.info(f"Limit: {limit}")
-            intreable_ = intreable_[:min(limit,len(intreable_))]
-        Logger.info(f"Result length {len(intreable_)}")
+            intreable_ = intreable_[:min(limit,len(list(intreable_)))]
+        Logger.info(f"Result length {len(list(intreable_))}")
 
-        if exists_new_files_to_download and len(intreable_) == 0 and self._validate_scraper_found_no_files():
-            raise ValueError(f"No files to download for file {files_types}")
+        if len(list(intreable_)) == 0:
+            if not (files_was_filtered_since_already_download or
+                         self.is_validate_scraper_found_no_files(limit=limit,
+                                                                  files_types=files_types)):
+                raise ValueError(f"No files to download for file {files_types}")
         return intreable_
 
     @classmethod

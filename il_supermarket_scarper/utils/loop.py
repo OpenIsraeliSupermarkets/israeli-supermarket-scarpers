@@ -34,6 +34,7 @@ def multiple_page_aggregtion(pages_to_scrape):
 def execute_in_event_loop(function_to_execute,iterable,max_workers=None,
                               aggregtion_function=defualt_aggregtion_function):
     """ execute a job in the event loop """
+
     loop = get_event_loop()
     return loop.run_until_complete(run_task_async(function_to_execute,iterable,
                                     max_workers=max_workers,
@@ -55,6 +56,8 @@ async def run_task_async(function_to_execute,iterable,max_workers=None,
                     arg
                 ))
 
+        if len(futures) == 0:
+            return list(),list()
         all_done,not_done = await asyncio.wait(futures)
         assert len(not_done) == 0, "Not all tasks are done, should be blocking."
     else:

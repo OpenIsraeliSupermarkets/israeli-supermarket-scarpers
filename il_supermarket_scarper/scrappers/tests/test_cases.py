@@ -31,7 +31,7 @@ def make_test_case(init_scraper_function):
                 os.removedirs(download_path)
 
 
-        def _make_sure_file_type_filter_work(self,files_found,file_type=None):
+        def _make_sure_filter_work(self,files_found,file_type=None,limit=None):
             """ make sure the file type filter works """
             if file_type:
                 filtered_files = 0
@@ -39,10 +39,10 @@ def make_test_case(init_scraper_function):
                     filtered_files+= len(FileTypesFilters.filter(f_type,files_found))
                 assert len(files_found) == filtered_files
 
-        def _make_sure_limit_works(self,files_found,limit=None):
-            """ make sure the limit filter works """
             assert not limit or len(files_found) == limit,f""" Found {files_found}
                                                                 f"files but should be {limit}"""
+
+
 
         def _make_sure_file_contain_chain_ids(self,chain_ids,file):
             """ make sure the scraper download only the chain id"""
@@ -83,8 +83,10 @@ def make_test_case(init_scraper_function):
 
                 download_path = os.path.join(dump_path,files_found[0])
                 files_found = os.listdir(download_path)
-                self._make_sure_file_type_filter_work(files_found,file_type=file_type)
-                self._make_sure_limit_works(files_found,limit=limit)
+
+                if not scraper.is_validate_scraper_found_no_files(limit=limit,
+                                                        files_types=file_type):
+                    self._make_sure_filter_work(files_found,file_type=file_type,limit=limit)
 
                 for file in files_found:
                     self._make_sure_file_contain_chain_ids(scraper.get_chain_id(),file)

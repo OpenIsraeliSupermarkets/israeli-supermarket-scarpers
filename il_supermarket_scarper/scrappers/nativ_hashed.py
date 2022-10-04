@@ -9,6 +9,7 @@ class NetivHasef(WebBase):
                 url="http://141.226.222.202/", folder_name=folder_name)
 
 
-    def _validate_scraper_found_no_files(self):
+    def is_validate_scraper_found_no_files(self,limit=None,files_types=None):
         # no data on shabat
-        return not _is_saturday_in_israel()
+        result = super().is_validate_scraper_found_no_files(limit=limit,files_types=files_types)
+        return (result or _is_saturday_in_israel())

@@ -17,7 +17,8 @@ setup(
                         "requests==2.27.1",
                         "lxml==4.9.1",
                         "beautifulsoup4==4.10.0",
-                        "pymongo==4.2.0"],
+                        "pymongo==4.2.0",
+                        "pytz==2022.4"],
     tests_require = ["pytest==7.1"],
     extras_require={
         "test":["pytest"]
