@@ -1,10 +1,10 @@
-from il_supermarket_scarper.utils.status import get_status,get_all_listed_scarpers
+from il_supermarket_scarper.utils.status import get_status, get_all_listed_scarpers
 from il_supermarket_scarper.utils.connection import disable_when_outside_israel
 
 
 @disable_when_outside_israel
 def test_scrapers_are_updated():
-    """ test the number of scrapers are the same as listed at the gov.il sirte"""
+    """test the number of scrapers are the same as listed at the gov.il sirte"""
     num_of_scarper_listed = len(get_all_listed_scarpers())
     num_of_scarper_on_gov_site = get_status()
 
@@ -12,7 +12,7 @@ def test_scrapers_are_updated():
 
 
 def test_all_chain_id_unqiue():
-    """ test all scrapers are working on diffrent chain """
+    """test all scrapers are working on diffrent chain"""
     all_chain_ids = list()
     for scraper_init in get_all_listed_scarpers():
         all_chain_ids.extend(scraper_init().get_chain_id())

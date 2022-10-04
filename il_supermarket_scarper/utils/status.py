@@ -11,98 +11,115 @@ from .logger import Logger
 
 
 def get_status():
-    """ get the number of scarper listed on the gov.il site """
+    """get the number of scarper listed on the gov.il site"""
     url = "https://www.gov.il/he/departments/legalInfo/cpfta_prices_regulations"
-    #Create a handle, page, to handle the contents of the website
+    # Create a handle, page, to handle the contents of the website
     page = requests.get(url)
-    #Store the contents of the website under doc
-    doc = BeautifulSoup(page.content, features='lxml')
-    #Parse data that are stored between <tr>..</tr> of HTML
+    # Store the contents of the website under doc
+    doc = BeautifulSoup(page.content, features="lxml")
+    # Parse data that are stored between <tr>..</tr> of HTML
     count = 0
-    for element in doc.find_all('strong'):
+    for element in doc.find_all("strong"):
         if "לצפייה במחירים" in str(element):
-            count +=1
+            count += 1
 
     return count
 
 
 def get_status_date():
-    """ get the date change listed on the gov.il site """
+    """get the date change listed on the gov.il site"""
     url = "https://www.gov.il/he/departments/legalInfo/cpfta_prices_regulations"
-    #Create a handle, page, to handle the contents of the website\
+    # Create a handle, page, to handle the contents of the website\
     page = requests.get(url)
 
     if page.status_code != 200:
         Logger.error(f"request as failed, page body is {page}.")
         raise ValueError(f"Failed reading site {url}.")
-    line_with_date = lh.fromstring(page.content).xpath("""/html/body/section/div/
-                                                        div[3]/div/span""")[0].text
+    line_with_date = (
+        lh.fromstring(page.content)
+        .xpath(
+            """/html/body/section/div/
+                                                        div[3]/div/span"""
+        )[0]
+        .text
+    )
     Logger.info(f"line_with_date: {line_with_date}")
 
-    dates = re.findall("""([1-9]|1[0-9]|2[0-9]|3[0-1]|0[0-9])(.|-|\/)
-            ([1-9]|1[0-2]|0[0-9])(.|-|\/)(20[0-9][0-9])""",line_with_date)
+    dates = re.findall(
+        """([1-9]|1[0-9]|2[0-9]|3[0-1]|0[0-9])(.|-|\/)
+            ([1-9]|1[0-2]|0[0-9])(.|-|\/)(20[0-9][0-9])""",
+        line_with_date,
+    )
 
     Logger.info(f"Found {len(dates)} dates")
     if len(dates) != 1:
         raise ValueError(f"found dates: {dates}")
 
-    return datetime.datetime.strptime("".join(dates[0]),"%d.%m.%Y")
+    return datetime.datetime.strptime("".join(dates[0]), "%d.%m.%Y")
 
 
 def get_all_listed_scarpers():
-    """ list all scrapers possible to use """
+    """list all scrapers possible to use"""
     from il_supermarket_scarper.engines.engine import Engine
     import il_supermarket_scarper.scrappers as scrappers
 
     all_scrapers = list()
-    for _,value in scrappers.__dict__.items():
-        if callable(value) and isinstance(value(),Engine):
+    for _, value in scrappers.__dict__.items():
+        if callable(value) and isinstance(value(), Engine):
             all_scrapers.append(value)
     return all_scrapers
 
+
 def get_all_listed_scarpers_class_names():
-    """ get the class name of all listed scrapers """
+    """get the class name of all listed scrapers"""
     result = list()
     for class_instance in get_all_listed_scarpers():
-        result.append( class_instance.__name__)
+        result.append(class_instance.__name__)
     return result
 
+
 def get_scraper_by_class(class_names):
-    """ get a scraper by class name """
+    """get a scraper by class name"""
     for class_instance in get_all_listed_scarpers():
         if class_instance.__name__ == class_names:
             return class_instance
     raise ValueError(f"class_names {class_names} not found")
 
+
 def get_output_folder(chain_name):
-    """ the the folder to write the chain fils in """
+    """the the folder to write the chain fils in"""
     return os.path.join(_get_dump_folder(), chain_name)
 
+
 def _get_dump_folder():
-    """ get the dump folder to locate the chains folders in """
-    return os.environ.get('XML_STORE_PATH',"dumps")
+    """get the dump folder to locate the chains folders in"""
+    return os.environ.get("XML_STORE_PATH", "dumps")
 
 
 # Enum for size units
 class UnitSize(enum.Enum):
-    """ enum represent the unit size in memory """
+    """enum represent the unit size in memory"""
+
     BYTES = "Bytes"
     KB = "Kb"
     MB = "Mb"
     GB = "Gb"
+
+
 def convert_unit(size_in_bytes, unit):
-    """ Convert the size from bytes to other units like KB, MB or GB"""
+    """Convert the size from bytes to other units like KB, MB or GB"""
     if unit == UnitSize.KB:
-        return size_in_bytes/1024
+        return size_in_bytes / 1024
     elif unit == UnitSize.MB:
-        return size_in_bytes/(1024*1024)
+        return size_in_bytes / (1024 * 1024)
     elif unit == UnitSize.GB:
-        return size_in_bytes/(1024*1024*1024)
+        return size_in_bytes / (1024 * 1024 * 1024)
     else:
         return size_in_bytes
 
-def log_folder_details(folder,unit=UnitSize.MB):
-    """ log details about a folder """
+
+def log_folder_details(folder, unit=UnitSize.MB):
+    """log details about a folder"""
     unit_size = 0
     for path, dirs, files in os.walk(folder):
         # summerize all files
@@ -115,23 +132,23 @@ def log_folder_details(folder,unit=UnitSize.MB):
                 size += fp_size
                 Logger.info(f"- file {fp}: size {size}")
 
-        unit_size = convert_unit(size,unit)
+        unit_size = convert_unit(size, unit)
         Logger.info(f"Found the following folders in {path}:")
         for folder in dirs:
-            unit_size += log_folder_details(os.path.join(path, folder),unit)
+            unit_size += log_folder_details(os.path.join(path, folder), unit)
 
     Logger.info(f"Total size of {folder}: {unit_size} {unit.name}")
 
-    return {"size":unit_size,
-            "unit":unit.name}
+    return {"size": unit_size, "unit": unit.name}
+
 
 def summerize_dump_folder_contant(dump_folder):
-    """ collect details about the dump folder """
+    """collect details about the dump folder"""
 
     Logger.info(" == Starting summerize dump folder == ")
     Logger.info(f"dump_folder = {dump_folder}")
     for any_file in os.listdir(dump_folder):
-        current_file = os.path.join(dump_folder,any_file)
+        current_file = os.path.join(dump_folder, any_file)
         if os.path.isdir(current_file):
             log_folder_details(current_file)
         else:
@@ -139,9 +156,9 @@ def summerize_dump_folder_contant(dump_folder):
 
 
 def clean_dump_folder(dump_folder):
-    """ clean the dump folder completly """
+    """clean the dump folder completly"""
     for any_file in os.listdir(dump_folder):
-        current_file = os.path.join(dump_folder,any_file)
+        current_file = os.path.join(dump_folder, any_file)
         if os.path.isdir(current_file):
             for file in os.listdir(current_file):
                 full_file_path = os.path.join(current_file, file)
@@ -149,6 +166,7 @@ def clean_dump_folder(dump_folder):
             os.rmdir(current_file)
         else:
             os.remove(current_file)
+
 
 def _is_saturday_in_israel():
     return datetime.datetime.now(pytz.timezone("Asia/Jerusalem")).weekday() == 5
