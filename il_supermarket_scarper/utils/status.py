@@ -4,7 +4,9 @@ from bs4 import BeautifulSoup
 import re
 import os
 import datetime 
+import pytz
 
+    
 from .logger import Logger
 
 def get_status():
@@ -140,7 +142,4 @@ def clean_dump_folder(dump_folder):
             os.remove(current_file)
 
 def _is_saturday_in_israel():
-    import datetime as dt
-    from dateutil.tz import gettz
-
-    return dt.datetime.now(gettz("Asia/Jerusalem")).weekday() == 5
+    return datetime.datetime.now(pytz.timezone("Asia/Jerusalem")).weekday() == 5
