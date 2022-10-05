@@ -4,7 +4,6 @@ Israel Supermarket Scraper: Clients to download the data published by the superm
 
 
 
-
 Got a question?
 ---------------
 
