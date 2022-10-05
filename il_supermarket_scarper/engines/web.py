@@ -83,9 +83,7 @@ class WebBase(Engine):
         download_urls, file_names = self.collect_files_details_from_site(
             limit=limit, files_types=files_types
         )
-        self.on_collected_details(
-            url_to_download=download_urls, file_names_to_store=file_names
-        )
+        self.on_collected_details(file_names, download_urls)
 
         Logger.info(f"collected {len(download_urls)} to download.")
         if len(download_urls) > 0:
