@@ -48,13 +48,28 @@ class ScraperStatus(DataBase):
         self.database = database.replace(" ", "_").lower()
         self.instance_id = uuid.uuid4().hex
 
-    def on_scraping_start(self, **additional_info):
+    def on_scraping_start(self, limit, files_types, **additional_info):
         """report scrap start"""
-        self._insert_an_update(ScraperStatus.STARTED, **additional_info)
+        self._insert_an_update(
+            ScraperStatus.STARTED,
+            limit=limit,
+            files_requested=files_types,
+            **additional_info,
+        )
 
-    def on_collected_details(self, **additional_info):
+    def on_collected_details(
+        self,
+        file_name_collected_from_site,
+        links_collected_from_site="FTP_ACSSES_LINK_MEANINGLESS",
+        **additional_info,
+    ):
         """report file details collected"""
-        self._insert_an_update(ScraperStatus.COLLECTED, **additional_info)
+        self._insert_an_update(
+            ScraperStatus.COLLECTED,
+            file_name_collected_from_site=file_name_collected_from_site,
+            links_collected_from_site=links_collected_from_site,
+            **additional_info,
+        )
 
     def on_download_completed(self, **additional_info):
         """report file downloaded"""

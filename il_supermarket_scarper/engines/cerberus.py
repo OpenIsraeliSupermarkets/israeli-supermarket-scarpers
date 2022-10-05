@@ -39,7 +39,7 @@ class Cerberus(Engine):
         files = self.collect_files_details_from_site(
             limit=limit, files_types=files_types, filter_null=True, filter_zero=True
         )
-        self.on_collected_details(url_to_download=files)
+        self.on_collected_details(files)
 
         results = execute_in_event_loop(
             self.persist_from_ftp, files, max_workers=self.max_workers
