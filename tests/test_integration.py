@@ -1,4 +1,5 @@
-from il_supermarket_scarper.utils.status import get_status, get_all_listed_scarpers
+from il_supermarket_scarper.utils.status import get_status
+from il_supermarket_scarper.scrappers_factory import get_all_listed_scarpers
 from il_supermarket_scarper.utils.connection import disable_when_outside_israel
 
 
@@ -13,7 +14,7 @@ def test_scrapers_are_updated():
 
 def test_all_chain_id_unqiue():
     """test all scrapers are working on diffrent chain"""
-    all_chain_ids = list()
+    all_chain_ids = []
     for scraper_init in get_all_listed_scarpers():
         all_chain_ids.extend(scraper_init().get_chain_id())
 

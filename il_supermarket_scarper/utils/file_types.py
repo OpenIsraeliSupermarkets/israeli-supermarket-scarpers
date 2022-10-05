@@ -34,14 +34,14 @@ class FileTypesFilters(Enum):
         return key_name in file_name.lower() and "null" not in file_name.lower()
 
     @classmethod
-    def filter(cls, file_type, iterable, by=None):
+    def filter(cls, file_type, iterable, by_function=lambda x: x):
         """Returns the type of the file."""
         string_to_look_in = getattr(cls, file_type).value
-        if not by:
-            by = lambda x: x
         return list(
             filter(
-                lambda filename: cls.filter_file(by(filename), string_to_look_in),
+                lambda filename: cls.filter_file(
+                    by_function(filename), string_to_look_in
+                ),
                 iterable,
             )
         )

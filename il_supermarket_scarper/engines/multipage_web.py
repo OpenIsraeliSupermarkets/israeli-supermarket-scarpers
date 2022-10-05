@@ -27,7 +27,7 @@ class MultiPageWeb(WebBase):
         """get the number of pages avaliabe to download"""
         return int(
             re.findall(
-                "^\/\?page\=([0-9]{2})$",
+                r"^\/\?page\=([0-9]{2})$",
                 html.xpath(
                     """//*[@id="gridContainer"]/table/
                                             tfoot/tr/td/a[6]/@href"""
@@ -58,15 +58,8 @@ class MultiPageWeb(WebBase):
             aggregtion_function=multiple_page_aggregtion,
             max_workers=self.max_workers,
         )
-        file_names, download_urls = list(
-            zip(
-                *self._apply_limit(
-                    list(zip(file_names, download_urls)),
-                    limit=limit,
-                    files_types=files_types,
-                    by=lambda x: x[0],
-                )
-            )
+        file_names, download_urls = self.apply_limit_zip(
+            file_names, download_urls, limit=limit, files_types=files_types
         )
 
         return download_urls, file_names
@@ -89,16 +82,13 @@ class MultiPageWeb(WebBase):
         file_links, filenames = self.collect_files_details_from_page(html)
         Logger.info(f"Page {page}: Found {len(file_links)} files")
 
-        filenames, file_links = list(
-            zip(
-                *self._apply_limit(
-                    list(zip(filenames, file_links)),
-                    limit=limit,
-                    files_types=files_types,
-                    by=lambda x: x[0],
-                )
-            )
+        filenames, file_links = self.apply_limit_zip(
+            filenames,
+            file_links,
+            limit=limit,
+            files_types=files_types,
         )
+
         Logger.info(
             f"After applying limit: Page {page}: "
             f"Found {len(file_links)} line and {len(filenames)} files"

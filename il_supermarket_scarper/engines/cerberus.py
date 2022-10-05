@@ -35,7 +35,7 @@ class Cerberus(Engine):
         self.ftp_session = False
 
     def scrape(self, limit=None, files_types=None):
-        super(Cerberus, self).scrape(limit=limit, files_types=files_types)
+        super().scrape(limit=limit, files_types=files_types)
         files = self.collect_files_details_from_site(
             limit=limit, files_types=files_types, filter_null=True, filter_zero=True
         )
@@ -84,7 +84,7 @@ class Cerberus(Engine):
         )
 
         # apply noraml filter
-        files = self._apply_limit(files, limit=limit, files_types=files_types)
+        files = self.apply_limit(files, limit=limit, files_types=files_types)
         Logger.info(f"After applying limit: Found {len(files)} files")
 
         return files
@@ -120,7 +120,7 @@ class Cerberus(Engine):
 
             Logger.info(f"Done persisting file {file_name}")
             extract_succefully = True
-        except Exception as exception:
+        except Exception as exception:  # pylint: disable=broad-except
             Logger.error(
                 f"Error downloading {file_name},extract_succefully={extract_succefully}"
                 f",downloaded={downloaded}"
