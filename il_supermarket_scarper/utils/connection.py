@@ -53,14 +53,14 @@ def url_connection_retry():
 
 def get_ip():
     """get the ip of the computer running the code"""
-    response = requests.get("https://api64.ipify.org?format=json").json()
+    response = requests.get("https://api64.ipify.org?format=json", timeout=10).json()
     return response["ip"]
 
 
 def get_location():
     """get the estimated location of the computer running the code"""
     ip_address = get_ip()
-    response = requests.get(f"https://ipapi.co/{ip_address}/json/").json()
+    response = requests.get(f"https://ipapi.co/{ip_address}/json/", timeout=10).json()
     location_data = {
         "ip": ip_address,
         "city": response.get("city"),
@@ -84,8 +84,7 @@ def disable_when_outside_israel(function):
     if estimated_location["country"] != "Israel":
         Logger.info(f"estimated location is {str(estimated_location)}")
         return _decorator
-    else:
-        return function
+    return function
 
 
 @url_connection_retry()
@@ -143,7 +142,7 @@ def request_and_check_status(url):
 
     """request resource and check the output"""
     Logger.info(f"Requesting url: {url}")
-    req_res = requests.get(url)
+    req_res = requests.get(url, timeout=10)
 
     if req_res.status_code != 200:
         Logger.info(f"Got status code: {req_res.status_code}, body is {req_res.text}")

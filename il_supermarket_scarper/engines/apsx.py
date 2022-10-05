@@ -21,7 +21,7 @@ class Aspx(WebBase, ABC):
         return download_urls, file_names
 
     def _build_query_url(self, query_params):
-        res = list()
+        res = []
         for base in super().get_request_url():
             res.append(base + self.aspx_page + query_params)
         return res
@@ -29,14 +29,14 @@ class Aspx(WebBase, ABC):
     def _get_all_possible_query_string_params(self):
         """get the arguments need to add to the url"""
         if isinstance(self.chain_id, list):
-            res = list()
+            res = []
             for c_id in self.chain_id:
                 res.append(f"?code=={c_id}")
             return res
         return [f"?code={self.chain_id}"]
 
     def get_request_url(self):
-        result = list()
+        result = []
         for query_params in self._get_all_possible_query_string_params():
             result.extend(self._build_query_url(query_params))
         Logger.info(f"Request url: {result}")

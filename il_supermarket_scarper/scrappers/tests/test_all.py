@@ -1,3 +1,4 @@
+# pylint: disable=missing-class-docstring,wildcard-import
 import pytest
 
 from il_supermarket_scarper.scrappers import *

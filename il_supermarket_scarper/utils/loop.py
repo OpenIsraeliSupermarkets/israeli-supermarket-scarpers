@@ -26,8 +26,8 @@ def defualt_aggregtion_function(all_done):
 
 def multiple_page_aggregtion(pages_to_scrape):
     """format the scraping result to the final input for multipage"""
-    download_urls = list()
-    file_names = list()
+    download_urls = []
+    file_names = []
     for result in pages_to_scrape:
         page_download_urls, page_file_names = result.result()
         download_urls.extend(page_download_urls)
@@ -71,12 +71,12 @@ async def run_task_async(
                 futures.append(loop.run_in_executor(executor, function_to_execute, arg))
 
         if len(futures) == 0:
-            return list(), list()
+            return [], []
         all_done, not_done = await asyncio.wait(futures)
         assert len(not_done) == 0, "Not all tasks are done, should be blocking."
     else:
         # or just itreate over all
-        all_done = list()
+        all_done = []
         for arg in iterable:
             all_done.append(function_to_execute(arg))
     all_done = aggregtion_function(list(all_done))

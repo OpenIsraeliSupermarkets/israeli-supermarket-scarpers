@@ -33,11 +33,31 @@ class WebBase(Engine):
 
         return download_urls, file_names
 
+    def apply_limit_zip(
+        self,
+        file_names,
+        download_urls,
+        limit=None,
+        files_types=None,
+        by_function=lambda x: x[0],
+    ):
+        """ apply limit to zip """
+        return list(
+            zip(
+                *self.apply_limit(
+                    list(zip(file_names, download_urls)),
+                    limit=limit,
+                    files_types=files_types,
+                    by_function=by_function,
+                )
+            )
+        )
+
     def collect_files_details_from_site(self, limit=None, files_types=None):
         """collect all enteris to download from site"""
         urls_to_collect_link_from = self.get_request_url()
 
-        all_trs = list()
+        all_trs = []
         for url in urls_to_collect_link_from:
             req_res = request_and_check_status(url)
             trs = self.get_data_from_page(req_res)
@@ -48,15 +68,8 @@ class WebBase(Engine):
         download_urls, file_names = self.extract_task_from_entry(all_trs)
 
         if len(download_urls) > 0:
-            file_names, download_urls = list(
-                zip(
-                    *self._apply_limit(
-                        list(zip(file_names, download_urls)),
-                        limit=limit,
-                        files_types=files_types,
-                        by=lambda x: x[0],
-                    )
-                )
+            file_names, download_urls = self.apply_limit_zip(
+                file_names, download_urls, limit=limit, files_types=files_types
             )
 
             Logger.info(f"After applying limit: Found {len(all_trs)} entries")

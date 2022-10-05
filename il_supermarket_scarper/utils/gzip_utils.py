@@ -23,10 +23,10 @@ def extract_xml_file_from_gz_file(file_save_path):
                         ) as f_out:
                             f_out.write(the_file.read())
 
-        except Exception as exception:
+        except Exception as exception:  # pylint: disable=broad-except
             report_failed_zip(exception, file_save_path)
 
-    except Exception as exception:
+    except Exception as exception:  # pylint: disable=broad-except
         report_failed_zip(exception, file_save_path)
 
 

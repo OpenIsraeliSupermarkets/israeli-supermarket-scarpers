@@ -4,6 +4,13 @@ import uuid
 from .logger import Logger
 from .status import log_folder_details
 
+PYMONGO_INSTALLED = True
+try:
+    import pymongo
+    from pymongo.errors import ServerSelectionTimeoutError
+except ImportError:
+    PYMONGO_INSTALLED = False
+
 
 class DataBase:
     """a class represnt a database"""
@@ -11,17 +18,21 @@ class DataBase:
     def __init__(self) -> None:
         self.myclient = None
         self.collection_status = False
-        try:
-            import pymongo
 
+    def create_connection(self):
+        """create the connection"""
+        if PYMONGO_INSTALLED:
             url = os.environ.get("MONGO_URL", "localhost")
             port = os.environ.get("MONGO_PORT", "27017")
             self.myclient = pymongo.MongoClient(f"mongodb://{url}:{port}/")
-        except Exception:
-            pass
 
     def enable_collection_status(self):
-        self.collection_status = True
+        """try to enable data colllection to mongo"""
+        if PYMONGO_INSTALLED:
+            self.collection_status = True
+            self.create_connection()
+        else:
+            Logger.info("can't able collection please install pymongo")
 
 
 class ScraperStatus(DataBase):
@@ -50,14 +61,15 @@ class ScraperStatus(DataBase):
         self._insert_an_update(ScraperStatus.DOWNLOADED, **additional_info)
         self._add_downloaded_files_to_list(**additional_info)
 
-    def filter_already_downloaded(self, storage_path, filelist, by=None):
+    def filter_already_downloaded(
+        self, storage_path, filelist, by_function=lambda x: x
+    ):
         """filter files already exists in long term memory or was downloaded before"""
         if self.collection_status:
             # filter according to database
             store_db = self.myclient[self.database]
 
-            new_filelist = list()
-            by_function = by if by else lambda x: x
+            new_filelist = []
             for file in filelist:
                 if not store_db["scraper_download"].find_one(
                     {"file_name": by_function(file)}
@@ -69,10 +81,10 @@ class ScraperStatus(DataBase):
                         "was downloaded and extracted"
                     )
             return new_filelist
-        else:
-            # filter according to disk
-            exits_on_disk = os.listdir(storage_path)
-            return list(filter(lambda x: x not in exits_on_disk, filelist))
+
+        # filter according to disk
+        exits_on_disk = os.listdir(storage_path)
+        return list(filter(lambda x: x not in exits_on_disk, filelist))
 
     def _add_downloaded_files_to_list(self, results, **_):
         if self.collection_status:
@@ -91,8 +103,6 @@ class ScraperStatus(DataBase):
         )
 
     def _insert_an_update(self, status, **additional_info):
-        from pymongo.errors import ServerSelectionTimeoutError
-
         if self.collection_status:
             try:
                 store_db = self.myclient[self.database]

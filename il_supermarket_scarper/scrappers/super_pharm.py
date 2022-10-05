@@ -19,7 +19,8 @@ class SuperPharm(MultiPageWeb):
     def get_total_pages(self, html):
         return int(
             re.findall(
-                ".*?page\=([0-9]*)$", html.xpath('//*[@class="page_link"]//a/@href')[-1]
+                r".*?page\=([0-9]*)$",
+                html.xpath(r'//*[@class="page_link"]//a/@href')[-1],
             )[0]
         )
 

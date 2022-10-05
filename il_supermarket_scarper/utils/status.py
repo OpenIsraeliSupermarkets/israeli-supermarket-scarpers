@@ -14,7 +14,7 @@ def get_status():
     """get the number of scarper listed on the gov.il site"""
     url = "https://www.gov.il/he/departments/legalInfo/cpfta_prices_regulations"
     # Create a handle, page, to handle the contents of the website
-    page = requests.get(url)
+    page = requests.get(url, timeout=10)
     # Store the contents of the website under doc
     doc = BeautifulSoup(page.content, features="lxml")
     # Parse data that are stored between <tr>..</tr> of HTML
@@ -30,7 +30,7 @@ def get_status_date():
     """get the date change listed on the gov.il site"""
     url = "https://www.gov.il/he/departments/legalInfo/cpfta_prices_regulations"
     # Create a handle, page, to handle the contents of the website\
-    page = requests.get(url)
+    page = requests.get(url, timeout=10)
 
     if page.status_code != 200:
         Logger.error(f"request as failed, page body is {page}.")
@@ -38,7 +38,7 @@ def get_status_date():
     line_with_date = (
         lh.fromstring(page.content)
         .xpath(
-            """/html/body/section/div/
+            r"""/html/body/section/div/
                                                         div[3]/div/span"""
         )[0]
         .text
@@ -46,7 +46,7 @@ def get_status_date():
     Logger.info(f"line_with_date: {line_with_date}")
 
     dates = re.findall(
-        """([1-9]|1[0-9]|2[0-9]|3[0-1]|0[0-9])(.|-|\/)
+        r"""([1-9]|1[0-9]|2[0-9]|3[0-1]|0[0-9])(.|-|\/)
             ([1-9]|1[0-2]|0[0-9])(.|-|\/)(20[0-9][0-9])""",
         line_with_date,
     )
@@ -56,35 +56,6 @@ def get_status_date():
         raise ValueError(f"found dates: {dates}")
 
     return datetime.datetime.strptime("".join(dates[0]), "%d.%m.%Y")
-
-
-def get_all_listed_scarpers():
-    """list all scrapers possible to use"""
-    from il_supermarket_scarper.engines.engine import Engine
-    import il_supermarket_scarper.scrappers as scrappers
-
-    all_scrapers = list()
-    for _, value in scrappers.__dict__.items():
-        if callable(value) and isinstance(value(), Engine):
-            all_scrapers.append(value)
-    return all_scrapers
-
-
-def get_all_listed_scarpers_class_names():
-    """get the class name of all listed scrapers"""
-    result = list()
-    for class_instance in get_all_listed_scarpers():
-        result.append(class_instance.__name__)
-    return result
-
-
-def get_scraper_by_class(class_names):
-    """get a scraper by class name"""
-    for class_instance in get_all_listed_scarpers():
-        if class_instance.__name__ == class_names:
-            return class_instance
-    raise ValueError(f"class_names {class_names} not found")
-
 
 def get_output_folder(chain_name):
     """the the folder to write the chain fils in"""
@@ -110,12 +81,11 @@ def convert_unit(size_in_bytes, unit):
     """Convert the size from bytes to other units like KB, MB or GB"""
     if unit == UnitSize.KB:
         return size_in_bytes / 1024
-    elif unit == UnitSize.MB:
+    if unit == UnitSize.MB:
         return size_in_bytes / (1024 * 1024)
-    elif unit == UnitSize.GB:
+    if unit == UnitSize.GB:
         return size_in_bytes / (1024 * 1024 * 1024)
-    else:
-        return size_in_bytes
+    return size_in_bytes
 
 
 def log_folder_details(folder, unit=UnitSize.MB):
@@ -127,15 +97,15 @@ def log_folder_details(folder, unit=UnitSize.MB):
         size = 0
         for file in files:
             if "xml" in file:
-                fp = os.path.join(path, file)
-                fp_size = os.path.getsize(fp)
+                full_file_path = os.path.join(path, file)
+                fp_size = os.path.getsize(full_file_path)
                 size += fp_size
-                Logger.info(f"- file {fp}: size {size}")
+                Logger.info(f"- file {full_file_path}: size {size}")
 
         unit_size = convert_unit(size, unit)
         Logger.info(f"Found the following folders in {path}:")
-        for folder in dirs:
-            unit_size += log_folder_details(os.path.join(path, folder), unit)
+        for sub_folder in dirs:
+            unit_size += log_folder_details(os.path.join(path, sub_folder), unit)
 
     Logger.info(f"Total size of {folder}: {unit_size} {unit.name}")
 

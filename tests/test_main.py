@@ -2,13 +2,13 @@ import os
 import shutil
 import time
 from il_supermarket_scarper.main import ScarpingTask
-from il_supermarket_scarper.utils.status import get_all_listed_scarpers_class_names
+from il_supermarket_scarper.scrappers_factory import get_all_listed_scarpers_class_names
 
 
 def test_main_with_limit():
     expected = get_all_listed_scarpers_class_names()
     output_folder = "test_dump"
-    scrapper_done = ScarpingTask().start(limit=1, dump_folder_name=output_folder)
+    scrapper_done = ScarpingTask(limit=1, dump_folder_name=output_folder).start()
 
     folders_from_scraper = list(map(lambda x: x.split("/")[1], scrapper_done))
 
@@ -28,14 +28,14 @@ def test_main_with_limit():
 
 def test_main_with_one_scarper():
     """the limit only for enabled scarpers"""
-    scrapper_done = ScarpingTask().start(limit=1, enabled_scrapers=["DorAlon"])
+    scrapper_done = ScarpingTask(limit=1, enabled_scrapers=["DorAlon"]).start()
     assert "dor" in scrapper_done[0].lower() and "alon" in scrapper_done[0].lower()
     assert len(scrapper_done) == 1
 
 
 def test_main_with_size_estimation_mode():
 
-    scrapper_done = ScarpingTask().start(
+    scrapper_done = ScarpingTask(
         limit=1, size_estimation_mode=True, enabled_scrapers=["DorAlon"]
-    )
+    ).start()
     assert len(scrapper_done) == 1

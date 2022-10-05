@@ -1,7 +1,6 @@
 from urllib.request import urlretrieve
 from abc import ABC
 import os
-import requests
 
 
 from il_supermarket_scarper.utils import (
@@ -39,18 +38,26 @@ class Engine(ScraperStatus, ABC):
         return self.storage_path
 
     def is_validate_scraper_found_no_files(self, limit=None, files_types=None):
-        return limit == 0
+        """return true if its ok the scarper reuturn no enrty"""
+        return limit == 0 or files_types == []
 
-    def _apply_limit(self, intreable, limit=None, files_types=None, by=None):
-        intreable_ = self.filter_already_downloaded(self.storage_path, intreable, by=by)
+    def apply_limit(
+        self, intreable, limit=None, files_types=None, by_function=lambda x: x
+    ):
+        """filter the list according to condition """
+        intreable_ = self.filter_already_downloaded(
+            self.storage_path, intreable, by_function=by_function
+        )
         files_was_filtered_since_already_download = (
             len(list(intreable)) != 0 and len(list(intreable_)) == 0
         )
-        intreable_ = self.unique(intreable_, by=by)
+        intreable_ = self.unique(intreable_, by_function=by_function)
         if files_types:
-            intreable_ = list()
+            intreable_ = []
             for type_ in files_types:
-                type_files = FileTypesFilters.filter(type_, intreable, by=by)
+                type_files = FileTypesFilters.filter(
+                    type_, intreable, by_function=by_function
+                )
                 if limit:
                     type_files = type_files[: min(limit, len(type_files))]
                 intreable_.extend(type_files)
@@ -72,14 +79,12 @@ class Engine(ScraperStatus, ABC):
         return intreable_
 
     @classmethod
-    def unique(cls, iterable, by=None):
+    def unique(cls, iterable, by_function=lambda x: x):
         """Returns the type of the file."""
         seen = set()
-        result = list()
-        if not by:
-            by = lambda x: x
+        result = []
         for item in iterable:
-            k = by(item)
+            k = by_function(item)
             if k not in seen:
                 seen.add(k)
                 result.append(item)
@@ -159,7 +164,7 @@ class Engine(ScraperStatus, ABC):
 
             Logger.info(f"Done downloading {file_link}")
 
-        except Exception as exception:
+        except Exception as exception:  # pylint: disable=broad-except
             Logger.error(
                 f"Error downloading {file_link},extract_succefully={extract_succefully}"
                 f",downloaded={downloaded}"
