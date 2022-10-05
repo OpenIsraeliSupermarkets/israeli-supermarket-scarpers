@@ -57,6 +57,7 @@ def get_status_date():
 
     return datetime.datetime.strptime("".join(dates[0]), "%d.%m.%Y")
 
+
 def get_output_folder(chain_name):
     """the the folder to write the chain fils in"""
     return os.path.join(_get_dump_folder(), chain_name)

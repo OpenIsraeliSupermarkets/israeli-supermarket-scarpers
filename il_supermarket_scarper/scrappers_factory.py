@@ -1,9 +1,9 @@
 from il_supermarket_scarper.engines.engine import Engine
 import il_supermarket_scarper.scrappers as all_scrappers
 
+
 def get_all_listed_scarpers():
     """list all scrapers possible to use"""
-
 
     all_scrapers = []
     for _, value in all_scrappers.__dict__.items():

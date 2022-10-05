@@ -41,7 +41,7 @@ class WebBase(Engine):
         files_types=None,
         by_function=lambda x: x[0],
     ):
-        """ apply limit to zip """
+        """apply limit to zip"""
         return list(
             zip(
                 *self.apply_limit(

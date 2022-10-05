@@ -44,7 +44,7 @@ class Engine(ScraperStatus, ABC):
     def apply_limit(
         self, intreable, limit=None, files_types=None, by_function=lambda x: x
     ):
-        """filter the list according to condition """
+        """filter the list according to condition"""
         intreable_ = self.filter_already_downloaded(
             self.storage_path, intreable, by_function=by_function
         )
