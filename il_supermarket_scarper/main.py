@@ -13,7 +13,7 @@ class ScarpingTask:
         files_types=FileTypesFilters.all_types(),
         dump_folder_name=None,
     ):
-        """ define the runner """
+        """define the runner"""
         self.runner = MainScrapperRunner(
             size_estimation_mode=size_estimation_mode,
             enabled_scrapers=enabled_scrapers,
@@ -24,7 +24,7 @@ class ScarpingTask:
         self.files_types = files_types
 
     def get_dump_folder_name(self):
-        """ get the dump folder name """
+        """get the dump folder name"""
         return self.dump_folder_name
 
     def start(self):
