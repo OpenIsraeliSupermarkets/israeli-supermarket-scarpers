@@ -33,7 +33,7 @@ class MultiPageWeb(WebBase):
         self.total_page_xpath = total_page_xpath
         self.total_pages_pattern = total_pages_pattern
 
-    @url_connection_retry
+    @url_connection_retry()
     def get_total_pages(self, html):
         """get the number of pages avaliabe to download"""
 
