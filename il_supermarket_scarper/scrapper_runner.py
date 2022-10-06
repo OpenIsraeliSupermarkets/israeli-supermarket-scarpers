@@ -1,6 +1,5 @@
 import os
 
-from distutils.util import strtobool
 from multiprocessing import Pool
 
 from .scrappers_factory import get_all_listed_scarpers_class_names, get_scraper_by_class
@@ -25,7 +24,7 @@ class MainScrapperRunner:
             Logger.info(
                 f"Setting size estimation mode from enviroment. value={env_size_estimation_mode}"
             )
-            self.size_estimation_mode = bool(strtobool(env_size_estimation_mode))
+            self.size_estimation_mode = bool(env_size_estimation_mode == "True")
         else:
             self.size_estimation_mode = size_estimation_mode
         Logger.info(f"size_estimation_mode: {self.size_estimation_mode}")
