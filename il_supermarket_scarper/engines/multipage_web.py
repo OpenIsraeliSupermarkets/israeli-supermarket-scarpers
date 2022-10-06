@@ -42,7 +42,10 @@ class MultiPageWeb(WebBase):
             html.xpath(self.total_page_xpath)[-1],
         )
         if len(elements) != 1:
-            raise ConnectionError("Didn't the element, contains number of pages.")
+            raise ConnectionError(
+                f"Didn't find the element contains number"
+                f" of pages. found={elements}"
+            )
         return int(elements[0])
 
     def collect_files_details_from_site(self, limit=None, files_types=None):

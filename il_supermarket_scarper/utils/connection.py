@@ -42,7 +42,14 @@ def url_connection_retry():
     """decorator the define the retry logic of connections tring to send get request"""
 
     def wrapper(func):
-        @retry(exceptions=ConnectionError, delay=5, tries=6, logger=Logger)
+        @retry(
+            exceptions=ConnectionError,
+            tries=5,
+            delay=2,
+            backoff=2,
+            max_delay=30,
+            logger=Logger,
+        )
         def inner(*args, **kwargs):
             return func(*args, **kwargs)
 
