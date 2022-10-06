@@ -1,5 +1,4 @@
 from pathlib import Path
-import re
 import json
 from il_supermarket_scarper.engines import MultiPageWeb
 from il_supermarket_scarper.utils import Logger, download_connection_retry
@@ -14,14 +13,8 @@ class SuperPharm(MultiPageWeb):
             chain_id="7290172900007",
             url="http://prices.super-pharm.co.il/",
             folder_name=folder_name,
-        )
-
-    def get_total_pages(self, html):
-        return int(
-            re.findall(
-                r".*?page\=([0-9]*)$",
-                html.xpath(r'//*[@class="page_link"]//a/@href')[-1],
-            )[0]
+            total_page_xpath='//*[@class="page_link"]//a/@href',
+            total_pages_pattern=r".*?page\=([0-9]*)$",
         )
 
     def collect_files_details_from_page(self, html):

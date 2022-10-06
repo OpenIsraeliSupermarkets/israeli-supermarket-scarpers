@@ -8,6 +8,7 @@ from il_supermarket_scarper.utils import (
     Logger,
     execute_in_event_loop,
     multiple_page_aggregtion,
+    url_connection_retry,
 )
 from .web import WebBase
 
@@ -19,21 +20,30 @@ class MultiPageWeb(WebBase):
     results_in_page = 20
 
     def __init__(
-        self, chain, chain_id, url="http://prices.shufersal.co.il/", folder_name=None
+        self,
+        chain,
+        chain_id,
+        url="http://prices.shufersal.co.il/",
+        folder_name=None,
+        total_page_xpath="""//*[@id="gridContainer"]/table/
+                                            tfoot/tr/td/a[6]/@href""",
+        total_pages_pattern=r"^\/\?page\=([0-9]{2})$",
     ):
         super().__init__(chain, chain_id, url=url, folder_name=folder_name)
+        self.total_page_xpath = total_page_xpath
+        self.total_pages_pattern = total_pages_pattern
 
+    @url_connection_retry
     def get_total_pages(self, html):
         """get the number of pages avaliabe to download"""
-        return int(
-            re.findall(
-                r"^\/\?page\=([0-9]{2})$",
-                html.xpath(
-                    """//*[@id="gridContainer"]/table/
-                                            tfoot/tr/td/a[6]/@href"""
-                )[0],
-            )[0]
+
+        elements = re.findall(
+            self.total_pages_pattern,
+            html.xpath(self.total_page_xpath)[-1],
         )
+        if len(elements) != 1:
+            raise ConnectionError("Didn't the element, contains number of pages.")
+        return int(elements[0])
 
     def collect_files_details_from_site(self, limit=None, files_types=None):
         self.post_scraping()
