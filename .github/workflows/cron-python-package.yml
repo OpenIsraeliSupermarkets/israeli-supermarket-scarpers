@@ -11,7 +11,11 @@ on:
   schedule:
     # * is a special character in YAML so you have to quote this string
     - cron:  '00 12 1/7 * *'
-
+    
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+  
 jobs:
   build:
 
