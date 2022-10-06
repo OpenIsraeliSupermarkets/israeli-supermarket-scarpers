@@ -19,6 +19,10 @@ on:
     branches: [ "master" ]
   schedule:
     - cron: '28 15 * * 1'
+    
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   analyze:
