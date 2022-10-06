@@ -2,7 +2,7 @@ Israel Supermarket Scraper: Clients to download the data published by the superm
 =======================================
 שקיפות מחירים (השוואת מחירים) - https://www.gov.il/he/departments/legalInfo/cpfta_prices_regulations
 
-
+[![Test-suite](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/cron-python-package.yml/badge.svg)](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/cron-python-package.yml)
 
 Got a question?
 ---------------
