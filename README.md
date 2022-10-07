@@ -5,6 +5,8 @@ Israel Supermarket Scraper: Clients to download the data published by the superm
 [![Test-suite](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/cron-python-package.yml/badge.svg)](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/cron-python-package.yml)
 [![CodeQL](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/codeql.yml/badge.svg)](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/codeql.yml)
 [![Pylint](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/pylint.yml/badge.svg)](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/pylint.yml)
+[![Publish Docker image](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/docker-publish.yml)
+[![Upload Python Package](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/python-publish.yml/badge.svg)](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/python-publish.yml)
 
 Got a question?
 ---------------
