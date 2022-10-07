@@ -51,6 +51,7 @@ repo directly:
     python3 -m pip install -U git+https://github.com/erlichsefi/israeli-supermarket-scarpers.git
     # or if you don't have 'git' installed
     python3 -m pip install -U https://github.com/erlichsefi/israeli-supermarket-scarpers/master
+    # 
 
 
 Running Docker
@@ -59,6 +60,10 @@ The docker is designed to run the scaper every 6 hours, (you change the cron exp
 
 
     docker-compose up -d
+
+or if you want to use the existing image from docker hub:
+
+    docker pull erlichsefi/israeli-supermarket-scarpers:latest
 
 Contributing
 ------------
