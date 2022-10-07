@@ -27,7 +27,7 @@ setup(
     tests_require=["pytest==7.1"],
     extras_require={"test": ["pytest"]},
     # *strongly* suggested for sharing
-    version="0.1",
+    version="0.2",
     # The license can be anything you like
     license="MIT",
     description="python package that implement a scraping for israeli supermarket data",
