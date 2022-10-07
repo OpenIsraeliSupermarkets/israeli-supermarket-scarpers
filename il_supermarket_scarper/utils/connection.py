@@ -7,7 +7,7 @@ import socket
 import requests
 
 from retry import retry
-
+from requests.exceptions import ReadTimeout
 from .logger import Logger
 
 
@@ -43,7 +43,7 @@ def url_connection_retry():
 
     def wrapper(func):
         @retry(
-            exceptions=ConnectionError,
+            exceptions=(ConnectionError, ReadTimeout),
             tries=5,
             delay=2,
             backoff=2,
@@ -149,7 +149,7 @@ def request_and_check_status(url):
 
     """request resource and check the output"""
     Logger.info(f"Requesting url: {url}")
-    req_res = requests.get(url, timeout=20)
+    req_res = requests.get(url, timeout=1)
 
     if req_res.status_code != 200:
         Logger.info(f"Got status code: {req_res.status_code}, body is {req_res.text}")
