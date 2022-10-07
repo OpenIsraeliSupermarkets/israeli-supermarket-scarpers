@@ -1,4 +1,8 @@
+from io import open
 from setuptools import setup
+
+with open("README.md", encoding="utf-8") as readme:
+    long_description = readme.read()
 
 setup(
     # Needed to silence warnings (and to be a worthwhile package)
@@ -26,18 +30,18 @@ setup(
     version="0.1",
     # The license can be anything you like
     license="MIT",
-    description="An example of a python package from pre-existing code",
+    description="python package that implement a scraping for israeli supermarket data",
     # We will also need a readme eventually (there will be a warning)
-    # long_description=open('README.md').read(),
-    keywords = ['israel', 'israeli', 'scraper','supermarket'], 
+    long_description=long_description,
+    keywords=["israel", "israeli", "scraper", "supermarket"],
     classifiers=[
-    'Development Status :: 3 - Alpha',      # Chose either "3 - Alpha", "4 - Beta" or "5 - Production/Stable" as the current state of your package
-    'Intended Audience :: Developers',      # Define that your audience are developers
-    'Topic :: Software Development :: Build Tools',
-    'License :: OSI Approved :: MIT License',   # Again, pick a license
-    'Programming Language :: Python :: 3',      #Specify which pyhton versions that you want to support
-    'Programming Language :: Python :: 3.4',
-    'Programming Language :: Python :: 3.5',
-    'Programming Language :: Python :: 3.6',
-  ],
+        "Development Status :: 3 - Alpha",
+        "Intended Audience :: Developers",
+        "Topic :: Software Development :: Build Tools",
+        "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.4",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+    ],
 )
