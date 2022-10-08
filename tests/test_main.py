@@ -21,9 +21,6 @@ def test_main_with_limit():
     assert len(folders_in_dump_folder) == len(expected)
     assert sorted(folders_from_scraper) == sorted(folders_in_dump_folder)
 
-    for folder in folders_in_dump_folder:
-        assert len(os.listdir(os.path.join(output_folder, folder))) >= 2
-
     shutil.rmtree(output_folder)
 
 
