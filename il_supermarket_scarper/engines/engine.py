@@ -103,6 +103,7 @@ class Engine(ScraperStatus, ABC):
 
     def scrape(self, limit=None, files_types=None):
         """run the scraping logic"""
+        self.post_scraping()
         self.on_scraping_start(limit=limit, files_types=files_types)
         Logger.info(f"Starting scraping for {self.chain}")
         self.make_storage_path_dir()
