@@ -1,8 +1,8 @@
 from io import open
 from setuptools import setup
 
-with open('README.md', encoding='utf-8') as f:
-    long_description = '\n' + f.read()
+with open("README.md", encoding="utf-8") as f:
+    long_description = "\n" + f.read()
 
 setup(
     # Needed to silence warnings (and to be a worthwhile package)
@@ -33,7 +33,7 @@ setup(
     description="python package that implement a scraping for israeli supermarket data",
     # We will also need a readme eventually (there will be a warning)
     long_description=long_description,
-    long_description_content_type='text/markdown',
+    long_description_content_type="text/markdown",
     keywords=["israel", "israeli", "scraper", "supermarket"],
     classifiers=[
         "Development Status :: 3 - Alpha",
