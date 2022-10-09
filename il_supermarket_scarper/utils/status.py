@@ -3,6 +3,7 @@ import re
 import os
 import enum
 import requests
+import holidays
 import pytz
 import lxml.html as lh
 from bs4 import BeautifulSoup
@@ -139,5 +140,13 @@ def clean_dump_folder(dump_folder):
             os.remove(current_file)
 
 
+def _now():
+    return datetime.datetime.now(pytz.timezone("Asia/Jerusalem"))
+
+
 def _is_saturday_in_israel():
-    return datetime.datetime.now(pytz.timezone("Asia/Jerusalem")).weekday() == 5
+    return _now().weekday() == 5
+
+
+def _is_holiday_in_israel():
+    return _now().date() in holidays.IL()

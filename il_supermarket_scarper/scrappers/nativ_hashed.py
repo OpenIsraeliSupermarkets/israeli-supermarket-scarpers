@@ -1,5 +1,5 @@
 from il_supermarket_scarper.engines.web import WebBase
-from il_supermarket_scarper.utils import _is_saturday_in_israel
+from il_supermarket_scarper.utils import _is_saturday_in_israel, _is_holiday_in_israel
 
 
 class NetivHasef(WebBase):
@@ -18,4 +18,4 @@ class NetivHasef(WebBase):
         result = super().is_validate_scraper_found_no_files(
             limit=limit, files_types=files_types
         )
-        return result or _is_saturday_in_israel()
+        return result or _is_saturday_in_israel() or _is_holiday_in_israel()
