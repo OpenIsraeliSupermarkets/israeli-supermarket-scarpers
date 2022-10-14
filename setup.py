@@ -13,6 +13,9 @@ setup(
     # Needed to actually package something
     packages=[
         "il_supermarket_scarper",
+        "il_supermarket_scarper.engines"
+        "il_supermarket_scarper.scrappers"
+        "il_supermarket_scarper.utils"
     ],
     # Needed for dependencies
     install_requires=[
