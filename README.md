@@ -1,5 +1,7 @@
 Israel Supermarket Scraper: Clients to download the data published by the supermarkets.
 =======================================
+This is a scraper for ALL the supermarket chains listed in the GOV.IL site. 
+
 שקיפות מחירים (השוואת מחירים) - https://www.gov.il/he/departments/legalInfo/cpfta_prices_regulations
 
 [![Test-suite](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/cron-python-package.yml/badge.svg)](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/cron-python-package.yml)
@@ -7,6 +9,9 @@ Israel Supermarket Scraper: Clients to download the data published by the superm
 [![Pylint](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/pylint.yml/badge.svg)](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/pylint.yml)
 [![Publish Docker image](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/docker-publish.yml)
 [![Upload Python Package](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/python-publish.yml/badge.svg)](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/python-publish.yml)
+
+HAPPY NOTICE! 
+the test-suite is scheduled to run every week, so you can see if the supermarket chains has chanced something in their interface and the package will not work probably also if the code isn't changed.  
 
 Got a question?
 ---------------
