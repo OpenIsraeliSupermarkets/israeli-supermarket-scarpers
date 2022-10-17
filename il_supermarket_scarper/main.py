@@ -12,12 +12,16 @@ class ScarpingTask:
         limit=None,
         files_types=FileTypesFilters.all_types(),
         dump_folder_name=None,
+        lookup_in_db=True,
+        multiprocessing=5
     ):
         """define the runner"""
         self.runner = MainScrapperRunner(
             size_estimation_mode=size_estimation_mode,
             enabled_scrapers=enabled_scrapers,
             dump_folder_name=dump_folder_name,
+            lookup_in_db=lookup_in_db,
+            multiprocessing=multiprocessing
         )
         self.dump_folder_name = dump_folder_name
         self.limit = limit
@@ -32,5 +36,3 @@ class ScarpingTask:
         return self.runner.run(limit=self.limit, files_types=self.files_types)
 
 
-if __name__ == "__main__":
-    ScarpingTask().start()
