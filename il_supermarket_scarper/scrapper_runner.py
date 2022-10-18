@@ -2,7 +2,7 @@ import os
 
 from multiprocessing import Pool
 
-from .scrappers_factory import get_all_listed_scarpers_class_names, get_scraper_by_class
+from .scrappers_factory import ScraperFactory
 from .utils import Logger, summerize_dump_folder_contant, clean_dump_folder
 
 
@@ -30,7 +30,7 @@ class MainScrapperRunner:
         Logger.info(f"size_estimation_mode: {self.size_estimation_mode}")
 
         if not enabled_scrapers:
-            enabled_scrapers = get_all_listed_scarpers_class_names()
+            enabled_scrapers = ScraperFactory.all_scrapers_name()
 
         self.enabled_scrapers = enabled_scrapers
         Logger.info(f"Enabled scrapers: {self.enabled_scrapers}")
@@ -69,8 +69,8 @@ class MainScrapperRunner:
 
     def scrape_one(self, chain_scrapper_class, limit=None, files_types=None):
         """scrape one"""
-        chain_scrapper_constractor = get_scraper_by_class(chain_scrapper_class)
-        Logger.info(f"Starting scrapper {chain_scrapper_constractor.__name__}")
+        chain_scrapper_constractor = ScraperFactory.get(chain_scrapper_class)
+        Logger.info(f"Starting scrapper {chain_scrapper_constractor}")
         scraper = chain_scrapper_constractor(folder_name=self.dump_folder_name)
         chain_name = scraper.get_chain_name()
 
