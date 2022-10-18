@@ -15,7 +15,7 @@ setup(
         "il_supermarket_scarper",
         "il_supermarket_scarper.engines",
         "il_supermarket_scarper.scrappers",
-        "il_supermarket_scarper.utils"
+        "il_supermarket_scarper.utils",
     ],
     # Needed for dependencies
     install_requires=[
@@ -26,7 +26,7 @@ setup(
         "beautifulsoup4==4.10.0",
         "pymongo==4.2.0",
         "pytz==2022.4",
-        "holidays==0.16"
+        "holidays==0.16",
     ],
     tests_require=["pytest==7.1"],
     extras_require={"test": ["pytest"]},

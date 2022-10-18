@@ -34,5 +34,3 @@ class ScarpingTask:
     def start(self):
         """run the scraping"""
         return self.runner.run(limit=self.limit, files_types=self.files_types)
-
-

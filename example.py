@@ -6,6 +6,6 @@ if __name__ == "__main__":
         dump_folder_name="dumps",
         lookup_in_db=False,
         multiprocessing=2,
-        size_estimation_mode=True,# download files,log size, delete files
+        size_estimation_mode=True,  # download files,log size, delete files
     )
     scraper.start()
