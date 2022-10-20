@@ -118,7 +118,16 @@ def make_test_case(init_scraper_function):
                 init_scraper_function,
                 self._get_temp_folder(),
                 limit=1,
-                file_type=FileTypesFilters.only_promo(),
+                file_type=[FileTypesFilters.PROMO_FILE.name],
+            )
+
+        def test_scrape_promo_full(self):
+            """scrape one promo file and make sure it exists"""
+            self._clean_scarpe_delete(
+                init_scraper_function,
+                self._get_temp_folder(),
+                limit=1,
+                file_type=[FileTypesFilters.PROMO_FULL_FILE.name],
             )
 
         def test_scrape_store(self):
@@ -127,7 +136,7 @@ def make_test_case(init_scraper_function):
                 init_scraper_function,
                 self._get_temp_folder(),
                 limit=1,
-                file_type=FileTypesFilters.only_store(),
+                file_type=[FileTypesFilters.STORE_FILE.name],
             )
 
         def test_scrape_price(self):
@@ -136,7 +145,16 @@ def make_test_case(init_scraper_function):
                 init_scraper_function,
                 self._get_temp_folder(),
                 limit=1,
-                file_type=FileTypesFilters.only_price(),
+                file_type=[FileTypesFilters.PRICE_FILE.name],
+            )
+
+        def test_scrape_price_full(self):
+            """scrape one price file and make sure it exists"""
+            self._clean_scarpe_delete(
+                init_scraper_function,
+                self._get_temp_folder(),
+                limit=1,
+                file_type=[FileTypesFilters.PRICE_FULL_FILE.name],
             )
 
         # def test_scrape_all(self):
