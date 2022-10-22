@@ -8,6 +8,6 @@ class Victory(Matrix):
         super().__init__(
             chain="Victory",
             chain_hebrew_name="ויקטורי",
-            chain_id=["7290696200003",'7290058103393'],
+            chain_id=["7290696200003", "7290058103393"],
             folder_name=folder_name,
         )
