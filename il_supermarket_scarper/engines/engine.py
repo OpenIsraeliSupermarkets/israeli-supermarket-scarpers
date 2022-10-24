@@ -39,7 +39,16 @@ class Engine(ScraperStatus, ABC):
 
     def is_validate_scraper_found_no_files(self, limit=None, files_types=None):
         """return true if its ok the scarper reuturn no enrty"""
-        return limit == 0 or files_types == []
+
+        # if all the files requested are the update files, is ok the scaraper failed.
+        request_only_update_file = False
+        if files_types:
+            request_only_update_file = True
+            for file_type in files_types:
+                if file_type in FileTypesFilters.all_full_files():
+                    request_only_update_file = False
+
+        return limit == 0 or files_types == [] or request_only_update_file
 
     def apply_limit(
         self, intreable, limit=None, files_types=None, by_function=lambda x: x

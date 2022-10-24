@@ -31,6 +31,16 @@ class FileTypesFilters(Enum):
         return [e.name for e in FileTypesFilters]
 
     @classmethod
+    def all_update_files(cls):
+        """ all the update files """
+        return [FileTypesFilters.PROMO_FILE.name,FileTypesFilters.PRICE_FILE.name]
+
+    @classmethod
+    def all_full_files(cls):
+        """ all the full files """
+        return [FileTypesFilters.PRICE_FULL_FILE.name,FileTypesFilters.PROMO_FULL_FILE.name]
+
+    @classmethod
     def only_promo(cls):
         """only files with promotion date"""
         return [FileTypesFilters.PROMO_FILE.name, FileTypesFilters.PROMO_FULL_FILE.name]
