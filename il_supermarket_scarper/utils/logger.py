@@ -25,20 +25,28 @@ def build_logger():
 
 class Logger:
     """a static logger class to share will all components"""
-
+    enabled = True
     logger = build_logger()
+
+    @classmethod
+    def change_logging_status(cls,new_status):
+        """ enable or disable status """
+        cls.enabled = new_status
 
     @classmethod
     def info(cls, msg, *args, **kwargs):
         """log info"""
-        cls.logger.info(msg, *args, **kwargs)
+        if cls.enabled:
+            cls.logger.info(msg, *args, **kwargs)
 
     @classmethod
     def error(cls, msg, *args, **kwargs):
         """log error"""
-        cls.logger.error(msg, *args, **kwargs)
+        if cls.enabled:
+            cls.logger.error(msg, *args, **kwargs)
 
     @classmethod
     def warning(cls, msg, *args, **kwargs):
         """log warning"""
-        cls.logger.warning(msg, *args, **kwargs)
+        if cls.enabled:
+            cls.logger.warning(msg, *args, **kwargs)
