@@ -25,12 +25,13 @@ def build_logger():
 
 class Logger:
     """a static logger class to share will all components"""
+
     enabled = True
     logger = build_logger()
 
     @classmethod
-    def change_logging_status(cls,new_status):
-        """ enable or disable status """
+    def change_logging_status(cls, new_status):
+        """enable or disable status"""
         cls.enabled = new_status
 
     @classmethod

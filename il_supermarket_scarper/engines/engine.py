@@ -50,6 +50,10 @@ class Engine(ScraperStatus, ABC):
 
         return limit == 0 or files_types == [] or request_only_update_file
 
+    def is_valid_file_empty(self, file_name):
+        """it is valid the file is empty"""
+        return file_name is None
+
     def apply_limit(
         self, intreable, limit=None, files_types=None, by_function=lambda x: x
     ):

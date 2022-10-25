@@ -32,13 +32,16 @@ class FileTypesFilters(Enum):
 
     @classmethod
     def all_update_files(cls):
-        """ all the update files """
-        return [FileTypesFilters.PROMO_FILE.name,FileTypesFilters.PRICE_FILE.name]
+        """all the update files"""
+        return [FileTypesFilters.PROMO_FILE.name, FileTypesFilters.PRICE_FILE.name]
 
     @classmethod
     def all_full_files(cls):
-        """ all the full files """
-        return [FileTypesFilters.PRICE_FULL_FILE.name,FileTypesFilters.PROMO_FULL_FILE.name]
+        """all the full files"""
+        return [
+            FileTypesFilters.PRICE_FULL_FILE.name,
+            FileTypesFilters.PROMO_FULL_FILE.name,
+        ]
 
     @classmethod
     def only_promo(cls):
@@ -68,13 +71,18 @@ class FileTypesFilters(Enum):
         )
 
     @classmethod
+    def is_file_from_type(cls, filename, file_type):
+        """check if file from certain type"""
+        string_to_look_in = getattr(cls, file_type).value
+        return cls.filter_file(filename, **string_to_look_in)
+
+    @classmethod
     def filter(cls, file_type, iterable, by_function=lambda x: x):
         """Returns the type of the file."""
-        string_to_look_in = getattr(cls, file_type).value
         return list(
             filter(
-                lambda filename: cls.filter_file(
-                    by_function(filename), **string_to_look_in
+                lambda filename: cls.is_file_from_type(
+                    by_function(filename), file_type
                 ),
                 iterable,
             )

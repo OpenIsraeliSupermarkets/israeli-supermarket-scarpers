@@ -44,7 +44,7 @@ def url_connection_retry():
 
     def wrapper(func):
         @retry(
-            exceptions=(ConnectionError, ReadTimeout,ReadTimeoutError),
+            exceptions=(ConnectionError, ReadTimeout, ReadTimeoutError),
             tries=5,
             delay=2,
             backoff=2,

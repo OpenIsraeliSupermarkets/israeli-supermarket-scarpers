@@ -57,9 +57,10 @@ def make_test_case(init_scraper_function):
             file_ext = file_name.split(".")[-1]
             assert file_ext == "xml", f" should be xml but {file_ext}, file:{file_name}"
 
-        def _make_sure_file_is_not_empty(self, full_file_path):
+        def _make_sure_file_is_not_empty(self, scraper, full_file_path):
             """make sure the files is not empty"""
-            assert os.path.getsize(full_file_path) != 0
+            if not scraper.is_valid_file_empty(full_file_path):
+                assert os.path.getsize(full_file_path) != 0
 
         def _clean_scarpe_delete(
             self, init_scraper_function, dump_path="temp", limit=None, file_type=None
@@ -91,8 +92,9 @@ def make_test_case(init_scraper_function):
                 for file in files_found:
                     self._make_sure_file_contain_chain_ids(scraper.get_chain_id(), file)
                     self._make_sure_file_extension_is_xml(file)
-                    self._make_sure_file_is_not_empty(os.path.join(download_path, file))
-
+                    self._make_sure_file_is_not_empty(
+                        scraper, os.path.join(download_path, file)
+                    )
             finally:
                 self._delete_download_folder(dump_path)
 

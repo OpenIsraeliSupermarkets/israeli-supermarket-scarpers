@@ -43,13 +43,13 @@ class WebBase(Engine):
     ):
         """apply limit to zip"""
         ziped = self.apply_limit(
-                    list(zip(file_names, download_urls)),
-                    limit=limit,
-                    files_types=files_types,
-                    by_function=by_function,
-                )
+            list(zip(file_names, download_urls)),
+            limit=limit,
+            files_types=files_types,
+            by_function=by_function,
+        )
         if len(ziped) == 0:
-            return [] ,[]
+            return [], []
         return list(zip(*ziped))
 
     def collect_files_details_from_site(self, limit=None, files_types=None):
