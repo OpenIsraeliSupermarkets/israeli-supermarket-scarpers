@@ -7,6 +7,7 @@ import socket
 import requests
 
 from retry import retry
+from urllib3.exceptions import ReadTimeoutError
 from requests.exceptions import ReadTimeout
 from .logger import Logger
 
@@ -43,7 +44,7 @@ def url_connection_retry():
 
     def wrapper(func):
         @retry(
-            exceptions=(ConnectionError, ReadTimeout),
+            exceptions=(ConnectionError, ReadTimeout,ReadTimeoutError),
             tries=5,
             delay=2,
             backoff=2,
