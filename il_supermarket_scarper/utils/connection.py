@@ -24,10 +24,10 @@ def download_connection_retry():
                 socket.gaierror,
                 socket.timeout,
             ),
-            tries=5,
+            tries=6,
             delay=2,
             backoff=2,
-            max_delay=30,
+            max_delay=64,
             logger=Logger,
         )
         def inner(*args, **kwargs):
@@ -45,10 +45,10 @@ def url_connection_retry():
     def wrapper(func):
         @retry(
             exceptions=(ConnectionError, ReadTimeout, ReadTimeoutError),
-            tries=5,
+            tries=6,
             delay=2,
             backoff=2,
-            max_delay=30,
+            max_delay=64,
             logger=Logger,
         )
         def inner(*args, **kwargs):
