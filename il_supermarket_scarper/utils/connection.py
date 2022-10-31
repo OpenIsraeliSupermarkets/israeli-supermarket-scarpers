@@ -8,6 +8,7 @@ import requests
 
 from retry import retry
 from urllib3.exceptions import ReadTimeoutError
+from urllib3 import HTTPConnectionPool
 from requests.exceptions import ReadTimeout
 from .logger import Logger
 
@@ -44,7 +45,7 @@ def url_connection_retry():
 
     def wrapper(func):
         @retry(
-            exceptions=(ConnectionError, ReadTimeout, ReadTimeoutError,Exception),
+            exceptions=(ConnectionError, ReadTimeout, ReadTimeoutError,HTTPConnectionPool),
             tries=6,
             delay=2,
             backoff=2,
