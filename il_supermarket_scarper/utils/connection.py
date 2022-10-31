@@ -52,6 +52,7 @@ def url_connection_retry():
             logger=Logger,
         )
         def inner(*args, **kwargs):
+            socket.setdefaulttimeout(15)
             return func(*args, **kwargs)
 
         return inner
