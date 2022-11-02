@@ -8,9 +8,20 @@ import requests
 
 from retry import retry
 from urllib3.exceptions import ReadTimeoutError
-from urllib3 import HTTPConnectionPool
 from requests.exceptions import ReadTimeout
 from .logger import Logger
+
+
+exceptions = (
+    URLError,
+    RemoteDisconnected,
+    ConnectionResetError,
+    socket.gaierror,
+    socket.timeout,
+    ConnectionError,
+    ReadTimeout,
+    ReadTimeoutError,
+)
 
 
 def download_connection_retry():
@@ -18,13 +29,7 @@ def download_connection_retry():
 
     def wrapper(func):
         @retry(
-            exceptions=(
-                URLError,
-                RemoteDisconnected,
-                ConnectionResetError,
-                socket.gaierror,
-                socket.timeout,
-            ),
+            exceptions=exceptions,
             tries=6,
             delay=2,
             backoff=2,
@@ -45,7 +50,7 @@ def url_connection_retry():
 
     def wrapper(func):
         @retry(
-            exceptions=(ConnectionError, ReadTimeout, ReadTimeoutError,HTTPConnectionPool),
+            exceptions=exceptions,
             tries=6,
             delay=2,
             backoff=2,
