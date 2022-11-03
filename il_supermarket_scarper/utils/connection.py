@@ -51,10 +51,9 @@ def url_connection_retry():
     def wrapper(func):
         @retry(
             exceptions=exceptions,
-            tries=6,
+            tries=10,
             delay=2,
             backoff=2,
-            max_delay=64,
             logger=Logger,
         )
         def inner(*args, **kwargs):
@@ -123,17 +122,16 @@ def session_and_check_status(url):
 
 
 @url_connection_retry()
-def session_with_cookies(chain, url, cookie=True):
+def session_with_cookies(chain, url):
     """request resource with cookies enabled"""
 
     session = requests.Session()
 
-    if cookie:
-        session.cookies = MozillaCookieJar(f"{chain}_cookies.txt")
-        try:
-            session.cookies.load()
-        except FileNotFoundError:
-            Logger.info("didn't find cookie file")
+    session.cookies = MozillaCookieJar(f"{chain}_cookies.txt")
+    try:
+        session.cookies.load()
+    except FileNotFoundError:
+        Logger.info("didn't find cookie file")
 
     Logger.info(f"On a new Session requesting url: {url}")
 
@@ -149,11 +147,20 @@ def session_with_cookies(chain, url, cookie=True):
             f" {response_content.status_code}"
         )
 
-    if cookie and not os.path.exists(f"{chain}_cookies.txt"):
+    if not os.path.exists(f"{chain}_cookies.txt"):
         session.cookies.save()
     return response_content
 
 
+@url_connection_retry()
 def request_and_check_status(url):
-    """request resource and check the output"""
-    return session_with_cookies("", url, cookie=False)
+
+    """ request resource and check the output """
+    Logger.info(f"Requesting url: {url}")
+    req_res = requests.get(url, timeout=15)
+
+    if req_res.status_code != 200:
+        Logger.info(f"Got status code: {req_res.status_code}, body is {req_res.text}")
+        raise ConnectionError(f"response for {url}, returned with status {req_res.status_code}")
+
+    return req_res
