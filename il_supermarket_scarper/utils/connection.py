@@ -155,12 +155,14 @@ def session_with_cookies(chain, url):
 @url_connection_retry()
 def request_and_check_status(url):
 
-    """ request resource and check the output """
+    """request resource and check the output"""
     Logger.info(f"Requesting url: {url}")
     req_res = requests.get(url, timeout=15)
 
     if req_res.status_code != 200:
         Logger.info(f"Got status code: {req_res.status_code}, body is {req_res.text}")
-        raise ConnectionError(f"response for {url}, returned with status {req_res.status_code}")
+        raise ConnectionError(
+            f"response for {url}, returned with status {req_res.status_code}"
+        )
 
     return req_res
