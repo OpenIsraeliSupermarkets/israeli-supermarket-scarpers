@@ -4,8 +4,8 @@ from http.cookiejar import MozillaCookieJar
 
 import os
 import socket
-import requests
 import random
+import requests
 
 from retry import retry
 from urllib3.exceptions import ReadTimeoutError
@@ -127,8 +127,9 @@ def disable_when_outside_israel(function):
     return function
 
 
+@cached(cache=TTLCache(maxsize=1024, ttl=60 * 5))
 def get_random_user_agent():
-    """ get random user agent """
+    """get random user agent"""
     user_agents = [
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:38.0) Gecko/20100101 Firefox/38.0",
         "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:38.0) Gecko/20100101 Firefox/38.0",
@@ -141,7 +142,7 @@ def get_random_user_agent():
         "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:41.0) Gecko/20100101 Firefox/41.0",
     ]
 
-    index = random.randrange(len(user_agents)-1)
+    index = random.randrange(len(user_agents) - 1)
     return {"User-Agent": str(user_agents[index])}
 
 
@@ -201,7 +202,7 @@ def request_and_check_status(url):
 
     """request resource and check the output"""
     Logger.info(f"Requesting url: {url}")
-    req_res = requests.get(url, timeout=15)
+    req_res = requests.get(url, timeout=15, headers=get_random_user_agent())
 
     if req_res.status_code != 200:
         Logger.info(f"Got status code: {req_res.status_code}, body is {req_res.text}")
