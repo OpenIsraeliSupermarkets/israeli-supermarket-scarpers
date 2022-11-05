@@ -16,7 +16,6 @@ class WebBase(Engine):
         super().__init__(chain, chain_id, folder_name)
         self.url = url
 
-    @cache()
     def get_data_from_page(self, req_res):
         """get the file list from a page"""
         soup = BeautifulSoup(req_res.text, features="lxml")
@@ -54,7 +53,7 @@ class WebBase(Engine):
             return [], []
         return list(zip(*ziped))
 
-
+    @cache()
     def collect_files_details_from_site(self, limit=None, files_types=None):
         """collect all enteris to download from site"""
         urls_to_collect_link_from = self.get_request_url()

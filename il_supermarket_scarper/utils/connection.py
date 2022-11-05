@@ -65,11 +65,21 @@ def url_connection_retry():
 
     return wrapper
 
+
 def cache():
     """decorator the define the retry logic of connections tring to send get request"""
 
+    def define_key(self, limit=None, files_types=None):
+        key = self.get_chain_name()
+        if limit:
+            key = key + "_" + str(limit)  # + func.__name__
+        if files_types:
+            key = key + "_" + ".".join(files_types)
+
+        return key
+
     def wrapper(func):
-        @cached(cache=TTLCache(maxsize=1024, ttl=60))
+        @cached(cache=TTLCache(maxsize=1024, ttl=60), key=define_key)
         def inner(*args, **kwargs):
             return func(*args, **kwargs)
 
@@ -77,11 +87,13 @@ def cache():
 
     return wrapper
 
+
 @cache()
 def get_ip():
     """get the ip of the computer running the code"""
     response = requests.get("https://api64.ipify.org?format=json", timeout=10).json()
     return response["ip"]
+
 
 @cache()
 def get_location():
