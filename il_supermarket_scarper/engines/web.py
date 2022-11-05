@@ -3,7 +3,6 @@ from il_supermarket_scarper.utils import (
     Logger,
     execute_in_event_loop,
     request_and_check_status,
-    cache,
 )
 
 from .engine import Engine
@@ -53,7 +52,7 @@ class WebBase(Engine):
             return [], []
         return list(zip(*ziped))
 
-    @cache()
+    # @cache()
     def collect_files_details_from_site(self, limit=None, files_types=None):
         """collect all enteris to download from site"""
         urls_to_collect_link_from = self.get_request_url()
