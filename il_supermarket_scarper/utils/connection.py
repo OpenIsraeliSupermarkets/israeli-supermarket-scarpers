@@ -5,6 +5,7 @@ from http.cookiejar import MozillaCookieJar
 import os
 import socket
 import requests
+import random
 
 from retry import retry
 from urllib3.exceptions import ReadTimeoutError
@@ -126,6 +127,24 @@ def disable_when_outside_israel(function):
     return function
 
 
+def get_random_user_agent():
+    """ get random user agent """
+    user_agents = [
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:38.0) Gecko/20100101 Firefox/38.0",
+        "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:38.0) Gecko/20100101 Firefox/38.0",
+        "Mozilla/5.0 (Windows NT 5.1; rv:40.0) Gecko/20100101 Firefox/40.0",
+        "Mozilla/5.0 (compatible; MSIE 6.0; Windows NT 5.1)",
+        "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 2.0.50727)",
+        "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:31.0) Gecko/20100101 Firefox/31.0",
+        "Opera/9.80 (Windows NT 6.2; Win64; x64) Presto/2.12.388 Version/12.17",
+        "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:45.0) Gecko/20100101 Firefox/45.0",
+        "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:41.0) Gecko/20100101 Firefox/41.0",
+    ]
+
+    index = random.randrange(len(user_agents)-1)
+    return {"User-Agent": str(user_agents[index])}
+
+
 @url_connection_retry()
 def session_and_check_status(url):
     """use a session to load the response and check status"""
@@ -133,7 +152,7 @@ def session_and_check_status(url):
     session = requests.Session()
 
     # get the download link
-    response_content = session.get(url)
+    response_content = session.get(url, headers=get_random_user_agent())
     if response_content.status_code != 200:
         Logger.info(
             f"Got status code: {response_content.status_code}"
@@ -141,7 +160,7 @@ def session_and_check_status(url):
         )
         raise ConnectionError(
             f"response for {url}, returned with "
-            "status {response_content.status_code}"
+            f"status {response_content.status_code}"
         )
     return response_content
 
