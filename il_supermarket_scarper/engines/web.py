@@ -3,6 +3,7 @@ from il_supermarket_scarper.utils import (
     Logger,
     execute_in_event_loop,
     request_and_check_status,
+    cache,
 )
 
 from .engine import Engine
@@ -15,6 +16,7 @@ class WebBase(Engine):
         super().__init__(chain, chain_id, folder_name)
         self.url = url
 
+    @cache()
     def get_data_from_page(self, req_res):
         """get the file list from a page"""
         soup = BeautifulSoup(req_res.text, features="lxml")
@@ -51,6 +53,7 @@ class WebBase(Engine):
         if len(ziped) == 0:
             return [], []
         return list(zip(*ziped))
+
 
     def collect_files_details_from_site(self, limit=None, files_types=None):
         """collect all enteris to download from site"""
