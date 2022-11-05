@@ -16,5 +16,6 @@ from .connection import (
     session_and_check_status,
     session_with_cookies,
     request_and_check_status,
+    cache
 )
 from .loop import execute_in_event_loop, multiple_page_aggregtion

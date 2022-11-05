@@ -9,6 +9,7 @@ import requests
 from retry import retry
 from urllib3.exceptions import ReadTimeoutError
 from requests.exceptions import ReadTimeout
+from cachetools import cached, TTLCache
 from .logger import Logger
 
 
@@ -51,7 +52,7 @@ def url_connection_retry():
     def wrapper(func):
         @retry(
             exceptions=exceptions,
-            tries=10,
+            tries=6,
             delay=2,
             backoff=2,
             logger=Logger,
@@ -64,13 +65,25 @@ def url_connection_retry():
 
     return wrapper
 
+def cache():
+    """decorator the define the retry logic of connections tring to send get request"""
 
+    def wrapper(func):
+        @cached(cache=TTLCache(maxsize=1024, ttl=60))
+        def inner(*args, **kwargs):
+            return func(*args, **kwargs)
+
+        return inner
+
+    return wrapper
+
+@cache()
 def get_ip():
     """get the ip of the computer running the code"""
     response = requests.get("https://api64.ipify.org?format=json", timeout=10).json()
     return response["ip"]
 
-
+@cache()
 def get_location():
     """get the estimated location of the computer running the code"""
     ip_address = get_ip()

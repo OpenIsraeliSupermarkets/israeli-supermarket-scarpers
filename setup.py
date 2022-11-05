@@ -27,6 +27,7 @@ setup(
         "pymongo==4.2.0",
         "pytz==2022.4",
         "holidays==0.16",
+        "cachetools==5.2.0"
     ],
     tests_require=["pytest==7.1"],
     extras_require={"test": ["pytest"]},
