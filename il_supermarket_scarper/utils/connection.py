@@ -153,7 +153,7 @@ def session_and_check_status(url):
     session = requests.Session()
 
     # get the download link
-    response_content = session.get(url, headers=get_random_user_agent())
+    response_content = session.get(url, timeout=15)
     if response_content.status_code != 200:
         Logger.info(
             f"Got status code: {response_content.status_code}"
@@ -180,7 +180,7 @@ def session_with_cookies(chain, url):
 
     Logger.info(f"On a new Session requesting url: {url}")
 
-    response_content = session.get(url)
+    response_content = session.get(url, timeout=15)
 
     if response_content.status_code != 200:
         Logger.info(
@@ -202,7 +202,7 @@ def request_and_check_status(url):
 
     """request resource and check the output"""
     Logger.info(f"Requesting url: {url}")
-    req_res = requests.get(url, timeout=15, headers=get_random_user_agent())
+    req_res = requests.get(url, timeout=15)
 
     if req_res.status_code != 200:
         Logger.info(f"Got status code: {req_res.status_code}, body is {req_res.text}")
