@@ -44,7 +44,7 @@ class MultiPageWeb(WebBase):
         if len(elements) != 1:
             raise ConnectionError(
                 f"Didn't find the element contains number"
-                f" of pages. found={elements}"
+                f" of pages. found={elements}, in {html}."
             )
         return int(elements[0])
 
