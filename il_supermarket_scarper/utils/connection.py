@@ -11,8 +11,8 @@ from retry import retry
 from urllib3.exceptions import ReadTimeoutError
 from requests.exceptions import (
     ReadTimeout,
-    ConnectionError,
-)  # pylint: disable=redefined-builtin
+    ConnectionError as RequestsConnectionError,
+)
 from cachetools import cached, TTLCache
 from .logger import Logger
 
@@ -26,6 +26,7 @@ exceptions = (
     ConnectionError,
     ReadTimeout,
     ReadTimeoutError,
+    RequestsConnectionError,
 )
 
 
