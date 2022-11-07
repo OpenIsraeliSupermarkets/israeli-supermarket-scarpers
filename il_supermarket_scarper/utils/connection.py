@@ -36,10 +36,10 @@ def download_connection_retry():
     def wrapper(func):
         @retry(
             exceptions=exceptions,
-            tries=6,
+            tries=8,
             delay=2,
             backoff=2,
-            max_delay=64,
+            max_delay=5*60,
             logger=Logger,
         )
         def inner(*args, **kwargs):
@@ -57,9 +57,10 @@ def url_connection_retry():
     def wrapper(func):
         @retry(
             exceptions=exceptions,
-            tries=6,
+            tries=8,
             delay=2,
             backoff=2,
+            max_delay=5*60,
             logger=Logger,
         )
         def inner(*args, **kwargs):
