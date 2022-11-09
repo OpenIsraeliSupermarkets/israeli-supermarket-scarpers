@@ -97,7 +97,7 @@ def cache():
 @cached(cache=TTLCache(maxsize=1024, ttl=60))
 def get_ip():
     """get the ip of the computer running the code"""
-    response = requests.get("https://api64.ipify.org?format=json", timeout=10).json()
+    response = requests.get("https://api64.ipify.org?format=json", timeout=15).json()
     return response["ip"]
 
 
@@ -105,7 +105,7 @@ def get_ip():
 def get_location():
     """get the estimated location of the computer running the code"""
     ip_address = get_ip()
-    response = requests.get(f"https://ipapi.co/{ip_address}/json/", timeout=10).json()
+    response = requests.get(f"https://ipapi.co/{ip_address}/json/", timeout=15).json()
     location_data = {
         "ip": ip_address,
         "city": response.get("city"),
