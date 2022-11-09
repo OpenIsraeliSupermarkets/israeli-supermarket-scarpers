@@ -12,10 +12,10 @@ from urllib3.exceptions import ReadTimeoutError
 from requests.exceptions import (
     ReadTimeout,
     ConnectionError as RequestsConnectionError,
+    ChunkedEncodingError,
 )
 from cachetools import cached, TTLCache
 from .logger import Logger
-
 
 exceptions = (
     URLError,
@@ -27,6 +27,7 @@ exceptions = (
     ReadTimeout,
     ReadTimeoutError,
     RequestsConnectionError,
+    ChunkedEncodingError,
 )
 
 
@@ -39,7 +40,7 @@ def download_connection_retry():
             tries=8,
             delay=2,
             backoff=2,
-            max_delay=5*60,
+            max_delay=5 * 60,
             logger=Logger,
         )
         def inner(*args, **kwargs):
@@ -60,7 +61,7 @@ def url_connection_retry():
             tries=8,
             delay=2,
             backoff=2,
-            max_delay=5*60,
+            max_delay=5 * 60,
             logger=Logger,
         )
         def inner(*args, **kwargs):
@@ -152,36 +153,17 @@ def get_random_user_agent():
 
 
 @url_connection_retry()
-def session_and_check_status(url):
-    """use a session to load the response and check status"""
-    Logger.info(f"On a new Session: calling {url}")
-    session = requests.Session()
-
-    # get the download link
-    response_content = session.get(url, timeout=15)
-    if response_content.status_code != 200:
-        Logger.info(
-            f"Got status code: {response_content.status_code}"
-            f"body is {response_content.text}"
-        )
-        raise ConnectionError(
-            f"response for {url}, returned with "
-            f"status {response_content.status_code}"
-        )
-    return response_content
-
-
-@url_connection_retry()
-def session_with_cookies(chain, url):
+def session_with_cookies(url, chain_cookie_name=None):
     """request resource with cookies enabled"""
 
     session = requests.Session()
 
-    session.cookies = MozillaCookieJar(f"{chain}_cookies.txt")
-    try:
-        session.cookies.load()
-    except FileNotFoundError:
-        Logger.info("didn't find cookie file")
+    if chain_cookie_name:
+        session.cookies = MozillaCookieJar(f"{chain_cookie_name}_cookies.txt")
+        try:
+            session.cookies.load()
+        except FileNotFoundError:
+            Logger.info("didn't find cookie file")
 
     Logger.info(f"On a new Session requesting url: {url}")
 
@@ -197,22 +179,12 @@ def session_with_cookies(chain, url):
             f" {response_content.status_code}"
         )
 
-    if not os.path.exists(f"{chain}_cookies.txt"):
+    if chain_cookie_name and not os.path.exists(f"{chain_cookie_name}_cookies.txt"):
         session.cookies.save()
     return response_content
 
 
 @url_connection_retry()
-def request_and_check_status(url):
-
-    """request resource and check the output"""
-    Logger.info(f"Requesting url: {url}")
-    req_res = requests.get(url, timeout=15)
-
-    if req_res.status_code != 200:
-        Logger.info(f"Got status code: {req_res.status_code}, body is {req_res.text}")
-        raise ConnectionError(
-            f"response for {url}, returned with status {req_res.status_code}"
-        )
-
-    return req_res
+def session_and_check_status(url):
+    """use a session to load the response and check status"""
+    return session_with_cookies(url)

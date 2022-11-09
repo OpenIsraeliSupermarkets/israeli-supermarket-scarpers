@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
 
-from il_supermarket_scarper.utils import Logger, request_and_check_status
+from il_supermarket_scarper.utils import Logger, session_and_check_status
 from .web import WebBase
 
 
@@ -25,7 +25,7 @@ class PublishPrice(WebBase):
         self.folder = soup.find_all("tr")[3].a.attrs["href"]
         Logger.info(f"Last folder is {self.folder}")
 
-        req_res = request_and_check_status(self.url + self.folder)
+        req_res = session_and_check_status(self.url + self.folder)
         soup = BeautifulSoup(req_res.text, features="lxml")
         return soup.find_all("tr")[3:]
 

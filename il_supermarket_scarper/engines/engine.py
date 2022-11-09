@@ -106,7 +106,7 @@ class Engine(ScraperStatus, ABC):
 
     def session_with_cookies_by_chain(self, url):
         """request resource with cookie by chain name"""
-        return session_with_cookies(self.chain, url)
+        return session_with_cookies(url, chain_cookie_name=self.chain)
 
     def post_scraping(self):
         """job to do post scraping"""
