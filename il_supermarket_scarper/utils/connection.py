@@ -44,7 +44,7 @@ def download_connection_retry():
             logger=Logger,
         )
         def inner(*args, **kwargs):
-            socket.setdefaulttimeout(15)
+            socket.setdefaulttimeout(25)
             return func(*args, **kwargs)
 
         return inner
@@ -167,7 +167,7 @@ def session_with_cookies(url, chain_cookie_name=None):
 
     Logger.info(f"On a new Session requesting url: {url}")
 
-    response_content = session.get(url, timeout=15)
+    response_content = session.get(url)
 
     if response_content.status_code != 200:
         Logger.info(
