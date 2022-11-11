@@ -3,6 +3,8 @@ import re
 import ntpath
 import lxml.html
 
+from il_supermarket_scarper.utils.connection import download_connection_retry
+
 
 from il_supermarket_scarper.utils import (
     Logger,
@@ -32,7 +34,17 @@ class MultiPageWeb(WebBase):
         self.total_page_xpath = total_page_xpath
         self.total_pages_pattern = total_pages_pattern
 
-    # @url_connection_retry()
+    @download_connection_retry()
+    def get_number_of_pages(self, url):
+        """get the number of pages to scarpe"""
+
+        html = lxml.html.parse(url)
+
+        total_pages = self.get_total_pages(html)
+        Logger.info(f"Found {total_pages} pages")
+
+        return total_pages
+
     def get_total_pages(self, html):
         """get the number of pages avaliabe to download"""
 
@@ -51,10 +63,7 @@ class MultiPageWeb(WebBase):
         self.post_scraping()
         url = self.get_request_url()
 
-        assert len(url) == 1, "should be only one url"
-        html = lxml.html.parse(url[0])
-
-        total_pages = self.get_total_pages(html)
+        total_pages = self.get_number_of_pages(url[0])
         Logger.info(f"Found {total_pages} pages")
 
         pages_to_scrape = list(

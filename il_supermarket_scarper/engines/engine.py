@@ -64,6 +64,11 @@ class Engine(ScraperStatus, ABC):
         files_was_filtered_since_already_download = (
             len(list(intreable)) != 0 and len(list(intreable_)) == 0
         )
+        # intreable_ = list(
+        #     filter(
+        #         lambda x: "PromoFull7290725900003-9032-202211111211" in x[0], intreable_
+        #     )
+        # )
         intreable_ = self.unique(intreable_, by_function=by_function)
         if files_types:
             intreable_ = []
