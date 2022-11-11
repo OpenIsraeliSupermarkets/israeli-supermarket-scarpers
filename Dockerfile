@@ -28,4 +28,4 @@ CMD pytest .
 
 # docker build -t erlichsefi/israeli-supermarket-scarpers:test --target test .
 # docker push erlichsefi/israeli-supermarket-scarpers:test
-# docker run -it --rm --name test-run scraper-test 
+# docker run -it --rm --name test-run erlichsefi/israeli-supermarket-scarpers:test

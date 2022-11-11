@@ -7,7 +7,7 @@ import socket
 import random
 import requests
 
-from retry import retry
+
 from urllib3.exceptions import ReadTimeoutError
 from requests.exceptions import (
     ReadTimeout,
@@ -16,6 +16,7 @@ from requests.exceptions import (
 )
 from cachetools import cached, TTLCache
 from .logger import Logger
+from .retrey import retry
 
 exceptions = (
     URLError,
@@ -44,7 +45,7 @@ def download_connection_retry():
             logger=Logger,
         )
         def inner(*args, **kwargs):
-            socket.setdefaulttimeout(25)
+            # socket.setdefaulttimeout(25)
             return func(*args, **kwargs)
 
         return inner
@@ -63,9 +64,11 @@ def url_connection_retry():
             backoff=2,
             max_delay=5 * 60,
             logger=Logger,
+            timeout=10,
+            backoff_timeout=5,
         )
         def inner(*args, **kwargs):
-            socket.setdefaulttimeout(15)
+            # socket.setdefaulttimeout(15)
             return func(*args, **kwargs)
 
         return inner
@@ -153,7 +156,7 @@ def get_random_user_agent():
 
 
 @url_connection_retry()
-def session_with_cookies(url, chain_cookie_name=None):
+def session_with_cookies(url, timeout=15, chain_cookie_name=None):
     """request resource with cookies enabled"""
 
     session = requests.Session()
@@ -167,7 +170,7 @@ def session_with_cookies(url, chain_cookie_name=None):
 
     Logger.info(f"On a new Session requesting url: {url}")
 
-    response_content = session.get(url)
+    response_content = session.get(url, timeout=timeout)
 
     if response_content.status_code != 200:
         Logger.info(
@@ -185,6 +188,6 @@ def session_with_cookies(url, chain_cookie_name=None):
 
 
 @url_connection_retry()
-def session_and_check_status(url):
+def session_and_check_status(url, timeout=15):
     """use a session to load the response and check status"""
-    return session_with_cookies(url)
+    return session_with_cookies(url, timeout=timeout)

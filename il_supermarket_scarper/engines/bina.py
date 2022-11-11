@@ -47,7 +47,9 @@ class Bina(Aspx):
 
     @download_connection_retry()
     def retrieve_file(self, file_link, file_save_path):
-        response_content = session_and_check_status(file_link)
+        response_content = session_and_check_status(
+            file_link,
+        )
 
         spath = json.loads(response_content.content)
         Logger.info(f"Found spath: {spath}")
