@@ -8,7 +8,6 @@ from il_supermarket_scarper.utils import (
     Logger,
     execute_in_event_loop,
     multiple_page_aggregtion,
-    url_connection_retry,
 )
 from .web import WebBase
 

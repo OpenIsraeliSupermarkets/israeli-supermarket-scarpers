@@ -18,10 +18,10 @@ except ImportError:
         :param caller: caller(f, *args, **kwargs)
         """
 
-        def decor(f):
-            @functools.wraps(f)
+        def decor(func):
+            @functools.wraps(func)
             def wrapper(*args, **kwargs):
-                return caller(f, *args, **kwargs)
+                return caller(func, *args, **kwargs)
 
             return wrapper
 
@@ -118,8 +118,8 @@ def retry(
 
     @decorator
     def retry_decorator(func, *fargs, **fkwargs):
-        args = fargs if fargs else list()
-        kwargs = fkwargs if fkwargs else dict()
+        args = fargs if fargs else []
+        kwargs = fkwargs if fkwargs else {}
         return __retry_internal(
             partial(func, *args, **kwargs),
             exceptions,
@@ -166,8 +166,8 @@ def retry_call(
                    default: retry.logging_logger. if None, logging is disabled.
     :returns: the result of the f function.
     """
-    args = fargs if fargs else list()
-    kwargs = fkwargs if fkwargs else dict()
+    args = fargs if fargs else []
+    kwargs = fkwargs if fkwargs else {}
     return __retry_internal(
         partial(func, *args, **kwargs),
         exceptions,
