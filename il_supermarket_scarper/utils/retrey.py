@@ -38,7 +38,7 @@ def __retry_internal(
     delay=0,
     max_delay=None,
     backoff=1,
-    timeout=15,
+    timeout=None,
     max_timeout=None,
     backoff_timeout=1,
     jitter=0,
@@ -76,7 +76,9 @@ def __retry_internal(
 
             time.sleep(_delay)
             _delay *= backoff
-            _timeout += backoff_timeout
+
+            if _timeout:
+                _timeout += backoff_timeout
 
             if isinstance(jitter, tuple):
                 _delay += random.uniform(*jitter)
