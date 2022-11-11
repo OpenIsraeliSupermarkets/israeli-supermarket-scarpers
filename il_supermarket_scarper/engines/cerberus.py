@@ -53,7 +53,7 @@ class Cerberus(Engine):
         """collect all files to download from the site"""
         Logger.info(
             f"Open connection to FTP server with {self.ftp_host} "
-            ", username: {self.ftp_username} , password: {self.ftp_password}"
+            f", username: {self.ftp_username} , password: {self.ftp_password}"
         )
         self.ftp_session = FTP_TLS(
             self.ftp_host, self.ftp_username, self.ftp_password, timeout=60 * 5
