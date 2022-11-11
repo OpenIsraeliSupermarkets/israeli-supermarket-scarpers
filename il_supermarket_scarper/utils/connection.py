@@ -45,7 +45,7 @@ def download_connection_retry():
             logger=Logger,
         )
         def inner(*args, **kwargs):
-            # socket.setdefaulttimeout(25)
+            socket.setdefaulttimeout(kwargs.get("timeout",15))
             return func(*args, **kwargs)
 
         return inner
@@ -68,7 +68,7 @@ def url_connection_retry():
             backoff_timeout=5,
         )
         def inner(*args, **kwargs):
-            # socket.setdefaulttimeout(15)
+            socket.setdefaulttimeout(kwargs.get("timeout",15))
             return func(*args, **kwargs)
 
         return inner
