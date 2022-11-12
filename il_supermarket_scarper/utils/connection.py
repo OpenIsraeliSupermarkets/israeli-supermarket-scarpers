@@ -43,9 +43,12 @@ def download_connection_retry():
             backoff=2,
             max_delay=5 * 60,
             logger=Logger,
+            timeout=15,
+            backoff_timeout=5,
         )
         def inner(*args, **kwargs):
             socket.setdefaulttimeout(kwargs.get("timeout", 15))
+            del kwargs["timeout"]  # function don't get timeout param
             return func(*args, **kwargs)
 
         return inner
