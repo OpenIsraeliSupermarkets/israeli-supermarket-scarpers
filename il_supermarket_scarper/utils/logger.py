@@ -1,18 +1,20 @@
 import logging
-from sys import stdout
+import sys
 
 
 def build_logger():
     """create the logger instance"""
     # Define logger
-    logger = logging.getLogger("mylogger")
+    logger = logging.getLogger("Logger")
 
     if not logger.handlers:
         logger.setLevel(logging.DEBUG)  # set logger level
         log_formatter = logging.Formatter(
             "%(name)-12s %(asctime)s %(levelname)-8s %(filename)s:%(funcName)s %(message)s"
         )
-        console_handler = logging.StreamHandler(stdout)  # set streamhandler to stdout
+        console_handler = logging.StreamHandler(
+            sys.stdout
+        )  # set streamhandler to stdout
         console_handler.setFormatter(log_formatter)
         logger.addHandler(console_handler)
 
@@ -45,6 +47,16 @@ class Logger:
         """log error"""
         if cls.enabled:
             cls.logger.error(msg, *args, **kwargs)
+
+    @classmethod
+    def error_execption(cls, execption):
+        """log execption"""
+        if cls.enabled:
+            cls.logger.error(
+                "got an execption:",
+                execption_type=type(execption),
+                exc_info=sys.exc_info(),
+            )
 
     @classmethod
     def warning(cls, msg, *args, **kwargs):

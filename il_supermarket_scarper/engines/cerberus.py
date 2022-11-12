@@ -125,7 +125,7 @@ class Cerberus(Engine):
                 f"Error downloading {file_name},extract_succefully={extract_succefully}"
                 f",downloaded={downloaded}"
             )
-            Logger.error(exception)
+            Logger.error_execption(exception)
             additionl_info = {"error": str(exception)}
 
         finally:

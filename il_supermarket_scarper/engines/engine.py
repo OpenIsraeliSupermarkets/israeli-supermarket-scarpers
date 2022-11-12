@@ -66,7 +66,7 @@ class Engine(ScraperStatus, ABC):
         )
         # intreable_ = list(
         #     filter(
-        #         lambda x: "PromoFull7290725900003-9032-202211111211" in x[0], intreable_
+        #         lambda x: "PromoFull7290725900003-9032-202211121210" in x[0], intreable_
         #     )
         # )
         intreable_ = self.unique(intreable_, by_function=by_function)
@@ -188,7 +188,7 @@ class Engine(ScraperStatus, ABC):
                 f"Error downloading {file_link},extract_succefully={extract_succefully}"
                 f",downloaded={downloaded}"
             )
-            Logger.error(exception)
+            Logger.error_execption(exception)
             error = str(exception)
 
         return downloaded, extract_succefully, error
