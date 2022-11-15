@@ -49,12 +49,11 @@ class Logger:
             cls.logger.error(msg, *args, **kwargs)
 
     @classmethod
-    def error_execption(cls, execption):
+    def error_execption(cls, _):
         """log execption"""
         if cls.enabled:
             cls.logger.error(
                 "got an execption:",
-                execption_type=type(execption),
                 exc_info=sys.exc_info(),
             )
 
