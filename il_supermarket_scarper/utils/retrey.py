@@ -32,7 +32,7 @@ except ImportError:
 logging_logger = logging.getLogger(__name__)
 
 
-def __retry_internal( # pylint: disable=broad-except,too-many-locals
+def __retry_internal(  # pylint: disable=broad-except,too-many-locals
     func,
     exceptions=Exception,
     tries=-1,
@@ -69,15 +69,16 @@ def __retry_internal( # pylint: disable=broad-except,too-many-locals
                 return func(timeout=_timeout)
             return func()
         except exceptions as error:  # pylint: disable=broad-except
-            measured_seconds = (datetime.now() - datetime_start ).total_seconds()
+            measured_seconds = (datetime.now() - datetime_start).total_seconds()
             _tries -= 1
             if not _tries:
                 raise
 
             if logger is not None:
                 logger.warning(
-                    "%s, measured time to timeout %s ,retrying in %s seconds...",
+                    "%s, configured timeout %s,measured time to timeout %s ,retrying in %s seconds",
                     error,
+                    _timeout,
                     measured_seconds,
                     _delay,
                 )
