@@ -1,11 +1,10 @@
-from urllib.request import urlretrieve
-
 import json
 
 from il_supermarket_scarper.utils import (
     Logger,
     download_connection_retry,
     session_and_check_status,
+    url_retrieve,
 )
 from .apsx import Aspx
 
@@ -57,5 +56,5 @@ class Bina(Aspx):
         url = spath[0]["SPath"]
         ext = file_link.split(".")[-1]
 
-        urlretrieve(url, file_save_path + "." + ext)
+        url_retrieve(url, file_save_path + "." + ext)
         return file_save_path + "." + ext

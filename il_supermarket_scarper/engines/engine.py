@@ -1,4 +1,3 @@
-from urllib.request import urlretrieve
 from abc import ABC
 import os
 
@@ -11,6 +10,7 @@ from il_supermarket_scarper.utils import (
     extract_xml_file_from_gz_file,
     download_connection_retry,
     session_with_cookies,
+    url_retrieve,
 )
 
 
@@ -147,7 +147,7 @@ class Engine(ScraperStatus, ABC):
         file_save_path_res = (
             file_save_path + "." + file_link.split("?")[0].split(".")[-1]
         )
-        urlretrieve(file_link, file_save_path_res)
+        url_retrieve(file_link, file_save_path_res)
         return file_save_path_res
 
     def save_and_extract(self, arg):

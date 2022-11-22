@@ -2,9 +2,11 @@ from urllib.error import URLError
 from http.client import RemoteDisconnected
 from http.cookiejar import MozillaCookieJar
 
+import contextlib
 import os
 import socket
 import random
+import urllib
 import requests
 
 
@@ -194,3 +196,18 @@ def session_with_cookies(url, timeout=15, chain_cookie_name=None):
 def session_and_check_status(url, timeout=15):
     """use a session to load the response and check status"""
     return session_with_cookies(url, timeout=timeout)
+
+
+def url_retrieve(url, filename):
+    # from urllib.request import urlretrieve
+    # urlretrieve(url, filename)
+    # >>> add here timeout if needed
+    """alternative to urllib.request.urlretrieve"""
+    with open(filename, "wb") as out_file:
+        with contextlib.closing(urllib.request.urlopen(url)) as file:
+            block_size = 1024 * 8
+            while True:
+                block = file.read(block_size)
+                if not block:
+                    break
+                out_file.write(block)
