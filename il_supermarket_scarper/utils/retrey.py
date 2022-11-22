@@ -2,6 +2,7 @@ import logging
 import random
 import time
 
+from datetime import datetime
 from functools import partial
 
 import functools
@@ -31,7 +32,7 @@ except ImportError:
 logging_logger = logging.getLogger(__name__)
 
 
-def __retry_internal(
+def __retry_internal( # pylint: disable=broad-except,too-many-locals
     func,
     exceptions=Exception,
     tries=-1,
@@ -62,17 +63,24 @@ def __retry_internal(
     _tries, _delay = tries, delay
     _timeout = timeout
     while _tries:
+        datetime_start = datetime.now()
         try:
             if timeout:
                 return func(timeout=_timeout)
             return func()
         except exceptions as error:  # pylint: disable=broad-except
+            measured_seconds = (datetime.now() - datetime_start ).total_seconds()
             _tries -= 1
             if not _tries:
                 raise
 
             if logger is not None:
-                logger.warning("%s, retrying in %s seconds...", error, _delay)
+                logger.warning(
+                    "%s, measured time to timeout %s ,retrying in %s seconds...",
+                    error,
+                    measured_seconds,
+                    _delay,
+                )
                 logger.error_execption(error)
 
             time.sleep(_delay)
