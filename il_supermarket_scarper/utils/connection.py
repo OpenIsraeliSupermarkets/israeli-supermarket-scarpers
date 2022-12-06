@@ -7,6 +7,7 @@ import os
 import socket
 import random
 import urllib
+from ftplib import error_perm
 import requests
 
 
@@ -20,6 +21,7 @@ from cachetools import cached, TTLCache
 from .logger import Logger
 from .retrey import retry
 
+
 exceptions = (
     URLError,
     RemoteDisconnected,
@@ -31,6 +33,7 @@ exceptions = (
     ReadTimeoutError,
     RequestsConnectionError,
     ChunkedEncodingError,
+    error_perm,
 )
 
 
