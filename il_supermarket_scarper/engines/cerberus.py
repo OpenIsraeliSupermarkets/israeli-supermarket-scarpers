@@ -1,13 +1,12 @@
-import ntpath
 import os
-from ftplib import FTP_TLS
 
 
 from il_supermarket_scarper.utils import (
     extract_xml_file_from_gz_file,
     Logger,
-    download_connection_retry,
     execute_in_event_loop,
+    collect_from_ftp,
+    fetch_temporary_gz_file_from_ftp,
 )
 from .engine import Engine
 
@@ -51,17 +50,10 @@ class Cerberus(Engine):
         self, limit=None, files_types=None, filter_null=False, filter_zero=False
     ):
         """collect all files to download from the site"""
-        Logger.info(
-            f"Open connection to FTP server with {self.ftp_host} "
-            f", username: {self.ftp_username} , password: {self.ftp_password}"
+        files = collect_from_ftp(
+            self.ftp_host, self.ftp_username, self.ftp_password, self.ftp_path
         )
-        self.ftp_session = FTP_TLS(
-            self.ftp_host, self.ftp_username, self.ftp_password, timeout=60 * 5
-        )
-        self.ftp_session.set_pasv(True)
-        self.ftp_session.cwd(self.ftp_path)
-        files = self.ftp_session.nlst()
-        self.ftp_session.quit()
+
         Logger.info(f"Found {len(files)} files")
 
         if filter_zero:
@@ -89,16 +81,6 @@ class Cerberus(Engine):
 
         return files
 
-    @download_connection_retry()
-    def fetch_temporary_gz_file_from_ftp(self, temporary_gz_file_path):
-        """download a file from a cerberus base site."""
-        with open(temporary_gz_file_path, "wb") as file_ftp:
-            file_name = ntpath.basename(temporary_gz_file_path)
-            ftp = FTP_TLS(self.ftp_host, self.ftp_username, self.ftp_password)
-            ftp.cwd(self.ftp_path)
-            ftp.retrbinary("RETR " + file_name, file_ftp.write)
-            ftp.quit()
-
     def persist_from_ftp(self, file_name):
         """download file to hard drive and extract it."""
         downloaded = False
@@ -112,7 +94,13 @@ class Cerberus(Engine):
             Logger.info(f"Start persisting file {file_name}")
             temporary_gz_file_path = os.path.join(self.storage_path, file_name)
 
-            self.fetch_temporary_gz_file_from_ftp(temporary_gz_file_path)
+            fetch_temporary_gz_file_from_ftp(
+                self.ftp_host,
+                self.ftp_username,
+                self.ftp_password,
+                self.ftp_path,
+                temporary_gz_file_path,
+            )
             downloaded = True
 
             if ext == ".gz":

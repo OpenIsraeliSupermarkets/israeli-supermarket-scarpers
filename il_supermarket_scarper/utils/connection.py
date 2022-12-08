@@ -3,11 +3,12 @@ from http.client import RemoteDisconnected
 from http.cookiejar import MozillaCookieJar
 
 import contextlib
+import ntpath
 import os
 import socket
 import random
 import urllib
-from ftplib import error_perm
+from ftplib import FTP_TLS, error_perm
 import requests
 
 
@@ -61,7 +62,7 @@ def download_connection_retry():
     return wrapper
 
 
-def url_connection_retry():
+def url_connection_retry(init_timeout=15):
     """decorator the define the retry logic of connections tring to send get request"""
 
     def wrapper(func):
@@ -72,7 +73,7 @@ def url_connection_retry():
             backoff=2,
             max_delay=5 * 60,
             logger=Logger,
-            timeout=10,
+            timeout=init_timeout,
             backoff_timeout=5,
         )
         def inner(*args, **kwargs):
@@ -214,3 +215,31 @@ def url_retrieve(url, filename):
                 if not block:
                     break
                 out_file.write(block)
+
+
+@url_connection_retry(60*5)
+def collect_from_ftp(ftp_host, ftp_username, ftp_password, ftp_path, timeout=60 * 5):
+    """collect all files to download from the site"""
+    Logger.info(
+        f"Open connection to FTP server with {ftp_host} "
+        f", username: {ftp_username} , password: {ftp_password}"
+    )
+    ftp_session = FTP_TLS(ftp_host,ftp_username,ftp_password,timeout=timeout)
+    ftp_session.set_pasv(True)
+    ftp_session.cwd(ftp_path)
+    files = ftp_session.nlst()
+    ftp_session.quit()
+    return files
+
+
+@download_connection_retry()
+def fetch_temporary_gz_file_from_ftp(
+    ftp_host, ftp_username, ftp_password, ftp_path, temporary_gz_file_path
+):
+    """download a file from a cerberus base site."""
+    with open(temporary_gz_file_path, "wb") as file_ftp:
+        file_name = ntpath.basename(temporary_gz_file_path)
+        ftp = FTP_TLS(ftp_host, ftp_username, ftp_password)
+        ftp.cwd(ftp_path)
+        ftp.retrbinary("RETR " + file_name, file_ftp.write)
+        ftp.quit()
