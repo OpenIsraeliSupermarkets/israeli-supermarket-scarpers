@@ -15,7 +15,7 @@ This is a scraper for ALL the supermarket chains listed in the GOV.IL site.
 
 ----
 Scheduled Automatic Testing:
-The test-suite is scheduled to run every week, so you can see if the supermarket chains has chanced something in their interface and the package will not work probably, status: [![Scheduled weekly Unit & Integration Tests](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/test-suite.yml/badge.svg?event=schedule)](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/test-suite.yml)
+The test-suite is scheduled to run every week, so you can see if the supermarket chains has chanced something in their interface and the package will not work probably, status: [![Scheduled Tests](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/test-suite.yml/badge.svg?event=schedule)](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/test-suite.yml)
 
 
 
