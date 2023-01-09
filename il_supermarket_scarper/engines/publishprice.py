@@ -5,7 +5,8 @@ from .web import WebBase
 
 
 class PublishPrice(WebBase):
-    """scrape the file of PublishPrice
+    """
+    scrape the file of PublishPrice
     possibly can support historical search: there is folder for each date.
     but this is not implemented.
     """
