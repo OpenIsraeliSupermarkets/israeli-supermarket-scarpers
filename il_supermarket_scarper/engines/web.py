@@ -76,7 +76,7 @@ class WebBase(Engine):
 
         return download_urls, file_names
 
-    # TODO: add files_names_to_scrape as in input to func scrape
+    # solution: add files_names_to_scrape as in input to func scrape
     # filter 'results' to faillers and retrey.
     def scrape(self, limit=None, files_types=None):
         """scarpe the files from multipage sites"""
