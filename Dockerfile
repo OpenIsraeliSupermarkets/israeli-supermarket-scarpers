@@ -10,13 +10,18 @@ RUN python3 -m pip install .
 
 VOLUME ["/usr/src/app/dumps"]
 
+# development container
+FROM base as dev
+RUN apt-get -y install git
+
+
+# production image
+FROM base as prod
+
 ADD crontab /etc/cron.d
 RUN chmod 0644 /etc/cron.d/crontab
 RUN crontab /etc/cron.d/crontab
 RUN touch /var/log/cron.log
-
-# production image
-FROM base as prod
 CMD python3 example.py && cron & tail -f /var/log/cron.log
 
 # run test
