@@ -1,0 +1,19 @@
+{
+  "build": { 
+    "dockerfile": "../Dockerfile",
+                    "args": {"traget":"dev"} 
+            },
+            "initializeCommand": "",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-toolsai.jupyter"
+      ]
+    }
+  },
+
+  "forwardPorts": [3000]
+}
