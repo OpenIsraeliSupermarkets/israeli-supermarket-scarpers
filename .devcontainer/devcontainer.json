@@ -1,10 +1,8 @@
 {
   "build": { 
     "dockerfile": "../Dockerfile",
-                    "args": {"traget":"dev"} 
-            },
-            "initializeCommand": "",
-
+    "target":"dev"
+    },
   "customizations": {
     "vscode": {
       "extensions": [
