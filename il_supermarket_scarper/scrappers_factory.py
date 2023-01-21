@@ -24,6 +24,7 @@ class ScraperFactory(Enum):
     SALACH_DABACH = all_scrappers.SalachDabach
     SHEFA_BARCART_ASHEM = all_scrappers.ShefaBarcartAshem
     SHUFERSAL = all_scrappers.Shufersal
+    SHUK_AHIR = all_scrappers.ShukAhir
     STOP_MARKET = all_scrappers.StopMarket
     SUPER_PHARM = all_scrappers.SuperPharm
     SUPER_YUDA = all_scrappers.SuperYuda
