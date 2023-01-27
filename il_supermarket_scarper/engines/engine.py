@@ -55,7 +55,7 @@ class Engine(ScraperStatus, ABC):
         return file_name is None
 
     def apply_limit(
-        self, intreable, limit=None, files_types=None, by_function=lambda x: x
+        self, intreable, limit=None, files_types=None, by_function=lambda x: x, store_id=None, only_latest=False
     ):
         """filter the list according to condition"""
         intreable_ = self.filter_already_downloaded(
@@ -119,10 +119,10 @@ class Engine(ScraperStatus, ABC):
         if os.path.exists(cookie_file):
             os.remove(cookie_file)
 
-    def scrape(self, limit=None, files_types=None):
+    def scrape(self, limit=None, files_types=None, store_id=None,only_latest=False):
         """run the scraping logic"""
         self.post_scraping()
-        self.on_scraping_start(limit=limit, files_types=files_types)
+        self.on_scraping_start(limit=limit, files_types=files_types, store_id=store_id, only_latest=only_latest)
         Logger.info(f"Starting scraping for {self.chain}")
         self.make_storage_path_dir()
 
