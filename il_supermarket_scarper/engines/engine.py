@@ -58,6 +58,8 @@ class Engine(ScraperStatus, ABC):
         self, intreable, limit=None, files_types=None, by_function=lambda x: x, store_id=None, only_latest=False
     ):
         """filter the list according to condition"""
+        assert not only_latest or limit is not None, "only_latest flag can't be applied with limit."
+        
         intreable_ = self.filter_already_downloaded(
             self.storage_path, intreable, by_function=by_function
         )
@@ -70,6 +72,10 @@ class Engine(ScraperStatus, ABC):
         #     )
         # )
         intreable_ = self.unique(intreable_, by_function=by_function)
+
+        if store_id:
+            intreable_ = filter(lambda x: f"-{store_id}-" in x ,intreable_)
+            
         if files_types:
             intreable_ = []
             for type_ in files_types:
