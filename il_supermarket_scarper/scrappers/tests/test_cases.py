@@ -4,7 +4,7 @@ import uuid
 from il_supermarket_scarper.utils import FileTypesFilters
 
 
-def make_test_case(init_scraper_function):
+def make_test_case(init_scraper_function, store_id):
     """create test suite for scraper"""
 
     class TestScapers(unittest.TestCase):
@@ -63,7 +63,7 @@ def make_test_case(init_scraper_function):
                 assert os.path.getsize(full_file_path) != 0
 
         def _clean_scarpe_delete(
-            self, init_scraper_function, dump_path="temp", limit=None, file_type=None
+            self, init_scraper_function, dump_path="temp", store_id=None, limit=None, file_type=None
         ):
 
             self._delete_download_folder(dump_path)
@@ -72,7 +72,7 @@ def make_test_case(init_scraper_function):
             try:
                 scraper = init_scraper_function(folder_name=dump_path)
 
-                kwarg = {"limit": limit, "files_types": file_type}
+                kwarg = {"limit": limit, "files_types": file_type, "store_id":store_id}
 
                 scraper.scrape(**kwarg)
 
@@ -157,6 +157,13 @@ def make_test_case(init_scraper_function):
                 self._get_temp_folder(),
                 limit=1,
                 file_type=[FileTypesFilters.PRICE_FULL_FILE.name],
+            )
+        def test_scrape_file_from_single_store(self):
+            self._clean_scarpe_delete(
+                init_scraper_function,
+                self._get_temp_folder(),
+                limit=20,
+                store_id=store_id,
             )
 
         # def test_scrape_all(self):
