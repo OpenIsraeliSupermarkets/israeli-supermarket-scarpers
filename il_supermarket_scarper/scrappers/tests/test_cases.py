@@ -32,13 +32,19 @@ def make_test_case(init_scraper_function, store_id):
                 self._delete_folder_and_sub_folder(download_path)
                 os.removedirs(download_path)
 
-        def _make_sure_filter_work(self, files_found, file_type=None, limit=None):
+        def _make_sure_filter_work(self, files_found, file_type=None, limit=None, store_id=None):
             """make sure the file type filter works"""
             if file_type:
                 filtered_files = 0
                 for f_type in file_type:
                     filtered_files += len(FileTypesFilters.filter(f_type, files_found))
                 assert len(files_found) == filtered_files
+            if store_id:
+                store_mark = []
+                for file in files_found:
+                    store_mark.append(file.split("-")[1])
+                assert len(set(store_mark)) == 1 and len(store_mark) == len(files_found)
+
 
             assert (
                 not limit or len(files_found) == limit
@@ -86,7 +92,7 @@ def make_test_case(init_scraper_function, store_id):
                     limit=limit, files_types=file_type
                 ):
                     self._make_sure_filter_work(
-                        files_found, file_type=file_type, limit=limit
+                        files_found, file_type=file_type, limit=limit,store_id=store_id
                     )
 
                 for file in files_found:
@@ -162,7 +168,6 @@ def make_test_case(init_scraper_function, store_id):
             self._clean_scarpe_delete(
                 init_scraper_function,
                 self._get_temp_folder(),
-                limit=20,
                 store_id=store_id,
             )
 

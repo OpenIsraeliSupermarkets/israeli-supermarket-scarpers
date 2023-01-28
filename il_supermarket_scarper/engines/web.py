@@ -86,7 +86,7 @@ class WebBase(Engine):
         super().scrape(limit, files_types=files_types, store_id=store_id, only_latest=only_latest)
 
         download_urls, file_names = self.collect_files_details_from_site(
-            limit=limit, files_types=files_types
+            limit=limit, files_types=files_types,store_id=store_id,only_latest=only_latest
         )
         self.on_collected_details(file_names, download_urls)
 

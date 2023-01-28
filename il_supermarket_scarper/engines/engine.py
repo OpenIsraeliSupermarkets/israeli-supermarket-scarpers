@@ -74,7 +74,7 @@ class Engine(ScraperStatus, ABC):
         intreable_ = self.unique(intreable_, by_function=by_function)
 
         if store_id:
-            intreable_ = filter(lambda x: f"-{store_id}-" in x ,intreable_)
+            intreable_ = list(filter(lambda x: f"{store_id:03d}-" in by_function(x) ,intreable_))
             
         if files_types:
             intreable_ = []
