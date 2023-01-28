@@ -77,8 +77,7 @@ class MultiPageWeb(WebBase):
             self.process_links_before_download,
             pages_to_scrape,
             aggregtion_function=multiple_page_aggregtion,
-            max_workers=self.max_workers,
-            store_id=store_id, only_latest=only_latest
+            max_workers=self.max_workers
         )
         file_names, download_urls = self.apply_limit_zip(
             file_names, download_urls, limit=limit, files_types=files_types, store_id=store_id, only_latest=only_latest
