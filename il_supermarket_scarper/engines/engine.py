@@ -55,11 +55,19 @@ class Engine(ScraperStatus, ABC):
         return file_name is None
 
     def apply_limit(
-        self, intreable, limit=None, files_types=None, by_function=lambda x: x, store_id=None, only_latest=False
+        self,
+        intreable,
+        limit=None,
+        files_types=None,
+        by_function=lambda x: x,
+        store_id=None,
+        only_latest=False,
     ):
         """filter the list according to condition"""
-        assert not only_latest or limit is None, "only_latest flag can't be applied with limit."
-        
+        assert (
+            not only_latest or limit is None
+        ), "only_latest flag can't be applied with limit."
+
         # filter files already downloaded
         intreable_ = self.filter_already_downloaded(
             self.storage_path, intreable, by_function=by_function
@@ -73,33 +81,17 @@ class Engine(ScraperStatus, ABC):
 
         # filter by store id
         if store_id:
-            intreable_ = list(filter(lambda x: f"{store_id:03d}-" in by_function(x) ,intreable_))
-        
+            intreable_ = list(
+                filter(lambda x: f"{store_id:03d}-" in by_function(x), intreable_)
+            )
+
         # filter by file type
         if files_types:
-            intreable_ = []
-            for type_ in files_types:
-                type_files = FileTypesFilters.filter(
-                    type_, intreable, by_function=by_function
-                )
-                if limit:
-                    type_files = type_files[: min(limit, len(type_files))]
-                intreable_.extend(type_files)
+            intreable_ = self.filter_file_types(
+                intreable, limit, files_types, by_function
+            )
         if only_latest:
-            groups_max = {}
-            groups_value = {}
-            for file in intreable_:
-                name_split = by_function(file).split("-")
-                store_info = "-".join(name_split[:2]) 
-                date_info = "-".join(name_split[2:]).split(".")[-1]
-
-                if store_info not in groups_max:
-                    groups_max[store_info] = date_info
-                    groups_value[store_info] = file
-                elif groups_max[store_info] < date_info :
-                    groups_max[store_info] = date_info
-                    groups_value[store_info] = file
-            intreable_ = list(groups_value.values())
+            intreable_ = self.get_only_latest(by_function, intreable_)
 
         # filter by limit if the 'files_types' filter is not on.
         if limit and files_types is not None:
@@ -118,6 +110,35 @@ class Engine(ScraperStatus, ABC):
             ):
                 raise ValueError(f"No files to download for file {files_types}")
         return intreable_
+
+    def filter_file_types(self, intreable, limit, files_types, by_function):
+        """ filter the file types requested """
+        intreable_ = []
+        for type_ in files_types:
+            type_files = FileTypesFilters.filter(
+                type_, intreable, by_function=by_function
+            )
+            if limit:
+                type_files = type_files[: min(limit, len(type_files))]
+            intreable_.extend(type_files)
+        return intreable_
+
+    def get_only_latest(self, by_function, intreable_):
+        """ get only the last version of the files """
+        groups_max = {}
+        groups_value = {}
+        for file in intreable_:
+            name_split = by_function(file).split("-")
+            store_info = "-".join(name_split[:2])
+            date_info = "-".join(name_split[2:]).rsplit('.', maxsplit=1)[-1]
+
+            if store_info not in groups_max:
+                groups_max[store_info] = date_info
+                groups_value[store_info] = file
+            elif groups_max[store_info] < date_info:
+                groups_max[store_info] = date_info
+                groups_value[store_info] = file
+        return list(groups_value.values())
 
     @classmethod
     def unique(cls, iterable, by_function=lambda x: x):
@@ -142,10 +163,15 @@ class Engine(ScraperStatus, ABC):
         if os.path.exists(cookie_file):
             os.remove(cookie_file)
 
-    def scrape(self, limit=None, files_types=None, store_id=None,only_latest=False):
+    def scrape(self, limit=None, files_types=None, store_id=None, only_latest=False):
         """run the scraping logic"""
         self.post_scraping()
-        self.on_scraping_start(limit=limit, files_types=files_types, store_id=store_id, only_latest=only_latest)
+        self.on_scraping_start(
+            limit=limit,
+            files_types=files_types,
+            store_id=store_id,
+            only_latest=only_latest,
+        )
         Logger.info(f"Starting scraping for {self.chain}")
         self.make_storage_path_dir()
 

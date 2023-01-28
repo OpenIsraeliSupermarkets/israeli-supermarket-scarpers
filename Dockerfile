@@ -13,6 +13,8 @@ VOLUME ["/usr/src/app/dumps"]
 # development container
 FROM base as dev
 RUN apt-get -y install git
+RUN pip install black
+RUN pip install pylint
 
 
 # production image

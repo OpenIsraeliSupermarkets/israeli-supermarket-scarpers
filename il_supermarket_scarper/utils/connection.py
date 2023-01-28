@@ -217,14 +217,14 @@ def url_retrieve(url, filename):
                 out_file.write(block)
 
 
-@url_connection_retry(60*5)
+@url_connection_retry(60 * 5)
 def collect_from_ftp(ftp_host, ftp_username, ftp_password, ftp_path, timeout=60 * 5):
     """collect all files to download from the site"""
     Logger.info(
         f"Open connection to FTP server with {ftp_host} "
         f", username: {ftp_username} , password: {ftp_password}"
     )
-    ftp_session = FTP_TLS(ftp_host,ftp_username,ftp_password,timeout=timeout)
+    ftp_session = FTP_TLS(ftp_host, ftp_username, ftp_password, timeout=timeout)
     ftp_session.set_pasv(True)
     ftp_session.cwd(ftp_path)
     files = ftp_session.nlst()
