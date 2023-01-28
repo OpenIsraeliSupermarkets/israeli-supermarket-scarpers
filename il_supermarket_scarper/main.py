@@ -10,6 +10,7 @@ class ScarpingTask:
         size_estimation_mode=False,
         enabled_scrapers=None,
         limit=None,
+        only_latest=False,
         files_types=FileTypesFilters.all_types(),
         dump_folder_name=None,
         lookup_in_db=True,
@@ -33,4 +34,4 @@ class ScarpingTask:
 
     def start(self):
         """run the scraping"""
-        return self.runner.run(limit=self.limit, files_types=self.files_types)
+        return self.runner.run(limit=self.limit, files_types=self.files_types,only_latest=self.only_latest)

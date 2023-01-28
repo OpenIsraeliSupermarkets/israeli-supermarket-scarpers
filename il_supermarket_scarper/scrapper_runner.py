@@ -38,7 +38,7 @@ class MainScrapperRunner:
         self.multiprocessing = multiprocessing
         self.lookup_in_db = lookup_in_db
 
-    def run(self, limit=None, files_types=None):
+    def run(self, limit=None, files_types=None,only_latest=False):
         """run the scraper"""
         Logger.info(f"Limit is {limit}")
         Logger.info(f"files_types is {files_types}")
@@ -51,7 +51,7 @@ class MainScrapperRunner:
                     map(
                         lambda chainScrapperClass: (
                             chainScrapperClass,
-                            {"limit": limit, "files_types": files_types},
+                            {"limit": limit, "files_types": files_types,"only_latest":only_latest},
                         ),
                         self.enabled_scrapers,
                     )
