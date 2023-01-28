@@ -7,3 +7,4 @@ il_supermarket_scraper.egg-info/
 build/
 database/*
 dumps/*
+logging.log
