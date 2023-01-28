@@ -27,6 +27,7 @@ class ScarpingTask:
         self.dump_folder_name = dump_folder_name
         self.limit = limit
         self.files_types = files_types
+        self.only_latest = only_latest
 
     def get_dump_folder_name(self):
         """get the dump folder name"""
@@ -34,4 +35,6 @@ class ScarpingTask:
 
     def start(self):
         """run the scraping"""
-        return self.runner.run(limit=self.limit, files_types=self.files_types,only_latest=self.only_latest)
+        return self.runner.run(
+            limit=self.limit, files_types=self.files_types, only_latest=self.only_latest
+        )
