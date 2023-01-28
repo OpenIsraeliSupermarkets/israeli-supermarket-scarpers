@@ -58,24 +58,24 @@ class Engine(ScraperStatus, ABC):
         self, intreable, limit=None, files_types=None, by_function=lambda x: x, store_id=None, only_latest=False
     ):
         """filter the list according to condition"""
-        assert not only_latest or limit is not None, "only_latest flag can't be applied with limit."
+        assert not only_latest or limit is None, "only_latest flag can't be applied with limit."
         
+        # filter files already downloaded
         intreable_ = self.filter_already_downloaded(
             self.storage_path, intreable, by_function=by_function
         )
         files_was_filtered_since_already_download = (
             len(list(intreable)) != 0 and len(list(intreable_)) == 0
         )
-        # intreable_ = list(
-        #     filter(
-        #         lambda x: "PromoFull7290725900003-9032-202211121210" in x[0], intreable_
-        #     )
-        # )
+
+        # filter unique links
         intreable_ = self.unique(intreable_, by_function=by_function)
 
+        # filter by store id
         if store_id:
             intreable_ = list(filter(lambda x: f"{store_id:03d}-" in by_function(x) ,intreable_))
-            
+        
+        # filter by file type
         if files_types:
             intreable_ = []
             for type_ in files_types:
@@ -85,13 +85,30 @@ class Engine(ScraperStatus, ABC):
                 if limit:
                     type_files = type_files[: min(limit, len(type_files))]
                 intreable_.extend(type_files)
+        if only_latest:
+            groups_max = {}
+            groups_value = {}
+            for file in intreable_:
+                name_split = by_function(file).split("-")
+                store_info = "-".join(name_split[:2]) 
+                date_info = "-".join(name_split[2:]).split(".")[-1]
 
-        elif limit:
+                if store_info not in groups_max:
+                    groups_max[store_info] = date_info
+                    groups_value[store_info] = file
+                elif groups_max[store_info] < date_info :
+                    groups_max[store_info] = date_info
+                    groups_value[store_info] = file
+            intreable_ = list(groups_value.values())
+
+        # filter by limit if the 'files_types' filter is not on.
+        if limit and files_types is not None:
             assert limit > 0, "Limit must be greater than 0"
             Logger.info(f"Limit: {limit}")
             intreable_ = intreable_[: min(limit, len(list(intreable_)))]
         Logger.info(f"Result length {len(list(intreable_))}")
 
+        # raise error if there was nothing to download.
         if len(list(intreable_)) == 0:
             if not (
                 files_was_filtered_since_already_download
