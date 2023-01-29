@@ -112,7 +112,7 @@ class Engine(ScraperStatus, ABC):
         return intreable_
 
     def filter_file_types(self, intreable, limit, files_types, by_function):
-        """ filter the file types requested """
+        """filter the file types requested"""
         intreable_ = []
         for type_ in files_types:
             type_files = FileTypesFilters.filter(
@@ -124,13 +124,13 @@ class Engine(ScraperStatus, ABC):
         return intreable_
 
     def get_only_latest(self, by_function, intreable_):
-        """ get only the last version of the files """
+        """get only the last version of the files"""
         groups_max = {}
         groups_value = {}
         for file in intreable_:
             name_split = by_function(file).split("-")
             store_info = "-".join(name_split[:2])
-            date_info = "-".join(name_split[2:]).rsplit('.', maxsplit=1)[-1]
+            date_info = "-".join(name_split[2:]).rsplit(".", maxsplit=1)[-1]
 
             if store_info not in groups_max:
                 groups_max[store_info] = date_info
