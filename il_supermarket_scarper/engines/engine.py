@@ -94,7 +94,7 @@ class Engine(ScraperStatus, ABC):
             intreable_ = self.get_only_latest(by_function, intreable_)
 
         # filter by limit if the 'files_types' filter is not on.
-        if limit and files_types is not None:
+        if limit and files_types is None:
             assert limit > 0, "Limit must be greater than 0"
             Logger.info(f"Limit: {limit}")
             intreable_ = intreable_[: min(limit, len(list(intreable_)))]
