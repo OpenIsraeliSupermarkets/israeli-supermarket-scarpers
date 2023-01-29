@@ -7,7 +7,6 @@ import ntpath
 import os
 import socket
 import random
-import urllib
 from ftplib import FTP_TLS, error_perm
 import requests
 
@@ -208,11 +207,11 @@ def url_retrieve(url, filename):
     # >>> add here timeout if needed
     """alternative to urllib.request.urlretrieve"""
     # https://gist.github.com/xflr6/f29ed682f23fd27b6a0b1241f244e6c9
-    with contextlib.closing(requests.get(url, stream=True)) as r:
-        r.raise_for_status()
-        with open(filename, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=8_192):
-                f.write(chunk)
+    with contextlib.closing(requests.get(url, stream=True, timeout=45)) as context:
+        context.raise_for_status()
+        with open(filename, "wb") as file:
+            for chunk in context.iter_content(chunk_size=8_192):
+                file.write(chunk)
     # with open(filename, "wb") as out_file:
     #     with contextlib.closing(urllib.request.urlopen(url, timeout=45)) as file:
     #         block_size = 1024 * 8
