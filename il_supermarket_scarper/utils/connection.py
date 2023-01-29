@@ -208,13 +208,16 @@ def url_retrieve(url, filename):
     # >>> add here timeout if needed
     """alternative to urllib.request.urlretrieve"""
     with open(filename, "wb") as out_file:
-        with contextlib.closing(urllib.request.urlopen(url)) as file:
+        with contextlib.closing(urllib.request.urlopen(url,timeout=45)) as file:
             block_size = 1024 * 8
             while True:
                 block = file.read(block_size)
                 if not block:
                     break
                 out_file.write(block)
+    # import shutil
+    # with urllib.request.urlopen(url) as response, open(filename, 'wb') as out_file:
+    #     shutil.copyfileobj(response, out_file)
 
 
 @url_connection_retry(60 * 5)
