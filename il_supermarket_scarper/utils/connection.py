@@ -207,14 +207,20 @@ def url_retrieve(url, filename):
     # urlretrieve(url, filename)
     # >>> add here timeout if needed
     """alternative to urllib.request.urlretrieve"""
-    with open(filename, "wb") as out_file:
-        with contextlib.closing(urllib.request.urlopen(url, timeout=45)) as file:
-            block_size = 1024 * 8
-            while True:
-                block = file.read(block_size)
-                if not block:
-                    break
-                out_file.write(block)
+    # https://gist.github.com/xflr6/f29ed682f23fd27b6a0b1241f244e6c9
+    with contextlib.closing(requests.get(url, stream=True)) as r:
+        r.raise_for_status()
+        with open(filename, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=8_192):
+                f.write(chunk)
+    # with open(filename, "wb") as out_file:
+    #     with contextlib.closing(urllib.request.urlopen(url, timeout=45)) as file:
+    #         block_size = 1024 * 8
+    #         while True:
+    #             block = file.read(block_size)
+    #             if not block:
+    #                 break
+    #             out_file.write(block)
     # import shutil
     # with urllib.request.urlopen(url) as response, open(filename, 'wb') as out_file:
     #     shutil.copyfileobj(response, out_file)
