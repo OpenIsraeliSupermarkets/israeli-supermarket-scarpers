@@ -74,6 +74,7 @@ class WebBase(Engine):
         download_urls, file_names = self.extract_task_from_entry(all_trs)
 
         if len(download_urls) > 0:
+            # pylint: disable=duplicate-code
             file_names, download_urls = self.apply_limit_zip(
                 file_names,
                 download_urls,

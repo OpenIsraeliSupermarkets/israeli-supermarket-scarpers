@@ -1,4 +1,3 @@
-# pylint: disable=R0801
 import os
 import shutil
 import time
