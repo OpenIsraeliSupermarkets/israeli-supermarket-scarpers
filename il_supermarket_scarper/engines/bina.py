@@ -2,7 +2,7 @@ import json
 
 from il_supermarket_scarper.utils import (
     Logger,
-    download_connection_retry,
+    url_connection_retry,
     session_and_check_status,
     url_retrieve,
 )
@@ -44,8 +44,8 @@ class Bina(Aspx):
         """get the file name without extensions from entey (tr)"""
         return entry.split(self.download_postfix)[-1].split(".")[0]
 
-    @download_connection_retry()
-    def retrieve_file(self, file_link, file_save_path):
+    @url_connection_retry()
+    def retrieve_file(self, file_link, file_save_path, timeout=30):
         response_content = session_and_check_status(
             file_link,
         )
@@ -56,5 +56,5 @@ class Bina(Aspx):
         url = spath[0]["SPath"]
         ext = file_link.split(".")[-1]
 
-        url_retrieve(url, file_save_path + "." + ext)
+        url_retrieve(url, file_save_path + "." + ext, timeout=timeout)
         return file_save_path + "." + ext

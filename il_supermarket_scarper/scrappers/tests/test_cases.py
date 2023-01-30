@@ -1,10 +1,11 @@
+# pylint: disable=too-many-statements
 import unittest
 import os
 import uuid
 from il_supermarket_scarper.utils import FileTypesFilters
 
 
-def make_test_case(init_scraper_function):
+def make_test_case(init_scraper_function, store_id):
     """create test suite for scraper"""
 
     class TestScapers(unittest.TestCase):
@@ -32,13 +33,31 @@ def make_test_case(init_scraper_function):
                 self._delete_folder_and_sub_folder(download_path)
                 os.removedirs(download_path)
 
-        def _make_sure_filter_work(self, files_found, file_type=None, limit=None):
+        def _make_sure_filter_work(
+            self,
+            files_found,
+            file_type=None,
+            limit=None,
+            store_id=None,
+            only_latest=False,
+        ):
             """make sure the file type filter works"""
             if file_type:
                 filtered_files = 0
                 for f_type in file_type:
                     filtered_files += len(FileTypesFilters.filter(f_type, files_found))
                 assert len(files_found) == filtered_files
+            if store_id:
+                store_mark = []
+                for file in files_found:
+                    store_mark.append(file.split("-")[1])
+                assert len(set(store_mark)) == 1 and len(store_mark) == len(files_found)
+            if only_latest:
+                files_sources = []
+                for file in files_found:
+                    source = file.split("-")[:2]
+                    assert source not in files_sources
+                    store_mark.append(source)
 
             assert (
                 not limit or len(files_found) == limit
@@ -63,7 +82,13 @@ def make_test_case(init_scraper_function):
                 assert os.path.getsize(full_file_path) != 0
 
         def _clean_scarpe_delete(
-            self, init_scraper_function, dump_path="temp", limit=None, file_type=None
+            self,
+            init_scraper_function,
+            dump_path="temp",
+            store_id=None,
+            limit=None,
+            file_type=None,
+            only_latest=False,
         ):
 
             self._delete_download_folder(dump_path)
@@ -72,7 +97,12 @@ def make_test_case(init_scraper_function):
             try:
                 scraper = init_scraper_function(folder_name=dump_path)
 
-                kwarg = {"limit": limit, "files_types": file_type}
+                kwarg = {
+                    "limit": limit,
+                    "files_types": file_type,
+                    "store_id": store_id,
+                    "only_latest": only_latest,
+                }
 
                 scraper.scrape(**kwarg)
 
@@ -86,7 +116,11 @@ def make_test_case(init_scraper_function):
                     limit=limit, files_types=file_type
                 ):
                     self._make_sure_filter_work(
-                        files_found, file_type=file_type, limit=limit
+                        files_found,
+                        file_type=file_type,
+                        limit=limit,
+                        store_id=store_id,
+                        only_latest=only_latest,
                     )
 
                 for file in files_found:
@@ -157,6 +191,23 @@ def make_test_case(init_scraper_function):
                 self._get_temp_folder(),
                 limit=1,
                 file_type=[FileTypesFilters.PRICE_FULL_FILE.name],
+            )
+
+        def test_scrape_file_from_single_store(self):
+            """test fetching only files from a ceriten store"""
+            self._clean_scarpe_delete(
+                init_scraper_function,
+                self._get_temp_folder(),
+                store_id=store_id,
+            )
+
+        def test_scrape_file_from_single_store_last(self):
+            """test fetching latest file only"""
+            self._clean_scarpe_delete(
+                init_scraper_function,
+                self._get_temp_folder(),
+                store_id=store_id,
+                only_latest=True,
             )
 
         # def test_scrape_all(self):

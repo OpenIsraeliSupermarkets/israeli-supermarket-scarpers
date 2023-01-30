@@ -59,7 +59,9 @@ class MultiPageWeb(WebBase):
             )
         return int(elements[0])
 
-    def collect_files_details_from_site(self, limit=None, files_types=None, store_id=None, only_latest=False):
+    def collect_files_details_from_site(
+        self, limit=None, files_types=None, store_id=None, only_latest=False
+    ):
         self.post_scraping()
         url = self.get_request_url()
 
@@ -78,10 +80,14 @@ class MultiPageWeb(WebBase):
             pages_to_scrape,
             aggregtion_function=multiple_page_aggregtion,
             max_workers=self.max_workers,
-            store_id=store_id, only_latest=only_latest
         )
         file_names, download_urls = self.apply_limit_zip(
-            file_names, download_urls, limit=limit, files_types=files_types, store_id=store_id, only_latest=only_latest
+            file_names,
+            download_urls,
+            limit=limit,
+            files_types=files_types,
+            store_id=store_id,
+            only_latest=only_latest,
         )
 
         return download_urls, file_names
@@ -95,7 +101,9 @@ class MultiPageWeb(WebBase):
             filenames.append(ntpath.basename(urlsplit(link).path).split(".")[0])
         return links, filenames
 
-    def process_links_before_download(self, page, limit=None, files_types=None, store_id=None, only_latest=None):
+    def process_links_before_download(
+        self, page, limit=None, files_types=None, store_id=None, only_latest=None
+    ):
         """additional processing to the links before download"""
         response = self.session_with_cookies_by_chain(page)
 
@@ -109,7 +117,8 @@ class MultiPageWeb(WebBase):
             file_links,
             limit=limit,
             files_types=files_types,
-            store_id=store_id, only_latest=only_latest
+            store_id=store_id,
+            only_latest=only_latest,
         )
 
         Logger.info(

@@ -40,7 +40,8 @@ class WebBase(Engine):
         limit=None,
         files_types=None,
         by_function=lambda x: x[0],
-        store_id=None, only_latest=False
+        store_id=None,
+        only_latest=False,
     ):
         """apply limit to zip"""
         ziped = self.apply_limit(
@@ -49,14 +50,16 @@ class WebBase(Engine):
             files_types=files_types,
             by_function=by_function,
             store_id=store_id,
-            only_latest=only_latest
+            only_latest=only_latest,
         )
         if len(ziped) == 0:
             return [], []
         return list(zip(*ziped))
 
     # @cache()
-    def collect_files_details_from_site(self, limit=None, files_types=None, store_id=None, only_latest=False):
+    def collect_files_details_from_site(
+        self, limit=None, files_types=None, store_id=None, only_latest=False
+    ):
         """collect all enteris to download from site"""
         urls_to_collect_link_from = self.get_request_url()
 
@@ -71,8 +74,14 @@ class WebBase(Engine):
         download_urls, file_names = self.extract_task_from_entry(all_trs)
 
         if len(download_urls) > 0:
+            # pylint: disable=duplicate-code
             file_names, download_urls = self.apply_limit_zip(
-                file_names, download_urls, limit=limit, files_types=files_types, store_id=store_id,only_latest=only_latest
+                file_names,
+                download_urls,
+                limit=limit,
+                files_types=files_types,
+                store_id=store_id,
+                only_latest=only_latest,
             )
 
             Logger.info(f"After applying limit: Found {len(all_trs)} entries")
@@ -81,12 +90,17 @@ class WebBase(Engine):
 
     # solution: add files_names_to_scrape as in input to func scrape
     # filter 'results' to faillers and retrey.
-    def scrape(self, limit=None, files_types=None,  store_id=None,only_latest=False):
+    def scrape(self, limit=None, files_types=None, store_id=None, only_latest=False):
         """scarpe the files from multipage sites"""
-        super().scrape(limit, files_types=files_types, store_id=store_id, only_latest=only_latest)
+        super().scrape(
+            limit, files_types=files_types, store_id=store_id, only_latest=only_latest
+        )
 
         download_urls, file_names = self.collect_files_details_from_site(
-            limit=limit, files_types=files_types
+            limit=limit,
+            files_types=files_types,
+            store_id=store_id,
+            only_latest=only_latest,
         )
         self.on_collected_details(file_names, download_urls)
 
