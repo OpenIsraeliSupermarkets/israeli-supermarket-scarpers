@@ -31,7 +31,13 @@ class PublishPrice(WebBase):
         return soup.find_all("tr")[3:]
 
     def extract_task_from_entry(self, all_trs):
-        all_trs = list(filter(lambda x: x.a is not None, all_trs))
+        # filter empty files
+        all_trs = list(
+            filter(
+                lambda x: x.a is not None and x.contents[-1].string.strip() != "0",
+                all_trs,
+            )
+        )
 
         download_urls: list = list(
             map(lambda x: self.url + self.folder + x.a.attrs["href"], all_trs)

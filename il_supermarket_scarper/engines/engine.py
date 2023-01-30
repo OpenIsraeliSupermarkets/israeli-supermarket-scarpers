@@ -8,7 +8,7 @@ from il_supermarket_scarper.utils import (
     Logger,
     ScraperStatus,
     extract_xml_file_from_gz_file,
-    download_connection_retry,
+    url_connection_retry,
     session_with_cookies,
     url_retrieve,
 )
@@ -55,43 +55,52 @@ class Engine(ScraperStatus, ABC):
         return file_name is None
 
     def apply_limit(
-        self, intreable, limit=None, files_types=None, by_function=lambda x: x, store_id=None, only_latest=False
+        self,
+        intreable,
+        limit=None,
+        files_types=None,
+        by_function=lambda x: x,
+        store_id=None,
+        only_latest=False,
     ):
         """filter the list according to condition"""
-        assert not only_latest or limit is not None, "only_latest flag can't be applied with limit."
-        
+        assert (
+            not only_latest or limit is None
+        ), "only_latest flag can't be applied with limit."
+
+        # filter files already downloaded
         intreable_ = self.filter_already_downloaded(
             self.storage_path, intreable, by_function=by_function
         )
         files_was_filtered_since_already_download = (
             len(list(intreable)) != 0 and len(list(intreable_)) == 0
         )
-        # intreable_ = list(
-        #     filter(
-        #         lambda x: "PromoFull7290725900003-9032-202211121210" in x[0], intreable_
-        #     )
-        # )
+
+        # filter unique links
         intreable_ = self.unique(intreable_, by_function=by_function)
 
+        # filter by store id
         if store_id:
-            intreable_ = filter(lambda x: f"-{store_id}-" in x ,intreable_)
-            
-        if files_types:
-            intreable_ = []
-            for type_ in files_types:
-                type_files = FileTypesFilters.filter(
-                    type_, intreable, by_function=by_function
-                )
-                if limit:
-                    type_files = type_files[: min(limit, len(type_files))]
-                intreable_.extend(type_files)
+            intreable_ = list(
+                filter(lambda x: f"{store_id:03d}-" in by_function(x), intreable_)
+            )
 
-        elif limit:
+        # filter by file type
+        if files_types:
+            intreable_ = self.filter_file_types(
+                intreable, limit, files_types, by_function
+            )
+        if only_latest:
+            intreable_ = self.get_only_latest(by_function, intreable_)
+
+        # filter by limit if the 'files_types' filter is not on.
+        if limit and files_types is None:
             assert limit > 0, "Limit must be greater than 0"
             Logger.info(f"Limit: {limit}")
             intreable_ = intreable_[: min(limit, len(list(intreable_)))]
         Logger.info(f"Result length {len(list(intreable_))}")
 
+        # raise error if there was nothing to download.
         if len(list(intreable_)) == 0:
             if not (
                 files_was_filtered_since_already_download
@@ -101,6 +110,35 @@ class Engine(ScraperStatus, ABC):
             ):
                 raise ValueError(f"No files to download for file {files_types}")
         return intreable_
+
+    def filter_file_types(self, intreable, limit, files_types, by_function):
+        """filter the file types requested"""
+        intreable_ = []
+        for type_ in files_types:
+            type_files = FileTypesFilters.filter(
+                type_, intreable, by_function=by_function
+            )
+            if limit:
+                type_files = type_files[: min(limit, len(type_files))]
+            intreable_.extend(type_files)
+        return intreable_
+
+    def get_only_latest(self, by_function, intreable_):
+        """get only the last version of the files"""
+        groups_max = {}
+        groups_value = {}
+        for file in intreable_:
+            name_split = by_function(file).split("-")
+            store_info = "-".join(name_split[:2])
+            date_info = "-".join(name_split[2:]).rsplit(".", maxsplit=1)[-1]
+
+            if store_info not in groups_max:
+                groups_max[store_info] = date_info
+                groups_value[store_info] = file
+            elif groups_max[store_info] < date_info:
+                groups_max[store_info] = date_info
+                groups_value[store_info] = file
+        return list(groups_value.values())
 
     @classmethod
     def unique(cls, iterable, by_function=lambda x: x):
@@ -115,9 +153,9 @@ class Engine(ScraperStatus, ABC):
 
         return result
 
-    def session_with_cookies_by_chain(self, url):
+    def session_with_cookies_by_chain(self, url, timeout=15):
         """request resource with cookie by chain name"""
-        return session_with_cookies(url, chain_cookie_name=self.chain)
+        return session_with_cookies(url, chain_cookie_name=self.chain, timeout=timeout)
 
     def post_scraping(self):
         """job to do post scraping"""
@@ -125,10 +163,15 @@ class Engine(ScraperStatus, ABC):
         if os.path.exists(cookie_file):
             os.remove(cookie_file)
 
-    def scrape(self, limit=None, files_types=None, store_id=None,only_latest=False):
+    def scrape(self, limit=None, files_types=None, store_id=None, only_latest=False):
         """run the scraping logic"""
         self.post_scraping()
-        self.on_scraping_start(limit=limit, files_types=files_types, store_id=store_id, only_latest=only_latest)
+        self.on_scraping_start(
+            limit=limit,
+            files_types=files_types,
+            store_id=store_id,
+            only_latest=only_latest,
+        )
         Logger.info(f"Starting scraping for {self.chain}")
         self.make_storage_path_dir()
 
@@ -147,13 +190,13 @@ class Engine(ScraperStatus, ABC):
         """return chain name"""
         return self.chain
 
-    @download_connection_retry()
-    def retrieve_file(self, file_link, file_save_path):
+    @url_connection_retry()
+    def retrieve_file(self, file_link, file_save_path, timeout=30):
         """download file"""
         file_save_path_res = (
             file_save_path + "." + file_link.split("?")[0].split(".")[-1]
         )
-        url_retrieve(file_link, file_save_path_res)
+        url_retrieve(file_link, file_save_path_res, timeout=timeout)
         return file_save_path_res
 
     def save_and_extract(self, arg):

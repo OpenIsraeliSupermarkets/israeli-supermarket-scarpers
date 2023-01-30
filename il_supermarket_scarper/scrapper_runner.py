@@ -38,7 +38,7 @@ class MainScrapperRunner:
         self.multiprocessing = multiprocessing
         self.lookup_in_db = lookup_in_db
 
-    def run(self, limit=None, files_types=None):
+    def run(self, limit=None, files_types=None, only_latest=False):
         """run the scraper"""
         Logger.info(f"Limit is {limit}")
         Logger.info(f"files_types is {files_types}")
@@ -51,7 +51,11 @@ class MainScrapperRunner:
                     map(
                         lambda chainScrapperClass: (
                             chainScrapperClass,
-                            {"limit": limit, "files_types": files_types},
+                            {
+                                "limit": limit,
+                                "files_types": files_types,
+                                "only_latest": only_latest,
+                            },
                         ),
                         self.enabled_scrapers,
                     )
@@ -67,7 +71,14 @@ class MainScrapperRunner:
         args, kwargs = arg
         return self.scrape_one(args, **kwargs)
 
-    def scrape_one(self, chain_scrapper_class, limit=None, files_types=None, store_id=None, only_latest=False):
+    def scrape_one(
+        self,
+        chain_scrapper_class,
+        limit=None,
+        files_types=None,
+        store_id=None,
+        only_latest=False,
+    ):
         """scrape one"""
         chain_scrapper_constractor = ScraperFactory.get(chain_scrapper_class)
         Logger.info(f"Starting scrapper {chain_scrapper_constractor}")
@@ -77,7 +88,12 @@ class MainScrapperRunner:
         Logger.info(f"scraping {chain_name}")
         if self.lookup_in_db:
             scraper.enable_collection_status()
-        scraper.scrape(limit=limit, files_types=files_types, store_id=store_id, only_latest=only_latest)
+        scraper.scrape(
+            limit=limit,
+            files_types=files_types,
+            store_id=store_id,
+            only_latest=only_latest,
+        )
         Logger.info(f"done scraping {chain_name}")
 
         folder_with_files = scraper.get_storage_path()

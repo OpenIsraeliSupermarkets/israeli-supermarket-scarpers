@@ -5,9 +5,9 @@ from http.cookiejar import MozillaCookieJar
 import contextlib
 import ntpath
 import os
+import time
 import socket
 import random
-import urllib
 from ftplib import FTP_TLS, error_perm
 import requests
 
@@ -202,29 +202,54 @@ def session_and_check_status(url, timeout=15):
     return session_with_cookies(url, timeout=timeout)
 
 
-def url_retrieve(url, filename):
+def url_retrieve(url, filename, timeout=30):
     # from urllib.request import urlretrieve
     # urlretrieve(url, filename)
     # >>> add here timeout if needed
     """alternative to urllib.request.urlretrieve"""
-    with open(filename, "wb") as out_file:
-        with contextlib.closing(urllib.request.urlopen(url)) as file:
-            block_size = 1024 * 8
-            while True:
-                block = file.read(block_size)
-                if not block:
-                    break
-                out_file.write(block)
+    # https://gist.github.com/xflr6/f29ed682f23fd27b6a0b1241f244e6c9
+    with contextlib.closing(
+        requests.get(url, stream=True, timeout=timeout)
+    ) as _request:
+        _request.raise_for_status()
+        size = int(_request.headers.get("Content-Length", "-1"))
+        read = 0
+        with open(filename, "wb") as file:
+            for chunk in _request.iter_content(chunk_size=None):
+                time.sleep(0.5)
+                read += len(chunk)
+                file.write(chunk)
+                file.flush()
+
+    if size >= 0 and read < size:
+        msg = f"retrieval incomplete: got only {read:d} out of {size:d} bytes"
+        raise ValueError(msg, (filename, _request.headers))
+    # with contextlib.closing(requests.get(url, stream=True, timeout=45)) as context:
+    #     context.raise_for_status()
+    #     with open(filename, "wb") as file:
+    #         for chunk in context.iter_content(chunk_size=8_192):
+    #             file.write(chunk)
+    # with open(filename, "wb") as out_file:
+    #     with contextlib.closing(urllib.request.urlopen(url, timeout=45)) as file:
+    #         block_size = 1024 * 8
+    #         while True:
+    #             block = file.read(block_size)
+    #             if not block:
+    #                 break
+    #             out_file.write(block)
+    # import shutil
+    # with urllib.request.urlopen(url) as response, open(filename, 'wb') as out_file:
+    #     shutil.copyfileobj(response, out_file)
 
 
-@url_connection_retry(60*5)
+@url_connection_retry(60 * 5)
 def collect_from_ftp(ftp_host, ftp_username, ftp_password, ftp_path, timeout=60 * 5):
     """collect all files to download from the site"""
     Logger.info(
         f"Open connection to FTP server with {ftp_host} "
         f", username: {ftp_username} , password: {ftp_password}"
     )
-    ftp_session = FTP_TLS(ftp_host,ftp_username,ftp_password,timeout=timeout)
+    ftp_session = FTP_TLS(ftp_host, ftp_username, ftp_password, timeout=timeout)
     ftp_session.set_pasv(True)
     ftp_session.cwd(ftp_path)
     files = ftp_session.nlst()
