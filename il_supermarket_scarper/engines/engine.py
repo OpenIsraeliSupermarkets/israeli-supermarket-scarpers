@@ -8,7 +8,7 @@ from il_supermarket_scarper.utils import (
     Logger,
     ScraperStatus,
     extract_xml_file_from_gz_file,
-    download_connection_retry,
+    url_connection_retry,
     session_with_cookies,
     url_retrieve,
 )
@@ -153,9 +153,9 @@ class Engine(ScraperStatus, ABC):
 
         return result
 
-    def session_with_cookies_by_chain(self, url):
+    def session_with_cookies_by_chain(self, url, timeout=15):
         """request resource with cookie by chain name"""
-        return session_with_cookies(url, chain_cookie_name=self.chain)
+        return session_with_cookies(url, chain_cookie_name=self.chain, timeout=timeout)
 
     def post_scraping(self):
         """job to do post scraping"""
@@ -190,13 +190,13 @@ class Engine(ScraperStatus, ABC):
         """return chain name"""
         return self.chain
 
-    @download_connection_retry()
-    def retrieve_file(self, file_link, file_save_path):
+    @url_connection_retry()
+    def retrieve_file(self, file_link, file_save_path, timeout=30):
         """download file"""
         file_save_path_res = (
             file_save_path + "." + file_link.split("?")[0].split(".")[-1]
         )
-        url_retrieve(file_link, file_save_path_res)
+        url_retrieve(file_link, file_save_path_res, timeout=timeout)
         return file_save_path_res
 
     def save_and_extract(self, arg):

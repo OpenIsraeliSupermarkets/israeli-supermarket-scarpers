@@ -5,11 +5,11 @@ from http.cookiejar import MozillaCookieJar
 import contextlib
 import ntpath
 import os
+import time
 import socket
 import random
 from ftplib import FTP_TLS, error_perm
 import requests
-import urllib3
 
 
 from urllib3.exceptions import ReadTimeoutError
@@ -202,25 +202,28 @@ def session_and_check_status(url, timeout=15):
     return session_with_cookies(url, timeout=timeout)
 
 
-def url_retrieve(url, filename):
+def url_retrieve(url, filename, timeout=30):
     # from urllib.request import urlretrieve
     # urlretrieve(url, filename)
     # >>> add here timeout if needed
     """alternative to urllib.request.urlretrieve"""
     # https://gist.github.com/xflr6/f29ed682f23fd27b6a0b1241f244e6c9
-    with contextlib.closing(requests.get(url, stream=True)) as r:
-        r.raise_for_status()
-        size = int(r.headers.get('Content-Length', '-1'))
+    with contextlib.closing(
+        requests.get(url, stream=True, timeout=timeout)
+    ) as _request:
+        _request.raise_for_status()
+        size = int(_request.headers.get("Content-Length", "-1"))
         read = 0
-        with open(filename, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=1024*36):
+        with open(filename, "wb") as file:
+            for chunk in _request.iter_content(chunk_size=None):
+                time.sleep(0.5)
                 read += len(chunk)
-                f.write(chunk)
-                f.flush()
+                file.write(chunk)
+                file.flush()
 
     if size >= 0 and read < size:
-        msg = f'retrieval incomplete: got only {read:d} out of {size:d} bytes'
-        raise ValueError(msg, (filename, r.headers))
+        msg = f"retrieval incomplete: got only {read:d} out of {size:d} bytes"
+        raise ValueError(msg, (filename, _request.headers))
     # with contextlib.closing(requests.get(url, stream=True, timeout=45)) as context:
     #     context.raise_for_status()
     #     with open(filename, "wb") as file:
