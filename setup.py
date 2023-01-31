@@ -21,7 +21,7 @@ setup(
     install_requires=[
         "retry==0.9.2",
         "mock==4.0.3",
-        "requests==2.27.1",
+        "requests==2.28.2",
         "lxml==4.9.1",
         "beautifulsoup4==4.10.0",
         "pymongo==4.2.0",
