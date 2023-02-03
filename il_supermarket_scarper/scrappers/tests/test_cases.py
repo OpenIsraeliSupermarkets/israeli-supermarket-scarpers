@@ -90,7 +90,6 @@ def make_test_case(init_scraper_function, store_id):
             file_type=None,
             only_latest=False,
         ):
-
             self._delete_download_folder(dump_path)
             os.makedirs(dump_path)
 
