@@ -12,7 +12,6 @@ def extract_xml_file_from_gz_file(file_save_path):
             with open(os.path.splitext(file_save_path)[0] + ".xml", "wb") as outfile:
                 shutil.copyfileobj(infile, outfile)
     except gzip.BadGzipFile:
-
         try:
             with open(file_save_path, "rb") as response_content:
                 with zipfile.ZipFile(io.BytesIO(response_content.read())) as the_zip:

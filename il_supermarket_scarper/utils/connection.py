@@ -209,7 +209,9 @@ def url_retrieve(url, filename, timeout=30):
     """alternative to urllib.request.urlretrieve"""
     # https://gist.github.com/xflr6/f29ed682f23fd27b6a0b1241f244e6c9
     with contextlib.closing(
-        requests.get(url, stream=True, timeout=timeout,headers={'Accept-Encoding': None})
+        requests.get(
+            url, stream=True, timeout=timeout, headers={"Accept-Encoding": None}
+        )
     ) as _request:
         _request.raise_for_status()
         size = int(_request.headers.get("Content-Length", "-1"))

@@ -2,7 +2,6 @@ import datetime
 import re
 import os
 import enum
-import requests
 import holidays
 import pytz
 import lxml.html as lh
@@ -13,9 +12,11 @@ from .connection import session_with_cookies
 
 
 def get_statue_page():
+    """fetch the gov.il site"""
     url = "https://www.gov.il/he/departments/legalInfo/cpfta_prices_regulations"
     # Create a handle, page, to handle the contents of the website
-    return session_with_cookies(url,chain_cookie_name="gov_il")
+    return session_with_cookies(url, chain_cookie_name="gov_il")
+
 
 def get_status():
     """get the number of scarper listed on the gov.il site"""
@@ -37,7 +38,7 @@ def get_status_date():
 
     if page.status_code != 200:
         Logger.error(f"request as failed, page body is {page}.")
-        raise ValueError(f"Failed reading the gov.il site.")
+        raise ValueError("Failed reading the gov.il site.")
     line_with_date = (
         lh.fromstring(page.content)
         .xpath(
