@@ -9,13 +9,17 @@ import lxml.html as lh
 from bs4 import BeautifulSoup
 
 from .logger import Logger
+from .connection import session_with_cookies
 
+
+def get_statue_page():
+    url = "https://www.gov.il/he/departments/legalInfo/cpfta_prices_regulations"
+    # Create a handle, page, to handle the contents of the website
+    return session_with_cookies(url,chain_cookie_name="gov_il")
 
 def get_status():
     """get the number of scarper listed on the gov.il site"""
-    url = "https://www.gov.il/he/departments/legalInfo/cpfta_prices_regulations"
-    # Create a handle, page, to handle the contents of the website
-    page = requests.get(url, timeout=10)
+    page = get_statue_page()
     # Store the contents of the website under doc
     doc = BeautifulSoup(page.content, features="lxml")
     # Parse data that are stored between <tr>..</tr> of HTML
@@ -29,13 +33,11 @@ def get_status():
 
 def get_status_date():
     """get the date change listed on the gov.il site"""
-    url = "https://www.gov.il/he/departments/legalInfo/cpfta_prices_regulations"
-    # Create a handle, page, to handle the contents of the website\
-    page = requests.get(url, timeout=10)
+    page = get_statue_page()
 
     if page.status_code != 200:
         Logger.error(f"request as failed, page body is {page}.")
-        raise ValueError(f"Failed reading site {url}.")
+        raise ValueError(f"Failed reading the gov.il site.")
     line_with_date = (
         lh.fromstring(page.content)
         .xpath(
