@@ -88,7 +88,7 @@ class Engine(ScraperStatus, ABC):
         # filter by file type
         if files_types:
             intreable_ = self.filter_file_types(
-                intreable, limit, files_types, by_function
+                intreable_, limit, files_types, by_function
             )
         if only_latest:
             intreable_ = self.get_only_latest(by_function, intreable_)
