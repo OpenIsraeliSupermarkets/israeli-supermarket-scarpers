@@ -61,7 +61,7 @@ class MegaMarketTestCase(make_test_case(MegaMarket, 2150)):
 
 
 @pytest.mark.run(order=12)
-class MegaTestCase(make_test_case(Mega, 9090)):
+class MegaTestCase(make_test_case(Mega, 3990)):
     pass
 
 
