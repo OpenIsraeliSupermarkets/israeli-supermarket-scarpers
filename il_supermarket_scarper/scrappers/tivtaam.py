@@ -1,4 +1,5 @@
 from il_supermarket_scarper.engines import Cerberus
+from il_supermarket_scarper.utils import _is_saturday_in_israel, _is_holiday_in_israel
 
 
 class TivTaam(Cerberus):
@@ -11,3 +12,8 @@ class TivTaam(Cerberus):
             folder_name=folder_name,
             ftp_username="TivTaam",
         )
+
+    def is_validate_scraper_found_no_files(
+        self, limit=None, files_types=None, store_id=None, only_latest=False
+    ):
+        return _is_saturday_in_israel() or _is_holiday_in_israel()

@@ -11,7 +11,7 @@ class BareketTestCase(make_test_case(Bareket, 2)):
 
 
 @pytest.mark.run(order=2)
-class YaynotBitanTestCase(make_test_case(YaynotBitan, 2740)):
+class YaynotBitanTestCase(make_test_case(YaynotBitan, 6)):
     pass
 
 
@@ -56,12 +56,12 @@ class MahsaniAShukTestCase(make_test_case(MahsaniAShuk, 98)):
 
 
 @pytest.mark.run(order=11)
-class MegaMarketTestCase(make_test_case(MegaMarket, 2150)):
+class MegaMarketTestCase(make_test_case(MegaMarket, 15)):
     pass
 
 
 @pytest.mark.run(order=12)
-class MegaTestCase(make_test_case(Mega, 9090)):
+class MegaTestCase(make_test_case(Mega, 9004)):
     pass
 
 
@@ -131,7 +131,7 @@ class TivTaamTestCase(make_test_case(TivTaam, 2)):
 
 
 @pytest.mark.run(order=26)
-class VictoryTestCase(make_test_case(Victory, 77)):
+class VictoryTestCase(make_test_case(Victory, 1)):
     pass
 
 
