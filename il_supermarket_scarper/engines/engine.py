@@ -104,7 +104,7 @@ class Engine(ScraperStatus, ABC):
         # filter by store id
         if store_id:
             intreable_ = list(
-                filter(lambda x: f"{store_id:03d}-" in by_function(x), intreable_)
+                filter(lambda x: f"-{store_id:03d}-" in by_function(x), intreable_)
             )
 
         # filter by file type

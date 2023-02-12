@@ -131,7 +131,7 @@ class TivTaamTestCase(make_test_case(TivTaam, 2)):
 
 
 @pytest.mark.run(order=26)
-class VictoryTestCase(make_test_case(Victory, 77)):
+class VictoryTestCase(make_test_case(Victory, 1)):
     pass
 
 
