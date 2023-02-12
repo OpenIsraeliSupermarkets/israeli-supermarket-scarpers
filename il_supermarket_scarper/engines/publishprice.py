@@ -45,5 +45,5 @@ class PublishPrice(WebBase):
         file_names: list = list(map(lambda x: x.a.attrs["href"].split(".")[0], all_trs))
         return download_urls, file_names
 
-    def get_store_name_format(self,store_id):
+    def get_store_name_format(self, store_id):
         return f"-{store_id:04d}-"
