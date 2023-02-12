@@ -56,12 +56,12 @@ class MahsaniAShukTestCase(make_test_case(MahsaniAShuk, 98)):
 
 
 @pytest.mark.run(order=11)
-class MegaMarketTestCase(make_test_case(MegaMarket, 2150)):
+class MegaMarketTestCase(make_test_case(MegaMarket, 15)):
     pass
 
 
 @pytest.mark.run(order=12)
-class MegaTestCase(make_test_case(Mega, 3990)):
+class MegaTestCase(make_test_case(Mega, 9004)):
     pass
 
 
