@@ -37,7 +37,18 @@ class Engine(ScraperStatus, ABC):
         """the the storage page of the files downloaded"""
         return self.storage_path
 
-    def is_validate_scraper_found_no_files(self, limit=None, files_types=None):
+    def _is_validate_scraper_found_no_files(
+        self, limit=None, files_types=None, store_id=None, only_latest=False
+    ):
+        Logger.info(
+            f"check if fail is allowd with, limit={limit},"
+            f"files_types={files_types},store_id={store_id},only_latest={only_latest}"
+        )
+        return False
+
+    def is_validate_scraper_found_no_files(
+        self, limit=None, files_types=None, store_id=None, only_latest=False
+    ):
         """return true if its ok the scarper reuturn no enrty"""
 
         # if all the files requested are the update files, is ok the scaraper failed.
@@ -47,12 +58,27 @@ class Engine(ScraperStatus, ABC):
             for file_type in files_types:
                 if file_type in FileTypesFilters.all_full_files():
                     request_only_update_file = False
-
-        return limit == 0 or files_types == [] or request_only_update_file
+        Logger.info(f"the value of {only_latest} should not affect.")
+        return (
+            limit == 0
+            or files_types == []
+            or request_only_update_file
+            or (store_id and store_id < 0)
+            or self._is_validate_scraper_found_no_files(
+                limit=limit,
+                files_types=files_types,
+                store_id=store_id,
+                only_latest=only_latest,
+            )
+        )
 
     def is_valid_file_empty(self, file_name):
         """it is valid the file is empty"""
         return file_name is None
+
+    def get_store_name_format(self, store_id):
+        """get the expected format of the store in the file name"""
+        return f"-{store_id:03d}-"
 
     def apply_limit(
         self,
@@ -82,7 +108,10 @@ class Engine(ScraperStatus, ABC):
         # filter by store id
         if store_id:
             intreable_ = list(
-                filter(lambda x: f"{store_id:03d}-" in by_function(x), intreable_)
+                filter(
+                    lambda x: self.get_store_name_format(store_id) in by_function(x),
+                    intreable_,
+                )
             )
 
         # filter by file type
@@ -105,10 +134,16 @@ class Engine(ScraperStatus, ABC):
             if not (
                 files_was_filtered_since_already_download
                 or self.is_validate_scraper_found_no_files(
-                    limit=limit, files_types=files_types
+                    limit=limit,
+                    files_types=files_types,
+                    store_id=store_id,
+                    only_latest=only_latest,
                 )
             ):
-                raise ValueError(f"No files to download for file {files_types}")
+                raise ValueError(
+                    f"No files to download for file files_types={files_types},"
+                    f"limit={limit},store_id={store_id},only_latest={only_latest}"
+                )
         return intreable_
 
     def filter_file_types(self, intreable, limit, files_types, by_function):

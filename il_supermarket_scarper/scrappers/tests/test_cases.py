@@ -112,7 +112,10 @@ def make_test_case(init_scraper_function, store_id):
                 files_found = os.listdir(download_path)
 
                 if not scraper.is_validate_scraper_found_no_files(
-                    limit=limit, files_types=file_type
+                    limit=limit,
+                    files_types=file_type,
+                    store_id=store_id,
+                    only_latest=only_latest,
                 ):
                     self._make_sure_filter_work(
                         files_found,

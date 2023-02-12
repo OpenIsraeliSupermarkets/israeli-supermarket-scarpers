@@ -13,13 +13,11 @@ class Polizer(Cerberus):
             ftp_username="politzer",
         )
 
-    def is_validate_scraper_found_no_files(self, limit=None, files_types=None):
+    def _is_validate_scraper_found_no_files(
+        self, limit=None, files_types=None, store_id=None, only_latest=False
+    ):
         # no data on shabat
-        result = super().is_validate_scraper_found_no_files(
-            limit=limit, files_types=files_types
-        )
-
-        return result or (
+        return (
             files_types is not None
             and len(files_types) == 1
             and files_types[0] == FileTypesFilters.STORE_FILE.name
