@@ -13,9 +13,8 @@ class NetivHasef(WebBase):
             folder_name=folder_name,
         )
 
-    def is_validate_scraper_found_no_files(self, limit=None, files_types=None):
+    def _is_validate_scraper_found_no_files(
+        self, limit=None, files_types=None, store_id=None, only_latest=False
+    ):
         # no data on shabat
-        result = super().is_validate_scraper_found_no_files(
-            limit=limit, files_types=files_types
-        )
-        return result or _is_saturday_in_israel() or _is_holiday_in_israel()
+        return _is_saturday_in_israel() or _is_holiday_in_israel()
