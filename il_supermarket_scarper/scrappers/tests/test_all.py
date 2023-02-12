@@ -11,7 +11,7 @@ class BareketTestCase(make_test_case(Bareket, 2)):
 
 
 @pytest.mark.run(order=2)
-class YaynotBitanTestCase(make_test_case(YaynotBitan, 2740)):
+class YaynotBitanTestCase(make_test_case(YaynotBitan, 6)):
     pass
 
 
