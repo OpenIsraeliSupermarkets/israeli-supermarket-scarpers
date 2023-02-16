@@ -9,6 +9,7 @@ import time
 import socket
 import random
 from ftplib import FTP_TLS, error_perm
+import subprocess
 import requests
 
 
@@ -68,7 +69,7 @@ def url_connection_retry(init_timeout=15):
     def wrapper(func):
         @retry(
             exceptions=exceptions,
-            tries=8,
+            tries=4,
             delay=2,
             backoff=2,
             max_delay=5 * 60,
@@ -270,3 +271,32 @@ def fetch_temporary_gz_file_from_ftp(
         ftp.cwd(ftp_path)
         ftp.retrbinary("RETR " + file_name, file_ftp.write)
         ftp.quit()
+
+
+def wget_file(file_link, file_save_path):
+    """use wget to download file"""
+    Logger.info(f"trying wget file {file_link} to {file_save_path}.")
+
+    files_parts = file_link.split(".")
+    if len(files_parts) < 2 or files_parts[-1] not in ["gz", "xml"]:
+        raise ValueError(
+            f"wget is not supported for file with unkownen extension {file_link}"
+        )
+    expected_output_file = f"{file_save_path}.{files_parts[-1]}"
+    with subprocess.Popen(
+        f"wget --output-document={expected_output_file} {file_link}",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        shell=True,
+    ) as process:
+        std_out, std_err = process.communicate()
+    Logger.info(f"Wget stdout {std_out}")
+    Logger.info(f"Wget stderr {std_err}")
+
+    if not os.path.exists(expected_output_file):
+        Logger.error(f"fils is not exists after wget {file_save_path}")
+        raise FileNotFoundError(
+            f"File wasn't downloaded with wget,std_err is {std_err}"
+        )
+    return expected_output_file

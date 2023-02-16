@@ -11,6 +11,7 @@ from il_supermarket_scarper.utils import (
     url_connection_retry,
     session_with_cookies,
     url_retrieve,
+    wget_file,
 )
 
 
@@ -256,7 +257,10 @@ class Engine(ScraperStatus, ABC):
         extract_succefully = False
         error = None
         try:
-            file_save_path_with_ext = self.retrieve_file(file_link, file_save_path)
+            try:
+                file_save_path_with_ext = self.retrieve_file(file_link, file_save_path)
+            except Exception:  # pylint: disable=broad-except
+                file_save_path_with_ext = wget_file(file_link, file_save_path)
             downloaded = True
 
             if file_save_path_with_ext.endswith("gz"):
