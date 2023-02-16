@@ -19,5 +19,6 @@ from .connection import (
     url_retrieve,
     collect_from_ftp,
     fetch_temporary_gz_file_from_ftp,
+    wget_file,
 )
 from .loop import execute_in_event_loop, multiple_page_aggregtion
