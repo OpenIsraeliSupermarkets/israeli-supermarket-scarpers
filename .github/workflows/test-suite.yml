@@ -35,7 +35,7 @@ jobs:
       run: |
         df --human-readable
         sudo apt clean
-        docker rmi $(docker image ls --all --quiet)
+        docker 2>/dev/null 1>&2 rmi $(docker image ls --all --quiet) || true
         rm --recursive --force "$AGENT_TOOLSDIRECTORY"
         df --human-readable
     - name: Test with pytest
