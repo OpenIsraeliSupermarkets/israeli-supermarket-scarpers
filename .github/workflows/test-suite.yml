@@ -26,12 +26,17 @@ jobs:
         python-version: ["3.8"]
 
     steps:
+
     - name: Checkout
       uses: actions/checkout@v3
     - name: Build with Docker
       run: docker build -t erlichsefi/israeli-supermarket-scarpers:test --target test .
+    - name: Free disk space
+      run: |
+        df --human-readable
+        sudo apt clean
+        docker rmi $(docker image ls --all --quiet)
+        rm --recursive --force "$AGENT_TOOLSDIRECTORY"
+        df --human-readable
     - name: Test with pytest
       run: docker run --rm --name test-run erlichsefi/israeli-supermarket-scarpers:test
-    - name: echo Hello World
-      uses: AutoModality/action-clean@v1
-      if: ${{ always() }} # To ensure this step runs even when earlier steps fail
