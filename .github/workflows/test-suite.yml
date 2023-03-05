@@ -10,7 +10,7 @@ on:
     branches: [ "master" ]
   schedule:
     # * is a special character in YAML so you have to quote this string
-    - cron:  '00 12 1/3 * *'
+    - cron:  '00 20 1/3 * *'
     
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
