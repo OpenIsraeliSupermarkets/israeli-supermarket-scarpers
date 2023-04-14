@@ -1,6 +1,11 @@
 from bs4 import BeautifulSoup
 
-from il_supermarket_scarper.utils import Logger, session_and_check_status
+from il_supermarket_scarper.utils import (
+    Logger,
+    session_and_check_status,
+    _is_weekend_in_israel,
+    _is_holiday_in_israel,
+)
 from .web import WebBase
 
 
@@ -47,3 +52,15 @@ class PublishPrice(WebBase):
 
     def get_store_name_format(self, store_id):
         return f"-{store_id:04d}-"
+
+    def _is_validate_scraper_found_no_files(
+        self, limit=None, files_types=None, store_id=None, only_latest=False
+    ):
+        return super()._is_validate_scraper_found_no_files(  # what fails the rest
+            limit=limit,
+            files_types=files_types,
+            store_id=store_id,
+            only_latest=only_latest,
+        ) or (
+            store_id and (_is_weekend_in_israel() or _is_holiday_in_israel())
+        )  # if we are looking for one store file in a weekend or holiday
