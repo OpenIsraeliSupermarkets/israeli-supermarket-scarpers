@@ -150,5 +150,13 @@ def _is_saturday_in_israel():
     return _now().weekday() == 5
 
 
+def _is_friday_in_israel():
+    return _now().weekday() == 4
+
+
+def _is_weekend_in_israel():
+    return _is_friday_in_israel() or _is_saturday_in_israel()
+
+
 def _is_holiday_in_israel():
     return _now().date() in holidays.IL()

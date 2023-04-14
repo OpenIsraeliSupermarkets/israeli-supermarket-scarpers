@@ -102,6 +102,7 @@ def __retry_internal(  # pylint: disable=broad-except,too-many-locals
                 _timeout = min(_timeout, max_timeout)
     raise ValueError("shouldn't be called!")
 
+
 def retry(
     exceptions=Exception,
     tries=-1,
