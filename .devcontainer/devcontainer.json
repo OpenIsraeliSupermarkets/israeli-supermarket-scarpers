@@ -3,7 +3,7 @@
     "dockerfile": "../Dockerfile",
     "target":"dev",
     "args": {
-      "PY_VERSION":"3.11"
+      "PY_VERSION":"3.11.0"
       }
     },
   "customizations": {
