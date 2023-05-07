@@ -1,7 +1,10 @@
 {
   "build": { 
     "dockerfile": "../Dockerfile",
-    "target":"dev"
+    "target":"dev",
+    "args": {
+      "PY_VERSION":"3.11"
+      }
     },
   "customizations": {
     "vscode": {
