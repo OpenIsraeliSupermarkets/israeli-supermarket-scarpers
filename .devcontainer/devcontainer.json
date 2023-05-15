@@ -1,7 +1,7 @@
 {
   "build": { 
     "dockerfile": "../Dockerfile",
-    "target":"dev",
+    "target":"test",
     "args": {
       "PY_VERSION":"3.11.0"
       }
