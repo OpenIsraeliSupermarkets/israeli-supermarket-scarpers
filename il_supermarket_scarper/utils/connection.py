@@ -253,6 +253,7 @@ def collect_from_ftp(ftp_host, ftp_username, ftp_password, ftp_path, timeout=60 
         f", username: {ftp_username} , password: {ftp_password}"
     )
     ftp_session = FTP_TLS(ftp_host, ftp_username, ftp_password, timeout=timeout)
+    ftp_session.trust_server_pasv_ipv4_address = True
     ftp_session.set_pasv(True)
     ftp_session.cwd(ftp_path)
     files = ftp_session.nlst()
@@ -268,6 +269,7 @@ def fetch_temporary_gz_file_from_ftp(
     with open(temporary_gz_file_path, "wb") as file_ftp:
         file_name = ntpath.basename(temporary_gz_file_path)
         ftp = FTP_TLS(ftp_host, ftp_username, ftp_password)
+        ftp.trust_server_pasv_ipv4_address = True
         ftp.cwd(ftp_path)
         ftp.retrbinary("RETR " + file_name, file_ftp.write)
         ftp.quit()
