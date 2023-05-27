@@ -7,6 +7,7 @@ from .status import (
     _is_saturday_in_israel,
     _is_holiday_in_israel,
     _is_weekend_in_israel,
+    _now,
 )
 from .mongo import ScraperStatus
 from .file_types import FileTypesFilters

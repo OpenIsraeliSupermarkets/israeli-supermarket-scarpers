@@ -5,6 +5,7 @@ from il_supermarket_scarper.utils import (
     session_and_check_status,
     _is_weekend_in_israel,
     _is_holiday_in_israel,
+    _now,
 )
 from .web import WebBase
 
@@ -28,8 +29,14 @@ class PublishPrice(WebBase):
     def get_data_from_page(self, req_res):
         soup = BeautifulSoup(req_res.text, features="lxml")
 
-        self.folder = soup.find_all("tr")[3].a.attrs["href"]
-        Logger.info(f"Last folder is {self.folder}")
+        target_date = _now().strftime("%Y%m%d")
+        current_date_page = list(
+            filter(lambda x: target_date in str(x.a), soup.find_all("tr"))
+        )
+        assert len(current_date_page) == 1, f"can't find {target_date}"
+
+        self.folder = current_date_page[0].a.attrs["href"]
+        Logger.info(f"Looking at folder = {self.folder}")
 
         req_res = session_and_check_status(self.url + self.folder)
         soup = BeautifulSoup(req_res.text, features="lxml")
@@ -56,11 +63,17 @@ class PublishPrice(WebBase):
     def _is_validate_scraper_found_no_files(
         self, limit=None, files_types=None, store_id=None, only_latest=False
     ):
-        return super()._is_validate_scraper_found_no_files(  # what fails the rest
-            limit=limit,
-            files_types=files_types,
-            store_id=store_id,
-            only_latest=only_latest,
-        ) or (
-            store_id and (_is_weekend_in_israel() or _is_holiday_in_israel())
-        )  # if we are looking for one store file in a weekend or holiday
+        return (
+            super()._is_validate_scraper_found_no_files(  # what fails the rest
+                limit=limit,
+                files_types=files_types,
+                store_id=store_id,
+                only_latest=only_latest,
+            )
+            or (  # if we are looking for one store file in a weekend or holiday
+                store_id and (_is_weekend_in_israel() or _is_holiday_in_israel())
+            )
+            or (  # if we are looking a specific number of file in a weekend or holiday
+                limit is not None and (_is_weekend_in_israel() or _is_holiday_in_israel())
+            )
+        )
