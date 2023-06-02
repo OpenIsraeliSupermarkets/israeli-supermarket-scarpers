@@ -80,7 +80,7 @@ def make_test_case(init_scraper_function, store_id):
         def _make_sure_file_is_not_empty(self, scraper, full_file_path):
             """make sure the files is not empty"""
             if not scraper.is_valid_file_empty(full_file_path):
-                assert os.path.getsize(full_file_path) != 0
+                assert os.path.getsize(full_file_path) != 0, f"{full_file_path} is empty file."
 
         def _clean_scarpe_delete(
             self,
