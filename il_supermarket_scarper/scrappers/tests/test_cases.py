@@ -66,6 +66,7 @@ def make_test_case(init_scraper_function, store_id):
 
         def _make_sure_file_contain_chain_ids(self, chain_ids, file):
             """make sure the scraper download only the chain id"""
+            found_chain_id = False
             for possible_chain_ids in chain_ids:
                 if possible_chain_ids in file:
                     found_chain_id = True
