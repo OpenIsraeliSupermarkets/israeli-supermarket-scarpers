@@ -74,6 +74,7 @@ class PublishPrice(WebBase):
                 store_id and (_is_weekend_in_israel() or _is_holiday_in_israel())
             )
             or (  # if we are looking a specific number of file in a weekend or holiday
-                limit is not None and (_is_weekend_in_israel() or _is_holiday_in_israel())
+                limit is not None
+                and (_is_weekend_in_israel() or _is_holiday_in_israel())
             )
         )
