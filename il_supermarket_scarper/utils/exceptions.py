@@ -1,5 +1,2 @@
-
-
-
 class RestartSessionError(Exception):
-    pass
+    """This error will be raised if we would like to retry to downalod after a session restart"""
