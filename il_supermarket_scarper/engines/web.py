@@ -14,6 +14,7 @@ class WebBase(Engine):
     def __init__(self, chain, chain_id, url, folder_name=None):
         super().__init__(chain, chain_id, folder_name)
         self.url = url
+        self.max_retry = 2
 
     def get_data_from_page(self, req_res):
         """get the file list from a page"""
@@ -92,27 +93,58 @@ class WebBase(Engine):
     # filter 'results' to faillers and retrey.
     def scrape(self, limit=None, files_types=None, store_id=None, only_latest=False):
         """scarpe the files from multipage sites"""
-        super().scrape(
-            limit, files_types=files_types, store_id=store_id, only_latest=only_latest
-        )
 
-        download_urls, file_names = self.collect_files_details_from_site(
-            limit=limit,
-            files_types=files_types,
-            store_id=store_id,
-            only_latest=only_latest,
-        )
-        self.on_collected_details(file_names, download_urls)
+        retry_list = []
+        for i in range(self.max_retry):
+            Logger.info(f"Itreation #{i},retry_list={retry_list}")
 
-        Logger.info(f"collected {len(download_urls)} to download.")
-        if len(download_urls) > 0:
-            results = execute_in_event_loop(
-                self.save_and_extract,
-                zip(download_urls, file_names),
-                max_workers=self.max_workers,
+            super().scrape(
+                limit, files_types=files_types, store_id=store_id, only_latest=only_latest
             )
-        else:
-            results = {}
-        self.on_download_completed(results=results)
+            
+            download_urls, file_names = self.collect_files_details_from_site(
+                limit=limit,
+                files_types=files_types,
+                store_id=store_id,
+                only_latest=only_latest,
+            )
+
+            if len(retry_list)>0: # if there is something to retry.
+                download_urls,file_names = filter_spesific_files(download_urls, file_names, retry_list)
+
+            self.on_collected_details(file_names, download_urls)
+
+            Logger.info(f"collected {len(download_urls)} to download.")
+            if len(download_urls) > 0:
+                results = execute_in_event_loop(
+                    self.save_and_extract,
+                    zip(download_urls, file_names),
+                    max_workers=self.max_workers,
+                )
+            else:
+                results = {}
+
+            self.on_download_completed(results=results)
+
+            # next iteration
+            retry_list = compute_retry(results)
+
         self.on_scrape_completed(self.get_storage_path())
         self.post_scraping()
+
+def compute_retry(results):
+    files_to_retry = []
+    for result in results:
+        if result['restart_and_retry']:
+            files_to_retry.append(result['file_name'])
+    return files_to_retry
+
+
+def filter_spesific_files(download_urls, file_names, retry_list):
+    _download_urls = []
+    _file_names = []
+    for download_url, file_name in zip(download_urls, file_names):
+        if file_name in retry_list:
+            _download_urls.append(download_url)
+            _file_names.append(file_name)
+    return _download_urls,_file_names

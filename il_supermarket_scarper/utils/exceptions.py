@@ -1,0 +1,5 @@
+
+
+
+class RestartSessionError(Exception):
+    pass

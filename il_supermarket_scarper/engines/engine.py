@@ -12,6 +12,7 @@ from il_supermarket_scarper.utils import (
     session_with_cookies,
     url_retrieve,
     wget_file,
+    RestartSessionError
 )
 
 
@@ -241,7 +242,7 @@ class Engine(ScraperStatus, ABC):
         file_link, file_name = arg
         file_save_path = os.path.join(self.storage_path, file_name)
         Logger.info(f"Downloading {file_link} to {file_save_path}")
-        downloaded, extract_succefully, error = self._save_and_extract(
+        downloaded, extract_succefully, error,restart_and_retry = self._save_and_extract(
             file_link, file_save_path
         )
 
@@ -250,12 +251,14 @@ class Engine(ScraperStatus, ABC):
             "downloaded": downloaded,
             "extract_succefully": extract_succefully,
             "error": error,
+            "restart_and_retry":restart_and_retry
         }
 
     def _save_and_extract(self, file_link, file_save_path):
         downloaded = False
         extract_succefully = False
         error = None
+        restart_and_retry = False
         try:
             try:
                 file_save_path_with_ext = self.retrieve_file(file_link, file_save_path)
@@ -270,7 +273,14 @@ class Engine(ScraperStatus, ABC):
             extract_succefully = True
 
             Logger.info(f"Done downloading {file_link}")
-
+        except RestartSessionError as exception:
+            Logger.error(
+                f"Error downloading {file_link},extract_succefully={extract_succefully}"
+                f",downloaded={downloaded}"
+            )
+            Logger.error_execption(exception)
+            error = str(exception)
+            restart_and_retry = True
         except Exception as exception:  # pylint: disable=broad-except
             Logger.error(
                 f"Error downloading {file_link},extract_succefully={extract_succefully}"
@@ -279,4 +289,5 @@ class Engine(ScraperStatus, ABC):
             Logger.error_execption(exception)
             error = str(exception)
 
-        return downloaded, extract_succefully, error
+
+        return downloaded, extract_succefully, error, restart_and_retry
