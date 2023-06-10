@@ -12,7 +12,7 @@ from il_supermarket_scarper.utils import (
     session_with_cookies,
     url_retrieve,
     wget_file,
-    RestartSessionError
+    RestartSessionError,
 )
 
 
@@ -242,16 +242,19 @@ class Engine(ScraperStatus, ABC):
         file_link, file_name = arg
         file_save_path = os.path.join(self.storage_path, file_name)
         Logger.info(f"Downloading {file_link} to {file_save_path}")
-        downloaded, extract_succefully, error,restart_and_retry = self._save_and_extract(
-            file_link, file_save_path
-        )
+        (
+            downloaded,
+            extract_succefully,
+            error,
+            restart_and_retry,
+        ) = self._save_and_extract(file_link, file_save_path)
 
         return {
             "file_name": file_name,
             "downloaded": downloaded,
             "extract_succefully": extract_succefully,
             "error": error,
-            "restart_and_retry":restart_and_retry
+            "restart_and_retry": restart_and_retry,
         }
 
     def _save_and_extract(self, file_link, file_save_path):
@@ -288,6 +291,5 @@ class Engine(ScraperStatus, ABC):
             )
             Logger.error_execption(exception)
             error = str(exception)
-
 
         return downloaded, extract_succefully, error, restart_and_retry

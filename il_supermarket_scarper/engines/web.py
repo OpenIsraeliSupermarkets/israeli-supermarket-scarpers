@@ -99,9 +99,12 @@ class WebBase(Engine):
             Logger.info(f"Itreation #{i},retry_list={retry_list}")
 
             super().scrape(
-                limit, files_types=files_types, store_id=store_id, only_latest=only_latest
+                limit,
+                files_types=files_types,
+                store_id=store_id,
+                only_latest=only_latest,
             )
-            
+
             download_urls, file_names = self.collect_files_details_from_site(
                 limit=limit,
                 files_types=files_types,
@@ -109,8 +112,10 @@ class WebBase(Engine):
                 only_latest=only_latest,
             )
 
-            if len(retry_list)>0: # if there is something to retry.
-                download_urls,file_names = filter_spesific_files(download_urls, file_names, retry_list)
+            if len(retry_list) > 0:  # if there is something to retry.
+                download_urls, file_names = filter_spesific_files(
+                    download_urls, file_names, retry_list
+                )
 
             self.on_collected_details(file_names, download_urls)
 
@@ -132,19 +137,22 @@ class WebBase(Engine):
         self.on_scrape_completed(self.get_storage_path())
         self.post_scraping()
 
+
 def compute_retry(results):
+    """find the files to retry"""
     files_to_retry = []
     for result in results:
-        if result['restart_and_retry']:
-            files_to_retry.append(result['file_name'])
+        if result["restart_and_retry"]:
+            files_to_retry.append(result["file_name"])
     return files_to_retry
 
 
 def filter_spesific_files(download_urls, file_names, retry_list):
+    """filter the files to retry"""
     _download_urls = []
     _file_names = []
     for download_url, file_name in zip(download_urls, file_names):
         if file_name in retry_list:
             _download_urls.append(download_url)
             _file_names.append(file_name)
-    return _download_urls,_file_names
+    return _download_urls, _file_names
