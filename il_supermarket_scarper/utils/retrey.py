@@ -194,13 +194,14 @@ def retry_call(
     )
 
 
-def retry_files(num_of_retrys=2,arg_name="files_names_to_scrape"):
-    """ retry only ceritin files """
+def retry_files(num_of_retrys=2, arg_name="files_names_to_scrape"):
+    """retry only ceritin files"""
+
     @decorator
     def retry_files_decorator(func, *fargs, **fkwargs):
         args = fargs if fargs else []
         kwargs = fkwargs if fkwargs else {}
-        return __retry_files(func, args, kwargs,arg_name, num_of_retrys=num_of_retrys)
+        return __retry_files(func, args, kwargs, arg_name, num_of_retrys=num_of_retrys)
 
     return retry_files_decorator
 
