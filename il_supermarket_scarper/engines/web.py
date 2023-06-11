@@ -133,6 +133,9 @@ class WebBase(Engine):
 
             # next iteration
             retry_list = compute_retry(results)
+            # if there is not files in the retry list, break
+            if len(retry_list) == 0:
+                break
 
         self.on_scrape_completed(self.get_storage_path())
         self.post_scraping()
