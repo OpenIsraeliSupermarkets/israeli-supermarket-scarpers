@@ -3,6 +3,7 @@ import shutil
 import os
 import io
 import zipfile
+from .exceptions import RestartSessionError
 
 
 def extract_xml_file_from_gz_file(file_save_path):
@@ -36,6 +37,10 @@ def report_failed_zip(exception, file_save_path):
         file_contant = file.readlines()
     file_size = os.path.getsize(file_save_path)
     os.remove(file_save_path)
+
+    if "link expired" in str(file_contant):
+        raise RestartSessionError()
+
     raise ValueError(
         f"Error decoding file:{ file_save_path } with "
         f"error: {str(exception)} file size {str(file_size) } ,"

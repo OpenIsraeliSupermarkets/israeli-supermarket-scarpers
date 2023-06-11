@@ -12,6 +12,7 @@ from il_supermarket_scarper.utils import (
     session_with_cookies,
     url_retrieve,
     wget_file,
+    RestartSessionError,
 )
 
 
@@ -89,6 +90,7 @@ class Engine(ScraperStatus, ABC):
         by_function=lambda x: x,
         store_id=None,
         only_latest=False,
+        files_names_to_scrape=None,
     ):
         """filter the list according to condition"""
         assert (
@@ -97,7 +99,7 @@ class Engine(ScraperStatus, ABC):
 
         # filter files already downloaded
         intreable_ = self.filter_already_downloaded(
-            self.storage_path, intreable, by_function=by_function
+            self.storage_path, files_names_to_scrape, intreable, by_function=by_function
         )
         files_was_filtered_since_already_download = (
             len(list(intreable)) != 0 and len(list(intreable_)) == 0
@@ -199,13 +201,21 @@ class Engine(ScraperStatus, ABC):
         if os.path.exists(cookie_file):
             os.remove(cookie_file)
 
-    def scrape(self, limit=None, files_types=None, store_id=None, only_latest=False):
+    def scrape(
+        self,
+        limit=None,
+        files_types=None,
+        store_id=None,
+        only_latest=False,
+        files_names_to_scrape=None,
+    ):
         """run the scraping logic"""
         self.post_scraping()
         self.on_scraping_start(
             limit=limit,
             files_types=files_types,
             store_id=store_id,
+            files_names_to_scrape=files_names_to_scrape,
             only_latest=only_latest,
         )
         Logger.info(f"Starting scraping for {self.chain}")
@@ -241,21 +251,26 @@ class Engine(ScraperStatus, ABC):
         file_link, file_name = arg
         file_save_path = os.path.join(self.storage_path, file_name)
         Logger.info(f"Downloading {file_link} to {file_save_path}")
-        downloaded, extract_succefully, error = self._save_and_extract(
-            file_link, file_save_path
-        )
+        (
+            downloaded,
+            extract_succefully,
+            error,
+            restart_and_retry,
+        ) = self._save_and_extract(file_link, file_save_path)
 
         return {
             "file_name": file_name,
             "downloaded": downloaded,
             "extract_succefully": extract_succefully,
             "error": error,
+            "restart_and_retry": restart_and_retry,
         }
 
     def _save_and_extract(self, file_link, file_save_path):
         downloaded = False
         extract_succefully = False
         error = None
+        restart_and_retry = False
         try:
             try:
                 file_save_path_with_ext = self.retrieve_file(file_link, file_save_path)
@@ -270,7 +285,14 @@ class Engine(ScraperStatus, ABC):
             extract_succefully = True
 
             Logger.info(f"Done downloading {file_link}")
-
+        except RestartSessionError as exception:
+            Logger.error(
+                f"Error downloading {file_link},extract_succefully={extract_succefully}"
+                f",downloaded={downloaded}"
+            )
+            Logger.error_execption(exception)
+            error = str(exception)
+            restart_and_retry = True
         except Exception as exception:  # pylint: disable=broad-except
             Logger.error(
                 f"Error downloading {file_link},extract_succefully={extract_succefully}"
@@ -279,4 +301,4 @@ class Engine(ScraperStatus, ABC):
             Logger.error_execption(exception)
             error = str(exception)
 
-        return downloaded, extract_succefully, error
+        return downloaded, extract_succefully, error, restart_and_retry
