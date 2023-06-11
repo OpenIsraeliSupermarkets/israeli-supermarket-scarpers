@@ -77,7 +77,7 @@ class ScraperStatus(DataBase):
         self._add_downloaded_files_to_list(**additional_info)
 
     def filter_already_downloaded(
-        self, storage_path, filelist, by_function=lambda x: x
+        self, storage_path, files_names_to_scrape, filelist, by_function=lambda x: x
     ):
         """filter files already exists in long term memory or was downloaded before"""
         if self.collection_status:
@@ -99,6 +99,16 @@ class ScraperStatus(DataBase):
 
         # filter according to disk
         exits_on_disk = os.listdir(storage_path)
+
+        if files_names_to_scrape:
+            # delete what ever to retry
+            for file in exits_on_disk:
+                if file in files_names_to_scrape:
+                    os.remove(file)
+
+            # find only the files we would like to download
+            filelist = list(filter(lambda x: x in files_names_to_scrape, filelist))
+
         return list(filter(lambda x: x not in exits_on_disk, filelist))
 
     def _add_downloaded_files_to_list(self, results, **_):

@@ -90,6 +90,7 @@ class Engine(ScraperStatus, ABC):
         by_function=lambda x: x,
         store_id=None,
         only_latest=False,
+        files_names_to_scrape=None,
     ):
         """filter the list according to condition"""
         assert (
@@ -98,7 +99,7 @@ class Engine(ScraperStatus, ABC):
 
         # filter files already downloaded
         intreable_ = self.filter_already_downloaded(
-            self.storage_path, intreable, by_function=by_function
+            self.storage_path, files_names_to_scrape, intreable, by_function=by_function
         )
         files_was_filtered_since_already_download = (
             len(list(intreable)) != 0 and len(list(intreable_)) == 0
@@ -200,7 +201,14 @@ class Engine(ScraperStatus, ABC):
         if os.path.exists(cookie_file):
             os.remove(cookie_file)
 
-    def scrape(self, limit=None, files_types=None, store_id=None, only_latest=False):
+    def scrape(
+        self,
+        limit=None,
+        files_types=None,
+        store_id=None,
+        only_latest=False,
+        files_names_to_scrape=None,
+    ):
         """run the scraping logic"""
         self.post_scraping()
         self.on_scraping_start(
@@ -208,6 +216,7 @@ class Engine(ScraperStatus, ABC):
             files_types=files_types,
             store_id=store_id,
             only_latest=only_latest,
+            files_names_to_scrape=files_names_to_scrape,
         )
         Logger.info(f"Starting scraping for {self.chain}")
         self.make_storage_path_dir()

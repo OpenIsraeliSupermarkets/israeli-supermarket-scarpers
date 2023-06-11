@@ -93,6 +93,7 @@ class MainScrapperRunner:
             files_types=files_types,
             store_id=store_id,
             only_latest=only_latest,
+            files_names_to_scrape=None,
         )
         Logger.info(f"done scraping {chain_name}")
 
