@@ -120,7 +120,8 @@ class Cerberus(Engine):
         """download file to hard drive and extract it."""
         downloaded = False
         extract_succefully = False
-        additionl_info = {}
+        restart_and_retry = False
+        error = None
         try:
             ext = os.path.splitext(file_name)[1]
             if ext not in [".gz", ".xml"]:
@@ -149,8 +150,8 @@ class Cerberus(Engine):
                 f",downloaded={downloaded}"
             )
             Logger.error_execption(exception)
-            additionl_info = {"error": str(exception)}
-
+            error = str(exception)
+            restart_and_retry = True
         finally:
             if ext == ".gz" and os.path.exists(temporary_gz_file_path):
                 os.remove(temporary_gz_file_path)
@@ -159,5 +160,6 @@ class Cerberus(Engine):
             "file_name": file_name,
             "downloaded": downloaded,
             "extract_succefully": extract_succefully,
-            **additionl_info,
+            "restart_and_retry": restart_and_retry,
+            "error": error,
         }
