@@ -7,6 +7,7 @@ from il_supermarket_scarper.utils import (
     execute_in_event_loop,
     collect_from_ftp,
     fetch_temporary_gz_file_from_ftp,
+    retry_files,
 )
 from .engine import Engine
 
@@ -33,7 +34,15 @@ class Cerberus(Engine):
         self.ftp_password = ftp_password
         self.ftp_session = False
 
-    def scrape(self, limit=None, files_types=None, store_id=None, only_latest=False):
+    @retry_files(num_of_retrys=2)
+    def scrape(
+        self,
+        limit=None,
+        files_types=None,
+        store_id=None,
+        only_latest=False,
+        files_names_to_scrape=None,
+    ):
         super().scrape(
             limit=limit,
             files_types=files_types,
@@ -47,6 +56,7 @@ class Cerberus(Engine):
             filter_zero=True,
             store_id=store_id,
             only_latest=only_latest,
+            files_names_to_scrape=files_names_to_scrape,
         )
         self.on_collected_details(files)
 
@@ -55,6 +65,7 @@ class Cerberus(Engine):
         )
         self.on_download_completed(results=results)
         self.on_scrape_completed(self.get_storage_path())
+        return results
 
     def collect_files_details_from_site(
         self,
@@ -64,6 +75,7 @@ class Cerberus(Engine):
         filter_zero=False,
         store_id=None,
         only_latest=False,
+        files_names_to_scrape=None,
     ):
         """collect all files to download from the site"""
         files = collect_from_ftp(
@@ -98,6 +110,7 @@ class Cerberus(Engine):
             files_types=files_types,
             store_id=store_id,
             only_latest=only_latest,
+            files_names_to_scrape=files_names_to_scrape,
         )
         Logger.info(f"After applying limit: Found {len(files)} files")
 

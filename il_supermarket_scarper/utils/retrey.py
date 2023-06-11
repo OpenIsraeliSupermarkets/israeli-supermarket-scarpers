@@ -1,6 +1,7 @@
 import logging
 import random
 import time
+import inspect
 
 from datetime import datetime
 from functools import partial
@@ -191,3 +192,72 @@ def retry_call(
         jitter,
         logger,
     )
+
+
+def retry_files(num_of_retrys=2,arg_name="files_names_to_scrape"):
+    """ retry only ceritin files """
+    @decorator
+    def retry_files_decorator(func, *fargs, **fkwargs):
+        args = fargs if fargs else []
+        kwargs = fkwargs if fkwargs else {}
+        return __retry_files(func, args, kwargs,arg_name, num_of_retrys=num_of_retrys)
+
+    return retry_files_decorator
+
+
+def __retry_files(
+    func,
+    args,
+    kwargs,
+    arg_name,
+    num_of_retrys=1,
+    logger=logging_logger,
+):
+    retry_list = []
+    all_results = []
+    for i in range(num_of_retrys):
+        logger.info(f"Itreation #{i},retry_list={retry_list}")
+
+        if retry_list:
+            # replace the value of 'files_names_to_scrape'
+            args_names = inspect.getfullargspec(func).args
+            assert arg_name in args_names, f"{arg_name} wasn't found in {args_names}."
+
+            arg_list = list(args)
+            arg_list[args_names.index(arg_name)] = retry_list
+            args = tuple(arg_list)
+
+        results = func(*args, **kwargs)
+
+        # next iteration
+        retry_list, other_results = compute_retry(results)
+
+        all_results.append(other_results)
+        # if there is not files in the retry list, break
+        if len(retry_list) == 0:
+            break
+
+    return all_results
+
+
+def compute_retry(results):
+    """find the files to retry"""
+    files_to_retry = []
+    other_results = []
+    for result in results:
+        if result["restart_and_retry"]:
+            files_to_retry.append(result["file_name"])
+        else:
+            other_results.append(result)
+    return files_to_retry, other_results
+
+
+# def filter_spesific_files(download_urls, file_names, retry_list):
+#     """filter the files to retry"""
+#     _download_urls = []
+#     _file_names = []
+#     for download_url, file_name in zip(download_urls, file_names):
+#         if file_name in retry_list:
+#             _download_urls.append(download_url)
+#             _file_names.append(file_name)
+#     return _download_urls, _file_names

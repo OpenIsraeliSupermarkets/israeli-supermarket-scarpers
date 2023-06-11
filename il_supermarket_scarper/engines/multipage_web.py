@@ -60,7 +60,12 @@ class MultiPageWeb(WebBase):
         return int(elements[0])
 
     def collect_files_details_from_site(
-        self, limit=None, files_types=None, store_id=None, only_latest=False
+        self,
+        limit=None,
+        files_types=None,
+        store_id=None,
+        only_latest=False,
+        files_names_to_scrape=None,
     ):
         self.post_scraping()
         url = self.get_request_url()
