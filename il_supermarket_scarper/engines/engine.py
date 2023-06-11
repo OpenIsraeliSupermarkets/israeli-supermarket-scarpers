@@ -215,8 +215,8 @@ class Engine(ScraperStatus, ABC):
             limit=limit,
             files_types=files_types,
             store_id=store_id,
-            only_latest=only_latest,
             files_names_to_scrape=files_names_to_scrape,
+            only_latest=only_latest,
         )
         Logger.info(f"Starting scraping for {self.chain}")
         self.make_storage_path_dir()
