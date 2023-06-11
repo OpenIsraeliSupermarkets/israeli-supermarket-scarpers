@@ -71,7 +71,7 @@ async def run_task_async(
                 futures.append(loop.run_in_executor(executor, function_to_execute, arg))
 
         if len(futures) == 0:
-            return [], []
+            return []
         all_done, not_done = await asyncio.wait(futures)
         assert len(not_done) == 0, "Not all tasks are done, should be blocking."
     else:
