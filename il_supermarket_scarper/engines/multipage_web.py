@@ -93,6 +93,7 @@ class MultiPageWeb(WebBase):
             files_types=files_types,
             store_id=store_id,
             only_latest=only_latest,
+            files_names_to_scrape=files_names_to_scrape
         )
 
         return download_urls, file_names
