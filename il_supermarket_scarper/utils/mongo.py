@@ -104,7 +104,7 @@ class ScraperStatus(DataBase):
             # delete what ever to retry
             for file in exits_on_disk:
                 if file in files_names_to_scrape:
-                    os.remove(file)
+                    os.remove(os.path.join(storage_path,file))
 
             # find only the files we would like to download
             filelist = list(filter(lambda x: x in files_names_to_scrape, filelist))
