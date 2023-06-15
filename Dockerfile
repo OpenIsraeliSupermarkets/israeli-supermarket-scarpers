@@ -9,9 +9,10 @@ RUN apt-get update -y && \
     apt-get install cron -y && \
     apt-get install libxml2-dev -y && \
     apt-get install libxslt-dev -y 
+
 # setting the C++
-RUN apt-get install gcc-10 -y && \
-    apt-get install g++-10 -y 
+# RUN apt-get install gcc-10 -y && \
+#     apt-get install g++-10 -y 
 
 # setting python and more 
 RUN apt-get install python3-pip -y && \
