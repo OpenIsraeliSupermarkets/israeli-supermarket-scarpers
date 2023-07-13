@@ -5,7 +5,7 @@ from il_supermarket_scarper.utils.connection import disable_when_outside_israel
 
 @disable_when_outside_israel
 def test_scrapers_are_updated():
-    """test the number of scrapers are the same as listed at the gov.il sirte"""
+    """test the number of scrapers are the same as listed at the gov.il site"""
     num_of_scarper_listed = len(ScraperFactory.all_scrapers_name())
     num_of_scarper_on_gov_site = get_status()
 
