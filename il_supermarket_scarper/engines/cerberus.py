@@ -128,7 +128,6 @@ class Cerberus(Engine):
                 raise ValueError(f"File {file_name} extension is not .gz or .xml")
 
             Logger.info(f"Start persisting file {file_name}")
-            
             temporary_gz_file_path = os.path.join(self.storage_path, file_name)
 
             fetch_temporary_gz_file_from_ftp(
