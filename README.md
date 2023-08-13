@@ -58,7 +58,7 @@ Quick start
 
 il_supermarket_scarper can be installed using pip:
 
-    python3 -m pip install -U il_supermarket_scarper
+    python3 -m pip install -U il-supermarket-scraper
 
 If you want to run the latest version of the code, you can install from the
 repo directly:
