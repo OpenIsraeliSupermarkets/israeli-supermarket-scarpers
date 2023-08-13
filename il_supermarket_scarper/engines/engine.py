@@ -279,6 +279,7 @@ class Engine(ScraperStatus, ABC):
             downloaded = True
 
             if file_save_path_with_ext.endswith("gz"):
+                Logger.info(f"File size is {os.path.getsize(file_save_path_with_ext)} bytes.")
                 extract_xml_file_from_gz_file(file_save_path_with_ext)
 
                 os.remove(file_save_path_with_ext)
