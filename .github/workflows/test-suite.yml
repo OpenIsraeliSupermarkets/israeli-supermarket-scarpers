@@ -36,6 +36,9 @@ jobs:
         docker 2>/dev/null 1>&2 rmi $(docker image ls --all --quiet) || true
         rm --recursive --force "$AGENT_TOOLSDIRECTORY"
         df --human-readable
+    - name: Create File
+      run: |
+        echo "This is the content of the file." > newfile.txt
     - name: Build with Docker
       run: docker build -t erlichsefi/israeli-supermarket-scarpers:test --target test .
     - name: Test with pytest
