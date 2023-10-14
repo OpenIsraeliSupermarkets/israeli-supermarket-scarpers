@@ -1,6 +1,7 @@
 from enum import Enum
 import il_supermarket_scarper.scrappers as all_scrappers
-
+import random
+import os
 
 class ScraperFactory(Enum):
     """all scrapers avaliabe"""
@@ -34,6 +35,19 @@ class ScraperFactory(Enum):
     YELLOW = all_scrappers.Yellow
     YOHANANOF = all_scrappers.Yohananof
     ZOL_VEBEGADOL = all_scrappers.ZolVeBegadol
+
+    @classmethod
+    def __iter__(cls):
+        env_var_value = os.environ.get("SCRAPER_FACTORY_SUPPORTTED")
+        if not env_var_value:
+            return (member for member in cls)
+        supported_scrappers = list(map(str.strip,env_var_value.split("\n")))
+        return tuple([member for member in cls  if member.name in supported_scrappers])
+    
+    @classmethod
+    def sample(cls,n=1):
+        """ sample n from the scrappers """
+        return random.sample(cls.all_scrapers(), n)
 
     @classmethod
     def all_scrapers(cls):
