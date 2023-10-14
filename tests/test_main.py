@@ -27,7 +27,7 @@ def test_main_with_limit():
 def test_main_with_one_scarper():
     """the limit only for enabled scarpers"""
     scrapper_done = ScarpingTask(
-        limit=1, enabled_scrapers=[ScraperFactory.DOR_ALON]
+        limit=1, enabled_scrapers=ScraperFactory.sample(n=1)
     ).start()
     assert "dor" in scrapper_done[0].lower() and "alon" in scrapper_done[0].lower()
     assert len(scrapper_done) == 1
@@ -36,6 +36,6 @@ def test_main_with_one_scarper():
 def test_main_with_size_estimation_mode():
     """test size estmation mode"""
     scrapper_done = ScarpingTask(
-        limit=1, size_estimation_mode=True, enabled_scrapers=[ScraperFactory.DOR_ALON]
+        limit=1, size_estimation_mode=True, enabled_scrapers=ScraperFactory.sample(n=1)
     ).start()
     assert len(scrapper_done) == 1
