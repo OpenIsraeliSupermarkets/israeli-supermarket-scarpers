@@ -1,7 +1,7 @@
-from enum import Enum
-import il_supermarket_scarper.scrappers as all_scrappers
 import random
 import os
+from enum import Enum
+import il_supermarket_scarper.scrappers as all_scrappers
 
 class ScraperFactory(Enum):
     """all scrapers avaliabe"""
@@ -42,8 +42,8 @@ class ScraperFactory(Enum):
         if not env_var_value:
             return (member for member in cls)
         disabled_scrappers = list(map(str.strip,env_var_value.split(",")))
-        return tuple([member for member in cls  if member.name not in disabled_scrappers])
-    
+        return tuple(member for member in cls  if member.name not in disabled_scrappers)
+
     @classmethod
     def sample(cls,n=1):
         """ sample n from the scrappers """
