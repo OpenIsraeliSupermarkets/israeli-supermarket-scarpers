@@ -38,11 +38,11 @@ class ScraperFactory(Enum):
 
     @classmethod
     def __iter__(cls):
-        env_var_value = os.environ.get("SCRAPER_FACTORY_SUPPORTTED")
+        env_var_value = os.environ.get("DISABLED_SCRAPPERS")
         if not env_var_value:
             return (member for member in cls)
-        supported_scrappers = list(map(str.strip,env_var_value.split("\n")))
-        return tuple([member for member in cls  if member.name in supported_scrappers])
+        disabled_scrappers = list(map(str.strip,env_var_value.split(",")))
+        return tuple([member for member in cls  if member.name not in disabled_scrappers])
     
     @classmethod
     def sample(cls,n=1):
