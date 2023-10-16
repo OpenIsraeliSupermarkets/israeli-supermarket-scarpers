@@ -140,7 +140,9 @@ class Cerberus(Engine):
             downloaded = True
 
             if ext == ".gz":
-                Logger.info(f"File size is {os.path.getsize(temporary_gz_file_path)} bytes.")
+                Logger.info(
+                    f"File size is {os.path.getsize(temporary_gz_file_path)} bytes."
+                )
                 extract_xml_file_from_gz_file(temporary_gz_file_path)
 
             Logger.info(f"Done persisting file {file_name}")

@@ -121,7 +121,9 @@ class SuperYudaTestCase(make_test_case(ScraperFactory.SUPER_YUDA, 40)):
 
 
 @pytest.mark.run(order=24)
-class FreshMarketAndSuperDoshTestCase(make_test_case(ScraperFactory.FRESH_MARKET_AND_SUPER_DOSH, 1)):
+class FreshMarketAndSuperDoshTestCase(
+    make_test_case(ScraperFactory.FRESH_MARKET_AND_SUPER_DOSH, 1)
+):
     pass
 
 
