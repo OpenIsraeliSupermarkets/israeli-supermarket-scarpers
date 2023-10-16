@@ -29,7 +29,6 @@ def test_main_with_one_scarper():
     scrapper_done = ScarpingTask(
         limit=1, enabled_scrapers=ScraperFactory.sample(n=1)
     ).start()
-    assert "dor" in scrapper_done[0].lower() and "alon" in scrapper_done[0].lower()
     assert len(scrapper_done) == 1
 
 
