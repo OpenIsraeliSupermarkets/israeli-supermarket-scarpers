@@ -45,7 +45,7 @@ class ScraperFactory(Enum):
     @classmethod
     def sample(cls, n=1):
         """sample n from the scrappers"""
-        return random.sample(cls.all_scrapers(), n)
+        return random.sample(cls.all_scrapers_name(), n)
 
     @classmethod
     def all_scrapers(cls):
