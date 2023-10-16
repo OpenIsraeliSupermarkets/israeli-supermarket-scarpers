@@ -37,12 +37,17 @@ class ScraperFactory(Enum):
     ZOL_VEBEGADOL = all_scrappers.ZolVeBegadol
 
     @classmethod
-    def __iter__(cls):
+    def get_scraper_init(cls,enum):
         env_var_value = os.environ.get("DISABLED_SCRAPPERS")
-        if not env_var_value:
-            return (member for member in cls)
-        disabled_scrappers = list(map(str.strip,env_var_value.split(",")))
-        return tuple(member for member in cls  if member.name not in disabled_scrappers)
+        if env_var_value is not None:
+            disabled_scrappers = list(map(str.strip,env_var_value.split(",")))
+            if enum.name in disabled_scrappers:
+                return None
+        return enum.value
+
+    @classmethod
+    def __iter__(cls):   
+        return tuple(member for member in cls  if cls.get_scraper_init(member))
 
     @classmethod
     def sample(cls,n=1):
