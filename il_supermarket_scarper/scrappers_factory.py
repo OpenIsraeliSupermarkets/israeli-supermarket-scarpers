@@ -67,7 +67,6 @@ class ScraperFactory(Enum):
             enum = getattr(ScraperFactory,class_name)
         else:
             raise ValueError(f"class_names {class_name} not found")
-        
         if not cls.is_scraper_enabled(enum):
             return None
         return enum.value
