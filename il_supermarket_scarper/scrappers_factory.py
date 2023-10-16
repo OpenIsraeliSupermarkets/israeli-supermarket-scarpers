@@ -39,7 +39,7 @@ class ScraperFactory(Enum):
 
     @classmethod
     def all_active(cls):
-        """ get all the scarpers and filter disabled scrapers """
+        """get all the scarpers and filter disabled scrapers"""
         return (member for member in cls if cls.is_scraper_enabled(member))
 
     @classmethod
@@ -64,7 +64,7 @@ class ScraperFactory(Enum):
         if isinstance(class_name, ScraperFactory):
             enum = class_name
         elif class_name in cls.all_scrapers_name():
-            enum = getattr(ScraperFactory,class_name)
+            enum = getattr(ScraperFactory, class_name)
         else:
             raise ValueError(f"class_names {class_name} not found")
         if not cls.is_scraper_enabled(enum):
@@ -73,7 +73,7 @@ class ScraperFactory(Enum):
 
     @classmethod
     def is_scraper_enabled(cls, enum):
-        """ get scraper value base on the enum value, if it disabled, return None """
+        """get scraper value base on the enum value, if it disabled, return None"""
         env_var_value = os.environ.get("DISABLED_SCRAPPERS")
         if env_var_value is not None:
             disabled_scrappers = list(map(str.strip, env_var_value.split(",")))
