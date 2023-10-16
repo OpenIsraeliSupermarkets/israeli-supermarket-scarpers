@@ -3,6 +3,7 @@ import os
 from enum import Enum
 import il_supermarket_scarper.scrappers as all_scrappers
 
+
 class ScraperFactory(Enum):
     """all scrapers avaliabe"""
 
@@ -37,21 +38,23 @@ class ScraperFactory(Enum):
     ZOL_VEBEGADOL = all_scrappers.ZolVeBegadol
 
     @classmethod
-    def get_scraper_init(cls,enum):
+    def get_scraper_init(cls, enum):
+        """ get scraper value base on the enum value, if it disabled, return None """
         env_var_value = os.environ.get("DISABLED_SCRAPPERS")
         if env_var_value is not None:
-            disabled_scrappers = list(map(str.strip,env_var_value.split(",")))
+            disabled_scrappers = list(map(str.strip, env_var_value.split(",")))
             if enum.name in disabled_scrappers:
                 return None
         return enum.value
 
     @classmethod
-    def __iter__(cls):   
-        return tuple(member for member in cls  if cls.get_scraper_init(member))
+    def __iter__(cls):
+        """ get all the scarpers and filter disabled scrapers """
+        return iter(member for member in cls if cls.get_scraper_init(member))
 
     @classmethod
-    def sample(cls,n=1):
-        """ sample n from the scrappers """
+    def sample(cls, n=1):
+        """sample n from the scrappers"""
         return random.sample(cls.all_scrapers(), n)
 
     @classmethod

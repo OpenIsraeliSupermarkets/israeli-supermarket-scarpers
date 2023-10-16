@@ -100,7 +100,6 @@ def make_test_case(scraper_enum, store_id):
 
             if init_scraper_function is not None:
                 try:
-                    
                     scraper = init_scraper_function(folder_name=dump_path)
 
                     kwarg = {
@@ -133,7 +132,9 @@ def make_test_case(scraper_enum, store_id):
                         )
 
                     for file in files_found:
-                        self._make_sure_file_contain_chain_ids(scraper.get_chain_id(), file)
+                        self._make_sure_file_contain_chain_ids(
+                            scraper.get_chain_id(), file
+                        )
                         self._make_sure_file_extension_is_xml(file)
                         self._make_sure_file_is_not_empty(
                             scraper, os.path.join(download_path, file)
@@ -141,22 +142,17 @@ def make_test_case(scraper_enum, store_id):
                 finally:
                     self._delete_download_folder(dump_path)
 
-
         def _get_temp_folder(self):
             """get a temp folder to download the files into"""
             return self.folder_name + str(uuid.uuid4().hex)
 
         def test_scrape_one(self):
             """scrape one file and make sure it exists"""
-            self._clean_scarpe_delete(
-                scraper_enum, self._get_temp_folder(), limit=1
-            )
+            self._clean_scarpe_delete(scraper_enum, self._get_temp_folder(), limit=1)
 
         def test_scrape_ten(self):
             """scrape ten file and make sure they exists"""
-            self._clean_scarpe_delete(
-                scraper_enum, self._get_temp_folder(), limit=10
-            )
+            self._clean_scarpe_delete(scraper_enum, self._get_temp_folder(), limit=10)
 
         def test_scrape_promo(self):
             """scrape one promo file and make sure it exists"""
