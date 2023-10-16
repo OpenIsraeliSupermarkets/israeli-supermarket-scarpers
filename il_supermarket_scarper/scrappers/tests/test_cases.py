@@ -96,7 +96,7 @@ def make_test_case(scraper_enum, store_id):
         ):
             self._delete_download_folder(dump_path)
             os.makedirs(dump_path)
-            init_scraper_function = ScraperFactory.get_scraper_init(scraper_enum)
+            init_scraper_function = ScraperFactory.get(scraper_enum)
 
             if init_scraper_function is not None:
                 try:
