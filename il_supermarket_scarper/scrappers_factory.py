@@ -19,7 +19,7 @@ class ScraperFactory(Enum):
     MAHSANI_ASHUK = all_scrappers.MahsaniAShuk
     MEGA_MARKET = all_scrappers.MegaMarket
     MEGA = all_scrappers.Mega
-    NETIV_HASED = all_scrappers.NetivHasef
+    NETIV_HASED = all_scrappers.NetivHased
     OSHER_AD = all_scrappers.Osherad
     POLIZER = all_scrappers.Polizer
     RAMI_LEVY = all_scrappers.RamiLevy
