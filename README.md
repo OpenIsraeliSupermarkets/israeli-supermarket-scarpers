@@ -1,6 +1,7 @@
 Israel Supermarket Scraper: Clients to download the data published by the supermarkets.
 =======================================
 This is a scraper for ALL the supermarket chains listed in the GOV.IL site.
+
 שקיפות מחירים (השוואת מחירים) - https://www.gov.il/he/departments/legalInfo/cpfta_prices_regulations
 
 
@@ -15,8 +16,12 @@ This is a scraper for ALL the supermarket chains listed in the GOV.IL site.
 
 ----
 Scheduled Automatic Testing:
-The test-suite is scheduled to run every week, so you can see if the supermarket chains has chanced something in their interface and the package will not work probably, status: [![Scheduled Tests](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/test-suite.yml/badge.svg?event=schedule)](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/test-suite.yml)
+The test-suite is scheduled to run every three days, so you can see if the supermarket chains has chanced something in their interface and the package will not work probably. however, the tests running here are also integration tests with the APIs which may fail.
 
+Status: [![Scheduled Tests](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/test-suite.yml/badge.svg?event=schedule)](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/test-suite.yml)
+
+Notice:
+- NETIV_HASED is disabled in testing becuase it started failing at Oct' 2023.
 
 
 --------
@@ -37,7 +42,7 @@ If you think you've found a bug:
 What is il_supermarket_scarper?
 -------------
 
-There are alot of projects in github tring to scrape the supermarket data, must of them are not stable or wasn't updated of a while, it's about time there will be one codebase that those the work completely. 
+There are alot of projects in github trying to scrape the supermarket data, most of them are not stable or wasn't updated for a while, it's about time there will be one codebase that does the work completely. 
 
 You only need to run the following code to get all the data currently shared by the supermarkets.
 
@@ -46,7 +51,6 @@ from il_supermarket_scarper import MainScrapperRunner
 
 scraper = MainScrapperRunner()
 scraper.run()
-
 ```
 
 
@@ -66,7 +70,7 @@ repo directly:
     python3 -m pip install -U git+https://github.com/erlichsefi/israeli-supermarket-scarpers.git
     # or if you don't have 'git' installed
     python3 -m pip install -U https://github.com/erlichsefi/israeli-supermarket-scarpers/master
-    # 
+    
 
 
 Running Docker

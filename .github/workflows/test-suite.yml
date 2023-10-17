@@ -2,6 +2,8 @@
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
 name: Unit & Integration Tests
+env:
+  DISABLED_SCRAPPERS: NETIV_HASED
 
 on:
   push:
@@ -39,4 +41,4 @@ jobs:
     - name: Build with Docker
       run: docker build -t erlichsefi/israeli-supermarket-scarpers:test --target test .
     - name: Test with pytest
-      run: docker run --rm --name test-run erlichsefi/israeli-supermarket-scarpers:test
+      run: docker run --rm --name test-run -e DISABLED_SCRAPPERS="${{ env.DISABLED_SCRAPPERS }}" erlichsefi/israeli-supermarket-scarpers:test

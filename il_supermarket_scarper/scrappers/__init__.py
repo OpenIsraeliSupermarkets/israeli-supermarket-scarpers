@@ -10,7 +10,7 @@ from .maayan2000 import Maayan2000
 from .machsani_ashuk import MahsaniAShuk
 from .mega_market import MegaMarket
 from .mega import Mega
-from .nativ_hashed import NetivHasef
+from .nativ_hashed import NetivHased
 from .osherad import Osherad
 from .polizer import Polizer
 from .ramilevy import RamiLevy
