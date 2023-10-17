@@ -29,10 +29,10 @@ setup(
         "holidays==0.16",
         "cachetools==5.2.0",
     ],
-    tests_require=["pytest==7.1"],
+    tests_require=["pytest==7.1", "black==23.9.1", "pylint==3.0.1"],
     extras_require={"test": ["pytest"]},
     # *strongly* suggested for sharing
-    version="0.3",
+    version="0.3.1",
     # The license can be anything you like
     license="MIT",
     description="python package that implement a scraping for israeli supermarket data",

@@ -3,9 +3,10 @@ import unittest
 import os
 import uuid
 from il_supermarket_scarper.utils import FileTypesFilters
+from il_supermarket_scarper.scrappers_factory import ScraperFactory
 
 
-def make_test_case(init_scraper_function, store_id):
+def make_test_case(scraper_enum, store_id):
     """create test suite for scraper"""
 
     class TestScapers(unittest.TestCase):
@@ -13,7 +14,7 @@ def make_test_case(init_scraper_function, store_id):
 
         def __init__(self, name) -> None:
             super().__init__(name)
-            self.init_scraper_function = init_scraper_function
+            self.scraper_enum = scraper_enum
             self.folder_name = "temp"
 
         def _delete_folder_and_sub_folder(self, download_path):
@@ -86,7 +87,7 @@ def make_test_case(init_scraper_function, store_id):
 
         def _clean_scarpe_delete(
             self,
-            init_scraper_function,
+            scraper_enum,
             dump_path="temp",
             store_id=None,
             limit=None,
@@ -95,47 +96,51 @@ def make_test_case(init_scraper_function, store_id):
         ):
             self._delete_download_folder(dump_path)
             os.makedirs(dump_path)
+            init_scraper_function = ScraperFactory.get(scraper_enum)
 
-            try:
-                scraper = init_scraper_function(folder_name=dump_path)
+            if init_scraper_function is not None:
+                try:
+                    scraper = init_scraper_function(folder_name=dump_path)
 
-                kwarg = {
-                    "limit": limit,
-                    "files_types": file_type,
-                    "store_id": store_id,
-                    "only_latest": only_latest,
-                }
+                    kwarg = {
+                        "limit": limit,
+                        "files_types": file_type,
+                        "store_id": store_id,
+                        "only_latest": only_latest,
+                    }
 
-                scraper.scrape(**kwarg)
+                    scraper.scrape(**kwarg)
 
-                files_found = os.listdir(dump_path)
-                assert len(files_found) == 1, "only one folder should exists"
+                    files_found = os.listdir(dump_path)
+                    assert len(files_found) == 1, "only one folder should exists"
 
-                download_path = os.path.join(dump_path, files_found[0])
-                files_found = os.listdir(download_path)
+                    download_path = os.path.join(dump_path, files_found[0])
+                    files_found = os.listdir(download_path)
 
-                if not scraper.is_validate_scraper_found_no_files(
-                    limit=limit,
-                    files_types=file_type,
-                    store_id=store_id,
-                    only_latest=only_latest,
-                ):
-                    self._make_sure_filter_work(
-                        files_found,
-                        file_type=file_type,
+                    if not scraper.is_validate_scraper_found_no_files(
                         limit=limit,
+                        files_types=file_type,
                         store_id=store_id,
                         only_latest=only_latest,
-                    )
+                    ):
+                        self._make_sure_filter_work(
+                            files_found,
+                            file_type=file_type,
+                            limit=limit,
+                            store_id=store_id,
+                            only_latest=only_latest,
+                        )
 
-                for file in files_found:
-                    self._make_sure_file_contain_chain_ids(scraper.get_chain_id(), file)
-                    self._make_sure_file_extension_is_xml(file)
-                    self._make_sure_file_is_not_empty(
-                        scraper, os.path.join(download_path, file)
-                    )
-            finally:
-                self._delete_download_folder(dump_path)
+                    for file in files_found:
+                        self._make_sure_file_contain_chain_ids(
+                            scraper.get_chain_id(), file
+                        )
+                        self._make_sure_file_extension_is_xml(file)
+                        self._make_sure_file_is_not_empty(
+                            scraper, os.path.join(download_path, file)
+                        )
+                finally:
+                    self._delete_download_folder(dump_path)
 
         def _get_temp_folder(self):
             """get a temp folder to download the files into"""
@@ -143,20 +148,16 @@ def make_test_case(init_scraper_function, store_id):
 
         def test_scrape_one(self):
             """scrape one file and make sure it exists"""
-            self._clean_scarpe_delete(
-                init_scraper_function, self._get_temp_folder(), limit=1
-            )
+            self._clean_scarpe_delete(scraper_enum, self._get_temp_folder(), limit=1)
 
         def test_scrape_ten(self):
             """scrape ten file and make sure they exists"""
-            self._clean_scarpe_delete(
-                init_scraper_function, self._get_temp_folder(), limit=10
-            )
+            self._clean_scarpe_delete(scraper_enum, self._get_temp_folder(), limit=10)
 
         def test_scrape_promo(self):
             """scrape one promo file and make sure it exists"""
             self._clean_scarpe_delete(
-                init_scraper_function,
+                scraper_enum,
                 self._get_temp_folder(),
                 limit=1,
                 file_type=[FileTypesFilters.PROMO_FILE.name],
@@ -165,7 +166,7 @@ def make_test_case(init_scraper_function, store_id):
         def test_scrape_promo_full(self):
             """scrape one promo file and make sure it exists"""
             self._clean_scarpe_delete(
-                init_scraper_function,
+                scraper_enum,
                 self._get_temp_folder(),
                 limit=1,
                 file_type=[FileTypesFilters.PROMO_FULL_FILE.name],
@@ -174,7 +175,7 @@ def make_test_case(init_scraper_function, store_id):
         def test_scrape_store(self):
             """scrape one store file and make sure it exists"""
             self._clean_scarpe_delete(
-                init_scraper_function,
+                scraper_enum,
                 self._get_temp_folder(),
                 limit=1,
                 file_type=[FileTypesFilters.STORE_FILE.name],
@@ -183,7 +184,7 @@ def make_test_case(init_scraper_function, store_id):
         def test_scrape_price(self):
             """scrape one price file and make sure it exists"""
             self._clean_scarpe_delete(
-                init_scraper_function,
+                scraper_enum,
                 self._get_temp_folder(),
                 limit=1,
                 file_type=[FileTypesFilters.PRICE_FILE.name],
@@ -192,7 +193,7 @@ def make_test_case(init_scraper_function, store_id):
         def test_scrape_price_full(self):
             """scrape one price file and make sure it exists"""
             self._clean_scarpe_delete(
-                init_scraper_function,
+                scraper_enum,
                 self._get_temp_folder(),
                 limit=1,
                 file_type=[FileTypesFilters.PRICE_FULL_FILE.name],
@@ -201,7 +202,7 @@ def make_test_case(init_scraper_function, store_id):
         def test_scrape_file_from_single_store(self):
             """test fetching only files from a ceriten store"""
             self._clean_scarpe_delete(
-                init_scraper_function,
+                scraper_enum,
                 self._get_temp_folder(),
                 store_id=store_id,
             )
@@ -209,7 +210,7 @@ def make_test_case(init_scraper_function, store_id):
         def test_scrape_file_from_single_store_last(self):
             """test fetching latest file only"""
             self._clean_scarpe_delete(
-                init_scraper_function,
+                scraper_enum,
                 self._get_temp_folder(),
                 store_id=store_id,
                 only_latest=True,
