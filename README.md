@@ -20,8 +20,6 @@ The test-suite is scheduled to run every three days, so you can see if the super
 
 Status: [![Scheduled Tests](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/test-suite.yml/badge.svg?event=schedule)](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/test-suite.yml)
 
-Notice:
-- NETIV_HASED is disabled in testing becuase it started failing at Oct' 2023.
 
 
 --------
