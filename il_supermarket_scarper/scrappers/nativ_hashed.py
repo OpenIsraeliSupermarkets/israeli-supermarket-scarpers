@@ -9,7 +9,7 @@ class NetivHased(WebBase):
         super().__init__(
             "Netiv Hased",
             chain_id="7290058160839",
-            url="http://141.226.222.202/",
+            url="http://141.226.203.152/",
             folder_name=folder_name,
         )
 
