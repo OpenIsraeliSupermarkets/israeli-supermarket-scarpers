@@ -21,7 +21,7 @@ class PublishPrice(WebBase):
         super().__init__(
             chain,
             chain_id,
-            url=f"http://publishprice.{site_infix}.co.il/",
+            url=f"https://publishprice.{site_infix}.co.il/",
             folder_name=folder_name,
         )
         self.folder = None
