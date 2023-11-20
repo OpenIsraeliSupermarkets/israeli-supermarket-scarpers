@@ -3,7 +3,7 @@
 
 name: Unit & Integration Tests
 env:
-  DISABLED_SCRAPPERS: NETIV_HASED
+  #DISABLED_SCRAPPERS: NETIV_HASED
 
 on:
   push:
