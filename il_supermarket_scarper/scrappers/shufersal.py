@@ -6,5 +6,6 @@ class Shufersal(MultiPageWeb):
 
     def __init__(self, folder_name=None):
         super().__init__(
+            url="https://prices.shufersal.co.il/",
             chain="Shufersal", chain_id="7290027600007", folder_name=folder_name
         )
