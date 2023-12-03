@@ -4,7 +4,7 @@ import ntpath
 import lxml
 import requests
 
-from il_supermarket_scarper.utils.connection import download_connection_retry
+from il_supermarket_scarper.utils.connection import url_connection_retry
 
 
 from il_supermarket_scarper.utils import (
@@ -35,13 +35,15 @@ class MultiPageWeb(WebBase):
         self.total_page_xpath = total_page_xpath
         self.total_pages_pattern = total_pages_pattern
 
-    @download_connection_retry()
-    def get_number_of_pages(self, url):
+    @url_connection_retry()
+    def get_number_of_pages(self, url, timeout=15):
         """get the number of pages to scarpe"""
 
-        response = requests.get(url)
+        response = requests.get(url, timeout=timeout)
         if response.status_code != 200:
-            raise ValueError(f"Fetching resources failed from {url}, status code: {response.status_code}")
+            raise ValueError(
+                f"Fetching resources failed from {url}, status code: {response.status_code}"
+            )
 
         html_body = lxml.html.fromstring(response.content)
 
