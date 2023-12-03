@@ -1,9 +1,10 @@
 from urllib.parse import urlsplit
 import re
 import ntpath
-import lxml.html
+import lxml
+import requests
 
-from il_supermarket_scarper.utils.connection import download_connection_retry
+from il_supermarket_scarper.utils.connection import url_connection_retry
 
 
 from il_supermarket_scarper.utils import (
@@ -24,7 +25,7 @@ class MultiPageWeb(WebBase):
         self,
         chain,
         chain_id,
-        url="http://prices.shufersal.co.il/",
+        url,
         folder_name=None,
         total_page_xpath="""//*[@id="gridContainer"]/table/
                                             tfoot/tr/td/a[6]/@href""",
@@ -34,13 +35,19 @@ class MultiPageWeb(WebBase):
         self.total_page_xpath = total_page_xpath
         self.total_pages_pattern = total_pages_pattern
 
-    @download_connection_retry()
-    def get_number_of_pages(self, url):
+    @url_connection_retry()
+    def get_number_of_pages(self, url, timeout=15):
         """get the number of pages to scarpe"""
 
-        html = lxml.html.parse(url)
+        response = requests.get(url, timeout=timeout)
+        if response.status_code != 200:
+            raise ValueError(
+                f"Fetching resources failed from {url}, status code: {response.status_code}"
+            )
 
-        total_pages = self.get_total_pages(html)
+        html_body = lxml.html.fromstring(response.content)
+
+        total_pages = self.get_total_pages(html_body)
         Logger.info(f"Found {total_pages} pages")
 
         return total_pages
