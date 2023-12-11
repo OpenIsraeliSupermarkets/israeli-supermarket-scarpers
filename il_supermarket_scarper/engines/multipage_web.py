@@ -29,7 +29,7 @@ class MultiPageWeb(WebBase):
         folder_name=None,
         total_page_xpath="""//*[@id="gridContainer"]/table/
                                             tfoot/tr/td/a[6]/@href""",
-        total_pages_pattern=r"^\/\?page\=([0-9]{2})$",
+        total_pages_pattern=r"^\/\?page\=([0-9]{3})$",
     ):
         super().__init__(chain, chain_id, url=url, folder_name=folder_name)
         self.total_page_xpath = total_page_xpath
