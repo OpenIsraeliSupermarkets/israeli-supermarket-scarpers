@@ -6,7 +6,7 @@ from .test_cases import make_test_case
 
 
 @pytest.mark.run(order=1)
-class BareketTestCase(make_test_case(ScraperFactory.BAREKET, 2)):
+class BareketTestCase(make_test_case(ScraperFactory.BAREKET, 5)):
     pass
 
 
