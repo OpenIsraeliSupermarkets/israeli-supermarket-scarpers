@@ -8,7 +8,6 @@ class KingStore(Bina):
         super().__init__(
             chain="King Store",
             chain_id="7290058108879",
-            url_perfix="www",
-            domain="kingstore.co.il/Food_Law/",
-            folder_name=folder_name,
+            url_perfix="kingstore",
+            folder_name=folder_name
         )
