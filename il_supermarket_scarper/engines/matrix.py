@@ -13,7 +13,7 @@ class Matrix(Aspx):
         chain,
         chain_id,
         chain_hebrew_name=None,
-        url="http://matrixcatalog.co.il/",
+        url="https://laibcatalog.co.il/",
         aspx_page="NBCompetitionRegulations.aspx",
         folder_name=None,
     ):
