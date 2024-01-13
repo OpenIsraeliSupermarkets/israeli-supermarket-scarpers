@@ -22,7 +22,6 @@ Status: [![Scheduled Tests](https://github.com/erlichsefi/israeli-supermarket-sc
 
 Notice:
 - Berekt is disabled in testing becuase the chain has't upload data to the site.
-- Victory and MahsaniAShuk are disabled in testing becuase the hosting server block incoming connection from outside of Israel. (there is currently not options to host the codesapce in Israel)
 
 --------
 
