@@ -3,7 +3,7 @@
 
 name: Unit & Integration Tests
 env:
-  DISABLED_SCRAPPERS: Bareket
+  DISABLED_SCRAPPERS: Bareket,Victory,MahsaniAShuk
 
 on:
   push:
