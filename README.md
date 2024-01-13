@@ -20,7 +20,9 @@ The test-suite is scheduled to run every three days, so you can see if the super
 
 Status: [![Scheduled Tests](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/test-suite.yml/badge.svg?event=schedule)](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/test-suite.yml)
 
-
+Notice:
+- Berekt is disabled in testing becuase the chain has't upload data to the site.
+- some of the scrapers site are blocked to be accessed from outside of israel. 
 
 --------
 

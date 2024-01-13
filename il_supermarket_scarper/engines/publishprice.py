@@ -57,9 +57,6 @@ class PublishPrice(WebBase):
         file_names: list = list(map(lambda x: x.a.attrs["href"].split(".")[0], all_trs))
         return download_urls, file_names
 
-    def get_store_name_format(self, store_id):
-        return f"-{store_id:04d}-"
-
     def _is_validate_scraper_found_no_files(
         self, limit=None, files_types=None, store_id=None, only_latest=False
     ):
