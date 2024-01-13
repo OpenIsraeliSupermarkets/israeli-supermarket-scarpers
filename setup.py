@@ -4,6 +4,12 @@ from setuptools import setup
 with open("README.md", encoding="utf-8") as f:
     long_description = "\n" + f.read()
 
+with open("requirements.txt", encoding="utf-8") as f:
+    required = f.read().splitlines()
+
+with open("requirements-dev.txt", encoding="utf-8") as f:
+    dev_required = f.read().splitlines()
+
 setup(
     # Needed to silence warnings (and to be a worthwhile package)
     name="il-supermarket-scraper",
@@ -18,21 +24,11 @@ setup(
         "il_supermarket_scarper.utils",
     ],
     # Needed for dependencies
-    install_requires=[
-        "retry==0.9.2",
-        "mock==4.0.3",
-        "requests==2.31.0",
-        "lxml==4.9.1",
-        "beautifulsoup4==4.10.0",
-        "pymongo==4.2.0",
-        "pytz==2022.4",
-        "holidays==0.16",
-        "cachetools==5.2.0",
-    ],
-    tests_require=["pytest==7.1", "black==23.9.1", "pylint==3.0.1"],
+    install_requires=required,
+    tests_require=dev_required,
     extras_require={"test": ["pytest"]},
     # *strongly* suggested for sharing
-    version="0.3.6",
+    version="0.3.7",
     # The license can be anything you like
     license="MIT",
     description="python package that implement a scraping for israeli supermarket data",
