@@ -22,6 +22,7 @@ Status: [![Scheduled Tests](https://github.com/erlichsefi/israeli-supermarket-sc
 
 Notice:
 - Berekt is disabled in testing becuase the chain has't upload data to the site.
+- some of the scrapers site are blocked to be accessed from outside of israel. 
 
 --------
 
