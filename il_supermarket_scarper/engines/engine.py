@@ -1,5 +1,6 @@
 from abc import ABC
 import os
+import re
 
 
 from il_supermarket_scarper.utils import (
@@ -78,10 +79,6 @@ class Engine(ScraperStatus, ABC):
         """it is valid the file is empty"""
         return file_name is None
 
-    def get_store_name_format(self, store_id):
-        """get the expected format of the store in the file name"""
-        return f"-{store_id:03d}-"
-
     def apply_limit(
         self,
         intreable,
@@ -110,9 +107,10 @@ class Engine(ScraperStatus, ABC):
 
         # filter by store id
         if store_id:
+            pattern = re.compile(rf"-0*{store_id}-")
             intreable_ = list(
                 filter(
-                    lambda x: self.get_store_name_format(store_id) in by_function(x),
+                    lambda x: pattern.search(by_function(x)),
                     intreable_,
                 )
             )
