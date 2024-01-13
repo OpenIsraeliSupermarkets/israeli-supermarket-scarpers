@@ -4,10 +4,10 @@ from setuptools import setup
 with open("README.md", encoding="utf-8") as f:
     long_description = "\n" + f.read()
 
-with open('requirements.txt') as f:
+with open("requirements.txt", encoding="utf-8") as f:
     required = f.read().splitlines()
 
-with open('requirements-dev.txt') as f:
+with open("requirements-dev.txt", encoding="utf-8") as f:
     dev_required = f.read().splitlines()
 
 setup(
@@ -24,7 +24,7 @@ setup(
         "il_supermarket_scarper.utils",
     ],
     # Needed for dependencies
-    install_requires= required,
+    install_requires=required,
     tests_require=dev_required,
     extras_require={"test": ["pytest"]},
     # *strongly* suggested for sharing
