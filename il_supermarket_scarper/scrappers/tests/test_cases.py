@@ -51,7 +51,7 @@ def make_test_case(scraper_enum, store_id):
             if store_id:
                 store_mark = []
                 for file in files_found:
-                    store_mark.append(file.split("-")[1])
+                    store_mark.append(int(file.split("-")[1]))
                 assert len(set(store_mark)) == 1 and len(store_mark) == len(files_found)
             if only_latest:
                 files_sources = []
