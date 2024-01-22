@@ -115,6 +115,7 @@ class SuperPharmTestCase(make_test_case(ScraperFactory.SUPER_PHARM, 224)):
     pass
 
 
+
 # @pytest.mark.run(order=23)
 class SuperYudaTestCase(make_test_case(ScraperFactory.SUPER_YUDA, 40)):
     pass
@@ -149,4 +150,8 @@ class YohananofTestCase(make_test_case(ScraperFactory.YOHANANOF, 1)):
 
 # @pytest.mark.run(order=29)
 class ZolVeBegadolTestCase(make_test_case(ScraperFactory.ZOL_VEBEGADOL, 4)):
+    pass
+
+# @pytest.mark.run(order=30)
+class SuperSapirTestCase(make_test_case(ScraperFactory.SUPER_SAPIR,44)):
     pass
