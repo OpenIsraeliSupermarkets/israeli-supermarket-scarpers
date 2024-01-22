@@ -2,6 +2,7 @@ from il_supermarket_scarper.engines import Matrix
 from il_supermarket_scarper.utils import _is_saturday_in_israel, _is_holiday_in_israel
 from il_supermarket_scarper.utils import FlakyScraper
 
+
 @FlakyScraper
 class Bareket(Matrix):
     """scarper for bareket"""
