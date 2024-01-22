@@ -35,6 +35,10 @@ class HaziHinamTestCase(make_test_case(ScraperFactory.HAZI_HINAM, 2)):
     pass
 
 
+class HetCohen(make_test_case(ScraperFactory.HET_COHEN, 75)):
+    pass
+
+
 # @pytest.mark.run(order=7)
 class KeshetTestCase(make_test_case(ScraperFactory.KESHET, 5)):
     pass
@@ -120,10 +124,20 @@ class SuperYudaTestCase(make_test_case(ScraperFactory.SUPER_YUDA, 40)):
     pass
 
 
+# @pytest.mark.run(order=30)
+class SuperSapirTestCase(make_test_case(ScraperFactory.SUPER_SAPIR, 44)):
+    pass
+
+
 # @pytest.mark.run(order=24)
 class FreshMarketAndSuperDoshTestCase(
     make_test_case(ScraperFactory.FRESH_MARKET_AND_SUPER_DOSH, 1)
 ):
+    pass
+
+
+# @pytest.mark.run(order=25)
+class QuikTestCase(make_test_case(ScraperFactory.QUIK, None)):
     pass
 
 

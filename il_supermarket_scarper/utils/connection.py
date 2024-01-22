@@ -111,7 +111,7 @@ def cache():
 @cached(cache=TTLCache(maxsize=1024, ttl=60))
 def get_ip():
     """get the ip of the computer running the code"""
-    response = requests.get("https://api64.ipify.org?format=json", timeout=15).json()
+    response = requests.get("https://api.ipify.org?format=json", timeout=15).json()
     return response["ip"]
 
 
@@ -122,7 +122,9 @@ def get_location():
     response = requests.get(f"https://ipapi.co/{ip_address}/json/", timeout=15).json()
     location_data = {
         "ip": ip_address,
-        "city": response.get("city"),
+        "city": response.get(
+            "city",
+        ),
         "region": response.get("region"),
         "country": response.get("country_name"),
     }
@@ -140,7 +142,10 @@ def disable_when_outside_israel(function):
 
     estimated_location = get_location()
 
-    if estimated_location["country"] != "Israel":
+    if (
+        estimated_location["country"] is not None
+        and estimated_location["country"] != "Israel"
+    ):
         Logger.info(f"estimated location is {str(estimated_location)}")
         return _decorator
     return function
