@@ -1,6 +1,7 @@
 from urllib.error import URLError
 from http.client import RemoteDisconnected
 from http.cookiejar import MozillaCookieJar
+from http.cookiejar import LoadError
 
 import contextlib
 import ntpath
@@ -36,6 +37,7 @@ exceptions = (
     RequestsConnectionError,
     ChunkedEncodingError,
     error_perm,
+    LoadError,
 )
 
 
@@ -177,11 +179,16 @@ def session_with_cookies(url, timeout=15, chain_cookie_name=None):
     session = requests.Session()
 
     if chain_cookie_name:
-        session.cookies = MozillaCookieJar(f"{chain_cookie_name}_cookies.txt")
+        filemame = f"{chain_cookie_name}_cookies.txt"
+        session.cookies = MozillaCookieJar(filemame)
         try:
             session.cookies.load()
         except FileNotFoundError:
             Logger.info("didn't find cookie file")
+        except LoadError as e:
+            # there was an issue with reading the file.
+            os.remove(filemame)
+            raise e
 
     Logger.info(f"On a new Session requesting url: {url}")
 
