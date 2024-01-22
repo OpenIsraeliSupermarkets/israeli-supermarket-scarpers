@@ -13,6 +13,7 @@ class ScraperFactory(Enum):
     DOR_ALON = all_scrappers.DorAlon
     GOOD_PHARM = all_scrappers.GoodPharm
     HAZI_HINAM = all_scrappers.HaziHinam
+    HET_COHEN = all_scrappers.HetCohen
     KESHET = all_scrappers.Keshet
     KING_STORE = all_scrappers.KingStore
     MAAYAN_2000 = all_scrappers.Maayan2000
@@ -30,12 +31,19 @@ class ScraperFactory(Enum):
     STOP_MARKET = all_scrappers.StopMarket
     SUPER_PHARM = all_scrappers.SuperPharm
     SUPER_YUDA = all_scrappers.SuperYuda
+    SUPER_SAPIR = all_scrappers.SuperSapir
     FRESH_MARKET_AND_SUPER_DOSH = all_scrappers.FreshMarketAndSuperDosh
+    QUIK = all_scrappers.Quik
     TIV_TAAM = all_scrappers.TivTaam
     VICTORY = all_scrappers.Victory
     YELLOW = all_scrappers.Yellow
     YOHANANOF = all_scrappers.Yohananof
     ZOL_VEBEGADOL = all_scrappers.ZolVeBegadol
+
+    @classmethod
+    def all_listed_scrappers(cls):
+        """get all the scarpers and filter disabled scrapers"""
+        return list(cls)
 
     @classmethod
     def all_active(cls):
