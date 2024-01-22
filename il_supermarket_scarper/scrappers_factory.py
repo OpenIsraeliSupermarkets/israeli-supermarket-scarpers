@@ -29,6 +29,7 @@ class ScraperFactory(Enum):
     SHUK_AHIR = all_scrappers.ShukAhir
     STOP_MARKET = all_scrappers.StopMarket
     SUPER_PHARM = all_scrappers.SuperPharm
+    SUPER_SAPIR = all_scrappers.SuperSapir
     SUPER_YUDA = all_scrappers.SuperYuda
     FRESH_MARKET_AND_SUPER_DOSH = all_scrappers.FreshMarketAndSuperDosh
     TIV_TAAM = all_scrappers.TivTaam

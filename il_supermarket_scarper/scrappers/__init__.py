@@ -20,6 +20,7 @@ from .shufersal import Shufersal
 from .shuk_ahir import ShukAhir
 from .stop_market import StopMarket
 from .super_pharm import SuperPharm
+from .super_sapir import SuperSapir
 from .super_yuda import SuperYuda
 from .superdosh import FreshMarketAndSuperDosh
 from .tivtaam import TivTaam
