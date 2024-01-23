@@ -4,6 +4,7 @@ from .cofix import Cofix
 from .doralon import DorAlon
 from .good_pharm import GoodPharm
 from .hazihinam import HaziHinam
+from .het_cohen import HetCohen
 from .keshet import Keshet
 from .king_store import KingStore
 from .maayan2000 import Maayan2000
@@ -21,7 +22,9 @@ from .shuk_ahir import ShukAhir
 from .stop_market import StopMarket
 from .super_pharm import SuperPharm
 from .super_yuda import SuperYuda
+from .super_sapir import SuperSapir
 from .superdosh import FreshMarketAndSuperDosh
+from .quik import Quik
 from .tivtaam import TivTaam
 from .victory import Victory
 from .yellow import Yellow
