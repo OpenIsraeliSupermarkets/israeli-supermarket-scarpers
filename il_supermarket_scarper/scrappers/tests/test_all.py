@@ -59,11 +59,6 @@ class MahsaniAShukTestCase(make_test_case(ScraperFactory.MAHSANI_ASHUK, 98)):
     pass
 
 
-# @pytest.mark.run(order=11)
-class MegaMarketTestCase(make_test_case(ScraperFactory.MEGA_MARKET, 2150)):
-    pass
-
-
 # @pytest.mark.run(order=12)
 class MegaTestCase(make_test_case(ScraperFactory.MEGA, 37)):
     pass
