@@ -18,7 +18,6 @@ class ScraperFactory(Enum):
     KING_STORE = all_scrappers.KingStore
     MAAYAN_2000 = all_scrappers.Maayan2000
     MAHSANI_ASHUK = all_scrappers.MahsaniAShuk
-    MEGA_MARKET = all_scrappers.MegaMarket
     MEGA = all_scrappers.Mega
     NETIV_HASED = all_scrappers.NetivHased
     OSHER_AD = all_scrappers.Osherad
