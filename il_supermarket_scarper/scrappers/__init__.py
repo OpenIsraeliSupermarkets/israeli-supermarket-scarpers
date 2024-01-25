@@ -9,7 +9,6 @@ from .keshet import Keshet
 from .king_store import KingStore
 from .maayan2000 import Maayan2000
 from .machsani_ashuk import MahsaniAShuk
-from .mega_market import MegaMarket
 from .mega import Mega
 from .nativ_hashed import NetivHased
 from .osherad import Osherad
