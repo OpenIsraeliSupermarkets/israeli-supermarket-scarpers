@@ -21,7 +21,7 @@ The test-suite is scheduled to run every three days, so you can see if the super
 Status: [![Scheduled Tests](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/test-suite.yml/badge.svg?event=schedule)](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/test-suite.yml)
 
 Notice:
-- Berekt, MegeMarket and Quik are flaky! They will not fail the testing framework, but you can still use them.
+- Berekt and Quik are flaky! They will not fail the testing framework, but you can still use them.
 - some of the scrapers site are blocked to be accessed from outside of israel. 
 
 --------
