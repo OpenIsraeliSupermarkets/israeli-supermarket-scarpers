@@ -35,7 +35,7 @@ class HaziHinamTestCase(make_test_case(ScraperFactory.HAZI_HINAM, 2)):
     pass
 
 
-class HetCohen(make_test_case(ScraperFactory.HET_COHEN, 75)):
+class HetCohen(make_test_case(ScraperFactory.HET_COHEN, 45)):
     pass
 
 
