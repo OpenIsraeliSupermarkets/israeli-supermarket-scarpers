@@ -27,5 +27,5 @@ def test_update_date():
     """test date the site update"""
     date = get_status_date()
     assert date == datetime.datetime(
-        2024, 1, 25
+        2024, 1, 28
     ), "gov il site changed, please check it out."
