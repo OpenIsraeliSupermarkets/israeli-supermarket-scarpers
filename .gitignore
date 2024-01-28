@@ -9,3 +9,4 @@ dumps/*
 logging.log
 temp*/
 .vscode/settings.json
+.DS_Store
