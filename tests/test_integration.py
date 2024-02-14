@@ -26,6 +26,6 @@ def test_all_chain_id_unqiue():
 def test_update_date():
     """test date the site update"""
     date = get_status_date()
-    assert date == datetime.datetime(
-        2024, 1, 28
-    ), "gov il site changed, please check it out."
+    assert date.date() == datetime.datetime(
+        2024, 2, 11
+    ).date(), "gov il site changed, please check it out."
