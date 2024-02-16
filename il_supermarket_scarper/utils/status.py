@@ -1,4 +1,5 @@
 import datetime
+import difflib
 import re
 import os
 import enum
@@ -7,6 +8,7 @@ import pytz
 import lxml.html as lh
 from bs4 import BeautifulSoup
 
+from lxml.html.clean import clean_html  # pylint: disable=no-name-in-module
 from .logger import Logger
 from .connection import session_with_cookies
 
@@ -16,6 +18,21 @@ def get_statue_page():
     url = "https://www.gov.il/he/departments/legalInfo/cpfta_prices_regulations"
     # Create a handle, page, to handle the contents of the website
     return session_with_cookies(url, chain_cookie_name="gov_il")
+
+
+def get_cached_page():
+    """get the current cached page"""
+    cache = None
+    with open(
+        os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "tests",
+            "cpfta_prices_regulations",
+        ),
+        encoding="utf-8",
+    ) as page_cache:
+        cache = page_cache.read()
+    return cache
 
 
 def get_status():
@@ -59,6 +76,25 @@ def get_status_date():
         raise ValueError(f"found dates: {dates}")
 
     return datetime.datetime.strptime("".join(dates[0]), "%d.%m.%Y")
+
+
+def compute_page_diff():
+    """compute the diff between the page in the cache and the webpage"""
+    page = get_statue_page()
+    cache = get_cached_page()
+
+    cache_text = (
+        "".join(lh.fromstring(clean_html(cache)).itertext())
+        .replace("\n", "")
+        .replace("\r", "")
+    )
+    page_text = (
+        "".join(lh.fromstring(clean_html(page.content.decode("utf-8"))).itertext())
+        .replace("\n", "")
+        .replace("\r", "")
+    )
+
+    return [li for li in difflib.ndiff(cache_text, page_text) if li[0] != " "]
 
 
 def get_output_folder(chain_name):
