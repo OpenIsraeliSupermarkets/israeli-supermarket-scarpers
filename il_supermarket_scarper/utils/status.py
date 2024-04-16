@@ -42,7 +42,7 @@ def get_status():
     doc = BeautifulSoup(page.content, features="lxml")
     # Parse data that are stored between <tr>..</tr> of HTML
     count = 0
-    for element in doc.find_all("strong"):
+    for element in doc.find_all("herf"):
         if "לצפייה במחירים" in str(element) or "לצפיה במחירים" in str(element):
             count += 1
 
