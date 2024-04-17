@@ -10,14 +10,14 @@ from bs4 import BeautifulSoup
 
 from lxml.html.clean import clean_html  # pylint: disable=no-name-in-module
 from .logger import Logger
-from .connection import session_with_cookies
+from .connection import render_webpage
 
 
 def get_statue_page():
     """fetch the gov.il site"""
     url = "https://www.gov.il/he/departments/legalInfo/cpfta_prices_regulations"
     # Create a handle, page, to handle the contents of the website
-    return session_with_cookies(url, chain_cookie_name="gov_il")
+    return render_webpage(url)
 
 
 def get_cached_page():

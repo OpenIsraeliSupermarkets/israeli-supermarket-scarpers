@@ -209,47 +209,17 @@ def session_with_cookies(url, timeout=15, chain_cookie_name=None):
     return response_content
 
 
-def selenium_get(url, headless=True, timeout=30):  # Default timeout in seconds
-    """start browser"""
-    from selenium import webdriver
-    from selenium.common.exceptions import TimeoutException
-    from selenium.webdriver.support.ui import WebDriverWait
-    from selenium.webdriver.support import expected_conditions as EC
-    from selenium.webdriver.common.by import By
-    from selenium.webdriver.chrome.options import Options
-    from selenium import webdriver
+def render_webpage(url):
+    from playwright.sync_api import sync_playwright
 
-    def set_chrome_options() -> Options:
-        """Sets chrome options for Selenium.
-        Chrome options for headless browser is enabled.
-        """
-        chrome_options = Options()
-        chrome_options.add_argument("--headless")
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_prefs = {}
-        chrome_options.experimental_options["prefs"] = chrome_prefs
-        chrome_prefs["profile.default_content_settings"] = {"images": 2}
-        return chrome_options
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page()
+        page.goto(url)
+        content = page.content()
+        browser.close()
+    return content
 
-    webdriver_client = None
-    try:
-        webdriver_client = webdriver.Chrome(options=set_chrome_options())
-
-        # Wait until the page is loaded
-        WebDriverWait(webdriver_client, timeout).until(
-            EC.presence_of_element_located((By.TAG_NAME, "body"))
-        )
-
-        webdriver_client.get(url)
-
-        return webdriver_client.page_source
-    except TimeoutException:
-        print("Page load timed out.")
-        return None
-    finally:
-        if webdriver_client:
-            webdriver_client.quit()
 
 @url_connection_retry()
 def session_and_check_status(url, timeout=15):
