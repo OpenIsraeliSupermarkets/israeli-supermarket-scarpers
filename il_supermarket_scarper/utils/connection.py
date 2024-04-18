@@ -13,7 +13,7 @@ from ftplib import FTP_TLS, error_perm
 import subprocess
 import requests
 
-
+from playwright.sync_api import sync_playwright
 from urllib3.exceptions import ReadTimeoutError
 from requests.exceptions import (
     ReadTimeout,
@@ -209,14 +209,15 @@ def session_with_cookies(url, timeout=15, chain_cookie_name=None):
     return response_content
 
 
-def render_webpage(url):
-    from playwright.sync_api import sync_playwright
+def render_webpage(url, extraction):
+    """ render website with playwrite """
 
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page()
         page.goto(url)
-        content = page.content()
+        page.wait_for_load_state('networkidle')
+        content = extraction(page)
         browser.close()
     return content
 
