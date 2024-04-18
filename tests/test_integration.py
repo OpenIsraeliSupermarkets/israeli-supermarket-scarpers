@@ -2,7 +2,6 @@ import datetime
 from il_supermarket_scarper.utils.status import (
     get_status,
     get_status_date,
-    compute_page_diff,
 )
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
 from il_supermarket_scarper.utils.connection import disable_when_outside_israel
@@ -32,4 +31,4 @@ def test_update_date():
     date = get_status_date()
     assert (
         date.date() == datetime.datetime(2024, 2, 11).date()
-    ), f"gov il site changed, please check it out, {compute_page_diff()}"
+    ), "gov il site changed"
