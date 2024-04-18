@@ -210,13 +210,13 @@ def session_with_cookies(url, timeout=15, chain_cookie_name=None):
 
 
 def render_webpage(url, extraction):
-    """ render website with playwrite """
+    """render website with playwrite"""
 
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page()
         page.goto(url)
-        page.wait_for_load_state('networkidle')
+        page.wait_for_load_state("networkidle")
         content = extraction(page)
         browser.close()
     return content
