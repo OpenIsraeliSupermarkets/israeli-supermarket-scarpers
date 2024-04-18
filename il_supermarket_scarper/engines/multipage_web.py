@@ -1,7 +1,8 @@
 from urllib.parse import urlsplit
 import re
 import ntpath
-import lxml
+from lxml import html as lxml_html
+
 import requests
 
 from il_supermarket_scarper.utils.connection import url_connection_retry
@@ -44,8 +45,7 @@ class MultiPageWeb(WebBase):
             raise ValueError(
                 f"Fetching resources failed from {url}, status code: {response.status_code}"
             )
-
-        html_body = lxml.html.fromstring(response.content)
+        html_body = lxml_html.fromstring(response.content)
 
         total_pages = self.get_total_pages(html_body)
         Logger.info(f"Found {total_pages} pages")
@@ -120,7 +120,7 @@ class MultiPageWeb(WebBase):
         """additional processing to the links before download"""
         response = self.session_with_cookies_by_chain(page)
 
-        html = lxml.html.fromstring(response.text)
+        html = lxml_html.fromstring(response.text)
 
         file_links, filenames = self.collect_files_details_from_page(html)
         Logger.info(f"Page {page}: Found {len(file_links)} files")

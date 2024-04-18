@@ -1,6 +1,6 @@
 #syntax=docker/dockerfile:1
 
-FROM debian:latest as base
+FROM node:20-bookworm as base
 WORKDIR /usr/src/app
 ARG PY_VERSION="3.11.0"
 
@@ -10,9 +10,8 @@ RUN apt-get update -y && \
     apt-get install libxml2-dev -y && \
     apt-get install libxslt-dev -y 
 
-# setting the C++
-# RUN apt-get install gcc-10 -y && \
-#     apt-get install g++-10 -y 
+# playwrite
+RUN npx -y playwright@1.43.0 install --with-deps
 
 # setting python and more 
 RUN apt-get install python3-pip -y && \
