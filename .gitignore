@@ -10,3 +10,4 @@ logging.log
 temp*/
 .vscode/settings.json
 .DS_Store
+test_dump

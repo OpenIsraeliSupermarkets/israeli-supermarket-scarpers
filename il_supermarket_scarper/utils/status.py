@@ -1,23 +1,33 @@
 import datetime
-import difflib
 import re
 import os
 import enum
 import holidays
 import pytz
-import lxml.html as lh
-from bs4 import BeautifulSoup
-
-from lxml.html.clean import clean_html  # pylint: disable=no-name-in-module
 from .logger import Logger
-from .connection import session_with_cookies
+from .connection import render_webpage
 
 
-def get_statue_page():
+def get_statue_page(extraction_type):
     """fetch the gov.il site"""
     url = "https://www.gov.il/he/departments/legalInfo/cpfta_prices_regulations"
     # Create a handle, page, to handle the contents of the website
-    return session_with_cookies(url, chain_cookie_name="gov_il")
+
+    def get_from_playwrite(page):
+        if extraction_type == "update_date":
+            content = page.locator('//*[@id="metaData_updateDate_0"]').last.inner_text()
+        elif extraction_type == "links_name":
+            content = page.evaluate(
+                """() => {
+            const links = Array.from(document.querySelectorAll('a'));
+            return links.map(link => link.textContent.trim());
+        }"""
+            )
+        else:
+            raise ValueError(f"type '{extraction_type}' is not valid.")
+        return content
+
+    return render_webpage(url, extraction=get_from_playwrite)
 
 
 def get_cached_page():
@@ -37,12 +47,10 @@ def get_cached_page():
 
 def get_status():
     """get the number of scarper listed on the gov.il site"""
-    page = get_statue_page()
+    links_text = get_statue_page(extraction_type="links_name")
     # Store the contents of the website under doc
-    doc = BeautifulSoup(page.content, features="lxml")
-    # Parse data that are stored between <tr>..</tr> of HTML
     count = 0
-    for element in doc.find_all("strong"):
+    for element in links_text:
         if "לצפייה במחירים" in str(element) or "לצפיה במחירים" in str(element):
             count += 1
 
@@ -51,19 +59,8 @@ def get_status():
 
 def get_status_date():
     """get the date change listed on the gov.il site"""
-    page = get_statue_page()
-
-    if page.status_code != 200:
-        Logger.error(f"request as failed, page body is {page}.")
-        raise ValueError("Failed reading the gov.il site.")
-    line_with_date = (
-        lh.fromstring(page.content)
-        .xpath(
-            r"""/html/body/section/div/
-                                                        div[3]/div/span"""
-        )[0]
-        .text
-    )
+    line_with_date = get_statue_page(extraction_type="update_date")
+    print(line_with_date)
     Logger.info(f"line_with_date: {line_with_date}")
 
     dates = re.findall(
@@ -76,25 +73,6 @@ def get_status_date():
         raise ValueError(f"found dates: {dates}")
 
     return datetime.datetime.strptime("".join(dates[0]), "%d.%m.%Y")
-
-
-def compute_page_diff():
-    """compute the diff between the page in the cache and the webpage"""
-    page = get_statue_page()
-    cache = get_cached_page()
-
-    cache_text = (
-        "".join(lh.fromstring(clean_html(cache)).itertext())
-        .replace("\n", "")
-        .replace("\r", "")
-    )
-    page_text = (
-        "".join(lh.fromstring(clean_html(page.content.decode("utf-8"))).itertext())
-        .replace("\n", "")
-        .replace("\r", "")
-    )
-
-    return [li for li in difflib.ndiff(cache_text, page_text) if li[0] != " "]
 
 
 def get_output_folder(chain_name):
