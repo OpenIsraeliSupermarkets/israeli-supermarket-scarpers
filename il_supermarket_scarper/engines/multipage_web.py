@@ -1,11 +1,12 @@
 from urllib.parse import urlsplit
 import re
 import ntpath
+from lxml import html as lxml_html
 
 import requests
 
 from il_supermarket_scarper.utils.connection import url_connection_retry
-from lxml import html as lxml_html
+
 
 from il_supermarket_scarper.utils import (
     Logger,
