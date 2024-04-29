@@ -3,7 +3,7 @@ mock==4.0.3
 requests==2.31.0
 lxml==5.2.1
 beautifulsoup4==4.10.0
-pymongo==4.2.0
+pymongo==4.6.3
 pytz==2022.4
 holidays==0.16
 cachetools==5.2.0
