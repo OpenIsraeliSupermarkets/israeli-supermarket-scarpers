@@ -11,7 +11,8 @@ RUN apt-get update -y && \
     apt-get install libxslt-dev -y 
 
 # playwrite
-RUN npx -y playwright@1.43.0 install --with-deps
+RUN npx -y playwright@1.43.0 install --with-deps && \
+    playwrite install
 
 # setting python and more 
 RUN apt-get install python3-pip -y && \
