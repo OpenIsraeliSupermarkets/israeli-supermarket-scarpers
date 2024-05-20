@@ -3,16 +3,16 @@ services:
   kniot-scrapper:
     build:
       context: .
+      target: prod
     environment:
       - XML_STORE_PATH=dumps/
       - MONGO_URL=localhost
       - MONGO_PORT=27017
-      - SE_MODE=True
+      - SE_MODE=False
     container_name: kniot-scrapper
     network_mode: "host"
     hostname: kniot-scrapper
     restart: unless-stopped
-    target: prod
     volumes:
       - ./dumps:/usr/src/app/dumps
       - "/etc/timezone:/etc/timezone:ro"
