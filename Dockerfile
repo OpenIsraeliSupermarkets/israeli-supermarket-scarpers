@@ -12,6 +12,7 @@ RUN apt-get update -y && \
 
 # playwrite
 RUN npx -y playwright@1.43.0 install --with-deps
+    
 
 # setting python and more 
 RUN apt-get install python3-pip -y && \
@@ -34,6 +35,7 @@ RUN pyenv global $PY_VERSION
 # setup code
 COPY . .
 RUN python -m pip install .
+RUN python -m  playwright install  
 
 VOLUME ["/usr/src/app/dumps"]
 
