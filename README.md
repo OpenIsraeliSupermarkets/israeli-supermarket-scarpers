@@ -13,9 +13,14 @@ This is a scraper for ALL the supermarket chains listed in the GOV.IL site.
 [![Publish Docker image](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/docker-publish.yml)
 [![Upload Python Package](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/python-publish.yml/badge.svg)](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/python-publish.yml)
 
+## 🤗 Want to support my work?
+<p align="center">
+    <a href="https://buymeacoffee.com/erlichsefi" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;">
+    </a>
+</p>
 
+Scheduled Automatic Testing
 ----
-Scheduled Automatic Testing:
 The test-suite is scheduled to run every three days, so you can see if the supermarket chains has chanced something in their interface and the package will not work probably. however, the tests running here are also integration tests with the APIs which may fail.
 
 Status: [![Scheduled Tests](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/test-suite.yml/badge.svg?event=schedule)](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/test-suite.yml)
