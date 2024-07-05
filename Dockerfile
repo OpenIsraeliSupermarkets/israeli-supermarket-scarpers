@@ -5,7 +5,7 @@ WORKDIR /usr/src/app
 ARG PY_VERSION="3.11.0"
 
 # setting the enviroment 
-RUN apt-get update -y && \
+RUN apt-get update --fix-missing -y && \
     apt-get install cron -y && \
     apt-get install libxml2-dev -y && \
     apt-get install libxslt-dev -y 
