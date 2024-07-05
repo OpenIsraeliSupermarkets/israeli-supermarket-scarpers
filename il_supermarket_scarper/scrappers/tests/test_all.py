@@ -147,7 +147,7 @@ class VictoryTestCase(make_test_case(ScraperFactory.VICTORY, 1)):
 
 
 # @pytest.mark.run(order=27)
-class YellowTestCase(make_test_case(ScraperFactory.YELLOW, 100)):
+class YellowTestCase(make_test_case(ScraperFactory.YELLOW, 1272)):
     pass
 
 
