@@ -21,13 +21,13 @@ This is a scraper for ALL the supermarket chains listed in the GOV.IL site.
 
 Scheduled Automatic Testing
 ----
-The test-suite is scheduled to run every three days, so you can see if the supermarket chains has chanced something in their interface and the package will not work probably. however, the tests running here are also integration tests with the APIs which may fail.
+The test-suite is scheduled to run every three days, so you can see if the supermarket chains has chanced something in their interface and the package will not work probably.
 
 Status: [![Scheduled Tests](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/test-suite.yml/badge.svg?event=schedule)](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/test-suite.yml)
 
 Notice:
 - Berekt and Quik are flaky! They will not fail the testing framework, but you can still use them.
-- some of the scrapers site are blocked to be accessed from outside of israel. 
+- Some of the scrapers site are blocked to be accessed from outside of israel. 
 
 --------
 
@@ -60,14 +60,14 @@ scraper.run()
 
 
 Please notice!
-since new files are constantly uploaded by the supermarket to their site, you will only get the current snapshot. In order to keep geting data, you will need to run this code more the one time to get the newly uploaded files. 
+Since new files are constantly uploaded by the supermarket to their site, you will only get the current snapshot. In order to keep geting data, you will need to run this code more the one time to get the newly uploaded files.
 
 Quick start
 -----------
 
 il_supermarket_scarper can be installed using pip:
 
-    python3 -m pip install -U il-supermarket-scraper
+    python3 pip install il-supermarket-scraper
 
 If you want to run the latest version of the code, you can install from the
 repo directly:
