@@ -40,6 +40,8 @@ class PublishPrice(WebBase):
 
         req_res = session_and_check_status(self.url + self.folder)
         soup = BeautifulSoup(req_res.text, features="lxml")
+
+        # the devloper hard coded the files names in the html 
         all_trs = soup.find_all('script')[-1].text.replace("const files_html = [","").replace("];","").split("\n")[5].split(",")
         return list(map(lambda x:BeautifulSoup(x, features="lxml"),all_trs))
 
