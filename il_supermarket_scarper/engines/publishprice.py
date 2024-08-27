@@ -40,17 +40,18 @@ class PublishPrice(WebBase):
 
         req_res = session_and_check_status(self.url + self.folder)
         soup = BeautifulSoup(req_res.text, features="lxml")
-        return soup.find_all(class_='fileDiv')[1:]
+        all_trs = soup.find_all('script')[-1].text.replace("const files_html = [","").replace("];","").split("\n")[5].split(",")
+        return list(map(lambda x:BeautifulSoup(x, features="lxml"),all_trs))
 
     def extract_task_from_entry(self, all_trs):
         # filter empty files
         get_herf_element =  lambda x: x.find_all('a')[-1]
         get_herf = lambda x: get_herf_element(x).attrs["href"]
-        get_path_from_herf = lambda x: get_herf(x).replace("./","")
+        get_path_from_herf = lambda x: get_herf(x).replace("\\","").replace("\"","").replace("./","")
         get_name_from_herf = lambda x: get_path_from_herf(x).split(".")[0].split("/")[-1]
         all_trs = list(
             filter(
-                lambda x: x.find_all('a')[-1] is not None and x.contents[-1].string.strip() != "0",
+                lambda x: get_herf_element(x) is not None,
                 all_trs,
             )
         )
