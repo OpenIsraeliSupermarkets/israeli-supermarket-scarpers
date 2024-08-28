@@ -5,7 +5,7 @@ from il_supermarket_scarper.utils import (
     session_and_check_status,
     _is_weekend_in_israel,
     _is_holiday_in_israel,
-    _now,
+    # _now,
 )
 from .web import WebBase
 
@@ -17,7 +17,7 @@ class PublishPrice(WebBase):
     but this is not implemented.
     """
 
-    def __init__(self, chain, chain_id, site_infix, folder_name=None,domain="prices"):
+    def __init__(self, chain, chain_id, site_infix, folder_name=None, domain="prices"):
         super().__init__(
             chain,
             chain_id,
@@ -29,7 +29,7 @@ class PublishPrice(WebBase):
     def get_data_from_page(self, req_res):
         soup = BeautifulSoup(req_res.text, features="lxml")
 
-        target_date = _now().strftime("%Y%m%d")
+        # target_date = _now().strftime("%Y%m%d")
         # current_date_page = list(
         #     filter(lambda x: target_date in str(x.a), soup.find_all("tr"))
         # )
@@ -41,16 +41,30 @@ class PublishPrice(WebBase):
         req_res = session_and_check_status(self.url + self.folder)
         soup = BeautifulSoup(req_res.text, features="lxml")
 
-        # the devloper hard coded the files names in the html 
-        all_trs = soup.find_all('script')[-1].text.replace("const files_html = [","").replace("];","").split("\n")[5].split(",")
-        return list(map(lambda x:BeautifulSoup(x, features="lxml"),all_trs))
+        # the devloper hard coded the files names in the html
+        all_trs = (
+            soup.find_all("script")[-1]
+            .text.replace("const files_html = [", "")
+            .replace("];", "")
+            .split("\n")[5]
+            .split(",")
+        )
+        return list(map(lambda x: BeautifulSoup(x, features="lxml"), all_trs))
 
     def extract_task_from_entry(self, all_trs):
         # filter empty files
-        get_herf_element =  lambda x: x.find_all('a')[-1]
-        get_herf = lambda x: get_herf_element(x).attrs["href"]
-        get_path_from_herf = lambda x: get_herf(x).replace("\\","").replace("\"","").replace("./","")
-        get_name_from_herf = lambda x: get_path_from_herf(x).split(".")[0].split("/")[-1]
+        def get_herf_element(x):
+            return x.find_all("a")[-1]
+
+        def get_herf(x):
+            return get_herf_element(x).attrs["href"]
+
+        def get_path_from_herf(x):
+            return get_herf(x).replace("\\", "").replace('"', "").replace("./", "")
+
+        def get_name_from_herf(x):
+            return get_path_from_herf(x).split(".")[0].split("/")[-1]
+
         all_trs = list(
             filter(
                 lambda x: get_herf_element(x) is not None,
