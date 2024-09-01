@@ -1,8 +1,9 @@
+import json
+
 from il_supermarket_scarper.engines.web import WebBase
 from il_supermarket_scarper.engines import Bina
 
 from il_supermarket_scarper.utils import _is_saturday_in_israel, _is_holiday_in_israel
-import json
 
 
 class MeshnatYosef1(WebBase):
