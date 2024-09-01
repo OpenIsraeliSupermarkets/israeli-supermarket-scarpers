@@ -10,6 +10,7 @@ from .king_store import KingStore
 from .maayan2000 import Maayan2000
 from .machsani_ashuk import MahsaniAShuk
 from .mega import Mega
+from .meshnat_yosef import MeshnatYosef1,MeshnatYosef2
 from .nativ_hashed import NetivHased
 from .osherad import Osherad
 from .polizer import Polizer
