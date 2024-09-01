@@ -69,6 +69,16 @@ class NetivHasefTestCase(make_test_case(ScraperFactory.NETIV_HASED, 1)):
     pass
 
 
+# @pytest.mark.run(order=13)
+class MeshnatYosef1TestCase(make_test_case(ScraperFactory.MESHMAT_YOSEF_1, 1)):
+    pass
+
+
+# @pytest.mark.run(order=13)
+class MeshnatYosef2TestCase(make_test_case(ScraperFactory.MESHMAT_YOSEF_2, 1)):
+    pass
+
+
 # @pytest.mark.run(order=14)
 class OsheradTestCase(make_test_case(ScraperFactory.OSHER_AD, 1)):
     pass
