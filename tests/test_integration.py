@@ -29,4 +29,4 @@ def test_all_chain_id_unqiue():
 def test_update_date():
     """test date the site update"""
     date = get_status_date()
-    assert date.date() == datetime.datetime(2024, 7, 15).date(), "gov il site changed"
+    assert date.date() == datetime.datetime(2024, 9, 1).date(), "gov il site changed"
