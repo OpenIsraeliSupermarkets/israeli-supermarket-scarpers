@@ -2,6 +2,7 @@ import re
 
 
 def is_valid_chain_name(input_string):
+    """check the chain name is in a valid folder foramt"""
     # Regular expression pattern to match only letters (a-z, case insensitive) and hyphens (-)
     pattern = r"^[a-zA-Z0-9-]+$"
 
