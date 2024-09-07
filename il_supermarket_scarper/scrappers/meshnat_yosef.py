@@ -11,7 +11,7 @@ class MeshnatYosef1(WebBase):
 
     def __init__(self, folder_name=None):
         super().__init__(
-            "Meshnat Yosef 1",
+            "MeshnatYosef1",
             chain_id="333333",
             url="https://list-files.w5871031-kt.workers.dev/",
             folder_name=folder_name,
