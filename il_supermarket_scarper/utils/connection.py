@@ -22,7 +22,7 @@ from requests.exceptions import (
 )
 from cachetools import cached, TTLCache
 from .logger import Logger
-from .retrey import retry
+from .retry import retry
 
 
 exceptions = (
