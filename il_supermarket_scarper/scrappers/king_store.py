@@ -6,7 +6,7 @@ class KingStore(Bina):
 
     def __init__(self, folder_name=None):
         super().__init__(
-            chain="King Store",
+            chain="King-Store",
             chain_id="7290058108879",
             url_perfix="kingstore",
             folder_name=folder_name,

@@ -11,7 +11,7 @@ class MeshnatYosef1(WebBase):
 
     def __init__(self, folder_name=None):
         super().__init__(
-            "MeshnatYosef1",
+            "Meshnat-Yosef1",
             chain_id="333333",
             url="https://list-files.w5871031-kt.workers.dev/",
             folder_name=folder_name,
@@ -41,7 +41,7 @@ class MeshnatYosef2(Bina):
 
     def __init__(self, folder_name=None):
         super().__init__(
-            chain="MeshnatYosef2",
+            chain="Meshnat-Yosef2",
             chain_id="2222222",
             url_perfix="ktshivuk",
             folder_name=folder_name,
