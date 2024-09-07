@@ -14,7 +14,7 @@ from il_supermarket_scarper.utils import (
     url_retrieve,
     wget_file,
     RestartSessionError,
-    is_valid_chain_name
+    is_valid_chain_name,
 )
 
 
