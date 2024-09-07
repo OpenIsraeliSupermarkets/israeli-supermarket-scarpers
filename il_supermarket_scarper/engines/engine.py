@@ -14,6 +14,7 @@ from il_supermarket_scarper.utils import (
     url_retrieve,
     wget_file,
     RestartSessionError,
+    is_valid_chain_name
 )
 
 
@@ -27,6 +28,8 @@ class Engine(ScraperStatus, ABC):
         folder_name=None,
     ):
         super().__init__(chain)
+
+        assert not is_valid_chain_name(chain), "chain name can contain only abc and -"
         self.chain = chain
         self.chain_id = chain_id
         self.max_workers = 5
