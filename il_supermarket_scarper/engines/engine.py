@@ -29,7 +29,7 @@ class Engine(ScraperStatus, ABC):
     ):
         super().__init__(chain)
 
-        assert not is_valid_chain_name(chain), "chain name can contain only abc and -"
+        assert is_valid_chain_name(chain), "chain name can contain only abc and -"
         self.chain = chain
         self.chain_id = chain_id
         self.max_workers = 5
