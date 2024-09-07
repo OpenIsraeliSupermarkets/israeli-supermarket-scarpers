@@ -6,7 +6,7 @@ class Osherad(Cerberus):
 
     def __init__(self, folder_name=None):
         super().__init__(
-            chain="Osher Ad",
+            chain="Osher-Ad",
             chain_id="7290103152017",
             folder_name=folder_name,
             ftp_username="osherad",

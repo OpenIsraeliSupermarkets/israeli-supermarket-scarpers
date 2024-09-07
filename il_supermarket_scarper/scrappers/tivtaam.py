@@ -11,7 +11,7 @@ class TivTaam(Cerberus):
 
     def __init__(self, folder_name=None):
         super().__init__(
-            "Tiv Taam",
+            "Tiv-Taam",
             chain_id="7290873255550",
             folder_name=folder_name,
             ftp_username="TivTaam",
