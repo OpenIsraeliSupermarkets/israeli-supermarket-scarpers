@@ -6,7 +6,7 @@ class StopMarket(Cerberus):
 
     def __init__(self, folder_name=None):
         super().__init__(
-            "Stop Market",
+            "Stop-Market",
             chain_id=[
                 "72906390",
                 "7290639000004",
