@@ -6,7 +6,7 @@ class ShukAhir(Bina):
 
     def __init__(self, folder_name=None):
         super().__init__(
-            chain="Shuk Ahir",
+            chain="Shuk-Ahir",
             chain_id="7290058148776",
             url_perfix="shuk-hayir",
             folder_name=folder_name,
