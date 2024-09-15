@@ -19,15 +19,15 @@ This is a scraper for ALL the supermarket chains listed in the GOV.IL site.
     </a>
 </p>
 
-Scheduled Automatic Testing
+Daily Automatic Testing
 ----
-The test-suite is scheduled to run every three days, so you can see if the supermarket chains has chanced something in their interface and the package will not work probably.
+The test suite is scheduled to run daily, so you can see if the supermarket chains have changed something in their interface and the package will not work properly.
 
 Status: [![Scheduled Tests](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/test-suite.yml/badge.svg?event=schedule)](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/test-suite.yml)
 
 Notice:
 - Berekt and Quik are flaky! They will not fail the testing framework, but you can still use them.
-- Some of the scrapers site are blocked to be accessed from outside of israel. 
+- Some of the scrapers sites are blocked from being accessed from outside of Israel. 
 
 --------
 
@@ -47,7 +47,7 @@ If you think you've found a bug:
 What is il_supermarket_scarper?
 -------------
 
-There are alot of projects in github trying to scrape the supermarket data, most of them are not stable or wasn't updated for a while, it's about time there will be one codebase that does the work completely. 
+There are a lot of projects in GitHub trying to scrape the supermarket data, but most of them are not stable or haven't been updated for a while, it's about time there will be one codebase that does the work completely. 
 
 You only need to run the following code to get all the data currently shared by the supermarkets.
 
@@ -60,7 +60,7 @@ scraper.run()
 
 
 Please notice!
-Since new files are constantly uploaded by the supermarket to their site, you will only get the current snapshot. In order to keep geting data, you will need to run this code more the one time to get the newly uploaded files.
+Since new files are constantly uploaded by the supermarket to their site, you will only get the current snapshot. In order to keep getting data, you will need to run this code more than one time to get the newly uploaded files.
 
 Quick start
 -----------
@@ -69,7 +69,7 @@ il_supermarket_scarper can be installed using pip:
 
     python3 pip install il-supermarket-scraper
 
-If you want to run the latest version of the code, you can install from the
+If you want to run the latest version of the code, you can install it from the
 repo directly:
 
     python3 -m pip install -U git+https://github.com/erlichsefi/israeli-supermarket-scarpers.git
@@ -80,7 +80,7 @@ repo directly:
 
 Running Docker
 -----------
-The docker is designed to run the scaper every 6 hours, (you change the cron expression if you would like, checkout the file 'crontab'), in every itreation the scraper will collect the files avaliabe to download and check if the file alreay exists before fetching it, either by scaning the dump folder, or checking the mongo.
+The docker is designed to run the scaper every 6 hours, (you change the cron expression if you would like, checkout the file 'crontab'), in every iteration the scraper will collect the files available to download and check if the file already exists before fetching it, either by scanning the dump folder, or checking the mongo.
 
 
     docker-compose up -d

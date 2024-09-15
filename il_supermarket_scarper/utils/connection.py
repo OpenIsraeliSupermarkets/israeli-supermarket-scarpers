@@ -1,4 +1,5 @@
 from urllib.error import URLError
+from urllib3.exceptions import MaxRetryError
 from http.client import RemoteDisconnected
 from http.cookiejar import MozillaCookieJar
 from http.cookiejar import LoadError
@@ -19,6 +20,7 @@ from requests.exceptions import (
     ReadTimeout,
     ConnectionError as RequestsConnectionError,
     ChunkedEncodingError,
+    ConnectTimeout
 )
 from cachetools import cached, TTLCache
 from .logger import Logger
@@ -29,6 +31,8 @@ exceptions = (
     URLError,
     RemoteDisconnected,
     ConnectionResetError,
+    ConnectTimeout,
+    MaxRetryError,
     socket.gaierror,
     socket.timeout,
     ConnectionError,
@@ -38,6 +42,7 @@ exceptions = (
     ChunkedEncodingError,
     error_perm,
     LoadError,
+    
 )
 
 
