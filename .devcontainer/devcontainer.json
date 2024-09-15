@@ -11,7 +11,8 @@
       "extensions": [
         "ms-python.python",
         "ms-python.vscode-pylance",
-        "ms-toolsai.jupyter"
+        "ms-toolsai.jupyter",
+        "LittleFoxTeam.vscode-python-test-adapter"
       ]
     }
   },

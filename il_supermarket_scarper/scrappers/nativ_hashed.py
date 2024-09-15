@@ -2,6 +2,7 @@ from il_supermarket_scarper.engines.web import WebBase
 from il_supermarket_scarper.utils import _is_saturday_in_israel, _is_holiday_in_israel
 
 
+# possible: NetivHased are down in Shabatz
 class NetivHased(WebBase):
     """scraper for nativ Hased"""
 
