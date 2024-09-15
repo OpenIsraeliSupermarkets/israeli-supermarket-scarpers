@@ -13,7 +13,7 @@ with open("requirements-dev.txt", encoding="utf-8") as f:
 setup(
     # Needed to silence warnings (and to be a worthwhile package)
     name="il-supermarket-scraper",
-    url="https://github.com/jladan/package_demo",
+    url="https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers",
     author="Sefi Erlich",
     author_email="erlichsefi@gmail.com",
     # Needed to actually package something
