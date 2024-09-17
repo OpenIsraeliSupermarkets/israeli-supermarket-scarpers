@@ -1,17 +1,18 @@
-from il_supermarket_scarper.engines import Matrix
+from il_supermarket_scarper.engines import Bina
 from il_supermarket_scarper.utils import _is_saturday_in_israel, _is_holiday_in_israel
 from il_supermarket_scarper.utils import FlakyScraper
 
 
 @FlakyScraper
-class Bareket(Matrix):
+class Bareket(Bina):
     """scarper for bareket"""
 
     def __init__(self, folder_name=None):
         super().__init__(
             chain="bareket",
-            chain_hebrew_name="סופר ברקת",
             chain_id="7290875100001",
+            url_perfix="superbareket"
+            download_postfix="/Main.aspx",
             folder_name=folder_name,
         )
 
