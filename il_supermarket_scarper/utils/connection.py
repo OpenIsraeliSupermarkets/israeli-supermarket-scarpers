@@ -20,7 +20,7 @@ from requests.exceptions import (
     ReadTimeout,
     ConnectionError as RequestsConnectionError,
     ChunkedEncodingError,
-    ConnectTimeout
+    ConnectTimeout,
 )
 from cachetools import cached, TTLCache
 from .logger import Logger
@@ -42,7 +42,6 @@ exceptions = (
     ChunkedEncodingError,
     error_perm,
     LoadError,
-    
 )
 
 
