@@ -2,6 +2,7 @@ from il_supermarket_scarper.utils import FileTypesFilters
 
 
 def test_file_type():
+    """test prasing file name to enum"""
     assert (
         FileTypesFilters.get_type_from_file("Price7290058108879-339-202409181941")
         == FileTypesFilters.PRICE_FILE

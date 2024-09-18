@@ -1,4 +1,9 @@
-class DumpFolderNames:
+from enum import Enum
+
+
+class DumpFolderNames(Enum):
+    """all the folder that files will be download to"""
+
     BAREKET = "Bareket"
     YAYNO_BITAN = "YaynotBitan"
     COFIX = "Cofix"
@@ -33,5 +38,12 @@ class DumpFolderNames:
     YOHANANOF = "Yohananof"
     ZOL_VEBEGADOL = "ZolVeBegadol"
 
+    @classmethod
     def is_valid_folder_name(cls, member):
-        return member.name in DumpFolderNames
+        """check if an folder is part of the cls"""
+        return isinstance(member, DumpFolderNames)
+
+    @classmethod
+    def all_folders_names(cls):
+        """get the name of all listed folders"""
+        return [e.name for e in cls]
