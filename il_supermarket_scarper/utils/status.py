@@ -127,7 +127,7 @@ def log_folder_details(folder, unit=UnitSize.MB):
 
     Logger.info(f"Total size of {folder}: {unit_size} {unit.name}")
 
-    return {"size": unit_size, "unit": unit.name}
+    return {"size": unit_size, "unit": unit.name, "folder_content": os.listdir(folder)}
 
 
 def summerize_dump_folder_contant(dump_folder):
