@@ -100,7 +100,7 @@ class ScraperStatus:
         """Insert an update into the MongoDB collection."""
         document = {
             "status": status,
-            "when": datetime.datetime.now(),
+            "when": datetime.now(),
             **additional_info,
         }
         self.database.insert_document("scraper_status", document)
