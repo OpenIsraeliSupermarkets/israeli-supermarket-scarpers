@@ -2,11 +2,9 @@ import datetime
 import os
 
 from datetime import datetime
-import uuid
-
+from logger import Logger
 from .status import log_folder_details
 from .databases import JsonDataBase
-from logger import Logger
 
 
 class ScraperStatus:

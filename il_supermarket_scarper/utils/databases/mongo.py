@@ -19,9 +19,6 @@ class MongoDataBase(AbstractDataBase):
         self.myclient = None
         self.store_db = None
 
-    def is_collection_enabled(self):
-        return self.collection_status
-
     def create_connection(self):
         """Create a connection to the MongoDB database."""
         if PYMONGO_INSTALLED:
@@ -33,24 +30,24 @@ class MongoDataBase(AbstractDataBase):
     def enable_collection_status(self):
         """Enable data collection to MongoDB."""
         if PYMONGO_INSTALLED:
-            self.collection_status = True
+            self.set_collection_status(True)
             self.create_connection()
         else:
             Logger.info("Can't enable collection. Please install pymongo.")
 
     def insert_document(self, collection_name, document):
         """Insert a document into a MongoDB collection."""
-        if self.collection_status:
+        if self.is_collection_enabled():
             try:
                 self.store_db[collection_name].insert_one(document)
             except ServerSelectionTimeoutError:
-                self.collection_status = False
+                self.set_collection_status(False)
                 Logger.error(
                     "Failed to connect to MongoDB. Collection status disabled."
                 )
 
     def find_document(self, collection_name, query):
         """Find a document in a MongoDB collection."""
-        if self.collection_status:
+        if self.is_collection_enabled():
             return self.store_db[collection_name].find_one(query)
         return None

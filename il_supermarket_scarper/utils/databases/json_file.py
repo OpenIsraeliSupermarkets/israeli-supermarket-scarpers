@@ -8,7 +8,7 @@ class JsonDataBase(AbstractDataBase):
     """A class that represents a JSON-based database."""
 
     def __init__(self, database_name, base_path="json_db") -> None:
-        super().__init__(database_name,collection_status=True)
+        super().__init__(database_name, collection_status=True)
         self.base_path = base_path
         self._ensure_db_directory_exists()
 
@@ -23,13 +23,6 @@ class JsonDataBase(AbstractDataBase):
             self.base_path, f"{self.database_name}_{collection_name}.json"
         )
 
-    def is_collection_enabled(self):
-        return self.collection_status
-
-    def enable_collection_status(self):
-        """Enable data collection to JSON storage."""
-        self.collection_status = True
-
     def insert_document(self, collection_name, document):
         """Insert a document into a JSON collection (file)."""
         if self.collection_status:
@@ -38,7 +31,7 @@ class JsonDataBase(AbstractDataBase):
 
             # Load existing data from the file if it exists
             if os.path.exists(file_path):
-                with open(file_path, "r") as file:
+                with open(file_path, "r", encoding="utf-8") as file:
                     try:
                         data = json.load(file)
                     except json.JSONDecodeError:
@@ -48,7 +41,7 @@ class JsonDataBase(AbstractDataBase):
 
             # Add the new document and save it back to the file
             data.append(document)
-            with open(file_path, "w") as file:
+            with open(file_path, "w", encoding="utf-8") as file:
                 json.dump(data, file, default=str, indent=4)
 
     def find_document(self, collection_name, query):
@@ -57,7 +50,7 @@ class JsonDataBase(AbstractDataBase):
             file_path = self._get_collection_file_path(collection_name)
 
             if os.path.exists(file_path):
-                with open(file_path, "r") as file:
+                with open(file_path, "r", encoding="utf-8") as file:
                     try:
                         data = json.load(file)
                         # Filter the documents based on the query
