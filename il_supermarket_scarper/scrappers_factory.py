@@ -69,6 +69,8 @@ class ScraperFactory(Enum):
     @classmethod
     def get(cls, class_name):
         """get a scraper by class name"""
+
+        enum = None
         if isinstance(class_name, ScraperFactory):
             enum = class_name
         elif class_name in cls.all_scrapers_name():
