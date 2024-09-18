@@ -1,10 +1,9 @@
-import datetime
 import os
 
-from datetime import datetime
 from .logger import Logger
 from .status import log_folder_details
 from .databases import JsonDataBase
+from .status import _now
 
 
 class ScraperStatus:
@@ -15,8 +14,8 @@ class ScraperStatus:
     DOWNLOADED = "downloaded"
     ESTIMATED_SIZE = "estimated_size"
 
-    def __init__(self, database_name) -> None:
-        self.database = JsonDataBase(database_name)
+    def __init__(self, database_name,base_path) -> None:
+        self.database = JsonDataBase(database_name,base_path)
 
     def on_scraping_start(self, limit, files_types, **additional_info):
         """Report that scraping has started."""
@@ -82,7 +81,7 @@ class ScraperStatus:
     def _add_downloaded_files_to_list(self, results, **_):
         """Add downloaded files to the MongoDB collection."""
         if self.database.is_collection_enabled():
-            when = datetime.datetime.now()
+            when = _now()
             for res in results:
                 if res["downloaded"] and res["extract_succefully"]:
                     self.database.insert_document(
@@ -100,7 +99,7 @@ class ScraperStatus:
         """Insert an update into the MongoDB collection."""
         document = {
             "status": status,
-            "when": datetime.now(),
+            "when": _now(),
             **additional_info,
         }
         self.database.insert_document("scraper_status", document)
