@@ -1,4 +1,3 @@
-
 class DumpFolderNames:
     BAREKET = "Bareket"
     YAYNO_BITAN = "YaynotBitan"
@@ -33,3 +32,6 @@ class DumpFolderNames:
     YELLOW = "Yellow"
     YOHANANOF = "Yohananof"
     ZOL_VEBEGADOL = "ZolVeBegadol"
+
+    def is_valid_folder_name(cls, member):
+        return member.name in DumpFolderNames

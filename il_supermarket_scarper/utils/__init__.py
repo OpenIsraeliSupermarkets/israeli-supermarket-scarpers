@@ -28,3 +28,4 @@ from .exceptions import RestartSessionError
 from .retry import retry_files
 from .marking import FlakyScraper
 from .validation import is_valid_chain_name
+from .folders_name import DumpFolderNames
