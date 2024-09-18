@@ -2,7 +2,7 @@
 import unittest
 import os
 import uuid
-from il_supermarket_scarper.utils import FileTypesFilters,Logger
+from il_supermarket_scarper.utils import FileTypesFilters, Logger
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
 
 
@@ -97,7 +97,7 @@ def make_test_case(scraper_enum, store_id):
             self._delete_download_folder(dump_path)
             os.makedirs(dump_path)
             init_scraper_function = ScraperFactory.get(scraper_enum)
-            
+
             if init_scraper_function is None:
                 Logger.info(f"{scraper_enum} is disabled.")
             else:
