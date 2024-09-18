@@ -54,7 +54,7 @@ class JsonDataBase(AbstractDataBase):
 
             # Save the updated data back to the file
             with open(file_path, "w", encoding="utf-8") as file:
-                json.dump(data, file, default=str, indent=4)
+                json.dump(dict(sorted(data.items())), file, default=str, indent=4)
 
     def find_document(self, collection_name, query):
         """Find a document in a collection based on a query."""

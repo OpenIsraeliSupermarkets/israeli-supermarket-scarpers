@@ -5,8 +5,6 @@ from .status import log_folder_details
 from .databases import JsonDataBase
 from .status import _now
 from .lock_utils import lock_by_string
-from .status import _now
-
 
 
 class ScraperStatus:
@@ -16,10 +14,11 @@ class ScraperStatus:
     COLLECTED = "collected"
     DOWNLOADED = "downloaded"
     ESTIMATED_SIZE = "estimated_size"
+    VERIFIED_DOWNLOADS = "verified_downloads"
 
     def __init__(self, database_name, base_path) -> None:
         self.database = JsonDataBase(database_name, base_path)
-        self.task_id = _now().strftime('%Y%m%d%H%M%S')
+        self.task_id = _now().strftime("%Y%m%d%H%M%S")
 
     @lock_by_string()
     def on_scraping_start(self, limit, files_types, **additional_info):
@@ -60,7 +59,7 @@ class ScraperStatus:
             new_filelist = []
             for file in filelist:
                 if not self.database.find_document(
-                    "downloaded", {"file_name": by_function(file)}
+                    self.VERIFIED_DOWNLOADS, {"file_name": by_function(file)}
                 ):
                     new_filelist.append(file)
                 else:
@@ -90,11 +89,12 @@ class ScraperStatus:
         if self.database.is_collection_enabled():
             when = _now()
             for res in results:
-                if res["downloaded"] and res["extract_succefully"]:
+                if res["extract_succefully"]:
                     self.database.insert_document(
-                        "downloaded",
+                        self.VERIFIED_DOWNLOADS,
                         {"file_name": res["file_name"], "when": when},
                     )
+
     @lock_by_string()
     def on_scrape_completed(self, folder_name):
         """Report when scraping is completed."""
