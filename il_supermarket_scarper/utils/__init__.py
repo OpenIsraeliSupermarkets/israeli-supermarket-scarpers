@@ -9,7 +9,7 @@ from .status import (
     _is_weekend_in_israel,
     _now,
 )
-from .mongo import ScraperStatus
+from .scraper_status import ScraperStatus
 from .file_types import FileTypesFilters
 from .connection import (
     download_connection_retry,
