@@ -2,7 +2,7 @@ import datetime
 import os
 
 from datetime import datetime
-from logger import Logger
+from .logger import Logger
 from .status import log_folder_details
 from .databases import JsonDataBase
 
