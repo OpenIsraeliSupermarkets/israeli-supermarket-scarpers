@@ -8,9 +8,9 @@ class AbstractDataBase(ABC):
         self.database_name = database_name.replace(" ", "_").lower()
         self.collection_status = collection_status
 
-    @abstractmethod
     def enable_collection_status(self):
         """Enable data collection to the database."""
+        self.collection_status = True
 
     @abstractmethod
     def insert_document(self, collection_name, document):
