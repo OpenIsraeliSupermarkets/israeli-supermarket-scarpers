@@ -12,7 +12,6 @@ class Bareket(Bina):
             chain="bareket",
             chain_id="7290875100001",
             url_perfix="superbareket",
-            download_postfix="/Main.aspx",
             folder_name=folder_name,
         )
 
