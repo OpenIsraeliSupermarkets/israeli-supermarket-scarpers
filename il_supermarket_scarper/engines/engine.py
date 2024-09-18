@@ -27,11 +27,10 @@ class Engine(ScraperStatus, ABC):
         chain_id,
         folder_name=None,
     ):
-        super().__init__(chain)
-
         assert DumpFolderNames.is_valid_folder_name(
             chain
         ), "chain name can contain only abc and -"
+        super().__init__(chain.value)
         self.chain = chain
         self.chain_id = chain_id
         self.max_workers = 5
