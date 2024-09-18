@@ -31,11 +31,11 @@ class Engine(ScraperStatus, ABC):
             chain
         ), "chain name can contain only abc and -"
 
-        super().__init__(chain.value,"status")
+        super().__init__(chain.value, "status")
         self.chain = chain
         self.chain_id = chain_id
         self.max_workers = 5
-        self.storage_path = get_output_folder(self.chain.value,folder_name=folder_name)
+        self.storage_path = get_output_folder(self.chain.value, folder_name=folder_name)
         Logger.info(f"Storage path: {self.storage_path}")
 
     def get_storage_path(self):
