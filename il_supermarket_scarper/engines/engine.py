@@ -30,14 +30,12 @@ class Engine(ScraperStatus, ABC):
         assert DumpFolderNames.is_valid_folder_name(
             chain
         ), "chain name can contain only abc and -"
-        super().__init__(chain.value)
+
+        super().__init__(chain.value,"status")
         self.chain = chain
         self.chain_id = chain_id
         self.max_workers = 5
-        if folder_name:
-            self.storage_path = os.path.join(folder_name, self.chain.value)
-        else:
-            self.storage_path = get_output_folder(self.chain.value)
+        self.storage_path = get_output_folder(self.chain.value,folder_name=folder_name)
         Logger.info(f"Storage path: {self.storage_path}")
 
     def get_storage_path(self):
