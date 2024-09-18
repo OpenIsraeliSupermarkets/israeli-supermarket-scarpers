@@ -155,77 +155,70 @@ def make_test_case(scraper_enum, store_id):
             """scrape one file and make sure it exists"""
             self._clean_scarpe_delete(scraper_enum, self._get_temp_folder(), limit=1)
 
-        # def test_scrape_ten(self):
-        #     """scrape ten file and make sure they exists"""
-        #     self._clean_scarpe_delete(scraper_enum, self._get_temp_folder(), limit=10)
+        def test_scrape_ten(self):
+            """scrape ten file and make sure they exists"""
+            self._clean_scarpe_delete(scraper_enum, self._get_temp_folder(), limit=10)
 
-        # def test_scrape_promo(self):
-        #     """scrape one promo file and make sure it exists"""
-        #     self._clean_scarpe_delete(
-        #         scraper_enum,
-        #         self._get_temp_folder(),
-        #         limit=1,
-        #         file_type=[FileTypesFilters.PROMO_FILE.name],
-        #     )
+        def test_scrape_promo(self):
+            """scrape one promo file and make sure it exists"""
+            self._clean_scarpe_delete(
+                scraper_enum,
+                self._get_temp_folder(),
+                limit=1,
+                file_type=[FileTypesFilters.PROMO_FILE.name],
+            )
 
-        # def test_scrape_promo_full(self):
-        #     """scrape one promo file and make sure it exists"""
-        #     self._clean_scarpe_delete(
-        #         scraper_enum,
-        #         self._get_temp_folder(),
-        #         limit=1,
-        #         file_type=[FileTypesFilters.PROMO_FULL_FILE.name],
-        #     )
+        def test_scrape_promo_full(self):
+            """scrape one promo file and make sure it exists"""
+            self._clean_scarpe_delete(
+                scraper_enum,
+                self._get_temp_folder(),
+                limit=1,
+                file_type=[FileTypesFilters.PROMO_FULL_FILE.name],
+            )
 
-        # def test_scrape_store(self):
-        #     """scrape one store file and make sure it exists"""
-        #     self._clean_scarpe_delete(
-        #         scraper_enum,
-        #         self._get_temp_folder(),
-        #         limit=1,
-        #         file_type=[FileTypesFilters.STORE_FILE.name],
-        #     )
+        def test_scrape_store(self):
+            """scrape one store file and make sure it exists"""
+            self._clean_scarpe_delete(
+                scraper_enum,
+                self._get_temp_folder(),
+                limit=1,
+                file_type=[FileTypesFilters.STORE_FILE.name],
+            )
 
-        # def test_scrape_price(self):
-        #     """scrape one price file and make sure it exists"""
-        #     self._clean_scarpe_delete(
-        #         scraper_enum,
-        #         self._get_temp_folder(),
-        #         limit=1,
-        #         file_type=[FileTypesFilters.PRICE_FILE.name],
-        #     )
+        def test_scrape_price(self):
+            """scrape one price file and make sure it exists"""
+            self._clean_scarpe_delete(
+                scraper_enum,
+                self._get_temp_folder(),
+                limit=1,
+                file_type=[FileTypesFilters.PRICE_FILE.name],
+            )
 
-        # def test_scrape_price_full(self):
-        #     """scrape one price file and make sure it exists"""
-        #     self._clean_scarpe_delete(
-        #         scraper_enum,
-        #         self._get_temp_folder(),
-        #         limit=1,
-        #         file_type=[FileTypesFilters.PRICE_FULL_FILE.name],
-        #     )
+        def test_scrape_price_full(self):
+            """scrape one price file and make sure it exists"""
+            self._clean_scarpe_delete(
+                scraper_enum,
+                self._get_temp_folder(),
+                limit=1,
+                file_type=[FileTypesFilters.PRICE_FULL_FILE.name],
+            )
 
-        # def test_scrape_file_from_single_store(self):
-        #     """test fetching only files from a ceriten store"""
-        #     self._clean_scarpe_delete(
-        #         scraper_enum,
-        #         self._get_temp_folder(),
-        #         store_id=store_id,
-        #     )
+        def test_scrape_file_from_single_store(self):
+            """test fetching only files from a ceriten store"""
+            self._clean_scarpe_delete(
+                scraper_enum,
+                self._get_temp_folder(),
+                store_id=store_id,
+            )
 
-        # def test_scrape_file_from_single_store_last(self):
-        #     """test fetching latest file only"""
-        #     self._clean_scarpe_delete(
-        #         scraper_enum,
-        #         self._get_temp_folder(),
-        #         store_id=store_id,
-        #         only_latest=True,
-        #     )
-
-        # def test_scrape_all(self):
-        #     """scrape all"""
-        #     self._clean_scarpe_delete(
-        #         init_scraper_function,
-        #         self._get_temp_folder(),
-        #     )
+        def test_scrape_file_from_single_store_last(self):
+            """test fetching latest file only"""
+            self._clean_scarpe_delete(
+                scraper_enum,
+                self._get_temp_folder(),
+                store_id=store_id,
+                only_latest=True,
+            )
 
     return TestScapers
