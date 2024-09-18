@@ -77,6 +77,14 @@ class FileTypesFilters(Enum):
         return cls.filter_file(filename, **string_to_look_in)
 
     @classmethod
+    def get_type_from_file(cls, filename):
+        """get file type from filename"""
+        for file_type_name in cls.all_types():
+            if cls.is_file_from_type(filename, file_type_name):
+                return getattr(cls, file_type_name)
+        return None
+
+    @classmethod
     def filter(cls, file_type, iterable, by_function=lambda x: x):
         """Returns the type of the file."""
         return list(
