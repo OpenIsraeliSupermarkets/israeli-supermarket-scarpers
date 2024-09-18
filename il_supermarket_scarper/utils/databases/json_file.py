@@ -1,7 +1,7 @@
 import os
 import json
-from logger import Logger
-from base import AbstractDataBase
+from il_supermarket_scarper.utils import Logger
+from .base import AbstractDataBase
 
 
 class JsonDataBase(AbstractDataBase):

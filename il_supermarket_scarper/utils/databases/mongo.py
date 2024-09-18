@@ -1,6 +1,6 @@
 import os
-from logger import Logger
-from base import AbstractDataBase
+from il_supermarket_scarper.utils import Logger
+from .base import AbstractDataBase
 
 
 PYMONGO_INSTALLED = True
