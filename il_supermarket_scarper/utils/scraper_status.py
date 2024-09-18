@@ -4,6 +4,9 @@ from .logger import Logger
 from .status import log_folder_details
 from .databases import JsonDataBase
 from .status import _now
+from .lock_utils import lock_by_string
+from .status import _now
+
 
 
 class ScraperStatus:
@@ -16,7 +19,9 @@ class ScraperStatus:
 
     def __init__(self, database_name, base_path) -> None:
         self.database = JsonDataBase(database_name, base_path)
+        self.task_id = _now().strftime('%Y%m%d%H%M%S')
 
+    @lock_by_string()
     def on_scraping_start(self, limit, files_types, **additional_info):
         """Report that scraping has started."""
         self._insert_an_update(
@@ -26,6 +31,7 @@ class ScraperStatus:
             **additional_info,
         )
 
+    @lock_by_string()
     def on_collected_details(
         self,
         file_name_collected_from_site,
@@ -40,6 +46,7 @@ class ScraperStatus:
             **additional_info,
         )
 
+    @lock_by_string()
     def on_download_completed(self, **additional_info):
         """Report that the file has been downloaded."""
         self._insert_an_update(ScraperStatus.DOWNLOADED, **additional_info)
@@ -53,7 +60,7 @@ class ScraperStatus:
             new_filelist = []
             for file in filelist:
                 if not self.database.find_document(
-                    "scraper_download", {"file_name": by_function(file)}
+                    "downloaded", {"file_name": by_function(file)}
                 ):
                     new_filelist.append(file)
                 else:
@@ -85,10 +92,10 @@ class ScraperStatus:
             for res in results:
                 if res["downloaded"] and res["extract_succefully"]:
                     self.database.insert_document(
-                        "scraper_download",
+                        "downloaded",
                         {"file_name": res["file_name"], "when": when},
                     )
-
+    @lock_by_string()
     def on_scrape_completed(self, folder_name):
         """Report when scraping is completed."""
         self._insert_an_update(
@@ -102,4 +109,4 @@ class ScraperStatus:
             "when": _now(),
             **additional_info,
         }
-        self.database.insert_document("scraper_status", document)
+        self.database.insert_document(self.task_id, document)
