@@ -11,18 +11,19 @@ class AbstractDataBase(ABC):
     @abstractmethod
     def enable_collection_status(self):
         """Enable data collection to the database."""
-        pass
 
     @abstractmethod
     def insert_document(self, collection_name, document):
         """Insert a document into a collection."""
-        pass
 
     @abstractmethod
     def find_document(self, collection_name, query):
         """Find a document in a collection based on a query."""
-        pass
 
     def is_collection_enabled(self):
         """Check if collection is enabled."""
         return self.collection_status
+
+    def set_collection_status(self, status):
+        """Enable data collection to JSON storage."""
+        self.collection_status = status
