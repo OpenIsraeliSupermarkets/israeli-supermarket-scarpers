@@ -7,5 +7,8 @@ class Mega(PublishPrice):
 
     def __init__(self, folder_name=None):
         super().__init__(
-            chain=DumpFolderNames.MEGA, chain_id="7290055700007", site_infix="mega", folder_name=folder_name
+            chain=DumpFolderNames.MEGA,
+            chain_id="7290055700007",
+            site_infix="mega",
+            folder_name=folder_name,
         )

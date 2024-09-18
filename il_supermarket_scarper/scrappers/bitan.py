@@ -1,6 +1,7 @@
 from il_supermarket_scarper.engines.publishprice import PublishPrice
 from il_supermarket_scarper.utils import DumpFolderNames
 
+
 class YaynotBitan(PublishPrice):
     """scaper for yaynot beitan"""
 

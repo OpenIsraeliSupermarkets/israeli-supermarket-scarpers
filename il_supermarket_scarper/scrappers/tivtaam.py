@@ -3,7 +3,7 @@ from il_supermarket_scarper.utils import (
     _is_saturday_in_israel,
     _is_holiday_in_israel,
     FileTypesFilters,
-    DumpFolderNames
+    DumpFolderNames,
 )
 
 

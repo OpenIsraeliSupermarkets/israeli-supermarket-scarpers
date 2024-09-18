@@ -1,6 +1,7 @@
 from il_supermarket_scarper.engines import Cerberus
 from il_supermarket_scarper.utils import DumpFolderNames
 
+
 class StopMarket(Cerberus):
     """scraper for stop market"""
 

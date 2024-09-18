@@ -1,5 +1,5 @@
 import os
-from il_supermarket_scarper.utils import Logger
+from ..logger import Logger
 from .base import AbstractDataBase
 
 

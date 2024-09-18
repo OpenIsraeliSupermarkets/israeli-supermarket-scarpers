@@ -14,8 +14,8 @@ class ScraperStatus:
     DOWNLOADED = "downloaded"
     ESTIMATED_SIZE = "estimated_size"
 
-    def __init__(self, database_name,base_path) -> None:
-        self.database = JsonDataBase(database_name,base_path)
+    def __init__(self, database_name, base_path) -> None:
+        self.database = JsonDataBase(database_name, base_path)
 
     def on_scraping_start(self, limit, files_types, **additional_info):
         """Report that scraping has started."""
