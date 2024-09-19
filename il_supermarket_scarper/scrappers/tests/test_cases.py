@@ -2,6 +2,7 @@
 import unittest
 import os
 import uuid
+import xml.etree.ElementTree as ET
 from il_supermarket_scarper.utils import FileTypesFilters, Logger
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
 
@@ -78,12 +79,26 @@ def make_test_case(scraper_enum, store_id):
             file_ext = file_name.split(".")[-1]
             assert file_ext == "xml", f" should be xml but {file_ext}, file:{file_name}"
 
-        def _make_sure_file_is_not_empty(self, scraper, full_file_path):
-            """make sure the files is not empty"""
-            if not scraper.is_valid_file_empty(full_file_path):
-                assert (
-                    os.path.getsize(full_file_path) != 0
-                ), f"{full_file_path} is empty file."
+        # def _make_sure_file_is_not_empty(self, scraper, full_file_path):
+        #     """make sure the files is not empty"""
+        #     if not scraper.is_valid_file_empty(full_file_path):
+        #         assert (
+        #             os.path.getsize(full_file_path) != 0
+        #         ), f"{full_file_path} is empty file."
+
+        def _make_sure_file_is_xml_readable(self, full_file_path):
+            """Ensure the file is a valid XML and readable."""
+            try:
+                with open(full_file_path, "r", encoding="utf-8") as file:
+                    ET.parse(file)
+            except ET.ParseError:
+                raise ValueError(
+                    f"{full_file_path} is not a valid XML file or it is corrupted."
+                )
+            except Exception as e:
+                raise ValueError(
+                    f"An error occurred while reading {full_file_path}: {str(e)}"
+                )
 
         def _clean_scarpe_delete(
             self,
@@ -138,9 +153,10 @@ def make_test_case(scraper_enum, store_id):
                             scraper.get_chain_id(), file
                         )
                         self._make_sure_file_extension_is_xml(file)
-                        self._make_sure_file_is_not_empty(
-                            scraper, os.path.join(download_path, file)
-                        )
+                        # self._make_sure_file_is_not_empty(
+                        #     scraper, os.path.join(download_path, file)
+                        # )
+                        self._make_sure_file_is_xml_readable(file)
                 except ValueError:
                     if hasattr(scraper, "_is_flaky"):
                         pass
