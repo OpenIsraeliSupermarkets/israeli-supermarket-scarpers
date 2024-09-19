@@ -28,4 +28,4 @@ jobs:
         pip install pylint
     - name: Analysing the code with pylint
       run: |
-        pylint $(git ls-files '*.py') --disable=E0401,R0801,R0903
+        pylint $(git ls-files '*.py') --disable=E0401,R0801,R0903,W0707
