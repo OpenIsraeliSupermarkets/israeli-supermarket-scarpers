@@ -14,7 +14,7 @@ from il_supermarket_scarper.utils import (
     url_retrieve,
     wget_file,
     RestartSessionError,
-    is_valid_chain_name,
+    DumpFolderNames,
 )
 
 
@@ -27,16 +27,15 @@ class Engine(ScraperStatus, ABC):
         chain_id,
         folder_name=None,
     ):
-        super().__init__(chain)
+        assert DumpFolderNames.is_valid_folder_name(
+            chain
+        ), "chain name can contain only abc and -"
 
-        assert is_valid_chain_name(chain), "chain name can contain only abc and -"
+        super().__init__(chain.value, "status")
         self.chain = chain
         self.chain_id = chain_id
         self.max_workers = 5
-        if folder_name:
-            self.storage_path = os.path.join(folder_name, self.chain)
-        else:
-            self.storage_path = get_output_folder(self.chain)
+        self.storage_path = get_output_folder(self.chain.value, folder_name=folder_name)
         Logger.info(f"Storage path: {self.storage_path}")
 
     def get_storage_path(self):

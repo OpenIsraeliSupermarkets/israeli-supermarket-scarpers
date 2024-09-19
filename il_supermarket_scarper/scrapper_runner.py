@@ -15,7 +15,7 @@ class MainScrapperRunner:
         enabled_scrapers=None,
         dump_folder_name=None,
         multiprocessing=5,
-        lookup_in_db=False,
+        lookup_in_db=True,
     ):
         assert isinstance(enabled_scrapers, list) or enabled_scrapers is None
 
@@ -88,6 +88,7 @@ class MainScrapperRunner:
         Logger.info(f"scraping {chain_name}")
         if self.lookup_in_db:
             scraper.enable_collection_status()
+            scraper.enable_aggregation_between_runs()
         scraper.scrape(
             limit=limit,
             files_types=files_types,

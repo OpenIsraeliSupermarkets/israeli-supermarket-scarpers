@@ -1,7 +1,7 @@
 from pathlib import Path
 import json
 from il_supermarket_scarper.engines import MultiPageWeb
-from il_supermarket_scarper.utils import Logger, url_connection_retry
+from il_supermarket_scarper.utils import Logger, url_connection_retry, DumpFolderNames
 
 
 class SuperPharm(MultiPageWeb):
@@ -9,7 +9,7 @@ class SuperPharm(MultiPageWeb):
 
     def __init__(self, folder_name=None):
         super().__init__(
-            chain="Super-Pharm",
+            chain=DumpFolderNames.SUPER_PHARM,
             chain_id="7290172900007",
             url="http://prices.super-pharm.co.il/",
             folder_name=folder_name,

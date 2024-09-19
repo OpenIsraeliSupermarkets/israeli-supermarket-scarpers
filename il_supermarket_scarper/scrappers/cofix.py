@@ -1,5 +1,5 @@
 from il_supermarket_scarper.engines import Cerberus
-from il_supermarket_scarper.utils import FileTypesFilters
+from il_supermarket_scarper.utils import FileTypesFilters, DumpFolderNames
 
 
 class Cofix(Cerberus):
@@ -7,7 +7,7 @@ class Cofix(Cerberus):
 
     def __init__(self, folder_name=None):
         super().__init__(
-            "cofix",
+            chain=DumpFolderNames.COFIX,
             chain_id="7291056200008",
             folder_name=folder_name,
             ftp_username="SuperCofixApp",

@@ -1,8 +1,3 @@
-from urllib.error import URLError
-from http.client import RemoteDisconnected
-from http.cookiejar import MozillaCookieJar
-from http.cookiejar import LoadError
-
 import contextlib
 import ntpath
 import os
@@ -11,14 +6,21 @@ import socket
 import random
 from ftplib import FTP_TLS, error_perm
 import subprocess
-import requests
 
+from http.client import RemoteDisconnected
+from http.cookiejar import MozillaCookieJar
+from http.cookiejar import LoadError
+from urllib.error import URLError
+from urllib3.exceptions import MaxRetryError, ReadTimeoutError
+
+
+import requests
 from playwright.sync_api import sync_playwright
-from urllib3.exceptions import ReadTimeoutError
 from requests.exceptions import (
     ReadTimeout,
     ConnectionError as RequestsConnectionError,
     ChunkedEncodingError,
+    ConnectTimeout,
 )
 from cachetools import cached, TTLCache
 from .logger import Logger
@@ -29,6 +31,8 @@ exceptions = (
     URLError,
     RemoteDisconnected,
     ConnectionResetError,
+    ConnectTimeout,
+    MaxRetryError,
     socket.gaierror,
     socket.timeout,
     ConnectionError,
