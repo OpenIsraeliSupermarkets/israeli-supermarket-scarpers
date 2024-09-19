@@ -4,7 +4,16 @@ from il_supermarket_scarper.utils.status import (
     get_status_date,
 )
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
-from il_supermarket_scarper.utils.connection import disable_when_outside_israel
+from il_supermarket_scarper.utils import disable_when_outside_israel, DumpFolderNames
+
+
+def test_scrapers_folders_match():
+    """test the number of scrapers are the same as listed at the gov.il site"""
+    scrapers_keys = ScraperFactory.all_scrapers_name()
+    dump_keys = DumpFolderNames.all_folders_names()
+
+    assert set(scrapers_keys) & set(dump_keys) == set(scrapers_keys)
+    assert set(scrapers_keys) - set(dump_keys) == set()
 
 
 @disable_when_outside_israel

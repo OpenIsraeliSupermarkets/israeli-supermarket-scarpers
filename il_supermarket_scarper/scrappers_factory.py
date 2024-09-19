@@ -69,13 +69,16 @@ class ScraperFactory(Enum):
     @classmethod
     def get(cls, class_name):
         """get a scraper by class name"""
+
         enum = None
         if isinstance(class_name, ScraperFactory):
             enum = class_name
         elif class_name in cls.all_scrapers_name():
             enum = getattr(ScraperFactory, class_name)
-        else:
+
+        if enum is None:
             raise ValueError(f"class_names {class_name} not found")
+
         if not cls.is_scraper_enabled(enum):
             return None
         return enum.value

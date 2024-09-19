@@ -3,7 +3,11 @@ import json
 from il_supermarket_scarper.engines.web import WebBase
 from il_supermarket_scarper.engines import Bina
 
-from il_supermarket_scarper.utils import _is_saturday_in_israel, _is_holiday_in_israel
+from il_supermarket_scarper.utils import (
+    _is_saturday_in_israel,
+    _is_holiday_in_israel,
+    DumpFolderNames,
+)
 
 
 class MeshnatYosef1(WebBase):
@@ -11,7 +15,7 @@ class MeshnatYosef1(WebBase):
 
     def __init__(self, folder_name=None):
         super().__init__(
-            "Meshnat-Yosef1",
+            DumpFolderNames.MESHMAT_YOSEF_1,
             chain_id="333333",
             url="https://list-files.w5871031-kt.workers.dev/",
             folder_name=folder_name,
@@ -41,7 +45,7 @@ class MeshnatYosef2(Bina):
 
     def __init__(self, folder_name=None):
         super().__init__(
-            chain="Meshnat-Yosef2",
+            DumpFolderNames.MESHMAT_YOSEF_2,
             chain_id="2222222",
             url_perfix="ktshivuk",
             folder_name=folder_name,

@@ -13,7 +13,7 @@ with open("requirements-dev.txt", encoding="utf-8") as f:
 setup(
     # Needed to silence warnings (and to be a worthwhile package)
     name="il-supermarket-scraper",
-    url="https://github.com/jladan/package_demo",
+    url="https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers",
     author="Sefi Erlich",
     author_email="erlichsefi@gmail.com",
     # Needed to actually package something
@@ -28,7 +28,7 @@ setup(
     tests_require=dev_required,
     extras_require={"test": ["pytest"]},
     # *strongly* suggested for sharing
-    version="0.4.2",
+    version="0.4.3",
     # The license can be anything you like
     license="MIT",
     description="python package that implement a scraping for israeli supermarket data",

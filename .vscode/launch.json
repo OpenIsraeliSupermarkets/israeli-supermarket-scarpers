@@ -9,9 +9,9 @@
             "type": "python",
             "request": "test",
             "justMyCode": false,
-            "env": {
-                "DISABLED_SCRAPPERS" : "BAREKET"
-            }
+            // "env": {
+            //     "DISABLED_SCRAPPERS" : "BAREKET"
+            // }
         }
     ]
 }
