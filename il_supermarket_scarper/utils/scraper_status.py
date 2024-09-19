@@ -30,6 +30,9 @@ class ScraperStatus:
             **additional_info,
         )
 
+    def enable_collection_status(self):
+        self.database.enable_collection_status()
+
     @lock_by_string()
     def on_collected_details(
         self,
