@@ -19,6 +19,7 @@ class ScraperStatus:
     def __init__(self, database_name, base_path) -> None:
         self.database = JsonDataBase(database_name, base_path)
         self.task_id = _now().strftime("%Y%m%d%H%M%S")
+        self.filter_between_itrations = False
 
     @lock_by_string()
     def on_scraping_start(self, limit, files_types, **additional_info):
@@ -31,7 +32,12 @@ class ScraperStatus:
         )
 
     def enable_collection_status(self):
+        """ enable data collection to status files """
         self.database.enable_collection_status()
+
+    def enable_aggregation_between_runs(self):
+        """ allow tracking the downloaded file and don't downloading again if downloaded"""
+        self.filter_between_itrations = True
 
     @lock_by_string()
     def on_collected_details(
@@ -58,7 +64,7 @@ class ScraperStatus:
         self, storage_path, files_names_to_scrape, filelist, by_function=lambda x: x
     ):
         """Filter files already existing in long-term memory or previously downloaded."""
-        if self.database.is_collection_enabled():
+        if self.database.is_collection_enabled() and self.filter_between_itrations:
             new_filelist = []
             for file in filelist:
                 if not self.database.find_document(
