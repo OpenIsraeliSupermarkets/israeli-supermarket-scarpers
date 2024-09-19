@@ -32,11 +32,11 @@ class ScraperStatus:
         )
 
     def enable_collection_status(self):
-        """ enable data collection to status files """
+        """enable data collection to status files"""
         self.database.enable_collection_status()
 
     def enable_aggregation_between_runs(self):
-        """ allow tracking the downloaded file and don't downloading again if downloaded"""
+        """allow tracking the downloaded file and don't downloading again if downloaded"""
         self.filter_between_itrations = True
 
     @lock_by_string()
