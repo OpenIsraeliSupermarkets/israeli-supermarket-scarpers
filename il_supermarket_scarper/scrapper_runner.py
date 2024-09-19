@@ -15,7 +15,7 @@ class MainScrapperRunner:
         enabled_scrapers=None,
         dump_folder_name=None,
         multiprocessing=5,
-        lookup_in_db=False,
+        lookup_in_db=True,
     ):
         assert isinstance(enabled_scrapers, list) or enabled_scrapers is None
 
