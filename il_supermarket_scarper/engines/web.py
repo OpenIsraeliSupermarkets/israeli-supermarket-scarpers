@@ -141,6 +141,7 @@ class WebBase(Engine):
 
             self.on_scrape_completed(self.get_storage_path())
             self.post_scraping()
+            return results
         except Exception as e:
             self.on_download_fail(e,download_urls=download_urls, file_names=file_names)
             return {}
