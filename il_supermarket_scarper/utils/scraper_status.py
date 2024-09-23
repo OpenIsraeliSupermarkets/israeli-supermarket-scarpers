@@ -111,9 +111,10 @@ class ScraperStatus:
         self._insert_an_update(
             ScraperStatus.ESTIMATED_SIZE, folder_size=log_folder_details(folder_name)
         )
-    
+
     @lock_by_string()
-    def on_download_fail(self,execption,**additional_info):
+    def on_download_fail(self, execption, **additional_info):
+        """report when the scraping in failed"""
         self._insert_an_update(
             ScraperStatus.FAILED, execption=str(execption), **additional_info
         )
