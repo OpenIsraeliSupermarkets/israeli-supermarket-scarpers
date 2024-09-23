@@ -13,6 +13,7 @@ class ScraperStatus:
     STARTED = "started"
     COLLECTED = "collected"
     DOWNLOADED = "downloaded"
+    FAILED = "fail"
     ESTIMATED_SIZE = "estimated_size"
     VERIFIED_DOWNLOADS = "verified_downloads"
 
@@ -109,6 +110,12 @@ class ScraperStatus:
         """Report when scraping is completed."""
         self._insert_an_update(
             ScraperStatus.ESTIMATED_SIZE, folder_size=log_folder_details(folder_name)
+        )
+    
+    @lock_by_string()
+    def on_download_fail(self,execption,**additional_info):
+        self._insert_an_update(
+            ScraperStatus.FAILED, execption=str(execption), **additional_info
         )
 
     def _insert_an_update(self, status, **additional_info):

@@ -43,29 +43,32 @@ class Cerberus(Engine):
         only_latest=False,
         files_names_to_scrape=None,
     ):
-        super().scrape(
-            limit=limit,
-            files_types=files_types,
-            store_id=store_id,
-            only_latest=only_latest,
-        )
-        files = self.collect_files_details_from_site(
-            limit=limit,
-            files_types=files_types,
-            filter_null=True,
-            filter_zero=True,
-            store_id=store_id,
-            only_latest=only_latest,
-            files_names_to_scrape=files_names_to_scrape,
-        )
-        self.on_collected_details(files)
+        files = []
+        try:
+            super().scrape(
+                limit=limit,
+                files_types=files_types,
+                store_id=store_id,
+                only_latest=only_latest,
+            )
+            files = self.collect_files_details_from_site(
+                limit=limit,
+                files_types=files_types,
+                filter_null=True,
+                filter_zero=True,
+                store_id=store_id,
+                only_latest=only_latest,
+                files_names_to_scrape=files_names_to_scrape,
+            )
+            self.on_collected_details(files)
 
-        results = execute_in_event_loop(
-            self.persist_from_ftp, files, max_workers=self.max_workers
-        )
-        self.on_download_completed(results=results)
-        self.on_scrape_completed(self.get_storage_path())
-        return results
+            results = execute_in_event_loop(
+                self.persist_from_ftp, files, max_workers=self.max_workers
+            )
+            self.on_download_completed(results=results)
+            self.on_scrape_completed(self.get_storage_path())
+        except Exception as e:
+            self.on_download_fail(e,files=files)
 
     def collect_files_details_from_site(
         self,
