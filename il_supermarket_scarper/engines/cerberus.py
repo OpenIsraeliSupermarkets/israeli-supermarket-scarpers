@@ -67,6 +67,7 @@ class Cerberus(Engine):
             )
             self.on_download_completed(results=results)
             self.on_scrape_completed(self.get_storage_path())
+            return results
         except Exception as e:
             self.on_download_fail(e,files=files)
 

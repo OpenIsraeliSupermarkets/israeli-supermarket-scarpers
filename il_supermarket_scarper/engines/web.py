@@ -143,3 +143,4 @@ class WebBase(Engine):
             self.post_scraping()
         except Exception as e:
             self.on_download_fail(e,download_urls=download_urls, file_names=file_names)
+            return {}
