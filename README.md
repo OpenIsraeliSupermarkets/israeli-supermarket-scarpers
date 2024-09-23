@@ -67,7 +67,7 @@ Quick start
 
 il_supermarket_scarper can be installed using pip:
 
-    python3 pip install il-supermarket-scraper
+    python3 pip install israeli-supermarket-scraper
 
 If you want to run the latest version of the code, you can install it from the
 repo directly:
