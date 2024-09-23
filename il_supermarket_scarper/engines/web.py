@@ -135,7 +135,7 @@ class WebBase(Engine):
                     max_workers=self.max_workers,
                 )
             else:
-                results = {}
+                results = []
 
             self.on_download_completed(results=results)
 
@@ -144,4 +144,4 @@ class WebBase(Engine):
             return results
         except Exception as e:  # pylint: disable=broad-except
             self.on_download_fail(e, download_urls=download_urls, file_names=file_names)
-            return {}
+            return []
