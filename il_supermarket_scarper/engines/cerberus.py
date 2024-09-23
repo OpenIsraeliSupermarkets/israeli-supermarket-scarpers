@@ -68,8 +68,9 @@ class Cerberus(Engine):
             self.on_download_completed(results=results)
             self.on_scrape_completed(self.get_storage_path())
             return results
-        except Exception as e:
-            self.on_download_fail(e,files=files)
+        except Exception as e:  # pylint: disable=broad-except
+            self.on_download_fail(e, files=files)
+            return []
 
     def collect_files_details_from_site(
         self,

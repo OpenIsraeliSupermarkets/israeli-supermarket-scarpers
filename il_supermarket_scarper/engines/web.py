@@ -108,7 +108,7 @@ class WebBase(Engine):
         files_names_to_scrape=None,
     ):
         """scarpe the files from multipage sites"""
-        download_urls, file_names = [], [] 
+        download_urls, file_names = [], []
         try:
             super().scrape(
                 limit,
@@ -142,6 +142,6 @@ class WebBase(Engine):
             self.on_scrape_completed(self.get_storage_path())
             self.post_scraping()
             return results
-        except Exception as e:
-            self.on_download_fail(e,download_urls=download_urls, file_names=file_names)
+        except Exception as e:  # pylint: disable=broad-except
+            self.on_download_fail(e, download_urls=download_urls, file_names=file_names)
             return {}
