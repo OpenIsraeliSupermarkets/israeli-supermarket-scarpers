@@ -18,8 +18,9 @@ class ScraperStatus:
     VERIFIED_DOWNLOADS = "verified_downloads"
 
     def __init__(self, database_name, base_path, folder_name=None) -> None:
-        self.database = JsonDataBase(database_name, get_output_folder(base_path,folder_name=folder_name))
-        get_output_folder
+        self.database = JsonDataBase(
+            database_name, get_output_folder(base_path, folder_name=folder_name)
+        )
         self.task_id = _now().strftime("%Y%m%d%H%M%S")
         self.filter_between_itrations = False
 
