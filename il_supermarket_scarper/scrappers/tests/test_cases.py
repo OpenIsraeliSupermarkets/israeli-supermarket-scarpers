@@ -156,7 +156,7 @@ def make_test_case(scraper_enum, store_id):
                         # self._make_sure_file_is_not_empty(
                         #     scraper, os.path.join(download_path, file)
                         # )
-                        self._make_sure_file_is_xml_readable(file)
+                        self._make_sure_file_is_xml_readable(os.path.join(download_path,file))
                 except ValueError:
                     if hasattr(scraper, "_is_flaky"):
                         pass
