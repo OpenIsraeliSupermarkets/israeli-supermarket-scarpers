@@ -3,7 +3,7 @@ import unittest
 import os
 import uuid
 import xml.etree.ElementTree as ET
-from il_supermarket_scarper.utils import FileTypesFilters, Logger
+from il_supermarket_scarper.utils import FileTypesFilters, Logger, DumpFolderNames
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
 
 
@@ -130,8 +130,9 @@ def make_test_case(scraper_enum, store_id):
 
                     files_found = os.listdir(dump_path)
                     assert len(files_found) == 2, "only one folder should exists and the status folder"
-
-                    download_path = os.path.join(dump_path, files_found[0])
+                    assert DumpFolderNames[scraper_enum.name].value in files_found
+                    
+                    download_path = os.path.join(dump_path, DumpFolderNames[scraper_enum.name].value)
                     files_found = os.listdir(download_path)
 
                     if not scraper.is_validate_scraper_found_no_files(
