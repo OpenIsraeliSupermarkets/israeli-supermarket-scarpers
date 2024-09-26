@@ -129,7 +129,7 @@ def make_test_case(scraper_enum, store_id):
                     scraper.scrape(**kwarg)
 
                     files_found = os.listdir(dump_path)
-                    assert len(files_found) == 1, "only one folder should exists"
+                    assert len(files_found) == 2, "only one folder should exists and the status folder"
 
                     download_path = os.path.join(dump_path, files_found[0])
                     files_found = os.listdir(download_path)
