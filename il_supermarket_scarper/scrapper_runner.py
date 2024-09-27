@@ -89,6 +89,7 @@ class MainScrapperRunner:
         if self.lookup_in_db:
             scraper.enable_collection_status()
             scraper.enable_aggregation_between_runs()
+
         scraper.scrape(
             limit=limit,
             files_types=files_types,

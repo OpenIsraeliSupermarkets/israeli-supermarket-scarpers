@@ -1,9 +1,10 @@
 # pylint: disable=too-many-statements
 import unittest
+import tempfile
 import os
 import uuid
 import xml.etree.ElementTree as ET
-from il_supermarket_scarper.utils import FileTypesFilters, Logger
+from il_supermarket_scarper.utils import FileTypesFilters, Logger, DumpFolderNames
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
 
 
@@ -103,6 +104,24 @@ def make_test_case(scraper_enum, store_id):
         def _clean_scarpe_delete(
             self,
             scraper_enum,
+            store_id=None,
+            limit=None,
+            file_type=None,
+            only_latest=False,
+        ):
+            with tempfile.TemporaryDirectory() as tmpdirname:
+                self.__clean_scarpe_delete(
+                    scraper_enum=scraper_enum,
+                    dump_path=tmpdirname,
+                    store_id=store_id,
+                    limit=limit,
+                    file_type=file_type,
+                    only_latest=only_latest,
+                )
+
+        def __clean_scarpe_delete(
+            self,
+            scraper_enum,
             dump_path="temp",
             store_id=None,
             limit=None,
@@ -129,9 +148,14 @@ def make_test_case(scraper_enum, store_id):
                     scraper.scrape(**kwarg)
 
                     files_found = os.listdir(dump_path)
-                    assert len(files_found) == 1, "only one folder should exists"
+                    assert (
+                        len(files_found) == 2
+                    ), "only one folder should exists and the status folder"
+                    assert DumpFolderNames[scraper_enum.name].value in files_found
 
-                    download_path = os.path.join(dump_path, files_found[0])
+                    download_path = os.path.join(
+                        dump_path, DumpFolderNames[scraper_enum.name].value
+                    )
                     files_found = os.listdir(download_path)
 
                     if not scraper.is_validate_scraper_found_no_files(
@@ -156,7 +180,9 @@ def make_test_case(scraper_enum, store_id):
                         # self._make_sure_file_is_not_empty(
                         #     scraper, os.path.join(download_path, file)
                         # )
-                        self._make_sure_file_is_xml_readable(file)
+                        self._make_sure_file_is_xml_readable(
+                            os.path.join(download_path, file)
+                        )
                 except ValueError:
                     if hasattr(scraper, "_is_flaky"):
                         pass
@@ -169,17 +195,16 @@ def make_test_case(scraper_enum, store_id):
 
         def test_scrape_one(self):
             """scrape one file and make sure it exists"""
-            self._clean_scarpe_delete(scraper_enum, self._get_temp_folder(), limit=1)
+            self._clean_scarpe_delete(scraper_enum, limit=1)
 
         def test_scrape_ten(self):
             """scrape ten file and make sure they exists"""
-            self._clean_scarpe_delete(scraper_enum, self._get_temp_folder(), limit=10)
+            self._clean_scarpe_delete(scraper_enum, limit=10)
 
         def test_scrape_promo(self):
             """scrape one promo file and make sure it exists"""
             self._clean_scarpe_delete(
                 scraper_enum,
-                self._get_temp_folder(),
                 limit=1,
                 file_type=[FileTypesFilters.PROMO_FILE.name],
             )
@@ -188,7 +213,6 @@ def make_test_case(scraper_enum, store_id):
             """scrape one promo file and make sure it exists"""
             self._clean_scarpe_delete(
                 scraper_enum,
-                self._get_temp_folder(),
                 limit=1,
                 file_type=[FileTypesFilters.PROMO_FULL_FILE.name],
             )
@@ -197,7 +221,6 @@ def make_test_case(scraper_enum, store_id):
             """scrape one store file and make sure it exists"""
             self._clean_scarpe_delete(
                 scraper_enum,
-                self._get_temp_folder(),
                 limit=1,
                 file_type=[FileTypesFilters.STORE_FILE.name],
             )
@@ -206,7 +229,6 @@ def make_test_case(scraper_enum, store_id):
             """scrape one price file and make sure it exists"""
             self._clean_scarpe_delete(
                 scraper_enum,
-                self._get_temp_folder(),
                 limit=1,
                 file_type=[FileTypesFilters.PRICE_FILE.name],
             )
@@ -215,7 +237,6 @@ def make_test_case(scraper_enum, store_id):
             """scrape one price file and make sure it exists"""
             self._clean_scarpe_delete(
                 scraper_enum,
-                self._get_temp_folder(),
                 limit=1,
                 file_type=[FileTypesFilters.PRICE_FULL_FILE.name],
             )
@@ -224,7 +245,6 @@ def make_test_case(scraper_enum, store_id):
             """test fetching only files from a ceriten store"""
             self._clean_scarpe_delete(
                 scraper_enum,
-                self._get_temp_folder(),
                 store_id=store_id,
             )
 
@@ -232,7 +252,6 @@ def make_test_case(scraper_enum, store_id):
             """test fetching latest file only"""
             self._clean_scarpe_delete(
                 scraper_enum,
-                self._get_temp_folder(),
                 store_id=store_id,
                 only_latest=True,
             )

@@ -3,7 +3,7 @@ import os
 from .logger import Logger
 from .status import log_folder_details
 from .databases import JsonDataBase
-from .status import _now
+from .status import _now, get_output_folder
 from .lock_utils import lock_by_string
 
 
@@ -13,11 +13,14 @@ class ScraperStatus:
     STARTED = "started"
     COLLECTED = "collected"
     DOWNLOADED = "downloaded"
+    FAILED = "fail"
     ESTIMATED_SIZE = "estimated_size"
     VERIFIED_DOWNLOADS = "verified_downloads"
 
-    def __init__(self, database_name, base_path) -> None:
-        self.database = JsonDataBase(database_name, base_path)
+    def __init__(self, database_name, base_path, folder_name=None) -> None:
+        self.database = JsonDataBase(
+            database_name, get_output_folder(base_path, folder_name=folder_name)
+        )
         self.task_id = _now().strftime("%Y%m%d%H%M%S")
         self.filter_between_itrations = False
 
@@ -109,6 +112,13 @@ class ScraperStatus:
         """Report when scraping is completed."""
         self._insert_an_update(
             ScraperStatus.ESTIMATED_SIZE, folder_size=log_folder_details(folder_name)
+        )
+
+    @lock_by_string()
+    def on_download_fail(self, execption, **additional_info):
+        """report when the scraping in failed"""
+        self._insert_an_update(
+            ScraperStatus.FAILED, execption=str(execption), **additional_info
         )
 
     def _insert_an_update(self, status, **additional_info):

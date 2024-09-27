@@ -108,35 +108,40 @@ class WebBase(Engine):
         files_names_to_scrape=None,
     ):
         """scarpe the files from multipage sites"""
-        super().scrape(
-            limit,
-            files_types=files_types,
-            store_id=store_id,
-            only_latest=only_latest,
-        )
-
-        download_urls, file_names = self.collect_files_details_from_site(
-            limit=limit,
-            files_types=files_types,
-            store_id=store_id,
-            only_latest=only_latest,
-            files_names_to_scrape=files_names_to_scrape,
-        )
-
-        self.on_collected_details(file_names, download_urls)
-
-        Logger.info(f"collected {len(download_urls)} to download.")
-        if len(download_urls) > 0:
-            results = execute_in_event_loop(
-                self.save_and_extract,
-                zip(download_urls, file_names),
-                max_workers=self.max_workers,
+        download_urls, file_names = [], []
+        try:
+            super().scrape(
+                limit,
+                files_types=files_types,
+                store_id=store_id,
+                only_latest=only_latest,
             )
-        else:
-            results = {}
 
-        self.on_download_completed(results=results)
+            download_urls, file_names = self.collect_files_details_from_site(
+                limit=limit,
+                files_types=files_types,
+                store_id=store_id,
+                only_latest=only_latest,
+                files_names_to_scrape=files_names_to_scrape,
+            )
 
-        self.on_scrape_completed(self.get_storage_path())
-        self.post_scraping()
-        return results
+            self.on_collected_details(file_names, download_urls)
+
+            Logger.info(f"collected {len(download_urls)} to download.")
+            if len(download_urls) > 0:
+                results = execute_in_event_loop(
+                    self.save_and_extract,
+                    zip(download_urls, file_names),
+                    max_workers=self.max_workers,
+                )
+            else:
+                results = []
+
+            self.on_download_completed(results=results)
+
+            self.on_scrape_completed(self.get_storage_path())
+            self.post_scraping()
+            return results
+        except Exception as e:  # pylint: disable=broad-except
+            self.on_download_fail(e, download_urls=download_urls, file_names=file_names)
+            return []
