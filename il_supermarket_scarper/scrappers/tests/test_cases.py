@@ -129,10 +129,14 @@ def make_test_case(scraper_enum, store_id):
                     scraper.scrape(**kwarg)
 
                     files_found = os.listdir(dump_path)
-                    assert len(files_found) == 2, "only one folder should exists and the status folder"
+                    assert (
+                        len(files_found) == 2
+                    ), "only one folder should exists and the status folder"
                     assert DumpFolderNames[scraper_enum.name].value in files_found
-                    
-                    download_path = os.path.join(dump_path, DumpFolderNames[scraper_enum.name].value)
+
+                    download_path = os.path.join(
+                        dump_path, DumpFolderNames[scraper_enum.name].value
+                    )
                     files_found = os.listdir(download_path)
 
                     if not scraper.is_validate_scraper_found_no_files(
@@ -157,7 +161,9 @@ def make_test_case(scraper_enum, store_id):
                         # self._make_sure_file_is_not_empty(
                         #     scraper, os.path.join(download_path, file)
                         # )
-                        self._make_sure_file_is_xml_readable(os.path.join(download_path,file))
+                        self._make_sure_file_is_xml_readable(
+                            os.path.join(download_path, file)
+                        )
                 except ValueError:
                     if hasattr(scraper, "_is_flaky"):
                         pass

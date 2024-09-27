@@ -95,12 +95,16 @@ class Engine(ScraperStatus, ABC):
         intreable_ = self.filter_already_downloaded(
             self.storage_path, files_names_to_scrape, intreable, by_function=by_function
         )
+        Logger.info(
+            f"Number of entry after filter already downloaded is {len(intreable_)}"
+        )
         files_was_filtered_since_already_download = (
             len(list(intreable)) != 0 and len(list(intreable_)) == 0
         )
 
         # filter unique links
         intreable_ = self.unique(intreable_, by_function=by_function)
+        Logger.info(f"Number of entry after filter unique links is {len(intreable_)}")
 
         # filter by store id
         if store_id:
@@ -111,14 +115,19 @@ class Engine(ScraperStatus, ABC):
                     intreable_,
                 )
             )
+        Logger.info(f"Number of entry after filter store id is {len(intreable_)}")
 
         # filter by file type
         if files_types:
             intreable_ = self.filter_file_types(
                 intreable_, limit, files_types, by_function
             )
+        Logger.info(f"Number of entry after filter file type id is {len(intreable_)}")
+
         if only_latest:
             intreable_ = self.get_only_latest(by_function, intreable_)
+
+        Logger.info(f"Number of entry after filter keeping latast is {len(intreable_)}")
 
         # filter by limit if the 'files_types' filter is not on.
         if limit and files_types is None:
