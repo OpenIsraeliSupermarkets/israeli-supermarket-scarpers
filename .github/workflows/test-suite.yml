@@ -42,4 +42,6 @@ jobs:
     - name: Build with Docker
       run: docker build -t erlichsefi/israeli-supermarket-scarpers:test --target test .
     - name: Test with pytest
-      run: docker run --rm --name test-run -e DISABLED_SCRAPPERS="${{ env.DISABLED_SCRAPPERS }}" erlichsefi/israeli-supermarket-scarpers:test
+      run:  docker rm scraper-test-run || true && 
+            docker run --rm --name scraper-test-run -e DISABLED_SCRAPPERS="${{ env.DISABLED_SCRAPPERS }}" erlichsefi/israeli-supermarket-scarpers:test &&
+            docker builder prune -f
