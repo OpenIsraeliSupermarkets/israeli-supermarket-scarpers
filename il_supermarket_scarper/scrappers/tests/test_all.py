@@ -116,7 +116,7 @@ class QuikTestCase(make_test_case(ScraperFactory.QUIK, None)):
     """Test case for ScraperFactory.QUIK."""
 
 
-class TivTaamTestCase(make_test_case(ScraperFactory.TIV_TAAM, 2)):
+class TivTaamTestCase(make_test_case(ScraperFactory.TIV_TAAM, 3)):
     """Test case for ScraperFactory.TIV_TAAM."""
 
 
