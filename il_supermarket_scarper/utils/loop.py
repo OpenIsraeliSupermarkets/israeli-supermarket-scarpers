@@ -1,5 +1,5 @@
 import concurrent.futures
-
+from il_supermarket_scarper.utils import Logger
 
 def defualt_aggregtion_function(all_done):
     """format the scraping result to the final input"""
@@ -23,7 +23,7 @@ def multiple_page_aggregtion(pages_to_scrape):
     return download_urls, file_names
 
 
-def execute_in_parallels(
+def execute_in_parallel(
     function_to_execute,
     iterable,
     max_workers=None,
@@ -31,6 +31,7 @@ def execute_in_parallels(
 ):
     """execute a job in the event loop"""
 
+    Logger.info(f"Running {len(iterable)} tasks in parallel")
     results = run_tasks(
         function_to_execute,
         iterable,
@@ -38,7 +39,7 @@ def execute_in_parallels(
     )
     
     all_done = aggregtion_function(results)
-    print(f"Done with {len(all_done)} tasks")
+    print(f"Done with {len(all_done)} tasks in parallel")
     return all_done
 
 def run_tasks(
@@ -49,7 +50,7 @@ def run_tasks(
     """Run tasks in multi-thread or sequentially"""
     if max_workers:
         # Use multi-thread
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers,thread_name_prefix="PullingThread") as executor:
             futures = [executor.submit(function_to_execute, arg) for arg in iterable]
             return [future.result() for future in concurrent.futures.as_completed(futures)]
     else:
