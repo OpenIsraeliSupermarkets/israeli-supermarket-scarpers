@@ -10,7 +10,7 @@ from il_supermarket_scarper.utils.connection import url_connection_retry
 
 from il_supermarket_scarper.utils import (
     Logger,
-    execute_in_event_loop,
+    execute_in_parallels,
     multiple_page_aggregtion,
 )
 from .web import WebBase
@@ -87,7 +87,7 @@ class MultiPageWeb(WebBase):
             )
         )
 
-        download_urls, file_names = execute_in_event_loop(
+        download_urls, file_names = execute_in_parallels(
             self.process_links_before_download,
             pages_to_scrape,
             aggregtion_function=multiple_page_aggregtion,

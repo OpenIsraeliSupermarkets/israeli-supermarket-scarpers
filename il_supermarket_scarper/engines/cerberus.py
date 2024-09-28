@@ -4,7 +4,7 @@ import os
 from il_supermarket_scarper.utils import (
     extract_xml_file_from_gz_file,
     Logger,
-    execute_in_event_loop,
+    execute_in_parallels,
     collect_from_ftp,
     fetch_temporary_gz_file_from_ftp,
     retry_files,
@@ -62,7 +62,7 @@ class Cerberus(Engine):
             )
             self.on_collected_details(files)
 
-            results = execute_in_event_loop(
+            results = execute_in_parallels(
                 self.persist_from_ftp, files, max_workers=self.max_workers
             )
             self.on_download_completed(results=results)

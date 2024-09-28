@@ -1,16 +1,4 @@
-import asyncio
 import concurrent.futures
-from .logger import Logger
-
-
-def get_event_loop():
-    """get the current running event loop"""
-    try:
-        return asyncio.get_event_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        return loop
 
 
 def defualt_aggregtion_function(all_done):
@@ -35,7 +23,7 @@ def multiple_page_aggregtion(pages_to_scrape):
     return download_urls, file_names
 
 
-def execute_in_event_loop(
+def execute_in_parallels(
     function_to_execute,
     iterable,
     max_workers=None,
@@ -43,43 +31,27 @@ def execute_in_event_loop(
 ):
     """execute a job in the event loop"""
 
-    loop = get_event_loop()
-    return loop.run_until_complete(
-        run_task_async(
-            function_to_execute,
-            iterable,
-            max_workers=max_workers,
-            aggregtion_function=aggregtion_function,
-        )
+    results = run_tasks(
+        function_to_execute,
+        iterable,
+        max_workers=max_workers,
     )
+    
+    all_done = aggregtion_function(results)
+    print(f"Done with {len(all_done)} tasks")
+    return all_done
 
-
-async def run_task_async(
+def run_tasks(
     function_to_execute,
     iterable,
-    max_workers=None,
-    aggregtion_function=defualt_aggregtion_function,
+    max_workers: int = None,
 ):
-    """run task in multi-thread"""
-    loop = get_event_loop()
-
+    """Run tasks in multi-thread or sequentially"""
     if max_workers:
-        # use multi-thread
-        futures = []
+        # Use multi-thread
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-            for arg in iterable:
-                futures.append(loop.run_in_executor(executor, function_to_execute, arg))
-
-        if len(futures) == 0:
-            return []
-        all_done, not_done = await asyncio.wait(futures)
-        assert len(not_done) == 0, "Not all tasks are done, should be blocking."
+            futures = [executor.submit(function_to_execute, arg) for arg in iterable]
+            return [future.result() for future in concurrent.futures.as_completed(futures)]
     else:
-        # or just itreate over all
-        all_done = []
-        for arg in iterable:
-            all_done.append(function_to_execute(arg))
-    all_done = aggregtion_function(list(all_done))
-
-    Logger.info(f"Done with {len(all_done)} files")
-    return all_done
+        # Or just iterate over all
+        return [function_to_execute(arg) for arg in iterable]
