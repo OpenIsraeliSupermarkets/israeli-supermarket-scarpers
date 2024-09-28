@@ -29,7 +29,7 @@ class Engine(ScraperStatus, ABC):
         super().__init__(chain.value, "status", folder_name=folder_name)
         self.chain = chain
         self.chain_id = chain_id
-        self.max_workers = 10
+        self.max_workers = 20
         self.storage_path = get_output_folder(self.chain.value, folder_name=folder_name)
         Logger.info(f"Storage path: {self.storage_path}")
 
