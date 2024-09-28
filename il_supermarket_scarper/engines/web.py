@@ -131,7 +131,7 @@ class WebBase(Engine):
             if len(download_urls) > 0:
                 results = execute_in_parallel(
                     self.save_and_extract,
-                    zip(download_urls, file_names),
+                    list(zip(download_urls, file_names)),
                     max_threads=self.max_threads,
                 )
             else:
