@@ -1,7 +1,9 @@
 import time
 import json
 import datetime
+import tempfile
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
+
 
 
 if __name__ == "__main__":
@@ -11,8 +13,9 @@ if __name__ == "__main__":
 
         def full_execution(scraper):
             """full execution of the scraper"""
-            initer = ScraperFactory.get(scraper)()
-            return initer.scrape()
+            with tempfile.TemporaryDirectory() as tmpdirname:
+                initer = ScraperFactory.get(scraper)(folder_name=tmpdirname)
+                return initer.scrape()
 
         execution_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         start_time = time.time()
