@@ -1,8 +1,14 @@
 import time
 import json
+import sys
 import datetime
 import tempfile
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
+import pstats
+import cProfile
+from io import StringIO
+
+
 
 
 
@@ -19,9 +25,21 @@ if __name__ == "__main__":
 
         execution_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         start_time = time.time()
+        pr = cProfile.Profile()
+        pr.enable()
+
         files = full_execution(scraper_name)
+
+        pr.disable()
+
+        stream = StringIO()
+        ps = pstats.Stats(pr, stream=stream)
+        ps.print_stats()
+        stream.seek(0)
+
         end_time = time.time()
         result[scraper_name] = {
+            "status": stream.read(),
             "execution_time": execution_time,
             "start_time": start_time,
             "end_time": end_time,

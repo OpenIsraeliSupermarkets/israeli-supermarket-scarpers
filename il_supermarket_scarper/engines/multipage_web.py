@@ -74,11 +74,12 @@ class MultiPageWeb(WebBase):
         limit=None,
         files_types=None,
         store_id=None,
+        when_date=None,
         only_latest=False,
         files_names_to_scrape=None,
     ):
         self.post_scraping()
-        url = self.get_request_url()
+        url = self.get_request_url(files_types=files_types, store_id=store_id, when_date=when_date)
 
         total_pages = self.get_number_of_pages(url[0])
         Logger.info(f"Found {total_pages} pages")
