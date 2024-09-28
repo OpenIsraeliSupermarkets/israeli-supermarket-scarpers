@@ -10,7 +10,7 @@ def build_logger():
     if not logger.handlers:
         logger.setLevel(logging.DEBUG)  # set logger level
         log_formatter = logging.Formatter(
-            "%(name)-12s %(asctime)s %(levelname)-8s %(filename)s:%(funcName)s %(message)s"
+            "%(name)-12s %(asctime)s %(levelname)-8s [%(threadName)s] %(filename)s:%(funcName)s %(message)s"
         )
         console_handler = logging.StreamHandler(
             sys.stdout
@@ -41,6 +41,14 @@ class Logger:
         """log info"""
         if cls.enabled:
             cls.logger.info(msg, *args, **kwargs)
+
+
+    @classmethod
+    def debug(cls, msg, *args, **kwargs):
+        """log info"""
+        if cls.enabled:
+            cls.logger.debug(msg, *args, **kwargs)
+
 
     @classmethod
     def error(cls, msg, *args, **kwargs):

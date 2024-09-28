@@ -23,7 +23,7 @@ from .connection import (
     fetch_temporary_gz_file_from_ftp,
     wget_file,
 )
-from .loop import execute_in_parallels, multiple_page_aggregtion
+from .loop import execute_in_parallel, multiple_page_aggregtion
 from .exceptions import RestartSessionError
 from .retry import retry_files
 from .marking import FlakyScraper
