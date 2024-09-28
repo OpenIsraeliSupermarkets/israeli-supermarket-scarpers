@@ -12,8 +12,8 @@ from .engine import Engine
 class WebBase(Engine):
     """scrape the file of websites that the only why to download them is via web"""
 
-    def __init__(self, chain, chain_id, url, folder_name=None):
-        super().__init__(chain, chain_id, folder_name)
+    def __init__(self, chain, chain_id, url, folder_name=None, max_threads=5):
+        super().__init__(chain, chain_id, folder_name, max_threads=max_threads)
         self.url = url
         self.max_retry = 2
 
@@ -132,7 +132,7 @@ class WebBase(Engine):
                 results = execute_in_parallel(
                     self.save_and_extract,
                     zip(download_urls, file_names),
-                    max_workers=self.max_workers,
+                    max_threads=self.max_threads,
                 )
             else:
                 results = []

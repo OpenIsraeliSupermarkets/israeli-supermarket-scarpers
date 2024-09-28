@@ -42,13 +42,11 @@ class Logger:
         if cls.enabled:
             cls.logger.info(msg, *args, **kwargs)
 
-
     @classmethod
     def debug(cls, msg, *args, **kwargs):
         """log info"""
         if cls.enabled:
             cls.logger.debug(msg, *args, **kwargs)
-
 
     @classmethod
     def error(cls, msg, *args, **kwargs):

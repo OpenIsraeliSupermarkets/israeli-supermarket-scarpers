@@ -21,7 +21,7 @@ from il_supermarket_scarper.utils import (
 class Engine(ScraperStatus, ABC):
     """base engine for scraping"""
 
-    def __init__(self, chain, chain_id, folder_name=None):
+    def __init__(self, chain, chain_id, folder_name=None, max_threads=10):
         assert DumpFolderNames.is_valid_folder_name(
             chain
         ), "chain name can contain only abc and -"
@@ -29,7 +29,7 @@ class Engine(ScraperStatus, ABC):
         super().__init__(chain.value, "status", folder_name=folder_name)
         self.chain = chain
         self.chain_id = chain_id
-        self.max_workers = 20
+        self.max_threads = max_threads
         self.storage_path = get_output_folder(self.chain.value, folder_name=folder_name)
         Logger.info(f"Storage path: {self.storage_path}")
 
