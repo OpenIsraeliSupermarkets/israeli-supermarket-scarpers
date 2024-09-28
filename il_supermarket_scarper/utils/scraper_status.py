@@ -100,12 +100,16 @@ class ScraperStatus:
         """Add downloaded files to the MongoDB collection."""
         if self.database.is_collection_enabled():
             when = _now()
+
+            documents = []
             for res in results:
                 if res["extract_succefully"]:
-                    self.database.insert_document(
-                        self.VERIFIED_DOWNLOADS,
+                    documents.append(
                         {"file_name": res["file_name"], "when": when},
                     )
+            self.database.insert_documents(
+                self.VERIFIED_DOWNLOADS,
+                documents)
 
     @lock_by_string()
     def on_scrape_completed(self, folder_name):

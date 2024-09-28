@@ -12,4 +12,5 @@ class Yellow(Cerberus):
             folder_name=folder_name,
             ftp_username="Paz_bo",
             ftp_password="paz468",
+            max_threads=10,
         )

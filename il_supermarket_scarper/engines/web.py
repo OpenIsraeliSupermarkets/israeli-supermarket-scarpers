@@ -66,11 +66,14 @@ class WebBase(Engine):
         limit=None,
         files_types=None,
         store_id=None,
+        when_date=None,
         only_latest=False,
         files_names_to_scrape=None,
     ):
         """collect all enteris to download from site"""
-        urls_to_collect_link_from = self.get_request_url()
+        urls_to_collect_link_from = self.get_request_url(
+            files_types, store_id, when_date
+        )
 
         all_trs = []
         for url in urls_to_collect_link_from:
