@@ -1,7 +1,7 @@
 from bs4 import BeautifulSoup
 from il_supermarket_scarper.utils import (
     Logger,
-    execute_in_event_loop,
+    execute_in_parallels,
     session_and_check_status,
     retry_files,
 )
@@ -129,7 +129,7 @@ class WebBase(Engine):
 
             Logger.info(f"collected {len(download_urls)} to download.")
             if len(download_urls) > 0:
-                results = execute_in_event_loop(
+                results = execute_in_parallels(
                     self.save_and_extract,
                     zip(download_urls, file_names),
                     max_workers=self.max_workers,
