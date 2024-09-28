@@ -31,8 +31,11 @@ class MultiPageWeb(WebBase):
         total_page_xpath="""//*[@id="gridContainer"]/table/
                                             tfoot/tr/td/a[6]/@href""",
         total_pages_pattern=r"^\/\?page\=([0-9]{3})$",
+        max_threads=5,
     ):
-        super().__init__(chain, chain_id, url=url, folder_name=folder_name)
+        super().__init__(
+            chain, chain_id, url=url, folder_name=folder_name, max_threads=max_threads
+        )
         self.total_page_xpath = total_page_xpath
         self.total_pages_pattern = total_pages_pattern
 
@@ -91,7 +94,7 @@ class MultiPageWeb(WebBase):
             self.process_links_before_download,
             pages_to_scrape,
             aggregtion_function=multiple_page_aggregtion,
-            max_workers=self.max_workers,
+            max_threads=self.max_threads,
         )
         file_names, download_urls = self.apply_limit_zip(
             file_names,

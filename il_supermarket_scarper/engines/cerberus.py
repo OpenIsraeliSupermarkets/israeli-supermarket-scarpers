@@ -26,8 +26,9 @@ class Cerberus(Engine):
         ftp_path="/",
         ftp_username="",
         ftp_password="",
+        max_threads=5,
     ):
-        super().__init__(chain, chain_id, folder_name)
+        super().__init__(chain, chain_id, folder_name, max_threads)
         self.ftp_host = ftp_host
         self.ftp_path = ftp_path
         self.ftp_username = ftp_username
@@ -63,7 +64,7 @@ class Cerberus(Engine):
             self.on_collected_details(files)
 
             results = execute_in_parallel(
-                self.persist_from_ftp, files, max_workers=self.max_workers
+                self.persist_from_ftp, files, max_threads=self.max_threads
             )
             self.on_download_completed(results=results)
             self.on_scrape_completed(self.get_storage_path())

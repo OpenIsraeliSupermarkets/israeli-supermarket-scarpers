@@ -7,8 +7,12 @@ from .web import WebBase
 class Aspx(WebBase, ABC):
     """class for aspx scapers"""
 
-    def __init__(self, chain, chain_id, url, aspx_page, folder_name=None):
-        super().__init__(chain, chain_id, url, folder_name=folder_name)
+    def __init__(
+        self, chain, chain_id, url, aspx_page, folder_name=None, max_threads=5
+    ):
+        super().__init__(
+            chain, chain_id, url, folder_name=folder_name, max_threads=max_threads
+        )
         self.aspx_page = aspx_page
 
     def extract_task_from_entry(self, all_trs):
