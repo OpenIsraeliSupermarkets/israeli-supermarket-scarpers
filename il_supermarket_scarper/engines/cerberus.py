@@ -64,7 +64,7 @@ class Cerberus(Engine):
             self.on_collected_details(files)
 
             results = execute_in_parallel(
-                self.persist_from_ftp, files, max_threads=self.max_threads
+                self.persist_from_ftp, list(files), max_threads=self.max_threads
             )
             self.on_download_completed(results=results)
             self.on_scrape_completed(self.get_storage_path())

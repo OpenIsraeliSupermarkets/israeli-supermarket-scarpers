@@ -92,7 +92,7 @@ class MultiPageWeb(WebBase):
 
         download_urls, file_names = execute_in_parallel(
             self.process_links_before_download,
-            pages_to_scrape,
+            list(pages_to_scrape),
             aggregtion_function=multiple_page_aggregtion,
             max_threads=self.max_threads,
         )

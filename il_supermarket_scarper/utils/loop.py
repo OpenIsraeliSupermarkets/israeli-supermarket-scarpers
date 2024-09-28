@@ -53,7 +53,7 @@ def run_tasks(
     if max_threads:
         # Use multi-thread
         with concurrent.futures.ThreadPoolExecutor(
-            max_threads=max_threads, thread_name_prefix="PullingThread"
+            max_workers=max_threads, thread_name_prefix="PullingThread"
         ) as executor:
             futures = [executor.submit(function_to_execute, arg) for arg in iterable]
             return [
