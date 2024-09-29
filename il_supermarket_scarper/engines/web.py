@@ -22,7 +22,7 @@ class WebBase(Engine):
         soup = BeautifulSoup(req_res.text, features="lxml")
         return soup.find_all("tr")[1:]
 
-    def get_request_url(self):
+    def get_request_url(self,files_types=None, store_id=None, when_date=None): #pylint: disable=unused-argument
         """get all links to collect download links from"""
         return [self.url]
 
@@ -72,7 +72,7 @@ class WebBase(Engine):
     ):
         """collect all enteris to download from site"""
         urls_to_collect_link_from = self.get_request_url(
-            files_types, store_id, when_date
+            files_types=files_types, store_id=store_id, when_date=when_date
         )
 
         all_trs = []

@@ -67,12 +67,12 @@ class Aspx(WebBase, ABC):
                     ]
                 )
             chains_urls = chains_urls_with_types
-        
+
         # add store id
         if store_id:
             for chain_url in chains_urls:
                 chain_url += f"&WStore={store_id}"
-        
+
         # posting date
         if when_date:
             for chain_url in chains_urls:
