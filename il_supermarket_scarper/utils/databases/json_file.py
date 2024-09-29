@@ -44,7 +44,7 @@ class JsonDataBase(AbstractDataBase):
                     Logger.warning(f"File {file_path} is corrupted, resetting it.")
                     data = {}
         return data
-    
+
     def _write_database(self, data):
         """Write data to the JSON database file."""
         file_path = self._get_database_file_path()
@@ -55,7 +55,7 @@ class JsonDataBase(AbstractDataBase):
     def insert_documents(self, collection_name, document):
         """Insert a document into a collection inside the JSON database."""
         if self.collection_status:
-            
+
             data = self._read_database()
             # Ensure the collection exists in the database
             if collection_name not in data:

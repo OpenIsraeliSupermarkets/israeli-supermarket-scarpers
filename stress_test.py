@@ -1,15 +1,11 @@
 import time
 import json
-import sys
 import datetime
 import tempfile
-from il_supermarket_scarper.scrappers_factory import ScraperFactory
 import pstats
 import cProfile
 from io import StringIO
-
-
-
+from il_supermarket_scarper.scrappers_factory import ScraperFactory
 
 
 if __name__ == "__main__":

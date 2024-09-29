@@ -107,9 +107,7 @@ class ScraperStatus:
                     documents.append(
                         {"file_name": res["file_name"], "when": when},
                     )
-            self.database.insert_documents(
-                self.VERIFIED_DOWNLOADS,
-                documents)
+            self.database.insert_documents(self.VERIFIED_DOWNLOADS, documents)
 
     @lock_by_string()
     def on_scrape_completed(self, folder_name):
