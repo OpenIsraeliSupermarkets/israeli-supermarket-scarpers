@@ -22,7 +22,9 @@ class WebBase(Engine):
         soup = BeautifulSoup(req_res.text, features="lxml")
         return soup.find_all("tr")[1:]
 
-    def get_request_url(self,files_types=None, store_id=None, when_date=None): #pylint: disable=unused-argument
+    def get_request_url(
+        self, files_types=None, store_id=None, when_date=None
+    ):  # pylint: disable=unused-argument
         """get all links to collect download links from"""
         return [self.url]
 
@@ -109,6 +111,8 @@ class WebBase(Engine):
         store_id=None,
         only_latest=False,
         files_names_to_scrape=None,
+        filter_null=False,
+        filter_zero=False,
     ):
         """scarpe the files from multipage sites"""
         download_urls, file_names = [], []
@@ -118,6 +122,8 @@ class WebBase(Engine):
                 files_types=files_types,
                 store_id=store_id,
                 only_latest=only_latest,
+                filter_null=filter_null,
+                filter_zero=filter_zero,
             )
 
             download_urls, file_names = self.collect_files_details_from_site(

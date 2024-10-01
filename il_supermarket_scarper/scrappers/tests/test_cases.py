@@ -143,6 +143,8 @@ def make_test_case(scraper_enum, store_id):
                         "files_types": file_type,
                         "store_id": store_id,
                         "only_latest": only_latest,
+                        "filter_null": True,
+                        "filter_zero": True,
                     }
 
                     scraper.scrape(**kwarg)

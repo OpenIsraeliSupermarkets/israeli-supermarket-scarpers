@@ -43,6 +43,8 @@ class Cerberus(Engine):
         store_id=None,
         only_latest=False,
         files_names_to_scrape=None,
+        filter_null=False,
+        filter_zero=False,
     ):
         files = []
         try:
@@ -55,8 +57,8 @@ class Cerberus(Engine):
             files = self.collect_files_details_from_site(
                 limit=limit,
                 files_types=files_types,
-                filter_null=False,
-                filter_zero=False,
+                filter_null=filter_null,
+                filter_zero=filter_zero,
                 store_id=store_id,
                 only_latest=only_latest,
                 files_names_to_scrape=files_names_to_scrape,
