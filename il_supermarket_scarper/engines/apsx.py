@@ -51,7 +51,7 @@ class Aspx(WebBase, ABC):
         if isinstance(self.chain_id, list):
             res = []
             for c_id in self.chain_id:
-                res.append(f"?code=={c_id}")
+                res.append(f"?code={c_id}")
             return res
         chains_urls = [f"?code={self.chain_id}"]
 
