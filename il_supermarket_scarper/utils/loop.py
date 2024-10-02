@@ -1,5 +1,5 @@
 import concurrent.futures
-from logger import Logger
+from .logger import Logger
 
 
 def defualt_aggregtion_function(all_done):
