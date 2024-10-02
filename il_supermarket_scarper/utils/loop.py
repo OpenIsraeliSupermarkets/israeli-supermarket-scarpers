@@ -18,7 +18,10 @@ def multiple_page_aggregtion(pages_to_scrape):
     download_urls = []
     file_names = []
     for result in pages_to_scrape:
-        page_download_urls, page_file_names = result.result()
+        if hasattr(result, "result"):
+            page_download_urls, page_file_names = result.result()
+        else:
+            page_download_urls, page_file_names = result
         download_urls.extend(page_download_urls)
         file_names.extend(page_file_names)
     return download_urls, file_names
