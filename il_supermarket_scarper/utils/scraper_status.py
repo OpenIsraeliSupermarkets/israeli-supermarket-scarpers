@@ -1,4 +1,5 @@
 import os
+import traceback
 
 from .logger import Logger
 from .status import log_folder_details
@@ -120,7 +121,10 @@ class ScraperStatus:
     def on_download_fail(self, execption, **additional_info):
         """report when the scraping in failed"""
         self._insert_an_update(
-            ScraperStatus.FAILED, execption=str(execption), **additional_info
+            ScraperStatus.FAILED, 
+            execption=str(execption), 
+            traceback=traceback.format_exc(),
+            **additional_info
         )
 
     def _insert_an_update(self, status, **additional_info):
