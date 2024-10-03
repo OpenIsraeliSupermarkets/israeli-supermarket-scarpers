@@ -10,7 +10,7 @@ from il_supermarket_scarper.utils.connection import url_connection_retry
 
 from il_supermarket_scarper.utils import (
     Logger,
-    execute_in_event_loop,
+    execute_in_parallel,
     multiple_page_aggregtion,
 )
 from .web import WebBase
@@ -31,8 +31,11 @@ class MultiPageWeb(WebBase):
         total_page_xpath="""//*[@id="gridContainer"]/table/
                                             tfoot/tr/td/a[6]/@href""",
         total_pages_pattern=r"^\/\?page\=([0-9]{3})$",
+        max_threads=5,
     ):
-        super().__init__(chain, chain_id, url=url, folder_name=folder_name)
+        super().__init__(
+            chain, chain_id, url=url, folder_name=folder_name, max_threads=max_threads
+        )
         self.total_page_xpath = total_page_xpath
         self.total_pages_pattern = total_pages_pattern
 
@@ -71,11 +74,14 @@ class MultiPageWeb(WebBase):
         limit=None,
         files_types=None,
         store_id=None,
+        when_date=None,
         only_latest=False,
         files_names_to_scrape=None,
     ):
         self.post_scraping()
-        url = self.get_request_url()
+        url = self.get_request_url(
+            files_types=files_types, store_id=store_id, when_date=when_date
+        )
 
         total_pages = self.get_number_of_pages(url[0])
         Logger.info(f"Found {total_pages} pages")
@@ -87,11 +93,11 @@ class MultiPageWeb(WebBase):
             )
         )
 
-        download_urls, file_names = execute_in_event_loop(
+        download_urls, file_names = execute_in_parallel(
             self.process_links_before_download,
-            pages_to_scrape,
+            list(pages_to_scrape),
             aggregtion_function=multiple_page_aggregtion,
-            max_workers=self.max_workers,
+            max_threads=self.max_threads,
         )
         file_names, download_urls = self.apply_limit_zip(
             file_names,

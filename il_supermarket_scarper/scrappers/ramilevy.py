@@ -11,4 +11,5 @@ class RamiLevy(Cerberus):
             chain_id="7290058140886",
             folder_name=folder_name,
             ftp_username="RamiLevi",
+            max_threads=10,
         )
