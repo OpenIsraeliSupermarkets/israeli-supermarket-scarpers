@@ -35,11 +35,13 @@ class Aspx(WebBase, ABC):
         """build the url with the query params"""
 
     def get_request_url(self, files_types=None, store_id=None, when_date=None):
+        base_urls = super().get_request_url()
         result = []
         for query_params in self._get_all_possible_query_string_params(
             files_types=files_types, store_id=store_id, when_date=when_date
         ):
-            result.extend(self._build_query_url(query_params))
+            
+            result.extend(self._build_query_url(query_params,base_urls))
         Logger.info(f"Request url: {result}")
         return result
 

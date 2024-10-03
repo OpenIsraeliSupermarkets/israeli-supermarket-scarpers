@@ -35,9 +35,9 @@ class Matrix(Aspx):
             return "-1"
         return c_id + store_id.zfill(4)
 
-    def _build_query_url(self, query_params):
+    def _build_query_url(self, query_params, base_urls):
         res = []
-        for base in super().get_request_url():
+        for base in base_urls:
             res.append(
                 {
                     "method": "POST",

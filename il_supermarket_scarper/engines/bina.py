@@ -49,9 +49,9 @@ class Bina(Aspx):
             return 5
         raise ValueError(f"file type {file_type} not supported")
 
-    def _build_query_url(self, query_params):
+    def _build_query_url(self, query_params,base_urls):
         res = []
-        for base in super().get_request_url():
+        for base in base_urls:
             res.append(
                 {
                     "url": base + self.aspx_page + query_params,
