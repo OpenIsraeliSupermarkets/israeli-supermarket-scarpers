@@ -177,39 +177,54 @@ def get_random_user_agent():
 
 
 @url_connection_retry()
-def session_with_cookies(url, timeout=15, chain_cookie_name=None):
-    """request resource with cookies enabled"""
+def session_with_cookies(
+    url, timeout=15, chain_cookie_name=None, method="GET", body=None
+):
+    """
+    Request resource with cookies enabled.
+
+    Parameters:
+    - url: URL to request
+    - timeout: Request timeout
+    - chain_cookie_name: Optional, name for saving/loading cookies
+    - method: HTTP method, defaults to GET
+    - body: Data to be sent in the request body (for POST or PUT requests)
+    """
 
     session = requests.Session()
 
     if chain_cookie_name:
-        filemame = f"{chain_cookie_name}_cookies.txt"
-        session.cookies = MozillaCookieJar(filemame)
+        filename = f"{chain_cookie_name}_cookies.txt"
+        session.cookies = MozillaCookieJar(filename)
         try:
             session.cookies.load()
         except FileNotFoundError:
-            Logger.info("didn't find cookie file")
-        except LoadError as e:
-            # there was an issue with reading the file.
-            os.remove(filemame)
+            Logger.info("Didn't find cookie file")
+        except Exception as e:
+            # There was an issue with reading the file.
+            os.remove(filename)
             raise e
 
     Logger.info(f"On a new Session requesting url: {url}")
 
-    response_content = session.get(url, timeout=timeout)
+    if method == "POST":
+        response_content = session.post(url, data=body, timeout=timeout)
+    else:
+        response_content = session.get(url, timeout=timeout)
 
     if response_content.status_code != 200:
         Logger.info(
-            f"On Session, Got status code: {response_content.status_code}"
+            f"On Session, got status code: {response_content.status_code}"
             f", body is {response_content.text} "
         )
         raise ConnectionError(
-            f"response for {url}, returned with status"
+            f"Response for {url}, returned with status"
             f" {response_content.status_code}"
         )
 
     if chain_cookie_name and not os.path.exists(f"{chain_cookie_name}_cookies.txt"):
         session.cookies.save()
+
     return response_content
 
 
@@ -227,9 +242,9 @@ def render_webpage(url, extraction):
 
 
 @url_connection_retry()
-def session_and_check_status(url, timeout=15):
+def session_and_check_status(url, timeout=15, method="GET", body=None):
     """use a session to load the response and check status"""
-    return session_with_cookies(url, timeout=timeout)
+    return session_with_cookies(url, timeout=timeout, method=method, body=body)
 
 
 def url_retrieve(url, filename, timeout=30):

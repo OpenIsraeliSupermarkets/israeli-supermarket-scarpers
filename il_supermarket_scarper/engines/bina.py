@@ -5,7 +5,9 @@ from il_supermarket_scarper.utils import (
     url_connection_retry,
     session_and_check_status,
     url_retrieve,
+    FileTypesFilters,
 )
+
 from .apsx import Aspx
 
 
@@ -32,6 +34,68 @@ class Bina(Aspx):
             folder_name=folder_name,
         )
         self.download_postfix = download_postfix
+
+    def file_type_id(self, file_type):
+        """get the file type id"""
+        if file_type == FileTypesFilters.STORE_FILE.name:
+            return 1
+        if file_type == FileTypesFilters.PRICE_FILE.name:
+            return 2
+        if file_type == FileTypesFilters.PROMO_FILE.name:
+            return 3
+        if file_type == FileTypesFilters.PRICE_FULL_FILE.name:
+            return 4
+        if file_type == FileTypesFilters.PROMO_FULL_FILE.name:
+            return 5
+        raise ValueError(f"file type {file_type} not supported")
+
+    def _build_query_url(self, query_params):
+        res = []
+        for base in super().get_request_url():
+            res.append(
+                {
+                    "url": base + self.aspx_page + query_params,
+                    "method": "GET",
+                }
+            )
+        return res
+
+    def _get_all_possible_query_string_params(
+        self, files_types=None, store_id=None, when_date=None
+    ):
+        """get the arguments need to add to the url"""
+        chains_urls = []
+        if isinstance(self.chain_id, list):
+            for c_id in self.chain_id:
+                chains_urls.append(f"?code={c_id}")
+        else:
+            chains_urls.append(f"?code={self.chain_id}")
+
+        # add file types to url
+        if files_types:
+            chains_urls_with_types = []
+            for files_type in files_types:
+                file_type_id = self.file_type_id(files_type)
+                chains_urls_with_types.extend(
+                    [
+                        f"{chain_url}&WFileType={file_type_id}"
+                        for chain_url in chains_urls
+                    ]
+                )
+            chains_urls = chains_urls_with_types
+
+        # add store id
+        if store_id:
+            for chain_url in chains_urls:
+                chain_url += f"&WStore={store_id}"
+
+        # posting date
+        if when_date:
+            for chain_url in chains_urls:
+                chain_url += (
+                    f"&WDate={when_date.strftime('%d/%m/%Y').reaplce('/','%2F')}"
+                )
+        return chains_urls
 
     def get_data_from_page(self, req_res):
         return json.loads(req_res.text)

@@ -79,7 +79,7 @@ class WebBase(Engine):
 
         all_trs = []
         for url in urls_to_collect_link_from:
-            req_res = session_and_check_status(url)
+            req_res = session_and_check_status(**url)
             trs = self.get_data_from_page(req_res)
             all_trs.extend(trs)
 
