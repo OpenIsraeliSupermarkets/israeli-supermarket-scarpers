@@ -205,7 +205,7 @@ def session_with_cookies(
             os.remove(filename)
             raise e
 
-    Logger.info(f"On a new Session requesting url: {url}")
+    Logger.info(f"On a new Session requesting url: {method},{url},{body}")
 
     if method == "POST":
         response_content = session.post(url, data=body, timeout=timeout)
