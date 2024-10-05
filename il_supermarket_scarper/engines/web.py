@@ -76,7 +76,7 @@ class WebBase(Engine):
         urls_to_collect_link_from = self.get_request_url(
             files_types=files_types, store_id=store_id, when_date=when_date
         )
-
+ 
         all_trs = []
         for url in urls_to_collect_link_from:
             req_res = session_and_check_status(**url)
@@ -113,6 +113,7 @@ class WebBase(Engine):
         files_names_to_scrape=None,
         filter_null=False,
         filter_zero=False,
+        suppress_exception=False
     ):
         """scarpe the files from multipage sites"""
         download_urls, file_names = [], []
@@ -153,4 +154,7 @@ class WebBase(Engine):
             return results
         except Exception as e:  # pylint: disable=broad-except
             self.on_download_fail(e, download_urls=download_urls, file_names=file_names)
-            return []
+            
+            if suppress_exception:
+                return []
+            raise e

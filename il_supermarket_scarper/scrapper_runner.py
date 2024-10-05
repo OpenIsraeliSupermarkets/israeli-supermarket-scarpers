@@ -98,6 +98,7 @@ class MainScrapperRunner:
             files_names_to_scrape=None,
             filter_null=False,
             filter_zero=False,
+            suppress_exception=True
         )
         Logger.info(f"done scraping {chain_name}")
 

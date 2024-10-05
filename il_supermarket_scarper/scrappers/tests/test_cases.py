@@ -145,6 +145,7 @@ def make_test_case(scraper_enum, store_id):
                         "only_latest": only_latest,
                         "filter_null": True,
                         "filter_zero": True,
+                        "suppress_exception": False,
                     }
 
                     scraper.scrape(**kwarg)

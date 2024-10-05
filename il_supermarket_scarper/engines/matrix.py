@@ -1,5 +1,5 @@
 from bs4 import BeautifulSoup
-from il_supermarket_scarper.utils import Logger, _now
+from il_supermarket_scarper.utils import Logger, _now, FileTypesFilters
 from .apsx import Aspx
 
 
@@ -21,7 +21,20 @@ class Matrix(Aspx):
         """get the file type id"""
         if files_types is None:
             return "all"
-        return [ftype.name.lower() for ftype in files_types]
+        
+        types = []
+        for ftype in files_types:
+            if ftype == FileTypesFilters.STORE_FILE.name:
+                types.append("storefull")
+            if ftype == FileTypesFilters.PRICE_FILE.name:
+                types.append("price")
+            if ftype == FileTypesFilters.PROMO_FILE.name:
+                types.append("promo")
+            if ftype == FileTypesFilters.PRICE_FULL_FILE.name:
+                types.append("pricefull")
+            if ftype == FileTypesFilters.PROMO_FULL_FILE.name:
+                types.append("promofull")
+        return types
 
     def get_when(self, when_date):
         """get the when date"""
@@ -29,11 +42,16 @@ class Matrix(Aspx):
             when_date = _now()
         return when_date.strftime("%d/%m/%Y")
 
-    def get_stores_id(self, store_id=None, c_id=None):
+    def get_chain_n_stores__id(self, store_id=None, c_id=None):
         """get the store id"""
         if store_id is None:
-            return "-1"
-        return c_id + store_id.zfill(4)
+            chain_id = str(c_id) #+ "001"
+            store_id = "-1"
+        else:
+            chain_id = str(c_id)
+            store_id = str(c_id) + str(store_id).zfill(3)
+        return chain_id, store_id
+        
 
     def _build_query_url(self, query_params, base_urls):
         res = []
@@ -55,28 +73,26 @@ class Matrix(Aspx):
         post_body = []
         if isinstance(self.chain_id, list):
             for c_id in self.chain_id:
+                chain_id, store_id = self.get_chain_n_stores__id(store_id=store_id, c_id=c_id)
                 post_body.append(
                     {
                         "ctl00$TextArea": "",
-                        "ctl00$MainContent$chain": "-1",
-                        "ctl00$MainContent$subChain": str(c_id),
-                        "ctl00$MainContent$branch": self.get_stores_id(
-                            store_id=store_id, c_id=c_id
-                        ),
+                        "ctl00$MainContent$chain":  chain_id,
+                        "ctl00$MainContent$subChain": "-1", 
+                        "ctl00$MainContent$branch": store_id,
                         "ctl00$MainContent$txtDate": self.get_when(when_date=when_date),
                         "ctl00$MainContent$fileType": "all",
                         "ctl00$MainContent$btnSearch": "חיפוש",
                     }
                 )
         else:
+            chain_id, store_id = self.get_chain_n_stores__id(store_id=store_id, c_id=self.chain_id)
             post_body.append(
                 {
                     "ctl00$TextArea": "",
-                    "ctl00$MainContent$chain": "-1",
-                    "ctl00$MainContent$subChain": str(c_id),
-                    "ctl00$MainContent$branch": self.get_stores_id(
-                        store_id=store_id, c_id=c_id
-                    ),
+                    "ctl00$MainContent$chain": chain_id,
+                    "ctl00$MainContent$subChain":  "-1", 
+                    "ctl00$MainContent$branch": store_id,
                     "ctl00$MainContent$txtDate": self.get_when(when_date=when_date),
                     "ctl00$MainContent$fileType": "all",
                     "ctl00$MainContent$btnSearch": "חיפוש",

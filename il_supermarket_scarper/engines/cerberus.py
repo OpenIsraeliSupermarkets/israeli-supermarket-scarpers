@@ -45,6 +45,7 @@ class Cerberus(Engine):
         files_names_to_scrape=None,
         filter_null=False,
         filter_zero=False,
+        suppress_exception=False
     ):
         files = []
         try:
@@ -53,6 +54,7 @@ class Cerberus(Engine):
                 files_types=files_types,
                 store_id=store_id,
                 only_latest=only_latest,
+                suppress_exception=suppress_exception
             )
             files = self.collect_files_details_from_site(
                 limit=limit,
@@ -62,6 +64,7 @@ class Cerberus(Engine):
                 store_id=store_id,
                 only_latest=only_latest,
                 files_names_to_scrape=files_names_to_scrape,
+                suppress_exception=suppress_exception
             )
             self.on_collected_details(files)
 
@@ -73,7 +76,11 @@ class Cerberus(Engine):
             return results
         except Exception as e:  # pylint: disable=broad-except
             self.on_download_fail(e, files=files)
-            return []
+            Logger.error_execption(e)
+            
+            if suppress_exception:
+                return []
+            raise e
 
     def collect_files_details_from_site(
         self,
