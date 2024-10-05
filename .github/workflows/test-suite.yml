@@ -7,9 +7,9 @@ name: Unit & Integration Tests
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "master" ]
+    branches: [ "main" ]
   schedule:
     # * is a special character in YAML so you have to quote this string
     - cron:  '00 17 * * *'
