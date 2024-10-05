@@ -1,4 +1,5 @@
 import os
+import traceback
 
 from .logger import Logger
 from .status import log_folder_details
@@ -100,12 +101,14 @@ class ScraperStatus:
         """Add downloaded files to the MongoDB collection."""
         if self.database.is_collection_enabled():
             when = _now()
+
+            documents = []
             for res in results:
                 if res["extract_succefully"]:
-                    self.database.insert_document(
-                        self.VERIFIED_DOWNLOADS,
+                    documents.append(
                         {"file_name": res["file_name"], "when": when},
                     )
+            self.database.insert_documents(self.VERIFIED_DOWNLOADS, documents)
 
     @lock_by_string()
     def on_scrape_completed(self, folder_name):
@@ -118,7 +121,10 @@ class ScraperStatus:
     def on_download_fail(self, execption, **additional_info):
         """report when the scraping in failed"""
         self._insert_an_update(
-            ScraperStatus.FAILED, execption=str(execption), **additional_info
+            ScraperStatus.FAILED,
+            execption=str(execption),
+            traceback=traceback.format_exc(),
+            **additional_info,
         )
 
     def _insert_an_update(self, status, **additional_info):

@@ -17,12 +17,21 @@ class PublishPrice(WebBase):
     but this is not implemented.
     """
 
-    def __init__(self, chain, chain_id, site_infix, folder_name=None, domain="prices"):
+    def __init__(
+        self,
+        chain,
+        chain_id,
+        site_infix,
+        folder_name=None,
+        domain="prices",
+        max_threads=5,
+    ):
         super().__init__(
             chain,
             chain_id,
             url=f"https://{domain}.{site_infix}.co.il/",
             folder_name=folder_name,
+            max_threads=max_threads,
         )
         self.folder = None
 

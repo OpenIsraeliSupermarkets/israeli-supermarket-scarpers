@@ -7,11 +7,11 @@ This is a scraper for ALL the supermarket chains listed in the GOV.IL site.
 
 
 
-[![Unit & Integration Tests](https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers/actions/workflows/test-suite.yml/badge.svg?event=push)](https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers/actions/workflows/test-suite.yml)
-[![CodeQL](https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers/actions/workflows/codeql.yml/badge.svg)](https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers/actions/workflows/codeql.yml)
-[![Pylint](https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers/actions/workflows/pylint.yml/badge.svg)](https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers/actions/workflows/pylint.yml)
-[![Publish Docker image](https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers/actions/workflows/docker-publish.yml)
-[![Upload Python Package](https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers/actions/workflows/python-publish.yml/badge.svg)](https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers/actions/workflows/python-publish.yml)
+[![Unit & Integration Tests](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/test-suite.yml/badge.svg?event=push)](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/test-suite.yml)
+[![CodeQL](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/codeql.yml/badge.svg)](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/codeql.yml)
+[![Pylint](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/pylint.yml/badge.svg)](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/pylint.yml)
+[![Publish Docker image](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/docker-publish.yml)
+[![Upload Python Package](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/python-publish.yml/badge.svg)](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/python-publish.yml)
 
 ## 🤗 Want to support my work?
 <p align="center">
@@ -23,7 +23,7 @@ Daily Automatic Testing
 ----
 The test suite is scheduled to run daily, so you can see if the supermarket chains have changed something in their interface and the package will not work properly.
 
-Status: [![Scheduled Tests](https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers/actions/workflows/test-suite.yml/badge.svg?event=schedule)](https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers/actions/workflows/test-suite.yml)
+Status: [![Scheduled Tests](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/test-suite.yml/badge.svg?event=schedule)](https://github.com/erlichsefi/israeli-supermarket-scarpers/actions/workflows/test-suite.yml)
 
 Notice:
 - Berekt and Quik are flaky! They will not fail the testing framework, but you can still use them.
@@ -40,7 +40,7 @@ You can email me at erlichsefi@gmail.com
 
 If you think you've found a bug:
 
-- Create issue in [issue tracker](https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers/issues) to see if
+- Create issue in [issue tracker](https://github.com/erlichsefi/israeli-supermarket-scarpers/issues) to see if
   it's already been reported
 - Please consider solving the issue by yourself and creating a pull request.
 
@@ -72,9 +72,9 @@ il_supermarket_scarper can be installed using pip:
 If you want to run the latest version of the code, you can install it from the
 repo directly:
 
-    python3 -m pip install -U git+https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers.git
+    python3 -m pip install -U git+https://github.com/erlichsefi/israeli-supermarket-scarpers.git
     # or if you don't have 'git' installed
-    python3 -m pip install -U https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers/main
+    python3 -m pip install -U https://github.com/erlichsefi/israeli-supermarket-scarpers/master
     
 
 

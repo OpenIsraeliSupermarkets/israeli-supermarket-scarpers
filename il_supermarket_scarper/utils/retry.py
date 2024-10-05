@@ -233,7 +233,7 @@ def __retry_files(
         # next iteration
         retry_list, other_results = compute_retry(results)
 
-        all_results.append(other_results)
+        all_results.extend(other_results)
         # if there is not files in the retry list, break
         if len(retry_list) == 0:
             break
