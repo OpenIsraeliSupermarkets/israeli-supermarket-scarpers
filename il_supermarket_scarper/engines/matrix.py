@@ -48,8 +48,8 @@ class Matrix(Aspx):
             chain_id = str(c_id) #+ "001"
             store_id = "-1"
         else:
-            chain_id = str(c_id)
-            store_id = str(c_id) + str(store_id).zfill(3)
+            chain_id = str(c_id) 
+            store_id = str(c_id) + "001" + str(store_id).zfill(3)
         return chain_id, store_id
         
 
