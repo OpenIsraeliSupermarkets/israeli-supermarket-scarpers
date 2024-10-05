@@ -67,9 +67,9 @@ class Bina(Aspx):
         chains_urls = []
         if isinstance(self.chain_id, list):
             for c_id in self.chain_id:
-                chains_urls.append(f"?code={c_id}")
+                chains_urls.append(f"?_={c_id}")
         else:
-            chains_urls.append(f"?code={self.chain_id}")
+            chains_urls.append(f"?_={self.chain_id}")
 
         # add file types to url
         if files_types:
@@ -86,13 +86,13 @@ class Bina(Aspx):
 
         # add store id
         if store_id:
-            for chain_url in chains_urls:
-                chain_url += f"&WStore={store_id}"
+            for i in range(len(chains_urls)):
+                chains_urls[i] = chains_urls[i] + f"&WStore={store_id}"
 
         # posting date
         if when_date:
-            for chain_url in chains_urls:
-                chain_url += (
+            for i in range(len(chains_urls)):
+                chains_urls[i] = chains_urls[i] + (
                     f"&WDate={when_date.strftime('%d/%m/%Y').reaplce('/','%2F')}"
                 )
         return chains_urls
