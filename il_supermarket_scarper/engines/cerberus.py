@@ -4,7 +4,7 @@ import os
 from il_supermarket_scarper.utils import (
     extract_xml_file_from_gz_file,
     Logger,
-    execute_in_event_loop,
+    execute_in_parallel,
     collect_from_ftp,
     fetch_temporary_gz_file_from_ftp,
     retry_files,
@@ -26,8 +26,9 @@ class Cerberus(Engine):
         ftp_path="/",
         ftp_username="",
         ftp_password="",
+        max_threads=5,
     ):
-        super().__init__(chain, chain_id, folder_name)
+        super().__init__(chain, chain_id, folder_name, max_threads)
         self.ftp_host = ftp_host
         self.ftp_path = ftp_path
         self.ftp_username = ftp_username
@@ -42,6 +43,8 @@ class Cerberus(Engine):
         store_id=None,
         only_latest=False,
         files_names_to_scrape=None,
+        filter_null=False,
+        filter_zero=False,
     ):
         files = []
         try:
@@ -54,16 +57,16 @@ class Cerberus(Engine):
             files = self.collect_files_details_from_site(
                 limit=limit,
                 files_types=files_types,
-                filter_null=True,
-                filter_zero=True,
+                filter_null=filter_null,
+                filter_zero=filter_zero,
                 store_id=store_id,
                 only_latest=only_latest,
                 files_names_to_scrape=files_names_to_scrape,
             )
             self.on_collected_details(files)
 
-            results = execute_in_event_loop(
-                self.persist_from_ftp, files, max_workers=self.max_workers
+            results = execute_in_parallel(
+                self.persist_from_ftp, list(files), max_threads=self.max_threads
             )
             self.on_download_completed(results=results)
             self.on_scrape_completed(self.get_storage_path())

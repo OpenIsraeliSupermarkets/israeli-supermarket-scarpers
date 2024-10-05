@@ -1,7 +1,7 @@
 from bs4 import BeautifulSoup
 from il_supermarket_scarper.utils import (
     Logger,
-    execute_in_event_loop,
+    execute_in_parallel,
     session_and_check_status,
     retry_files,
 )
@@ -12,8 +12,8 @@ from .engine import Engine
 class WebBase(Engine):
     """scrape the file of websites that the only why to download them is via web"""
 
-    def __init__(self, chain, chain_id, url, folder_name=None):
-        super().__init__(chain, chain_id, folder_name)
+    def __init__(self, chain, chain_id, url, folder_name=None, max_threads=5):
+        super().__init__(chain, chain_id, folder_name, max_threads=max_threads)
         self.url = url
         self.max_retry = 2
 
@@ -22,7 +22,9 @@ class WebBase(Engine):
         soup = BeautifulSoup(req_res.text, features="lxml")
         return soup.find_all("tr")[1:]
 
-    def get_request_url(self):
+    def get_request_url(
+        self, files_types=None, store_id=None, when_date=None
+    ):  # pylint: disable=unused-argument
         """get all links to collect download links from"""
         return [self.url]
 
@@ -66,11 +68,14 @@ class WebBase(Engine):
         limit=None,
         files_types=None,
         store_id=None,
+        when_date=None,
         only_latest=False,
         files_names_to_scrape=None,
     ):
         """collect all enteris to download from site"""
-        urls_to_collect_link_from = self.get_request_url()
+        urls_to_collect_link_from = self.get_request_url(
+            files_types=files_types, store_id=store_id, when_date=when_date
+        )
 
         all_trs = []
         for url in urls_to_collect_link_from:
@@ -106,6 +111,8 @@ class WebBase(Engine):
         store_id=None,
         only_latest=False,
         files_names_to_scrape=None,
+        filter_null=False,
+        filter_zero=False,
     ):
         """scarpe the files from multipage sites"""
         download_urls, file_names = [], []
@@ -115,6 +122,8 @@ class WebBase(Engine):
                 files_types=files_types,
                 store_id=store_id,
                 only_latest=only_latest,
+                filter_null=filter_null,
+                filter_zero=filter_zero,
             )
 
             download_urls, file_names = self.collect_files_details_from_site(
@@ -129,10 +138,10 @@ class WebBase(Engine):
 
             Logger.info(f"collected {len(download_urls)} to download.")
             if len(download_urls) > 0:
-                results = execute_in_event_loop(
+                results = execute_in_parallel(
                     self.save_and_extract,
-                    zip(download_urls, file_names),
-                    max_workers=self.max_workers,
+                    list(zip(download_urls, file_names)),
+                    max_threads=self.max_threads,
                 )
             else:
                 results = []
