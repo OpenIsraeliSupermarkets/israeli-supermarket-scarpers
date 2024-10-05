@@ -1,4 +1,4 @@
-[MASTER]
+[MAIN]
 disable=
     C0114, # missing-module-docstring
     R0913, # too-many-arguments
