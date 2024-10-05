@@ -6,7 +6,7 @@ class BareketTestCase(make_test_case(ScraperFactory.BAREKET, 5)):
     """Test case for ScraperFactory.BAREKET."""
 
 
-class YaynotBitanTestCase(make_test_case(ScraperFactory.YAYNO_BITAN, 6)):
+class YaynotBitanTestCase(make_test_case(ScraperFactory.YAYNO_BITAN, 9032)):
     """Test case for ScraperFactory.YAYNO_BITAN."""
 
 

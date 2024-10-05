@@ -143,6 +143,8 @@ def make_test_case(scraper_enum, store_id):
                         "files_types": file_type,
                         "store_id": store_id,
                         "only_latest": only_latest,
+                        "filter_null": True,
+                        "filter_zero": True,
                     }
 
                     scraper.scrape(**kwarg)
@@ -199,7 +201,7 @@ def make_test_case(scraper_enum, store_id):
 
         def test_scrape_ten(self):
             """scrape ten file and make sure they exists"""
-            self._clean_scarpe_delete(scraper_enum, limit=10)
+            self._clean_scarpe_delete(scraper_enum, limit=None)
 
         def test_scrape_promo(self):
             """scrape one promo file and make sure it exists"""
