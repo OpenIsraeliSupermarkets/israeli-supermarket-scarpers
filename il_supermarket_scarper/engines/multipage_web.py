@@ -31,6 +31,7 @@ class MultiPageWeb(WebBase):
         total_page_xpath="""//*[@id="gridContainer"]/table/
                                             tfoot/tr/td/a[6]/@href""",
         total_pages_pattern=r"^\/\?page\=([0-9]{3})$",
+        page_argument="page",
         max_threads=5,
     ):
         super().__init__(
@@ -38,6 +39,7 @@ class MultiPageWeb(WebBase):
         )
         self.total_page_xpath = total_page_xpath
         self.total_pages_pattern = total_pages_pattern
+        self.page_argument = page_argument
 
     @url_connection_retry()
     def get_number_of_pages(self, url, timeout=15):
@@ -88,7 +90,9 @@ class MultiPageWeb(WebBase):
 
         pages_to_scrape = list(
             map(
-                lambda page_number: self.url + "?page=" + str(page_number),
+                lambda page_number: self.url
+                + f"?{self.page_argument}="
+                + str(page_number),
                 range(1, total_pages + 1),
             )
         )
