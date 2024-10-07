@@ -59,5 +59,5 @@ CMD python example.py && cron & tail -f /var/log/cron.log
 FROM base as test
 
 RUN python -m pip install . ".[test]"
-CMD python -m pytest .
+CMD python -m pytest -n 4
 
