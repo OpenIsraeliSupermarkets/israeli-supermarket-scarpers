@@ -8,9 +8,10 @@ from .exceptions import RestartSessionError
 
 def extract_xml_file_from_gz_file(file_save_path):
     """extract xml from gz"""
+    target_file_name = os.path.splitext(file_save_path)[0] + ".xml"
     try:
         with gzip.open(file_save_path, "rb") as infile:
-            with open(os.path.splitext(file_save_path)[0] + ".xml", "wb") as outfile:
+            with open(target_file_name, "wb") as outfile:
                 shutil.copyfileobj(infile, outfile)
     except (gzip.BadGzipFile,EOFError) as exception:
         try:
@@ -19,18 +20,18 @@ def extract_xml_file_from_gz_file(file_save_path):
                     zip_info = the_zip.infolist()[0]
                     with the_zip.open(zip_info) as the_file:
                         with open(
-                            os.path.splitext(file_save_path)[0] + ".xml", "wb"
+                            target_file_name, "wb"
                         ) as f_out:
                             f_out.write(the_file.read())
 
         except Exception as exception:  # pylint: disable=broad-except
-            report_failed_zip(exception, file_save_path)
+            report_failed_zip(exception, file_save_path, target_file_name)
 
     except Exception as exception:  # pylint: disable=broad-except
-        report_failed_zip(exception, file_save_path)
+        report_failed_zip(exception, file_save_path, target_file_name)
 
 
-def report_failed_zip(exception, file_save_path):
+def report_failed_zip(exception, file_save_path, target_file_name):
     """report a file wasn't able to extracted"""
     
     try:
@@ -58,3 +59,6 @@ def report_failed_zip(exception, file_save_path):
             )
     finally:
         os.remove(file_save_path)
+        # remove the corrupted file
+        if os.path.exists(target_file_name):
+            os.remove(target_file_name)
