@@ -34,9 +34,15 @@ class Matrix(Aspx):
 
         Logger.info(f"Found {len(all_trs)} entries")
         if self.chain_hebrew_name:
-            all_trs = list(
-                filter(lambda x: x and self.chain_hebrew_name in str(x), all_trs)
-            )
+            _all_trs = []
+            for tr in all_trs:
+                if tr and self.chain_hebrew_name in str(tr):
+                    _all_trs.append(tr)
+                else:
+                    Logger.debug(f"Filtered out {str(tr)}")
+
+            all_trs = _all_trs
+
             Logger.info(
                 f"After filtering with {self.chain_hebrew_name}:"
                 f"Found {len(all_trs)} entries"
