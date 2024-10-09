@@ -24,7 +24,7 @@ def extract_xml_file_from_gz_file(file_save_path):
 
         except ( # pylint: disable=broad-except,redefined-outer-name
             Exception
-        ) as exception:  
+        ) as exception:
             report_failed_zip(exception, file_save_path, target_file_name)
 
     except Exception as exception:  # pylint: disable=broad-except
