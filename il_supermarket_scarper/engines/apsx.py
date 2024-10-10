@@ -44,7 +44,7 @@ class Aspx(WebBase, ABC):
             res.append(base + self.aspx_page + query_params)
         return res
 
-    def _get_all_possible_query_string_params( #pylint: disable=unused-argument
+    def _get_all_possible_query_string_params(  # pylint: disable=unused-argument
         self, files_types=None, store_id=None, when_date=None
     ):
         """get the arguments need to add to the url"""
