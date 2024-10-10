@@ -38,7 +38,7 @@ class MainScrapperRunner:
         self.multiprocessing = multiprocessing
         self.lookup_in_db = lookup_in_db
 
-    def run(self, limit=None, files_types=None, only_latest=False):
+    def run(self, limit=None, files_types=None, when_date=False):
         """run the scraper"""
         Logger.info(f"Limit is {limit}")
         Logger.info(f"files_types is {files_types}")
@@ -54,7 +54,7 @@ class MainScrapperRunner:
                             {
                                 "limit": limit,
                                 "files_types": files_types,
-                                "only_latest": only_latest,
+                                "when_date": when_date,
                             },
                         ),
                         self.enabled_scrapers,
@@ -77,7 +77,7 @@ class MainScrapperRunner:
         limit=None,
         files_types=None,
         store_id=None,
-        only_latest=False,
+        when_date=None,
     ):
         """scrape one"""
         chain_scrapper_constractor = ScraperFactory.get(chain_scrapper_class)
@@ -94,7 +94,7 @@ class MainScrapperRunner:
             limit=limit,
             files_types=files_types,
             store_id=store_id,
-            only_latest=only_latest,
+            when_date=when_date,
             files_names_to_scrape=None,
             filter_null=False,
             filter_zero=False,

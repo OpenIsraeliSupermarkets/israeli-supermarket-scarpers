@@ -10,7 +10,7 @@ class ScarpingTask:
         size_estimation_mode=False,
         enabled_scrapers=None,
         limit=None,
-        only_latest=False,
+        when_date=None,
         files_types=FileTypesFilters.all_types(),
         dump_folder_name=None,
         lookup_in_db=True,
@@ -27,7 +27,7 @@ class ScarpingTask:
         self.dump_folder_name = dump_folder_name
         self.limit = limit
         self.files_types = files_types
-        self.only_latest = only_latest
+        self.when_date = when_date
 
     def get_dump_folder_name(self):
         """get the dump folder name"""
@@ -36,5 +36,5 @@ class ScarpingTask:
     def start(self):
         """run the scraping"""
         return self.runner.run(
-            limit=self.limit, files_types=self.files_types, only_latest=self.only_latest
+            limit=self.limit, files_types=self.files_types, when_date=self.when_date
         )

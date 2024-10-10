@@ -8,9 +8,10 @@ import io
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
 
 
-def format_stats_as_json(pr, project_name):
+def format_stats_as_json(profile, project_name):
+    """get the stats from the profiler and format them as json"""
     stream = io.StringIO()
-    ps = pstats.Stats(pr, stream=stream)
+    ps = pstats.Stats(profile, stream=stream)
     ps.sort_stats(pstats.SortKey.CUMULATIVE)  # Sort by cumulative time
     ps.print_stats()
 
@@ -21,21 +22,21 @@ def format_stats_as_json(pr, project_name):
     project_stats = []
     for line in stats_output:
         if project_name in line:  # Filter for project-specific lines
-            # Extract relevant fields from the profiling output
-            # The typical format is (Function location, Number of calls, Total time, Cumulative time, etc.)
+
             parts = line.split()
             if len(parts) >= 5:  # Basic sanity check for the parts
                 function_data = {
-                    "function": parts[-1],       # Function path
-                    "ncalls": parts[0],         # Number of calls
-                    "tottime": parts[1], 
-                    "tottime_per_call": parts[2],# Time spent in function
-                    "cumtime": parts[3],         # Cumulative time including subcalls
-                    "cumtime_per_call": parts[4]         #
+                    "function": parts[-1],  # Function path
+                    "ncalls": parts[0],  # Number of calls
+                    "tottime": parts[1],
+                    "tottime_per_call": parts[2],  # Time spent in function
+                    "cumtime": parts[3],  # Cumulative time including subcalls
+                    "cumtime_per_call": parts[4],  #
                 }
                 project_stats.append(function_data)
 
     return project_stats
+
 
 if __name__ == "__main__":
 

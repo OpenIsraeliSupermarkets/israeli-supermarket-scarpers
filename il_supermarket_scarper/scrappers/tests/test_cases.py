@@ -42,7 +42,7 @@ def make_test_case(scraper_enum, store_id):
             file_type=None,
             limit=None,
             store_id=None,
-            only_latest=False,
+            when_date=None,
         ):
             """make sure the file type filter works"""
             if file_type:
@@ -55,7 +55,7 @@ def make_test_case(scraper_enum, store_id):
                 for file in files_found:
                     store_mark.append(int(file.split("-")[1]))
                 assert len(set(store_mark)) == 1 and len(store_mark) == len(files_found)
-            if only_latest:
+            if when_date:
                 files_sources = []
                 for file in files_found:
                     source = file.split("-")[:2]
@@ -107,7 +107,7 @@ def make_test_case(scraper_enum, store_id):
             store_id=None,
             limit=None,
             file_type=None,
-            only_latest=False,
+            when_date=None,
         ):
             with tempfile.TemporaryDirectory() as tmpdirname:
                 self.__clean_scarpe_delete(
@@ -116,7 +116,7 @@ def make_test_case(scraper_enum, store_id):
                     store_id=store_id,
                     limit=limit,
                     file_type=file_type,
-                    only_latest=only_latest,
+                    when_date=when_date,
                 )
 
         def __clean_scarpe_delete(
@@ -126,7 +126,7 @@ def make_test_case(scraper_enum, store_id):
             store_id=None,
             limit=None,
             file_type=None,
-            only_latest=False,
+            when_date=None,
         ):
             self._delete_download_folder(dump_path)
             os.makedirs(dump_path)
@@ -142,7 +142,7 @@ def make_test_case(scraper_enum, store_id):
                         "limit": limit,
                         "files_types": file_type,
                         "store_id": store_id,
-                        "only_latest": only_latest,
+                        "when_date": when_date,
                         "filter_null": True,
                         "filter_zero": True,
                     }
@@ -164,14 +164,14 @@ def make_test_case(scraper_enum, store_id):
                         limit=limit,
                         files_types=file_type,
                         store_id=store_id,
-                        only_latest=only_latest,
+                        when_date=when_date,
                     ) and not hasattr(scraper, "_is_flaky"):
                         self._make_sure_filter_work(
                             files_found,
                             file_type=file_type,
                             limit=limit,
                             store_id=store_id,
-                            only_latest=only_latest,
+                            when_date=when_date,
                         )
 
                     for file in files_found:
@@ -255,7 +255,7 @@ def make_test_case(scraper_enum, store_id):
             self._clean_scarpe_delete(
                 scraper_enum,
                 store_id=store_id,
-                only_latest=True,
+                when_date="lastast",
             )
 
     return TestScapers

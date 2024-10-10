@@ -45,7 +45,7 @@ class WebBase(Engine):
         files_types=None,
         by_function=lambda x: x[0],
         store_id=None,
-        only_latest=False,
+        when_date=None,
         files_names_to_scrape=None,
     ):
         """apply limit to zip"""
@@ -55,7 +55,7 @@ class WebBase(Engine):
             files_types=files_types,
             by_function=by_function,
             store_id=store_id,
-            only_latest=only_latest,
+            when_date=when_date,
             files_names_to_scrape=files_names_to_scrape,
         )
         if len(ziped) == 0:
@@ -69,7 +69,6 @@ class WebBase(Engine):
         files_types=None,
         store_id=None,
         when_date=None,
-        only_latest=False,
         files_names_to_scrape=None,
     ):
         """collect all enteris to download from site"""
@@ -95,7 +94,7 @@ class WebBase(Engine):
                 limit=limit,
                 files_types=files_types,
                 store_id=store_id,
-                only_latest=only_latest,
+                when_date=when_date,
                 files_names_to_scrape=files_names_to_scrape,
             )
 
@@ -109,7 +108,7 @@ class WebBase(Engine):
         limit=None,
         files_types=None,
         store_id=None,
-        only_latest=False,
+        when_date=None,
         files_names_to_scrape=None,
         filter_null=False,
         filter_zero=False,
@@ -121,7 +120,7 @@ class WebBase(Engine):
                 limit,
                 files_types=files_types,
                 store_id=store_id,
-                only_latest=only_latest,
+                when_date=when_date,
                 filter_null=filter_null,
                 filter_zero=filter_zero,
             )
@@ -130,7 +129,7 @@ class WebBase(Engine):
                 limit=limit,
                 files_types=files_types,
                 store_id=store_id,
-                only_latest=only_latest,
+                when_date=when_date,
                 files_names_to_scrape=files_names_to_scrape,
             )
 

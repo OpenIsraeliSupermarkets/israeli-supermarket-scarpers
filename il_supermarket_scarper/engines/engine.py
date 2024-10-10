@@ -1,7 +1,7 @@
 from abc import ABC
 import os
 import re
-
+import datetime
 
 from il_supermarket_scarper.utils import (
     get_output_folder,
@@ -38,16 +38,16 @@ class Engine(ScraperStatus, ABC):
         return self.storage_path
 
     def _is_validate_scraper_found_no_files(
-        self, limit=None, files_types=None, store_id=None, only_latest=False
+        self, limit=None, files_types=None, store_id=None, when_date=None
     ):
         Logger.info(
             f"check if fail is allowd with, limit={limit},"
-            f"files_types={files_types},store_id={store_id},only_latest={only_latest}"
+            f"files_types={files_types},store_id={store_id},when_date={when_date}"
         )
         return False
 
     def is_validate_scraper_found_no_files(
-        self, limit=None, files_types=None, store_id=None, only_latest=False
+        self, limit=None, files_types=None, store_id=None, when_date=None
     ):
         """return true if its ok the scarper reuturn no enrty"""
 
@@ -58,7 +58,7 @@ class Engine(ScraperStatus, ABC):
             for file_type in files_types:
                 if file_type in FileTypesFilters.all_full_files():
                     request_only_update_file = False
-        Logger.info(f"the value of {only_latest} should not affect.")
+        Logger.info(f"the value of {when_date} should not affect.")
         return (
             limit == 0
             or files_types == []
@@ -68,7 +68,7 @@ class Engine(ScraperStatus, ABC):
                 limit=limit,
                 files_types=files_types,
                 store_id=store_id,
-                only_latest=only_latest,
+                when_date=when_date,
             )
         )
 
@@ -83,13 +83,13 @@ class Engine(ScraperStatus, ABC):
         files_types=None,
         by_function=lambda x: x,
         store_id=None,
-        only_latest=False,
+        when_date=None,
         files_names_to_scrape=None,
     ):
         """filter the list according to condition"""
         assert (
-            not only_latest or limit is None
-        ), "only_latest flag can't be applied with limit."
+            when_date is not None or limit is None
+        ), "when_date flag can't be applied with limit."
 
         # filter files already downloaded
         intreable_ = self.filter_already_downloaded(
@@ -124,8 +124,12 @@ class Engine(ScraperStatus, ABC):
             )
         Logger.info(f"Number of entry after filter file type id is {len(intreable_)}")
 
-        if only_latest:
+        if isinstance(when_date, datetime.datetime):
+            intreable_ = self.get_by_date(when_date, by_function, intreable_)
+        elif isinstance(when_date, str) and when_date == "latest":
             intreable_ = self.get_only_latest(by_function, intreable_)
+        else:
+            raise ValueError(f"when_date should be datetime or bool, got {when_date}")
 
         Logger.info(f"Number of entry after filter keeping latast is {len(intreable_)}")
 
@@ -144,12 +148,12 @@ class Engine(ScraperStatus, ABC):
                     limit=limit,
                     files_types=files_types,
                     store_id=store_id,
-                    only_latest=only_latest,
+                    when_date=when_date,
                 )
             ):
                 raise ValueError(
                     f"No files to download for file files_types={files_types},"
-                    f"limit={limit},store_id={store_id},only_latest={only_latest}"
+                    f"limit={limit},store_id={store_id},when_date={when_date}"
                 )
         return intreable_
 
@@ -182,6 +186,19 @@ class Engine(ScraperStatus, ABC):
                 groups_value[store_info] = file
         return list(groups_value.values())
 
+    def get_by_date(self, requested_date, by_function, intreable_):
+        """get by date"""
+
+        groups_value = []
+        for file in intreable_:
+            name_split = by_function(file).split("-")
+            date_info = "-".join(name_split[2:]).rsplit(".", maxsplit=1)[-1]
+
+            if date_info == requested_date:
+                groups_value.append(file)
+
+        return groups_value
+
     @classmethod
     def unique(cls, iterable, by_function=lambda x: x):
         """Returns the type of the file."""
@@ -210,7 +227,7 @@ class Engine(ScraperStatus, ABC):
         limit=None,
         files_types=None,
         store_id=None,
-        only_latest=False,
+        when_date=None,
         files_names_to_scrape=None,
         filter_null=False,
         filter_zero=False,
@@ -222,7 +239,7 @@ class Engine(ScraperStatus, ABC):
             files_types=files_types,
             store_id=store_id,
             files_names_to_scrape=files_names_to_scrape,
-            only_latest=only_latest,
+            when_date=when_date,
             filter_null=filter_null,
             filter_zero=filter_zero,
         )
