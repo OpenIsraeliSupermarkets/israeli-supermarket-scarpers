@@ -73,6 +73,7 @@ class Cerberus(Engine):
             return results
         except Exception as e:  # pylint: disable=broad-except
             self.on_download_fail(e, files=files)
+            Logger.error_execption(e)
             return []
 
     def collect_files_details_from_site(
