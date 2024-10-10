@@ -152,4 +152,5 @@ class WebBase(Engine):
             return results
         except Exception as e:  # pylint: disable=broad-except
             self.on_download_fail(e, download_urls=download_urls, file_names=file_names)
+            Logger.error_execption(e)
             return []

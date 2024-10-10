@@ -4,7 +4,7 @@ import tempfile
 import os
 import uuid
 import xml.etree.ElementTree as ET
-from il_supermarket_scarper.utils import FileTypesFilters, Logger, DumpFolderNames
+from il_supermarket_scarper.utils import FileTypesFilters, Logger, DumpFolderNames, _now
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
 
 
@@ -255,7 +255,7 @@ def make_test_case(scraper_enum, store_id):
             self._clean_scarpe_delete(
                 scraper_enum,
                 store_id=store_id,
-                when_date="lastast",
+                when_date=_now(),
             )
 
     return TestScapers

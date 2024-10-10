@@ -194,7 +194,7 @@ class Engine(ScraperStatus, ABC):
             name_split = by_function(file).split("-")
             date_info = "-".join(name_split[2:]).rsplit(".", maxsplit=1)[-1]
 
-            if date_info == requested_date:
+            if date_info.startswith(requested_date.strftime("%Y%d%m")):
                 groups_value.append(file)
 
         return groups_value

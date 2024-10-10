@@ -44,7 +44,7 @@ class Aspx(WebBase, ABC):
             res.append(base + self.aspx_page + query_params)
         return res
 
-    def _get_all_possible_query_string_params(
+    def _get_all_possible_query_string_params( #pylint: disable=unused-argument
         self, files_types=None, store_id=None, when_date=None
     ):
         """get the arguments need to add to the url"""
@@ -52,34 +52,37 @@ class Aspx(WebBase, ABC):
             res = []
             for c_id in self.chain_id:
                 res.append(f"?code={c_id}")
-            return res
+            chains_urls = res
+
         chains_urls = [f"?code={self.chain_id}"]
 
-        # add file types to url
-        if files_types:
-            chains_urls_with_types = []
-            for files_type in files_types:
-                file_type_id = self.file_type_id(files_type)
-                chains_urls_with_types.extend(
-                    [
-                        f"{chain_url}&WFileType={file_type_id}"
-                        for chain_url in chains_urls
-                    ]
-                )
-            chains_urls = chains_urls_with_types
-
-        # add store id
-        if store_id:
-            for chain_url in chains_urls:
-                chain_url += f"&WStore={store_id}"
-
-        # posting date
-        if when_date:
-            for chain_url in chains_urls:
-                chain_url += (
-                    f"&WDate={when_date.strftime('%d/%m/%Y').reaplce('/','%2F')}"
-                )
         return chains_urls
+
+        # # add file types to url
+        # if files_types:
+        #     chains_urls_with_types = []
+        #     for files_type in files_types:
+        #         file_type_id = self.file_type_id(files_type)
+        #         chains_urls_with_types.extend(
+        #             [
+        #                 f"{chain_url}&WFileType={file_type_id}"
+        #                 for chain_url in chains_urls
+        #             ]
+        #         )
+        #     chains_urls = chains_urls_with_types
+
+        # # add store id
+        # if store_id:
+        #     for chain_url in chains_urls:
+        #         chain_url += f"&WStore={store_id}"
+
+        # # posting date
+        # if when_date:
+        #     for chain_url in chains_urls:
+        #         chain_url += (
+        #             f"&WDate={when_date.strftime('%d/%m/%Y').reaplce('/','%2F')}"
+        #         )
+        # return chains_urls
 
     def get_request_url(self, files_types=None, store_id=None, when_date=None):
         result = []
