@@ -41,7 +41,7 @@ class Cerberus(Engine):
         limit=None,
         files_types=None,
         store_id=None,
-        only_latest=False,
+        when_date=None,
         files_names_to_scrape=None,
         filter_null=False,
         filter_zero=False,
@@ -52,7 +52,7 @@ class Cerberus(Engine):
                 limit=limit,
                 files_types=files_types,
                 store_id=store_id,
-                only_latest=only_latest,
+                when_date=when_date,
             )
             files = self.collect_files_details_from_site(
                 limit=limit,
@@ -60,7 +60,7 @@ class Cerberus(Engine):
                 filter_null=filter_null,
                 filter_zero=filter_zero,
                 store_id=store_id,
-                only_latest=only_latest,
+                when_date=when_date,
                 files_names_to_scrape=files_names_to_scrape,
             )
             self.on_collected_details(files)
@@ -73,6 +73,7 @@ class Cerberus(Engine):
             return results
         except Exception as e:  # pylint: disable=broad-except
             self.on_download_fail(e, files=files)
+            Logger.error_execption(e)
             return []
 
     def collect_files_details_from_site(
@@ -82,7 +83,7 @@ class Cerberus(Engine):
         filter_null=False,
         filter_zero=False,
         store_id=None,
-        only_latest=False,
+        when_date=None,
         files_names_to_scrape=None,
     ):
         """collect all files to download from the site"""
@@ -117,7 +118,7 @@ class Cerberus(Engine):
             limit=limit,
             files_types=files_types,
             store_id=store_id,
-            only_latest=only_latest,
+            when_date=when_date,
             files_names_to_scrape=files_names_to_scrape,
         )
         Logger.info(f"After applying limit: Found {len(files)} files")

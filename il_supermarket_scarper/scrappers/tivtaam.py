@@ -19,7 +19,7 @@ class TivTaam(Cerberus):
         )
 
     def is_validate_scraper_found_no_files(
-        self, limit=None, files_types=None, store_id=None, only_latest=False
+        self, limit=None, files_types=None, store_id=None, when_date=None
     ):
         return (
             _is_saturday_in_israel()

@@ -77,7 +77,6 @@ class MultiPageWeb(WebBase):
         files_types=None,
         store_id=None,
         when_date=None,
-        only_latest=False,
         files_names_to_scrape=None,
     ):
         self.post_scraping()
@@ -109,7 +108,7 @@ class MultiPageWeb(WebBase):
             limit=limit,
             files_types=files_types,
             store_id=store_id,
-            only_latest=only_latest,
+            when_date=when_date,
             files_names_to_scrape=files_names_to_scrape,
         )
 
@@ -125,7 +124,7 @@ class MultiPageWeb(WebBase):
         return links, filenames
 
     def process_links_before_download(
-        self, page, limit=None, files_types=None, store_id=None, only_latest=None
+        self, page, limit=None, files_types=None, store_id=None, when_date=None
     ):
         """additional processing to the links before download"""
         response = self.session_with_cookies_by_chain(page)
@@ -141,7 +140,7 @@ class MultiPageWeb(WebBase):
             limit=limit,
             files_types=files_types,
             store_id=store_id,
-            only_latest=only_latest,
+            when_date=when_date,
         )
 
         Logger.info(
