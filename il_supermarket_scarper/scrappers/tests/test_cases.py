@@ -63,9 +63,8 @@ def make_test_case(scraper_enum, store_id):
                     store_mark.append(source)
 
             assert (
-                not limit or len(files_found) == limit
-            ), f""" Found {files_found}
-                                                                f"files but should be {limit}"""
+                limit is None or len(files_found) == limit
+            ), f""" Found {files_found} f"files but should be {limit}"""
 
         def _make_sure_file_contain_chain_ids(self, chain_ids, file):
             """make sure the scraper download only the chain id"""
@@ -201,7 +200,7 @@ def make_test_case(scraper_enum, store_id):
 
         def test_scrape_ten(self):
             """scrape ten file and make sure they exists"""
-            self._clean_scarpe_delete(scraper_enum, limit=None)
+            self._clean_scarpe_delete(scraper_enum, limit=10)
 
         def test_scrape_promo(self):
             """scrape one promo file and make sure it exists"""

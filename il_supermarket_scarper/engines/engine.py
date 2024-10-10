@@ -134,7 +134,7 @@ class Engine(ScraperStatus, ABC):
         Logger.info(f"Number of entry after filter keeping latast is {len(intreable_)}")
 
         # filter by limit if the 'files_types' filter is not on.
-        if limit and files_types is None:
+        if limit:
             assert limit > 0, "Limit must be greater than 0"
             Logger.info(f"Limit: {limit}")
             intreable_ = intreable_[: min(limit, len(list(intreable_)))]
@@ -192,7 +192,7 @@ class Engine(ScraperStatus, ABC):
         groups_value = []
         for file in intreable_:
             name_split = by_function(file).split("-")
-            date_info = "-".join(name_split[2:]).rsplit(".", maxsplit=1)[-1]
+            date_info = name_split[-1].rsplit(".", maxsplit=1)[0]
 
             if date_info.startswith(requested_date.strftime("%Y%d%m")):
                 groups_value.append(file)
