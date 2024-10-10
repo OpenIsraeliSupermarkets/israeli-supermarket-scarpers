@@ -128,7 +128,7 @@ class Engine(ScraperStatus, ABC):
             intreable_ = self.get_by_date(when_date, by_function, intreable_)
         elif isinstance(when_date, str) and when_date == "latest":
             intreable_ = self.get_only_latest(by_function, intreable_)
-        else:
+        elif when_date is not None:
             raise ValueError(f"when_date should be datetime or bool, got {when_date}")
 
         Logger.info(f"Number of entry after filter keeping latast is {len(intreable_)}")
