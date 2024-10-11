@@ -231,6 +231,8 @@ class Engine(ScraperStatus, ABC):
         store_id=None,
         when_date=None,
         files_names_to_scrape=None,
+        filter_null=False,
+        filter_zero=False,
     ):
         """run the scraping logic"""
         self.post_scraping()
@@ -240,6 +242,8 @@ class Engine(ScraperStatus, ABC):
             store_id=store_id,
             files_names_to_scrape=files_names_to_scrape,
             when_date=when_date,
+            filter_nul=filter_null,
+            filter_zero=filter_zero
         )
         Logger.info(f"Starting scraping for {self.chain}")
         self.make_storage_path_dir()

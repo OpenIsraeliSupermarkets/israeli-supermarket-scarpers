@@ -45,7 +45,7 @@ class Aspx(WebBase, ABC):
         """list all param to add to the url"""
 
     @abstractmethod
-    def _build_query_url(self, query_params):
+    def _build_query_url(self, query_params, base_urls):
         """build the url with the query params"""
 
     def _get_all_possible_query_string_params(  # pylint: disable=unused-argument
@@ -93,7 +93,7 @@ class Aspx(WebBase, ABC):
         for query_params in self._get_all_possible_query_string_params(
             files_types=files_types, store_id=store_id, when_date=when_date
         ):
-            result.extend(self._build_query_url(query_params))
+            result.extend(self._build_query_url(query_params, self.url))
         Logger.info(f"Request url: {result}")
         return result
 
