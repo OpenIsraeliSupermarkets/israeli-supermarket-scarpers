@@ -188,13 +188,15 @@ class Engine(ScraperStatus, ABC):
 
     def get_by_date(self, requested_date, by_function, intreable_):
         """get by date"""
-
+        #
+        date_format = requested_date.strftime("%Y%m%d")
+        #
         groups_value = []
         for file in intreable_:
-            name_split = by_function(file).split("-")
+            name_split = by_function(file).split("-", maxsplit=2)
             date_info = name_split[-1].rsplit(".", maxsplit=1)[0]
 
-            if date_info.startswith(requested_date.strftime("%Y%d%m")):
+            if date_info.startswith(date_format):
                 groups_value.append(file)
 
         return groups_value
