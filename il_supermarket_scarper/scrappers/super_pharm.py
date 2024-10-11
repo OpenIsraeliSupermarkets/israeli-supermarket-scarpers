@@ -1,7 +1,14 @@
 from pathlib import Path
+import urllib.parse
+
 import json
 from il_supermarket_scarper.engines import MultiPageWeb
-from il_supermarket_scarper.utils import Logger, url_connection_retry, DumpFolderNames
+from il_supermarket_scarper.utils import (
+    Logger,
+    url_connection_retry,
+    DumpFolderNames,
+    FileTypesFilters,
+)
 
 
 class SuperPharm(MultiPageWeb):
@@ -15,6 +22,7 @@ class SuperPharm(MultiPageWeb):
             folder_name=folder_name,
             total_page_xpath='//*[@class="page_link"]//a/@href',
             total_pages_pattern=r".*?page\=([0-9]*)$",
+            page_argument="&page",
         )
 
     def collect_files_details_from_page(self, html):
@@ -42,3 +50,39 @@ class SuperPharm(MultiPageWeb):
         Path(file_to_save_with_ext).write_bytes(file_to_save.content)
 
         return file_to_save_with_ext
+
+    def get_file_types_id(self, files_types=None):
+        """get the file type id"""
+        if files_types is None:
+            return ""
+
+        types = []
+        for ftype in files_types:
+            if ftype == FileTypesFilters.STORE_FILE.name:
+                types.append("StoresFull")
+            if ftype == FileTypesFilters.PRICE_FILE.name:
+                types.append("Price")
+            if ftype == FileTypesFilters.PROMO_FILE.name:
+                types.append("Promo")
+            if ftype == FileTypesFilters.PRICE_FULL_FILE.name:
+                types.append("PriceFull")
+            if ftype == FileTypesFilters.PROMO_FULL_FILE.name:
+                types.append("PromoFull")
+        return types
+
+    def build_params(self, files_types=None, store_id=None, when_date=None):
+        """build the params for the request"""
+        assert (
+            files_types is None or len(files_types) == 1
+        ), "SuperPharm supports only one file type"
+
+        params = {"type": "", "date": "", "store": ""}
+
+        if store_id:
+            params["store"] = store_id
+        if when_date:
+            params["date"] = when_date.strftime("%Y-%m-%d")
+        if files_types:
+            params["type"] = self.get_file_types_id(files_types)
+
+        return "?" + urllib.parse.urlencode(params)

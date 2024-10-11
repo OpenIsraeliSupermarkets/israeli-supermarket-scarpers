@@ -1,17 +1,15 @@
 from urllib.parse import urlsplit
 import re
 import ntpath
+from abc import abstractmethod
 from lxml import html as lxml_html
-
-import requests
-
-from il_supermarket_scarper.utils.connection import url_connection_retry
 
 
 from il_supermarket_scarper.utils import (
     Logger,
     execute_in_parallel,
     multiple_page_aggregtion,
+    session_and_check_status,
 )
 from .web import WebBase
 
@@ -41,35 +39,38 @@ class MultiPageWeb(WebBase):
         self.total_pages_pattern = total_pages_pattern
         self.page_argument = page_argument
 
-    @url_connection_retry()
-    def get_number_of_pages(self, url, timeout=15):
+    @abstractmethod
+    def build_params(self, files_types=None, store_id=None, when_date=None):
+        """build the params for the request"""
+
+    def get_request_url(
+        self, files_types=None, store_id=None, when_date=None
+    ):  # pylint: disable=unused-argument
+        """get all links to collect download links from"""
+
+        arguments = self.build_params(files_types=files_types, store_id=store_id)
+        return [
+            {
+                "url": self.url + arguments,
+                "method": "GET",
+            }
+        ]
+
+    def get_number_of_pages(self, response):
         """get the number of pages to scarpe"""
 
-        response = requests.get(url, timeout=timeout)
-        if response.status_code != 200:
-            raise ValueError(
-                f"Fetching resources failed from {url}, status code: {response.status_code}"
-            )
         html_body = lxml_html.fromstring(response.content)
 
-        total_pages = self.get_total_pages(html_body)
-        Logger.info(f"Found {total_pages} pages")
+        elements = html_body.xpath(self.total_page_xpath)
 
-        return total_pages
+        if len(elements) == 0:
+            return None  # only one page
 
-    def get_total_pages(self, html):
-        """get the number of pages avaliabe to download"""
-
-        elements = re.findall(
+        pages = re.findall(
             self.total_pages_pattern,
-            html.xpath(self.total_page_xpath)[-1],
+            elements[-1],
         )
-        if len(elements) != 1:
-            raise ConnectionError(
-                f"Didn't find the element contains number"
-                f" of pages. found={elements}, in {html}."
-            )
-        return int(elements[0])
+        return int(pages[0])
 
     def collect_files_details_from_site(
         self,
@@ -80,21 +81,32 @@ class MultiPageWeb(WebBase):
         files_names_to_scrape=None,
     ):
         self.post_scraping()
-        url = self.get_request_url(
+        main_page_request = self.get_request_url(
             files_types=files_types, store_id=store_id, when_date=when_date
         )
 
-        total_pages = self.get_number_of_pages(**url[0])
+        assert len(main_page_request) == 1, "Only one url is expected"
+        main_page_response = session_and_check_status(**main_page_request[0])
+
+        total_pages = self.get_number_of_pages(main_page_response)
         Logger.info(f"Found {total_pages} pages")
 
-        pages_to_scrape = list(
-            map(
-                lambda page_number: self.url
-                + f"?{self.page_argument}="
-                + str(page_number),
-                range(1, total_pages + 1),
+        # if there is only one page, call it again,
+        # in the future, we can skip scrap it again
+        if total_pages is None:
+            pages_to_scrape = main_page_request
+        else:
+            pages_to_scrape = list(
+                map(
+                    lambda page_number: {
+                        **main_page_request[0],
+                        "url": main_page_request[0]["url"]
+                        + f"{self.page_argument}="
+                        + str(page_number),
+                    },
+                    range(1, total_pages + 1),
+                )
             )
-        )
 
         download_urls, file_names = execute_in_parallel(
             self.process_links_before_download,
@@ -124,15 +136,15 @@ class MultiPageWeb(WebBase):
         return links, filenames
 
     def process_links_before_download(
-        self, page, limit=None, files_types=None, store_id=None, when_date=None
+        self, request, limit=None, files_types=None, store_id=None, when_date=None
     ):
         """additional processing to the links before download"""
-        response = self.session_with_cookies_by_chain(page)
+        response = self.session_with_cookies_by_chain(**request)
 
         html = lxml_html.fromstring(response.text)
 
         file_links, filenames = self.collect_files_details_from_page(html)
-        Logger.info(f"Page {page}: Found {len(file_links)} files")
+        Logger.info(f"Page {request}: Found {len(file_links)} files")
 
         filenames, file_links = self.apply_limit_zip(
             filenames,
@@ -144,7 +156,7 @@ class MultiPageWeb(WebBase):
         )
 
         Logger.info(
-            f"After applying limit: Page {page}: "
+            f"After applying limit: Page {request}: "
             f"Found {len(file_links)} line and {len(filenames)} files"
         )
 

@@ -245,11 +245,7 @@ def make_test_case(scraper_enum, store_id):
 
         def test_scrape_file_from_single_store(self):
             """test fetching only files from a ceriten store"""
-            self._clean_scarpe_delete(
-                scraper_enum,
-                store_id=store_id,
-                limit=1
-            )
+            self._clean_scarpe_delete(scraper_enum, store_id=store_id, limit=1)
 
         def test_scrape_file_from_single_store_last(self):
             """test fetching latest file only"""
