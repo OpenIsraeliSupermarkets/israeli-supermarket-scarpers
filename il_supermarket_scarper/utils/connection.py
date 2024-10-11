@@ -3,6 +3,7 @@ import ntpath
 import os
 import time
 import socket
+import pickle
 import random
 from ftplib import FTP_TLS, error_perm
 import subprocess
@@ -192,12 +193,13 @@ def session_with_cookies(
     """
 
     session = requests.Session()
-
+    filename = f"{chain_cookie_name}_cookies.txt"
     if chain_cookie_name:
-        filename = f"{chain_cookie_name}_cookies.txt"
-        session.cookies = MozillaCookieJar(filename)
+        
         try:
-            session.cookies.load()
+            with open(filename, 'rb') as f:
+                session.cookies.update(pickle.load(f))
+            # session.cookies.load()
         except FileNotFoundError:
             Logger.info("Didn't find cookie file")
         except Exception as e:
@@ -222,8 +224,9 @@ def session_with_cookies(
             f" {response_content.status_code}"
         )
 
-    if chain_cookie_name and not os.path.exists(f"{chain_cookie_name}_cookies.txt"):
-        session.cookies.save()
+    if chain_cookie_name and not os.path.exists(filename):
+        with open(filename, 'wb') as f:
+            pickle.dump(session.cookies.get_dict(), f)
 
     return response_content
 

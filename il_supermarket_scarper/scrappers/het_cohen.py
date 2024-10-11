@@ -10,4 +10,5 @@ class HetCohen(Matrix):
             chain=DumpFolderNames.HET_COHEN,
             chain_id=["7290455000004"],
             folder_name=folder_name,
+            chain_hebrew_name="ח. כהן",
         )

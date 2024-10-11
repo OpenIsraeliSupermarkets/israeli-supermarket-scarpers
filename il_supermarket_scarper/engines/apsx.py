@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from il_supermarket_scarper.utils import Logger, FileTypesFilters
+from il_supermarket_scarper.utils import Logger
 
 from .web import WebBase
 
@@ -14,20 +14,6 @@ class Aspx(WebBase, ABC):
             chain, chain_id, url, folder_name=folder_name, max_threads=max_threads
         )
         self.aspx_page = aspx_page
-
-    def file_type_id(self, file_type):
-        """get the file type id"""
-        if file_type == FileTypesFilters.STORE_FILE.name:
-            return 1
-        if file_type == FileTypesFilters.PRICE_FILE.name:
-            return 2
-        if file_type == FileTypesFilters.PROMO_FILE.name:
-            return 3
-        if file_type == FileTypesFilters.PRICE_FULL_FILE.name:
-            return 4
-        if file_type == FileTypesFilters.PROMO_FULL_FILE.name:
-            return 5
-        raise ValueError(f"file type {file_type} not supported")
 
     def extract_task_from_entry(self, all_trs):
         download_urls: list = list(
@@ -48,20 +34,6 @@ class Aspx(WebBase, ABC):
     def _build_query_url(self, query_params, base_urls):
         """build the url with the query params"""
 
-    def _get_all_possible_query_string_params(  # pylint: disable=unused-argument
-        self, files_types=None, store_id=None, when_date=None
-    ):
-        """get the arguments need to add to the url"""
-        if isinstance(self.chain_id, list):
-            res = []
-            for c_id in self.chain_id:
-                res.append(f"?code={c_id}")
-            chains_urls = res
-
-        chains_urls = [f"?code={self.chain_id}"]
-
-        return chains_urls
-
     def get_request_url(self, files_types=None, store_id=None, when_date=None):
         result = []
         for query_params in self._get_all_possible_query_string_params(
@@ -74,9 +46,8 @@ class Aspx(WebBase, ABC):
     @abstractmethod
     def get_href_from_entry(self, entry):
         """get download link for entry (tr)"""
-        raise ValueError("abstract")
-
+        
     @abstractmethod
     def get_file_name_no_ext_from_entry(self, entry):
         """get the file name without extensions from entey (tr)"""
-        raise ValueError("abstract")
+        

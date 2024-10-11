@@ -214,10 +214,10 @@ class Engine(ScraperStatus, ABC):
 
         return result
 
-    def session_with_cookies_by_chain(self, url, method="GET", timeout=15):
+    def session_with_cookies_by_chain(self, url, method="GET", body=None, timeout=15):
         """request resource with cookie by chain name"""
         return session_with_cookies(
-            url, chain_cookie_name=self.chain, timeout=timeout, method=method
+            url, chain_cookie_name=self.chain, timeout=timeout, method=method, body=body
         )
 
     def post_scraping(self):
