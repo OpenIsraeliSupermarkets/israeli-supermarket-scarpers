@@ -1,4 +1,5 @@
 import json
+import urllib.parse
 
 from il_supermarket_scarper.utils import (
     Logger,
@@ -54,7 +55,7 @@ class Bina(Aspx):
         for base in base_urls:
             res.append(
                 {
-                    "url": base + self.aspx_page + query_params,
+                    "url": base + self.aspx_page + "?" +query_params,
                     "method": "GET",
                 }
             )
@@ -65,37 +66,44 @@ class Bina(Aspx):
     ):
         """get the arguments need to add to the url"""
         chains_urls = []
-        if isinstance(self.chain_id, list):
-            for c_id in self.chain_id:
-                chains_urls.append(f"?_={c_id}")
-        else:
-            chains_urls.append(f"?_={self.chain_id}")
+        
+        for c_id in self.get_chain_id():
+            chains_urls.append({
+                "_":f"{c_id}",
+                "wReshet":"הכל",
+                "WFileType":"",
+                "WDate":"",
+                "WStore":""
+            })
+
 
         # add file types to url
         if files_types:
             chains_urls_with_types = []
             for files_type in files_types:
                 file_type_id = self.file_type_id(files_type)
-                chains_urls_with_types.extend(
-                    [
-                        f"{chain_url}&WFileType={file_type_id}"
-                        for chain_url in chains_urls
-                    ]
-                )
+                
+                for chain_url in chains_urls:
+                    chains_urls_with_types.append(
+                        {
+                            **chain_url,
+                            "WFileType": file_type_id
+                            
+                        }
+                    )
             chains_urls = chains_urls_with_types
 
         # add store id
         if store_id:
             for i in range(len(chains_urls)):
-                chains_urls[i] = chains_urls[i] + f"&WStore={store_id}"
+                chains_urls[i]['WStore'] = store_id
 
         # posting date
         if when_date:
             for i in range(len(chains_urls)):
-                chains_urls[i] = chains_urls[i] + (
-                    f"&WDate={when_date.strftime('%d/%m/%Y').reaplce('/','%2F')}"
-                )
-        return chains_urls
+                chains_urls[i]['WDate'] = when_date.strftime('%d/%m/%Y')
+        
+        return [ urllib.parse.urlencode(params) for params in chains_urls]
 
     def get_data_from_page(self, req_res):
         return json.loads(req_res.text)

@@ -62,41 +62,17 @@ class Aspx(WebBase, ABC):
 
         return chains_urls
 
-        # # add file types to url
-        # if files_types:
-        #     chains_urls_with_types = []
-        #     for files_type in files_types:
-        #         file_type_id = self.file_type_id(files_type)
-        #         chains_urls_with_types.extend(
-        #             [
-        #                 f"{chain_url}&WFileType={file_type_id}"
-        #                 for chain_url in chains_urls
-        #             ]
-        #         )
-        #     chains_urls = chains_urls_with_types
-
-        # # add store id
-        # if store_id:
-        #     for chain_url in chains_urls:
-        #         chain_url += f"&WStore={store_id}"
-
-        # # posting date
-        # if when_date:
-        #     for chain_url in chains_urls:
-        #         chain_url += (
-        #             f"&WDate={when_date.strftime('%d/%m/%Y').reaplce('/','%2F')}"
-        #         )
-        # return chains_urls
-
     def get_request_url(self, files_types=None, store_id=None, when_date=None):
         result = []
         for query_params in self._get_all_possible_query_string_params(
             files_types=files_types, store_id=store_id, when_date=when_date
         ):
-            result.extend(self._build_query_url(query_params, self.url))
+            result.extend(self._build_query_url(query_params, [self.url]))
         Logger.info(f"Request url: {result}")
         return result
 
+# 'http://superbareket.binaprojects.com/MainIO_Hok.aspx?_=7290875100001&wReshet=%D7%94%D7%9B%D7%9C&WFileType=&WDate=&WStore=5
+# "https://superbareket.binaprojects.com/MainIO_Hok.aspx?_=1728646713094&wReshet=%D7%94%D7%9B%D7%9C&WStore=5&WDate=&WFileType=0"
     @abstractmethod
     def get_href_from_entry(self, entry):
         """get download link for entry (tr)"""
