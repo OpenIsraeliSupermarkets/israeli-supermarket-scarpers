@@ -88,14 +88,14 @@ class PublishPrice(WebBase):
         return download_urls, file_names
 
     def _is_validate_scraper_found_no_files(
-        self, limit=None, files_types=None, store_id=None, only_latest=False
+        self, limit=None, files_types=None, store_id=None, when_date=None
     ):
         return (
             super()._is_validate_scraper_found_no_files(  # what fails the rest
                 limit=limit,
                 files_types=files_types,
                 store_id=store_id,
-                only_latest=only_latest,
+                when_date=when_date,
             )
             or (  # if we are looking for one store file in a weekend or holiday
                 store_id and (_is_weekend_in_israel() or _is_holiday_in_israel())
