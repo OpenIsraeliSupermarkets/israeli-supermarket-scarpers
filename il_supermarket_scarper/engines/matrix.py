@@ -21,7 +21,7 @@ class Matrix(Aspx):
         """get the file type id"""
         if files_types is None:
             return "all"
-        
+
         types = []
         for ftype in files_types:
             if ftype == FileTypesFilters.STORE_FILE.name:
@@ -45,13 +45,12 @@ class Matrix(Aspx):
     def get_chain_n_stores__id(self, store_id=None, c_id=None):
         """get the store id"""
         if store_id is None:
-            chain_id = str(c_id) #+ "001"
+            chain_id = str(c_id)  # + "001"
             store_id = "-1"
         else:
-            chain_id = str(c_id) 
+            chain_id = str(c_id)
             store_id = str(c_id) + "001" + str(store_id).zfill(3)
         return chain_id, store_id
-        
 
     def _build_query_url(self, query_params, base_urls):
         res = []
@@ -73,12 +72,14 @@ class Matrix(Aspx):
         post_body = []
         if isinstance(self.chain_id, list):
             for c_id in self.chain_id:
-                chain_id, store_id = self.get_chain_n_stores__id(store_id=store_id, c_id=c_id)
+                chain_id, store_id = self.get_chain_n_stores__id(
+                    store_id=store_id, c_id=c_id
+                )
                 post_body.append(
                     {
                         "ctl00$TextArea": "",
-                        "ctl00$MainContent$chain":  chain_id,
-                        "ctl00$MainContent$subChain": "-1", 
+                        "ctl00$MainContent$chain": chain_id,
+                        "ctl00$MainContent$subChain": "-1",
                         "ctl00$MainContent$branch": store_id,
                         "ctl00$MainContent$txtDate": self.get_when(when_date=when_date),
                         "ctl00$MainContent$fileType": "all",
@@ -86,12 +87,14 @@ class Matrix(Aspx):
                     }
                 )
         else:
-            chain_id, store_id = self.get_chain_n_stores__id(store_id=store_id, c_id=self.chain_id)
+            chain_id, store_id = self.get_chain_n_stores__id(
+                store_id=store_id, c_id=self.chain_id
+            )
             post_body.append(
                 {
                     "ctl00$TextArea": "",
                     "ctl00$MainContent$chain": chain_id,
-                    "ctl00$MainContent$subChain":  "-1", 
+                    "ctl00$MainContent$subChain": "-1",
                     "ctl00$MainContent$branch": store_id,
                     "ctl00$MainContent$txtDate": self.get_when(when_date=when_date),
                     "ctl00$MainContent$fileType": "all",
