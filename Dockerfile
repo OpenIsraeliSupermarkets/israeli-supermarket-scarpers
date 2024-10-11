@@ -57,11 +57,7 @@ CMD python example.py && cron & tail -f /var/log/cron.log
 
 # run test
 FROM base as test
-# docker build -t erlichsefi/israeli-supermarket-scarpers --target prod .
-# docker push erlichsefi/israeli-supermarket-scarpers
-RUN python -m pip install . ".[test]"
-CMD python -m pytest .
 
-# docker build -t erlichsefi/israeli-supermarket-scarpers:test --target test .
-# docker push erlichsefi/israeli-supermarket-scarpers:test
-# docker run -it --rm --name test-run erlichsefi/israeli-supermarket-scarpers:test
+RUN python -m pip install . ".[test]"
+CMD python -m pytest -n 4
+

@@ -16,7 +16,7 @@ class Bareket(Bina):
         )
 
     def _is_validate_scraper_found_no_files(
-        self, limit=None, files_types=None, store_id=None, only_latest=False
+        self, limit=None, files_types=None, store_id=None, when_date=None
     ):
         # no data on shabat if you test a single store file.
         return _is_saturday_in_israel() or _is_holiday_in_israel() and store_id

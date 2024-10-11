@@ -14,6 +14,28 @@ class CofixTestCase(make_test_case(ScraperFactory.COFIX, 299)):
     """Test case for ScraperFactory.COFIX."""
 
 
+class CityMarketGivatayimTestCase(
+    make_test_case(ScraperFactory.CITY_MARKET_GIVATAYIM, 1)
+):
+    """Test case for CityMarketGivatay"""
+
+
+class CityMarketKirtatOnoTestCase(
+    make_test_case(ScraperFactory.CITY_MARKET_KIRYATONO, 3)
+):
+    """Test case for CityMarketKirtatOno"""
+
+
+class CityMarketKiryatGatTestCase(
+    make_test_case(ScraperFactory.CITY_MARKET_KIRYATGAT, 14)
+):
+    """Test case for CityMarketKiryatGat"""
+
+
+class CityMarketShopsTestCase(make_test_case(ScraperFactory.CITY_MARKET_SHOPS, 1)):
+    """Test case for CityMarketShops"""
+
+
 class DorAlonTestCase(make_test_case(ScraperFactory.DOR_ALON, 501)):
     """Test case for ScraperFactory.DOR_ALON."""
 

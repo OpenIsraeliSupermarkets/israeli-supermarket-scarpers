@@ -1,6 +1,12 @@
 from .bareket import Bareket
 from .bitan import YaynotBitan
 from .cofix import Cofix
+from .city_market import (
+    CityMarketGivatayim,
+    CityMarketKirtatOno,
+    CityMarketKiryatGat,
+    CityMarketShops,
+)
 from .doralon import DorAlon
 from .good_pharm import GoodPharm
 from .hazihinam import HaziHinam

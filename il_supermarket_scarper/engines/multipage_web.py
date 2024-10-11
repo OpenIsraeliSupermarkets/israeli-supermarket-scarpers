@@ -31,6 +31,7 @@ class MultiPageWeb(WebBase):
         total_page_xpath="""//*[@id="gridContainer"]/table/
                                             tfoot/tr/td/a[6]/@href""",
         total_pages_pattern=r"^\/\?page\=([0-9]{3})$",
+        page_argument="page",
         max_threads=5,
     ):
         super().__init__(
@@ -38,6 +39,7 @@ class MultiPageWeb(WebBase):
         )
         self.total_page_xpath = total_page_xpath
         self.total_pages_pattern = total_pages_pattern
+        self.page_argument = page_argument
 
     @url_connection_retry()
     def get_number_of_pages(self, url, timeout=15):
@@ -75,7 +77,6 @@ class MultiPageWeb(WebBase):
         files_types=None,
         store_id=None,
         when_date=None,
-        only_latest=False,
         files_names_to_scrape=None,
     ):
         self.post_scraping()
@@ -88,7 +89,9 @@ class MultiPageWeb(WebBase):
 
         pages_to_scrape = list(
             map(
-                lambda page_number: self.url + "?page=" + str(page_number),
+                lambda page_number: self.url
+                + f"?{self.page_argument}="
+                + str(page_number),
                 range(1, total_pages + 1),
             )
         )
@@ -105,7 +108,7 @@ class MultiPageWeb(WebBase):
             limit=limit,
             files_types=files_types,
             store_id=store_id,
-            only_latest=only_latest,
+            when_date=when_date,
             files_names_to_scrape=files_names_to_scrape,
         )
 
@@ -121,7 +124,7 @@ class MultiPageWeb(WebBase):
         return links, filenames
 
     def process_links_before_download(
-        self, page, limit=None, files_types=None, store_id=None, only_latest=None
+        self, page, limit=None, files_types=None, store_id=None, when_date=None
     ):
         """additional processing to the links before download"""
         response = self.session_with_cookies_by_chain(page)
@@ -137,7 +140,7 @@ class MultiPageWeb(WebBase):
             limit=limit,
             files_types=files_types,
             store_id=store_id,
-            only_latest=only_latest,
+            when_date=when_date,
         )
 
         Logger.info(

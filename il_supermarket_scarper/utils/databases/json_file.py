@@ -17,7 +17,7 @@ class JsonDataBase(AbstractDataBase):
     def _ensure_db_directory_exists(self):
         """Ensure the base directory for the JSON database exists."""
         if not os.path.exists(self.base_path):
-            os.makedirs(self.base_path)
+            os.makedirs(self.base_path, exist_ok=True)
 
     def _ensure_db_file_exists(self):
         """Ensure the database file exists."""

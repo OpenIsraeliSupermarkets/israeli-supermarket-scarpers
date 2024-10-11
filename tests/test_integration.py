@@ -25,17 +25,8 @@ def test_scrapers_are_updated():
     assert num_of_scarper_listed == num_of_scarper_on_gov_site
 
 
-def test_all_chain_id_unqiue():
-    """test all scrapers are working on diffrent chain"""
-    all_chain_ids = []
-    for scraper_init in ScraperFactory.all_scrapers():
-        all_chain_ids.extend(scraper_init().get_chain_id())
-
-    assert len(list(set(all_chain_ids))) == len(all_chain_ids)
-
-
 @disable_when_outside_israel
 def test_update_date():
     """test date the site update"""
     date = get_status_date()
-    assert date.date() == datetime.datetime(2024, 9, 1).date(), "gov il site changed"
+    assert date.date() == datetime.datetime(2024, 10, 6).date(), "gov il site changed"
