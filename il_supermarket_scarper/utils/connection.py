@@ -9,7 +9,6 @@ from ftplib import FTP_TLS, error_perm
 import subprocess
 
 from http.client import RemoteDisconnected
-from http.cookiejar import MozillaCookieJar
 from http.cookiejar import LoadError
 from urllib.error import URLError
 from urllib3.exceptions import MaxRetryError, ReadTimeoutError
@@ -195,9 +194,9 @@ def session_with_cookies(
     session = requests.Session()
     filename = f"{chain_cookie_name}_cookies.txt"
     if chain_cookie_name:
-        
+
         try:
-            with open(filename, 'rb') as f:
+            with open(filename, "rb") as f:
                 session.cookies.update(pickle.load(f))
             # session.cookies.load()
         except FileNotFoundError:
@@ -225,7 +224,7 @@ def session_with_cookies(
         )
 
     if chain_cookie_name and not os.path.exists(filename):
-        with open(filename, 'wb') as f:
+        with open(filename, "wb") as f:
             pickle.dump(session.cookies.get_dict(), f)
 
     return response_content

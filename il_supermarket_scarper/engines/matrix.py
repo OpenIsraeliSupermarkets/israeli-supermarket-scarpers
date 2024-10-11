@@ -80,7 +80,7 @@ class Matrix(Aspx):
         #         )
         #         post_body.append(
         #             {
-         
+
         #                 "ctl00$TextArea": "",
         #                 "ctl00$MainContent$chain": chain_id,
         #                 "ctl00$MainContent$subChain": "-1",
@@ -134,7 +134,5 @@ class Matrix(Aspx):
             all_trs = list(
                 filter(lambda x: x and self.chain_hebrew_name in str(x), all_trs)
             )
-            Logger.info(
-                f"Found {len(all_trs)} entries"
-            )
+            Logger.info(f"Found {len(all_trs)} entries")
         return all_trs

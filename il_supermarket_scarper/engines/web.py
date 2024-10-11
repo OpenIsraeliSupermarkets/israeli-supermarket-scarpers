@@ -71,13 +71,13 @@ class WebBase(Engine):
         files_names_to_scrape=None,
     ):
         """collect all enteris to download from site"""
-        #self.session_with_cookies_by_chain(self.url, method="GET")
+
         urls_to_collect_link_from = self.get_request_url(
             files_types=files_types, store_id=store_id, when_date=when_date
         )
         all_trs = []
         for url in urls_to_collect_link_from:
-            req_res = self.session_with_cookies_by_chain(**url)
+            req_res = session_and_check_status(**url)
             trs = self.get_data_from_page(req_res)
             all_trs.extend(trs)
 

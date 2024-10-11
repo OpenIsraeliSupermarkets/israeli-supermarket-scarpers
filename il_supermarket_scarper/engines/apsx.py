@@ -46,8 +46,7 @@ class Aspx(WebBase, ABC):
     @abstractmethod
     def get_href_from_entry(self, entry):
         """get download link for entry (tr)"""
-        
+
     @abstractmethod
     def get_file_name_no_ext_from_entry(self, entry):
         """get the file name without extensions from entey (tr)"""
-        
