@@ -71,8 +71,6 @@ class Aspx(WebBase, ABC):
         Logger.info(f"Request url: {result}")
         return result
 
-# 'http://superbareket.binaprojects.com/MainIO_Hok.aspx?_=7290875100001&wReshet=%D7%94%D7%9B%D7%9C&WFileType=&WDate=&WStore=5
-# "https://superbareket.binaprojects.com/MainIO_Hok.aspx?_=1728646713094&wReshet=%D7%94%D7%9B%D7%9C&WStore=5&WDate=&WFileType=0"
     @abstractmethod
     def get_href_from_entry(self, entry):
         """get download link for entry (tr)"""
