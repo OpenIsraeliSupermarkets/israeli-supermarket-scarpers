@@ -2,7 +2,6 @@ from il_supermarket_scarper.engines import Cerberus
 from il_supermarket_scarper.utils import (
     _is_saturday_in_israel,
     _is_holiday_in_israel,
-    FileTypesFilters,
     DumpFolderNames,
 )
 
@@ -21,11 +20,4 @@ class TivTaam(Cerberus):
     def is_validate_scraper_found_no_files(
         self, limit=None, files_types=None, store_id=None, when_date=None
     ):
-        return (
-            _is_saturday_in_israel()
-            or _is_holiday_in_israel()
-            or files_types
-            == [
-                FileTypesFilters.PRICE_FILE.name
-            ]  # some wendsday, there is only pricefull files.
-        )
+        return _is_saturday_in_israel() or _is_holiday_in_israel()

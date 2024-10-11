@@ -26,7 +26,7 @@ class WebBase(Engine):
         self, files_types=None, store_id=None, when_date=None
     ):  # pylint: disable=unused-argument
         """get all links to collect download links from"""
-        return [self.url]
+        return [{"url": self.url, "method": "GET"}]
 
     def extract_task_from_entry(self, all_trs):
         """extract download links and file names from page list"""
