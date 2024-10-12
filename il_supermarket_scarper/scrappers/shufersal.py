@@ -43,4 +43,4 @@ class Shufersal(MultiPageWeb):
 
         if store_id:
             params["storeId"] = store_id
-        return f"/FileObject/UpdateCategory?{urllib.parse.urlencode(params)}"
+        return [f"/FileObject/UpdateCategory?{urllib.parse.urlencode(params)}"]
