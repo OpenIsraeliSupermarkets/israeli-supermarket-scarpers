@@ -1,9 +1,5 @@
 from il_supermarket_scarper.engines.web import WebBase
-from il_supermarket_scarper.utils import (
-    _is_saturday_in_israel,
-    _is_holiday_in_israel,
-    DumpFolderNames,
-)
+from il_supermarket_scarper.utils import DumpFolderNames
 
 
 # possible: NetivHased are down in Shabatz
@@ -17,9 +13,3 @@ class NetivHased(WebBase):
             url="http://141.226.203.152/",
             folder_name=folder_name,
         )
-
-    def _is_validate_scraper_found_no_files(
-        self, limit=None, files_types=None, store_id=None, when_date=None
-    ):
-        # no data on shabat
-        return _is_saturday_in_israel() or _is_holiday_in_israel()

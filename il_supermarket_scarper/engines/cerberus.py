@@ -94,12 +94,14 @@ class Cerberus(Engine):
             FileTypesFilters.PROMO_FULL_FILE.name: "promof",
         }
         if files_types is None or files_types == FileTypesFilters.all_types():
-            yield None
+            return [None]
 
+        responses = []
         for file_type in files_types:
             if file_type not in file_type_mapping:
                 raise ValueError(f"File type {file_type} not supported")
-            yield file_type_mapping[file_type]
+            responses.append(file_type_mapping[file_type])
+        return responses
 
     def build_filter_arg(self, store_id=None, when_date=None, files_types=None):
         """build the filter arg for the ftp"""

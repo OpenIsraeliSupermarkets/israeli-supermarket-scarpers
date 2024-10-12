@@ -66,7 +66,7 @@ class PublishPrice(WebBase):
         )
 
         download_urls: list = list(
-            map(lambda x: self.url + self.folder + get_path_from_herf(x), all_trs)
+            map(lambda x: self.url + get_path_from_herf(x), all_trs)
         )
         file_names: list = list(map(get_name_from_herf, all_trs))
         return download_urls, file_names
