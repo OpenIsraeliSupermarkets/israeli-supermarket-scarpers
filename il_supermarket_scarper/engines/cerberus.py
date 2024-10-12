@@ -152,6 +152,7 @@ class Cerberus(Engine):
                 self.ftp_password,
                 self.ftp_path,
                 temporary_gz_file_path,
+                timeout=30,
             )
             downloaded = True
 

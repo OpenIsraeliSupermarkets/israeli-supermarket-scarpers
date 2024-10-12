@@ -36,7 +36,7 @@ class Bina(Aspx):
         )
         self.download_postfix = download_postfix
 
-    def file_type_id(self, file_type):
+    def file_type_ids(self, file_types):
         """get the file type id"""
         file_type_mapping = {
             FileTypesFilters.STORE_FILE.name: 1,
@@ -45,11 +45,14 @@ class Bina(Aspx):
             FileTypesFilters.PRICE_FULL_FILE.name: 4,
             FileTypesFilters.PROMO_FULL_FILE.name: 5,
         }
-
-        if file_type in file_type_mapping:
-            return file_type_mapping[file_type]
-        raise ValueError(f"File type {file_type} not supported")
-
+        if file_types is None or file_types == FileTypesFilters.all_types():
+            yield 0
+        else:
+            for file_type in file_types:
+                if file_type not in file_type_mapping:
+                    raise ValueError(f"File type {file_type} not supported")
+                yield file_type_mapping[file_type]
+                
     def _build_query_url(self, query_params, base_urls):
         res = []
         for base in base_urls:
@@ -81,12 +84,11 @@ class Bina(Aspx):
         # add file types to url
         if files_types:
             chains_urls_with_types = []
-            for files_type in files_types:
-                file_type_id = self.file_type_id(files_type)
+            for files_type in self.file_type_ids(files_types) :
 
                 for chain_url in chains_urls:
                     chains_urls_with_types.append(
-                        {**chain_url, "WFileType": file_type_id}
+                        {**chain_url, "WFileType": files_type}
                     )
             chains_urls = chains_urls_with_types
 
