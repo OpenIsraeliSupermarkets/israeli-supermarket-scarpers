@@ -217,7 +217,7 @@ def __retry_files(
     retry_list = []
     all_results = []
     for i in range(num_of_retrys):
-        logger.info(f"Itreation #{i},retry_list={retry_list}")
+        logger.info(f"File Retry: Itreation #{i},retry_list={retry_list}")
 
         if retry_list:
             # replace the value of 'files_names_to_scrape'

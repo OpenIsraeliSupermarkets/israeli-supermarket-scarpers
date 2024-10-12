@@ -42,7 +42,7 @@ class MainScrapperRunner:
         """run the scraper"""
         Logger.info(f"Limit is {limit}")
         Logger.info(f"files_types is {files_types}")
-        Logger.info("Start scraping all supermarkets.")
+        Logger.info(f"Start scraping {','.join(self.enabled_scrapers)}.")
 
         with Pool(self.multiprocessing) as pool:
             result = pool.map(

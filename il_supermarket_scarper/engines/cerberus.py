@@ -143,7 +143,7 @@ class Cerberus(Engine):
             if ext not in [".gz", ".xml"]:
                 raise ValueError(f"File {file_name} extension is not .gz or .xml")
 
-            Logger.info(f"Start persisting file {file_name}")
+            Logger.debug(f"Start persisting file {file_name}")
             temporary_gz_file_path = os.path.join(self.storage_path, file_name)
 
             fetch_temporary_gz_file_from_ftp(
@@ -156,12 +156,12 @@ class Cerberus(Engine):
             downloaded = True
 
             if ext == ".gz":
-                Logger.info(
+                Logger.debug(
                     f"File size is {os.path.getsize(temporary_gz_file_path)} bytes."
                 )
                 extract_xml_file_from_gz_file(temporary_gz_file_path)
 
-            Logger.info(f"Done persisting file {file_name}")
+            Logger.debug(f"Done persisting file {file_name}")
             extract_succefully = True
         except Exception as exception:  # pylint: disable=broad-except
             Logger.error(

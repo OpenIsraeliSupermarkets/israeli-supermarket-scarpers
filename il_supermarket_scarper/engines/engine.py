@@ -31,7 +31,6 @@ class Engine(ScraperStatus, ABC):
         self.chain_id = chain_id
         self.max_threads = max_threads
         self.storage_path = get_output_folder(self.chain.value, folder_name=folder_name)
-        Logger.info(f"Storage path: {self.storage_path}")
 
     def get_storage_path(self):
         """the the storage page of the files downloaded"""
@@ -40,7 +39,7 @@ class Engine(ScraperStatus, ABC):
     def _is_validate_scraper_found_no_files(
         self, limit=None, files_types=None, store_id=None, when_date=None
     ):
-        Logger.info(
+        Logger.debug(
             f"check if fail is allowd with, limit={limit},"
             f"files_types={files_types},store_id={store_id},when_date={when_date}"
         )
@@ -58,7 +57,7 @@ class Engine(ScraperStatus, ABC):
             for file_type in files_types:
                 if file_type in FileTypesFilters.all_full_files():
                     request_only_update_file = False
-        Logger.info(f"the value of {when_date} should not affect.")
+
         return (
             limit == 0
             or files_types == []
@@ -249,7 +248,6 @@ class Engine(ScraperStatus, ABC):
             filter_zero=filter_zero,
             suppress_exception=suppress_exception,
         )
-        Logger.info(f"Starting scraping for {self.chain}")
         self.make_storage_path_dir()
 
     def make_storage_path_dir(self):
@@ -281,7 +279,7 @@ class Engine(ScraperStatus, ABC):
 
         file_link, file_name = arg
         file_save_path = os.path.join(self.storage_path, file_name)
-        Logger.info(f"Downloading {file_link} to {file_save_path}")
+        Logger.debug(f"Downloading {file_link} to {file_save_path}")
         (
             downloaded,
             extract_succefully,
@@ -310,7 +308,7 @@ class Engine(ScraperStatus, ABC):
             downloaded = True
 
             if file_save_path_with_ext.endswith("gz"):
-                Logger.info(
+                Logger.debug(
                     f"File size is {os.path.getsize(file_save_path_with_ext)} bytes."
                 )
                 extract_xml_file_from_gz_file(file_save_path_with_ext)
@@ -318,7 +316,7 @@ class Engine(ScraperStatus, ABC):
                 os.remove(file_save_path_with_ext)
             extract_succefully = True
 
-            Logger.info(f"Done downloading {file_link}")
+            Logger.debug(f"Done downloading {file_link}")
         except RestartSessionError as exception:
             Logger.error(
                 f"Error downloading {file_link},extract_succefully={extract_succefully}"

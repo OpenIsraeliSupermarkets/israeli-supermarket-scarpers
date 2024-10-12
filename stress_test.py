@@ -49,16 +49,16 @@ if __name__ == "__main__":
             with tempfile.TemporaryDirectory() as tmpdirname:
                 try:
                     initer = ScraperFactory.get(scraper)(folder_name=tmpdirname)
-                    return initer.scrape(when_date=_now()),""
-                except Exception as e:
-                    return [],str(e)
+                    return initer.scrape(when_date=_now()), ""
+                except Exception as e:  # pylint: disable=broad-exception-caught
+                    return [], str(e)
 
         execution_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         start_time = time.time()
         pr = cProfile.Profile()
         pr.enable()
 
-        files,error = full_execution(scraper_name)
+        files, error = full_execution(scraper_name)
 
         pr.disable()
 
@@ -70,8 +70,7 @@ if __name__ == "__main__":
             "end_time": end_time,
             "time": end_time - start_time,
             "files": len(files),
-            "error":error
-
+            "error": error,
         }
 
         with open("stress_test_results.json", "w", encoding="utf-8") as f:

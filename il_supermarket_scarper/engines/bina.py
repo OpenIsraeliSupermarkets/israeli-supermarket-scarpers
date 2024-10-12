@@ -38,17 +38,17 @@ class Bina(Aspx):
 
     def file_type_id(self, file_type):
         """get the file type id"""
-        if file_type == FileTypesFilters.STORE_FILE.name:
-            return 1
-        if file_type == FileTypesFilters.PRICE_FILE.name:
-            return 2
-        if file_type == FileTypesFilters.PROMO_FILE.name:
-            return 3
-        if file_type == FileTypesFilters.PRICE_FULL_FILE.name:
-            return 4
-        if file_type == FileTypesFilters.PROMO_FULL_FILE.name:
-            return 5
-        raise ValueError(f"file type {file_type} not supported")
+        file_type_mapping = {
+            FileTypesFilters.STORE_FILE.name: 1,
+            FileTypesFilters.PRICE_FILE.name: 2,
+            FileTypesFilters.PROMO_FILE.name: 3,
+            FileTypesFilters.PRICE_FULL_FILE.name: 4,
+            FileTypesFilters.PROMO_FULL_FILE.name: 5,
+        }
+
+        if file_type in file_type_mapping:
+            return file_type_mapping[file_type]
+        raise ValueError(f"File type {file_type} not supported")
 
     def _build_query_url(self, query_params, base_urls):
         res = []
@@ -118,9 +118,8 @@ class Bina(Aspx):
         response_content = session_and_check_status(
             file_link,
         )
-
         spath = json.loads(response_content.content)
-        Logger.info(f"Found spath: {spath}")
+        Logger.debug(f"Found spath: {spath}")
 
         url = spath[0]["SPath"]
         ext = file_link.split(".")[-1]

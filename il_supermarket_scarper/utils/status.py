@@ -60,8 +60,8 @@ def get_status():
 def get_status_date():
     """get the date change listed on the gov.il site"""
     line_with_date = get_statue_page(extraction_type="update_date")
-    print(line_with_date)
-    Logger.info(f"line_with_date: {line_with_date}")
+
+    Logger.info(f"date in 'line_with_date' is '{line_with_date}'")
 
     dates = re.findall(
         r"([1-9]|1[0-9]|2[0-9]|3[0-1]|0[0-9])(.|-|\/)([1-9]|1[0-2]|0[0-9])(.|-|\/)(20[0-9][0-9])",

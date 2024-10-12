@@ -129,10 +129,10 @@ class Matrix(Aspx):
         soup = BeautifulSoup(req_res.text, features="lxml")
         all_trs = list(soup.find_all("tr"))[1:]  # skip title
 
-        Logger.info(f"Found {len(all_trs)} entries")
+        Logger.info(f"Before filtring names found {len(all_trs)} entries")
         if self.chain_hebrew_name:
             all_trs = list(
                 filter(lambda x: x and self.chain_hebrew_name in str(x), all_trs)
             )
-            Logger.info(f"Found {len(all_trs)} entries")
+            Logger.info(f"After filtering names found {len(all_trs)} entries")
         return all_trs

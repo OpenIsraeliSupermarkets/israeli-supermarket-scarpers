@@ -16,7 +16,7 @@ class FlakyScraper:
             self.name = name
 
         def scrape(self):
-            print(f"Scraping with {self.name}")
+            Logger.debug(f"Scraping with {self.name}")
     ```
     """
 

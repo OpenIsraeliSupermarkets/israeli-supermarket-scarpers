@@ -16,6 +16,8 @@ class Aspx(WebBase, ABC):
         self.aspx_page = aspx_page
 
     def extract_task_from_entry(self, all_trs):
+        """from the trs extract the download urls and file names"""
+
         download_urls: list = list(
             map(lambda x: self.url + self.get_href_from_entry(x), all_trs)
         )
@@ -35,12 +37,13 @@ class Aspx(WebBase, ABC):
         """build the url with the query params"""
 
     def get_request_url(self, files_types=None, store_id=None, when_date=None):
+        """build the request given the base url and the query params"""
         result = []
         for query_params in self._get_all_possible_query_string_params(
             files_types=files_types, store_id=store_id, when_date=when_date
         ):
             result.extend(self._build_query_url(query_params, [self.url]))
-        Logger.info(f"Request url: {result}")
+        Logger.debug(f"Request url: {result}")
         return result
 
     @abstractmethod

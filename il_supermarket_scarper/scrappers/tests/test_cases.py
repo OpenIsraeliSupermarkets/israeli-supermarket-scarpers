@@ -132,7 +132,7 @@ def make_test_case(scraper_enum, store_id):
             init_scraper_function = ScraperFactory.get(scraper_enum)
 
             if init_scraper_function is None:
-                Logger.info(f"{scraper_enum} is disabled.")
+                Logger.warning(f"{scraper_enum} is disabled.")
             else:
                 try:
                     scraper = init_scraper_function(folder_name=dump_path)

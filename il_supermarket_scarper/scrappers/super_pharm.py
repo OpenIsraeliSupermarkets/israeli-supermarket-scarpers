@@ -35,13 +35,13 @@ class SuperPharm(MultiPageWeb):
 
     @url_connection_retry()
     def retrieve_file(self, file_link, file_save_path, timeout=15):
-        Logger.info(f"On a new Session: calling {file_link}")
+        Logger.debug(f"On a new Session: calling {file_link}")
 
         response_content = self.session_with_cookies_by_chain(
             file_link, timeout=timeout
         )
         spath = json.loads(response_content.content)
-        Logger.info(f"Found spath: {spath}")
+        Logger.debug(f"Found spath: {spath}")
 
         file_to_save = self.session_with_cookies_by_chain(
             self.url + spath["href"], timeout=timeout

@@ -200,13 +200,13 @@ def session_with_cookies(
                 session.cookies.update(pickle.load(f))
             # session.cookies.load()
         except FileNotFoundError:
-            Logger.info("Didn't find cookie file")
+            Logger.debug("Didn't find cookie file")
         except Exception as e:
             # There was an issue with reading the file.
             os.remove(filename)
             raise e
 
-    Logger.info(f"On a new Session requesting url: {method},{url},{body}")
+    Logger.debug(f"On a new Session requesting url: {method},{url},{body}")
 
     if method == "POST":
         response_content = session.post(url, data=body, timeout=timeout)
@@ -214,7 +214,7 @@ def session_with_cookies(
         response_content = session.get(url, timeout=timeout)
 
     if response_content.status_code != 200:
-        Logger.info(
+        Logger.debug(
             f"On Session, got status code: {response_content.status_code}"
             f", body is {response_content.text} "
         )
@@ -323,7 +323,7 @@ def fetch_temporary_gz_file_from_ftp(
 
 def wget_file(file_link, file_save_path):
     """use wget to download file"""
-    Logger.info(f"trying wget file {file_link} to {file_save_path}.")
+    Logger.debug(f"trying wget file {file_link} to {file_save_path}.")
 
     files_parts = file_link.split(".")
     if len(files_parts) < 2 or files_parts[-1] not in ["gz", "xml"]:
@@ -339,8 +339,8 @@ def wget_file(file_link, file_save_path):
         shell=True,
     ) as process:
         std_out, std_err = process.communicate()
-    Logger.info(f"Wget stdout {std_out}")
-    Logger.info(f"Wget stderr {std_err}")
+    Logger.debug(f"Wget stdout {std_out}")
+    Logger.debug(f"Wget stderr {std_err}")
 
     if not os.path.exists(expected_output_file):
         Logger.error(f"fils is not exists after wget {file_save_path}")
