@@ -79,13 +79,6 @@ def make_test_case(scraper_enum, store_id):
             file_ext = file_name.split(".")[-1]
             assert file_ext == "xml", f" should be xml but {file_ext}, file:{file_name}"
 
-        # def _make_sure_file_is_not_empty(self, scraper, full_file_path):
-        #     """make sure the files is not empty"""
-        #     if not scraper.is_valid_file_empty(full_file_path):
-        #         assert (
-        #             os.path.getsize(full_file_path) != 0
-        #         ), f"{full_file_path} is empty file."
-
         def _make_sure_file_is_xml_readable(self, full_file_path):
             """Ensure the file is a valid XML and readable."""
             try:
@@ -179,9 +172,7 @@ def make_test_case(scraper_enum, store_id):
                             scraper.get_chain_id(), file
                         )
                         self._make_sure_file_extension_is_xml(file)
-                        # self._make_sure_file_is_not_empty(
-                        #     scraper, os.path.join(download_path, file)
-                        # )
+
                         self._make_sure_file_is_xml_readable(
                             os.path.join(download_path, file)
                         )

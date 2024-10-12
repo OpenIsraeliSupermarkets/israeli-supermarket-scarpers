@@ -273,22 +273,6 @@ def url_retrieve(url, filename, timeout=30):
     if size >= 0 and read < size:
         msg = f"retrieval incomplete: got only {read:d} out of {size:d} bytes"
         raise ValueError(msg, (filename, _request.headers))
-    # with contextlib.closing(requests.get(url, stream=True, timeout=45)) as context:
-    #     context.raise_for_status()
-    #     with open(filename, "wb") as file:
-    #         for chunk in context.iter_content(chunk_size=8_192):
-    #             file.write(chunk)
-    # with open(filename, "wb") as out_file:
-    #     with contextlib.closing(urllib.request.urlopen(url, timeout=45)) as file:
-    #         block_size = 1024 * 8
-    #         while True:
-    #             block = file.read(block_size)
-    #             if not block:
-    #                 break
-    #             out_file.write(block)
-    # import shutil
-    # with urllib.request.urlopen(url) as response, open(filename, 'wb') as out_file:
-    #     shutil.copyfileobj(response, out_file)
 
 
 @url_connection_retry(60 * 5)
