@@ -86,9 +86,6 @@ class Engine(ScraperStatus, ABC):
         files_names_to_scrape=None,
     ):
         """filter the list according to condition"""
-        # assert (
-        #     when_date is not None or limit is None
-        # ), "when_date flag can't be applied with limit."
 
         # filter files already downloaded
         intreable_ = self.filter_already_downloaded(

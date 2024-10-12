@@ -1,5 +1,6 @@
 from pathlib import Path
 import urllib.parse
+import datetime
 
 import json
 from il_supermarket_scarper.engines import MultiPageWeb
@@ -79,7 +80,7 @@ class SuperPharm(MultiPageWeb):
 
             if store_id:
                 params["store"] = store_id
-            if when_date:
+            if when_date and isinstance(when_date, datetime.datetime):
                 params["date"] = when_date.strftime("%Y-%m-%d")
             if files_types:
                 params["type"] = ftype

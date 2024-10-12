@@ -19,7 +19,9 @@ class SuperYuda(Bina):
     ):
 
         date_stoped_updateing = (
-            when_date is not None and when_date.date() > datetime.date(2024, 9, 26)
+            when_date is not None
+            and isinstance(when_date, datetime.datetime)
+            and when_date.date() > datetime.date(2024, 9, 26)
         )
 
         if date_stoped_updateing:

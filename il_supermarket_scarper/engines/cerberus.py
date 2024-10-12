@@ -1,5 +1,5 @@
 import os
-
+import datetime
 
 from il_supermarket_scarper.utils import (
     extract_xml_file_from_gz_file,
@@ -106,7 +106,7 @@ class Cerberus(Engine):
     def build_filter_arg(self, store_id=None, when_date=None, files_types=None):
         """build the filter arg for the ftp"""
         date_pattern = None
-        if when_date:
+        if when_date and isinstance(when_date, datetime.datetime):
             date_pattern = when_date.strftime("%Y%m%d")
 
         for type_pattern in self.get_type_pattern(files_types):

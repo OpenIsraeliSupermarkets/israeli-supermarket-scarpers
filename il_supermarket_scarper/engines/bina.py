@@ -1,5 +1,6 @@
 import json
 import urllib.parse
+import datetime
 
 from il_supermarket_scarper.utils import (
     Logger,
@@ -98,7 +99,7 @@ class Bina(Aspx):
                 chains_url["WStore"] = store_id
 
         # posting date
-        if when_date:
+        if when_date and isinstance(when_date, datetime.datetime):
             for chains_url in chains_urls:
                 chains_url["WDate"] = when_date.strftime("%d/%m/%Y")
 

@@ -70,23 +70,3 @@ class PublishPrice(WebBase):
         )
         file_names: list = list(map(get_name_from_herf, all_trs))
         return download_urls, file_names
-
-    # def _is_validate_scraper_found_no_files(
-    #     self, limit=None, files_types=None, store_id=None, when_date=None
-    # ):
-    #     """return true if this is valid case where the scraper found no files"""
-    #     return (
-    #         super()._is_validate_scraper_found_no_files(  # what fails the rest
-    #             limit=limit,
-    #             files_types=files_types,
-    #             store_id=store_id,
-    #             when_date=when_date,
-    #         )
-    #         or (  # if we are looking for one store file in a weekend or holiday
-    #             store_id and (_is_weekend_in_israel() or _is_holiday_in_israel())
-    #         )
-    #         or (  # if we are looking a specific number of file in a weekend or holiday
-    #             limit is not None
-    #             and (_is_weekend_in_israel() or _is_holiday_in_israel())
-    #         )
-    #     )

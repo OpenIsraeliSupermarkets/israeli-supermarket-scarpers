@@ -1,5 +1,5 @@
 import urllib.parse
-
+import datetime
 from il_supermarket_scarper.engines import Bina, MultiPageWeb
 from il_supermarket_scarper.utils import DumpFolderNames, FileTypesFilters
 
@@ -92,7 +92,7 @@ class CityMarketShops(MultiPageWeb):
 
             if store_id:
                 params["s"] = store_id
-            if when_date:
+            if when_date and isinstance(when_date, datetime.datetime):
                 params["d"] = when_date.strftime("%Y-%m-%d")
             if files_types:
                 params = {**params, **type_params}
