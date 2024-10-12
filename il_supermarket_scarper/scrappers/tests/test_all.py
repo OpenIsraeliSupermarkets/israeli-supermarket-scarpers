@@ -120,7 +120,7 @@ class SuperPharmTestCase(make_test_case(ScraperFactory.SUPER_PHARM, 224)):
     """Test case for ScraperFactory.SUPER_PHARM."""
 
 
-class SuperYudaTestCase(make_test_case(ScraperFactory.SUPER_YUDA, 213)):
+class SuperYudaTestCase(make_test_case(ScraperFactory.SUPER_YUDA, 204)):
     """Test case for ScraperFactory.SUPER_YUDA."""
 
 
