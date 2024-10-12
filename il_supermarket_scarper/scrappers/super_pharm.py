@@ -54,7 +54,7 @@ class SuperPharm(MultiPageWeb):
     def get_file_types_id(self, files_types=None):
         """get the file type id"""
         if files_types is None:
-            return ""
+            return [""]
 
         types = []
         for ftype in files_types:
@@ -72,17 +72,17 @@ class SuperPharm(MultiPageWeb):
 
     def build_params(self, files_types=None, store_id=None, when_date=None):
         """build the params for the request"""
-        assert (
-            files_types is None or len(files_types) == 1
-        ), "SuperPharm supports only one file type"
 
-        params = {"type": "", "date": "", "store": ""}
+        all_params = []
+        for ftype in self.get_file_types_id(files_types):
+            params = {"type": "", "date": "", "store": ""}
 
-        if store_id:
-            params["store"] = store_id
-        if when_date:
-            params["date"] = when_date.strftime("%Y-%m-%d")
-        if files_types:
-            params["type"] = self.get_file_types_id(files_types)
+            if store_id:
+                params["store"] = store_id
+            if when_date:
+                params["date"] = when_date.strftime("%Y-%m-%d")
+            if files_types:
+                params["type"] = ftype
+            all_params.append(params)
 
-        return "?" + urllib.parse.urlencode(params)
+        return ["?" + urllib.parse.urlencode(params) for params in all_params]

@@ -21,7 +21,7 @@ class Shufersal(MultiPageWeb):
     def get_file_types_id(self, files_types=None):
         """get the file type id"""
         if files_types is None:
-            return "0"
+            return ["0"]
 
         types = []
         for ftype in files_types:

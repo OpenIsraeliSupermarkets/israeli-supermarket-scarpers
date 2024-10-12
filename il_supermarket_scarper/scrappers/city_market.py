@@ -66,8 +66,8 @@ class CityMarketShops(MultiPageWeb):
 
     def get_file_types_id(self, files_types=None):
         """get the file type id"""
-        if files_types is None:
-            return ""
+        if files_types is None or files_types == FileTypesFilters.all_types():
+            return [{}]
 
         types = []
         for ftype in files_types:
@@ -81,21 +81,20 @@ class CityMarketShops(MultiPageWeb):
                 types.append({"t": "1", "f": "1"})
             if ftype == FileTypesFilters.PROMO_FULL_FILE.name:
                 types.append({"t": "2", "f": "1"})
-        return types[0]
+        return types
 
     def build_params(self, files_types=None, store_id=None, when_date=None):
         """build the params for the request"""
-        assert (
-            files_types is None or len(files_types) == 1
-        ), "SuperPharm supports only one file type"
 
-        params = {"d": "", "s": ""}
+        all_params = []
+        for type_params in self.get_file_types_id(files_types):
+            params = {"d": "", "s": ""}
 
-        if store_id:
-            params["s"] = store_id
-        if when_date:
-            params["d"] = when_date.strftime("%Y-%m-%d")
-        if files_types:
-            params = {**params, **self.get_file_types_id(files_types)}
+            if store_id:
+                params["s"] = store_id
+            if when_date:
+                params["d"] = when_date.strftime("%Y-%m-%d")
+            if files_types:
+                params = {**params, **type_params}
 
-        return "?" + urllib.parse.urlencode(params)
+        return ["?" + urllib.parse.urlencode(params) for params in all_params]

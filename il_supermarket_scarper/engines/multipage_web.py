@@ -48,13 +48,11 @@ class MultiPageWeb(WebBase):
     ):  # pylint: disable=unused-argument
         """get all links to collect download links from"""
 
-        arguments = self.build_params(files_types=files_types, store_id=store_id)
-        return [
-            {
+        for arguments in self.build_params(files_types=files_types, store_id=store_id):
+            yield {
                 "url": self.url + arguments,
                 "method": "GET",
             }
-        ]
 
     def get_number_of_pages(self, response):
         """get the number of pages to scarpe"""
@@ -80,40 +78,46 @@ class MultiPageWeb(WebBase):
         when_date=None,
         files_names_to_scrape=None,
     ):
-        self.post_scraping()
-        main_page_request = self.get_request_url(
+
+        main_page_requests = self.get_request_url(
             files_types=files_types, store_id=store_id, when_date=when_date
         )
+        download_urls = []
+        file_names = []
+        for main_page_request in main_page_requests:
 
-        assert len(main_page_request) == 1, "Only one url is expected"
-        main_page_response = session_and_check_status(**main_page_request[0])
+            main_page_response = session_and_check_status(**main_page_request)
 
-        total_pages = self.get_number_of_pages(main_page_response)
-        Logger.info(f"Found {total_pages} pages")
+            total_pages = self.get_number_of_pages(main_page_response)
+            Logger.info(f"Found {total_pages} pages")
 
-        # if there is only one page, call it again,
-        # in the future, we can skip scrap it again
-        if total_pages is None:
-            pages_to_scrape = main_page_request
-        else:
-            pages_to_scrape = list(
-                map(
-                    lambda page_number: {
-                        **main_page_request[0],
-                        "url": main_page_request[0]["url"]
-                        + f"{self.page_argument}="
-                        + str(page_number),
-                    },
-                    range(1, total_pages + 1),
+            # if there is only one page, call it again,
+            # in the future, we can skip scrap it again
+            if total_pages is None:
+                pages_to_scrape = [main_page_request]
+            else:
+                pages_to_scrape = list(
+                    map(
+                        lambda page_number: {
+                            **main_page_request,
+                            "url": main_page_request["url"]
+                            + f"{self.page_argument}="
+                            + str(page_number),
+                        },
+                        range(1, total_pages + 1),
+                    )
                 )
+
+            _download_urls, _file_names = execute_in_parallel(
+                self.process_links_before_download,
+                list(pages_to_scrape),
+                aggregtion_function=multiple_page_aggregtion,
+                max_threads=self.max_threads,
             )
 
-        download_urls, file_names = execute_in_parallel(
-            self.process_links_before_download,
-            list(pages_to_scrape),
-            aggregtion_function=multiple_page_aggregtion,
-            max_threads=self.max_threads,
-        )
+            download_urls.extend(_download_urls)
+            file_names.extend(_file_names)
+
         file_names, download_urls = self.apply_limit_zip(
             file_names,
             download_urls,
