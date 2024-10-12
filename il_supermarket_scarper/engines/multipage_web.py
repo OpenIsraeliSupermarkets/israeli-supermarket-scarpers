@@ -98,9 +98,9 @@ class MultiPageWeb(WebBase):
             else:
                 pages_to_scrape = list(
                     map(
-                        lambda page_number: {
-                            **main_page_request,
-                            "url": main_page_request["url"]
+                        lambda page_number, req=main_page_request: {
+                            **req,
+                            "url": req["url"]
                             + f"{self.page_argument}="
                             + str(page_number),
                         },
