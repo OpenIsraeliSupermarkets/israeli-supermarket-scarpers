@@ -292,7 +292,9 @@ def url_retrieve(url, filename, timeout=30):
 
 
 @url_connection_retry(60 * 5)
-def collect_from_ftp(ftp_host, ftp_username, ftp_password, ftp_path, timeout=60 * 5):
+def collect_from_ftp(
+    ftp_host, ftp_username, ftp_password, ftp_path, arg=None, timeout=60 * 5
+):
     """collect all files to download from the site"""
     Logger.info(
         f"Open connection to FTP server with {ftp_host} "
@@ -302,7 +304,10 @@ def collect_from_ftp(ftp_host, ftp_username, ftp_password, ftp_path, timeout=60 
     ftp_session.trust_server_pasv_ipv4_address = True
     ftp_session.set_pasv(True)
     ftp_session.cwd(ftp_path)
-    files = ftp_session.nlst()
+    if arg:
+        files = ftp_session.nlst(arg)
+    else:
+        files = ftp_session.nlst()
     ftp_session.quit()
     return files
 

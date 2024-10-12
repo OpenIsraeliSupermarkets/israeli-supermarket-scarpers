@@ -52,7 +52,7 @@ class Bina(Aspx):
                 if file_type not in file_type_mapping:
                     raise ValueError(f"File type {file_type} not supported")
                 yield file_type_mapping[file_type]
-                
+
     def _build_query_url(self, query_params, base_urls):
         res = []
         for base in base_urls:
@@ -84,7 +84,7 @@ class Bina(Aspx):
         # add file types to url
         if files_types:
             chains_urls_with_types = []
-            for files_type in self.file_type_ids(files_types) :
+            for files_type in self.file_type_ids(files_types):
 
                 for chain_url in chains_urls:
                     chains_urls_with_types.append(

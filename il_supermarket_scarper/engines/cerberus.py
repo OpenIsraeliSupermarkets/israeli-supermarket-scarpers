@@ -8,6 +8,7 @@ from il_supermarket_scarper.utils import (
     collect_from_ftp,
     fetch_temporary_gz_file_from_ftp,
     retry_files,
+    FileTypesFilters,
 )
 from .engine import Engine
 
@@ -83,6 +84,42 @@ class Cerberus(Engine):
                 return []
             raise e
 
+    def get_type_pattern(self, files_types):
+        """get the file type pattern"""
+        file_type_mapping = {
+            FileTypesFilters.STORE_FILE.name: "store",
+            FileTypesFilters.PRICE_FILE.name: "price",
+            FileTypesFilters.PROMO_FILE.name: "promo",
+            FileTypesFilters.PRICE_FULL_FILE.name: "pricef",
+            FileTypesFilters.PROMO_FULL_FILE.name: "promof",
+        }
+        if files_types is None or files_types == FileTypesFilters.all_types():
+            yield None
+
+        for file_type in files_types:
+            if file_type not in file_type_mapping:
+                raise ValueError(f"File type {file_type} not supported")
+            yield file_type_mapping[file_type]
+
+    def build_filter_arg(self, store_id=None, when_date=None, files_types=None):
+        """build the filter arg for the ftp"""
+        date_pattern = None
+        if when_date:
+            date_pattern = when_date.strftime("%Y%m%d")
+
+        for type_pattern in self.get_type_pattern(files_types):
+            output_pattern = ""
+            if type_pattern:
+                output_pattern = f"{type_pattern}*" + output_pattern
+            if store_id:
+                output_pattern = f"*{store_id}-*" + output_pattern
+            if date_pattern:
+                output_pattern = f"*{date_pattern}" + output_pattern
+
+            if output_pattern == "":
+                yield None
+            yield output_pattern
+
     def collect_files_details_from_site(
         self,
         limit=None,
@@ -94,9 +131,16 @@ class Cerberus(Engine):
         files_names_to_scrape=None,
     ):
         """collect all files to download from the site"""
-        files = collect_from_ftp(
-            self.ftp_host, self.ftp_username, self.ftp_password, self.ftp_path
-        )
+        files = []
+        for filter_arg in self.build_filter_arg(store_id, when_date, files_types):
+            filter_files = collect_from_ftp(
+                self.ftp_host,
+                self.ftp_username,
+                self.ftp_password,
+                self.ftp_path,
+                arg=filter_arg,
+            )
+            files.extend(filter_files)
 
         Logger.info(f"Found {len(files)} files")
 
