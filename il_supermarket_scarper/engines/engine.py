@@ -84,6 +84,7 @@ class Engine(ScraperStatus, ABC):
         store_id=None,
         when_date=None,
         files_names_to_scrape=None,
+        suppress_exception=False,
     ):
         """filter the list according to condition"""
 
@@ -146,6 +147,7 @@ class Engine(ScraperStatus, ABC):
                     store_id=store_id,
                     when_date=when_date,
                 )
+                and not suppress_exception
             ):
                 raise ValueError(
                     f"No files to download for file files_types={files_types},"

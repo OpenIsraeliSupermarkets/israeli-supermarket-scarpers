@@ -47,6 +47,7 @@ class WebBase(Engine):
         store_id=None,
         when_date=None,
         files_names_to_scrape=None,
+        suppress_exception=False,
     ):
         """apply limit to zip"""
         ziped = self.apply_limit(
@@ -57,6 +58,7 @@ class WebBase(Engine):
             store_id=store_id,
             when_date=when_date,
             files_names_to_scrape=files_names_to_scrape,
+            suppress_exception=suppress_exception,
         )
         if len(ziped) == 0:
             return [], []
@@ -69,12 +71,15 @@ class WebBase(Engine):
         store_id=None,
         when_date=None,
         files_names_to_scrape=None,
+        suppress_exception=False,
     ):
         """collect all enteris to download from site"""
 
         urls_to_collect_link_from = self.get_request_url(
             files_types=files_types, store_id=store_id, when_date=when_date
         )
+        assert len(urls_to_collect_link_from) > 0, "No pages to scrape"
+        
         all_trs = []
         for url in urls_to_collect_link_from:
             req_res = session_and_check_status(**url)
@@ -95,6 +100,7 @@ class WebBase(Engine):
                 store_id=store_id,
                 when_date=when_date,
                 files_names_to_scrape=files_names_to_scrape,
+                suppress_exception=suppress_exception,
             )
 
             Logger.info(f"After applying limit: Found {len(all_trs)} entries")
@@ -131,6 +137,7 @@ class WebBase(Engine):
                 store_id=store_id,
                 when_date=when_date,
                 files_names_to_scrape=files_names_to_scrape,
+                suppress_exception=suppress_exception,
             )
 
             self.on_collected_details(file_names, download_urls)

@@ -48,11 +48,13 @@ class MultiPageWeb(WebBase):
     ):  # pylint: disable=unused-argument
         """get all links to collect download links from"""
 
+        results = []
         for arguments in self.build_params(files_types=files_types, store_id=store_id):
-            yield {
+            results.append({
                 "url": self.url + arguments,
                 "method": "GET",
-            }
+            })
+        return results
 
     def get_number_of_pages(self, response):
         """get the number of pages to scarpe"""
@@ -77,11 +79,14 @@ class MultiPageWeb(WebBase):
         store_id=None,
         when_date=None,
         files_names_to_scrape=None,
+        suppress_exception=False,
     ):
 
         main_page_requests = self.get_request_url(
             files_types=files_types, store_id=store_id, when_date=when_date
         )
+        assert len(main_page_requests) > 0, "No pages to scrape"
+        
         download_urls = []
         file_names = []
         for main_page_request in main_page_requests:
@@ -126,6 +131,7 @@ class MultiPageWeb(WebBase):
             store_id=store_id,
             when_date=when_date,
             files_names_to_scrape=files_names_to_scrape,
+            suppress_exception=suppress_exception,
         )
 
         return download_urls, file_names
@@ -140,7 +146,13 @@ class MultiPageWeb(WebBase):
         return links, filenames
 
     def process_links_before_download(
-        self, request, limit=None, files_types=None, store_id=None, when_date=None
+        self,
+        request,
+        limit=None,
+        files_types=None,
+        store_id=None,
+        when_date=None,
+        suppress_exception=False,
     ):
         """additional processing to the links before download"""
         response = self.session_with_cookies_by_chain(**request)
@@ -157,6 +169,7 @@ class MultiPageWeb(WebBase):
             files_types=files_types,
             store_id=store_id,
             when_date=when_date,
+            suppress_exception=suppress_exception,
         )
 
         Logger.info(

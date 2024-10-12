@@ -96,5 +96,6 @@ class CityMarketShops(MultiPageWeb):
                 params["d"] = when_date.strftime("%Y-%m-%d")
             if files_types:
                 params = {**params, **type_params}
+            all_params.append(params)  
 
         return ["?" + urllib.parse.urlencode(params) for params in all_params]

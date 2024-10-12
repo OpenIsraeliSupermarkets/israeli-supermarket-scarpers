@@ -67,6 +67,7 @@ class Cerberus(Engine):
                 store_id=store_id,
                 when_date=when_date,
                 files_names_to_scrape=files_names_to_scrape,
+                suppress_exception=suppress_exception,
             )
             self.on_collected_details(files)
 
@@ -131,6 +132,7 @@ class Cerberus(Engine):
         store_id=None,
         when_date=None,
         files_names_to_scrape=None,
+        suppress_exception=False,
     ):
         """collect all files to download from the site"""
         files = []
@@ -173,6 +175,7 @@ class Cerberus(Engine):
             store_id=store_id,
             when_date=when_date,
             files_names_to_scrape=files_names_to_scrape,
+            suppress_exception=suppress_exception,
         )
         Logger.info(f"After applying limit: Found {len(files)} files")
 
