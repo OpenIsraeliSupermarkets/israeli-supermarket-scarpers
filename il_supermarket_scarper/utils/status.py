@@ -108,30 +108,34 @@ def convert_unit(size_in_bytes, unit):
 
 def log_folder_details(folder, unit=UnitSize.MB):
     """log details about a folder"""
-    unit_size = 0
-    for path, dirs, files in os.walk(folder):
+    size = 0
+    files_scaned = []
+    Logger.info(f"Found the following files in {folder}")
+
+    for path, _, files in os.walk(folder):
+
         # summerize all files
-        Logger.info(f"Found the following files in {path}:")
-        size = 0
         for file in files:
             if "xml" in file:
                 full_file_path = os.path.join(path, file)
-                fp_size = os.path.getsize(full_file_path)
-                size += fp_size
+                size += os.path.getsize(full_file_path)
+                files_scaned.append(full_file_path)
                 Logger.info(f"- file {full_file_path}: size {size}")
 
-        unit_size = convert_unit(size, unit)
-        Logger.info(f"Found the following folders in {path}:")
-        for sub_folder in dirs:
-            unit_size += log_folder_details(os.path.join(path, sub_folder), unit)
+        # unit_size =
+        # for sub_folder in dirs:
+        #     unit_size += log_folder_details(os.path.join(path, sub_folder), unit)
 
-    Logger.info(f"Total size of {folder}: {unit_size} {unit.name}")
+    Logger.info(
+        f"Folder {folder}: Num of Files= {len(files_scaned)},"
+        f"Size= {convert_unit(size, unit)} {unit.name}"
+    )
 
     return {
-        "size": unit_size,
+        "size": convert_unit(size, unit),
         "unit": unit.name,
         "folder": folder,
-        "folder_content": os.listdir(folder),
+        "folder_content": files_scaned,
     }
 
 

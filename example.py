@@ -1,5 +1,7 @@
 from il_supermarket_scarper import ScarpingTask
-from il_supermarket_scarper.utils import _now
+from il_supermarket_scarper.utils import _now, Logger
+
+Logger.set_logging_level("INFO")
 
 if __name__ == "__main__":
     scraper = ScarpingTask(
