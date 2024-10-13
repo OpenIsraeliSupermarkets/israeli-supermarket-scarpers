@@ -132,15 +132,14 @@ def disable_when_outside_israel(function):
             estimated_location["country"] is not None
             and estimated_location["country"] != "Israel"
         )
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         pass
 
     if execute:
         return function
-    
+
     Logger.info(f"estimated location is {str(estimated_location)}")
     return _decorator
-    
 
 
 def get_random_user_agent():
