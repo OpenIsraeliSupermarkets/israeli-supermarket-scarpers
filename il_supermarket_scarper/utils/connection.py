@@ -22,9 +22,9 @@ from requests.exceptions import (
     ChunkedEncodingError,
     ConnectTimeout,
 )
-from cachetools import cached, TTLCache
 from .logger import Logger
 from .retry import retry
+from .file_cache import file_cache
 
 
 exceptions = (
@@ -92,40 +92,19 @@ def url_connection_retry(init_timeout=15):
     return wrapper
 
 
-def cache():
-    """decorator the define the retry logic of connections tring to send get request"""
-
-    def define_key(self, limit=None, files_types=None):
-        key = self.get_chain_name()
-        if limit:
-            key = key + "_" + str(limit)  # + func.__name__
-        if files_types:
-            key = key + "_" + ".".join(files_types)
-
-        return key
-
-    def wrapper(func):
-        @cached(cache=TTLCache(maxsize=1024, ttl=60), key=define_key)
-        def inner(*args, **kwargs):
-            return func(*args, **kwargs)
-
-        return inner
-
-    return wrapper
-
-
-@cached(cache=TTLCache(maxsize=1024, ttl=60))
+@file_cache(ttl=60)
 def get_ip():
     """get the ip of the computer running the code"""
     response = requests.get("https://api.ipify.org?format=json", timeout=15).json()
     return response["ip"]
 
 
-@cached(cache=TTLCache(maxsize=1024, ttl=60))
+@file_cache(ttl=60)
 def get_location():
     """get the estimated location of the computer running the code"""
     ip_address = get_ip()
     response = requests.get(f"https://ipapi.co/{ip_address}/json/", timeout=15).json()
+
     location_data = {
         "ip": ip_address,
         "city": response.get(
@@ -146,18 +125,24 @@ def disable_when_outside_israel(function):
             "can't scarper Gov.il site outside IL region."
         )
 
-    estimated_location = get_location()
+    execute = True
+    try:
+        estimated_location = get_location()
+        execute = not (
+            estimated_location["country"] is not None
+            and estimated_location["country"] != "Israel"
+        )
+    except Exception:
+        pass
 
-    if (
-        estimated_location["country"] is not None
-        and estimated_location["country"] != "Israel"
-    ):
-        Logger.info(f"estimated location is {str(estimated_location)}")
-        return _decorator
-    return function
+    if execute:
+        return function
+    
+    Logger.info(f"estimated location is {str(estimated_location)}")
+    return _decorator
+    
 
 
-@cached(cache=TTLCache(maxsize=1024, ttl=60 * 5))
 def get_random_user_agent():
     """get random user agent"""
     user_agents = [

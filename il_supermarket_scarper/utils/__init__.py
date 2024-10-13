@@ -17,7 +17,6 @@ from .connection import (
     disable_when_outside_israel,
     session_and_check_status,
     session_with_cookies,
-    cache,
     url_retrieve,
     collect_from_ftp,
     fetch_temporary_gz_file_from_ftp,
