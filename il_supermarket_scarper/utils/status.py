@@ -169,8 +169,10 @@ def _now():
     return datetime.datetime.now(pytz.timezone("Asia/Jerusalem"))
 
 
-def _is_saturday_in_israel():
-    return _now().weekday() == 5
+def _is_saturday_in_israel(date=None):
+    if not date:
+        date = _now()
+    return date.weekday() == 5
 
 
 def _is_friday_in_israel():

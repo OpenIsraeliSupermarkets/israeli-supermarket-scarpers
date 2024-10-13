@@ -6,6 +6,7 @@ import uuid
 import xml.etree.ElementTree as ET
 from il_supermarket_scarper.utils import FileTypesFilters, Logger, DumpFolderNames, _now
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
+from il_supermarket_scarper.scraper_stability import ScraperStability
 
 
 def make_test_case(scraper_enum, store_id):
@@ -45,23 +46,31 @@ def make_test_case(scraper_enum, store_id):
             when_date=None,
         ):
             """make sure the file type filter works"""
+            # make sure the file type is applied
             if file_type:
                 filtered_files = 0
                 for f_type in file_type:
                     filtered_files += len(FileTypesFilters.filter(f_type, files_found))
                 assert len(files_found) == filtered_files
+
+            # check the store id is applied
             if store_id:
                 store_mark = []
                 for file in files_found:
                     store_mark.append(int(file.split("-")[1]))
                 assert len(set(store_mark)) == 1 and len(store_mark) == len(files_found)
-            if when_date:
-                files_sources = []
-                for file in files_found:
-                    source = file.split("-")[:2]
-                    assert source not in files_sources
-                    store_mark.append(source)
+                assert str(store_id) in str(
+                    store_mark[0]
+                ), f"{store_id} not in {store_mark[0]}"
 
+            # check the date time stamp is applied
+            if when_date:
+                for file in files_found:
+                    assert (
+                        when_date.strftime("%Y%m%d") in file
+                    ), f"{when_date} not in {file}"
+
+            # check limit
             assert (
                 limit is None or len(files_found) == limit
             ), f""" Found {files_found} f"files but should be {limit}"""
@@ -153,7 +162,8 @@ def make_test_case(scraper_enum, store_id):
                     )
                     files_found = os.listdir(download_path)
 
-                    if not scraper.is_validate_scraper_found_no_files(
+                    if not ScraperStability.is_validate_scraper_found_no_files(
+                        scraper_enum.name,
                         limit=limit,
                         files_types=file_type,
                         store_id=store_id,
@@ -199,6 +209,7 @@ def make_test_case(scraper_enum, store_id):
             self._clean_scarpe_delete(
                 scraper_enum,
                 limit=1,
+                when_date=_now(),
                 file_type=[FileTypesFilters.PROMO_FILE.name],
             )
 
@@ -207,6 +218,7 @@ def make_test_case(scraper_enum, store_id):
             self._clean_scarpe_delete(
                 scraper_enum,
                 limit=1,
+                when_date=_now(),
                 file_type=[FileTypesFilters.PROMO_FULL_FILE.name],
             )
 
@@ -215,6 +227,7 @@ def make_test_case(scraper_enum, store_id):
             self._clean_scarpe_delete(
                 scraper_enum,
                 limit=1,
+                when_date=_now(),
                 file_type=[FileTypesFilters.STORE_FILE.name],
             )
 
@@ -223,6 +236,7 @@ def make_test_case(scraper_enum, store_id):
             self._clean_scarpe_delete(
                 scraper_enum,
                 limit=1,
+                when_date=_now(),
                 file_type=[FileTypesFilters.PRICE_FILE.name],
             )
 
@@ -231,6 +245,7 @@ def make_test_case(scraper_enum, store_id):
             self._clean_scarpe_delete(
                 scraper_enum,
                 limit=1,
+                when_date=_now(),
                 file_type=[FileTypesFilters.PRICE_FULL_FILE.name],
             )
 

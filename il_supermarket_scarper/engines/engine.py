@@ -36,41 +36,6 @@ class Engine(ScraperStatus, ABC):
         """the the storage page of the files downloaded"""
         return self.storage_path
 
-    def _is_validate_scraper_found_no_files(
-        self, limit=None, files_types=None, store_id=None, when_date=None
-    ):
-        Logger.debug(
-            f"check if fail is allowd with, limit={limit},"
-            f"files_types={files_types},store_id={store_id},when_date={when_date}"
-        )
-        return False
-
-    def is_validate_scraper_found_no_files(
-        self, limit=None, files_types=None, store_id=None, when_date=None
-    ):
-        """return true if its ok the scarper reuturn no enrty"""
-
-        # if all the files requested are the update files, is ok the scaraper failed.
-        request_only_update_file = False
-        if files_types:
-            request_only_update_file = True
-            for file_type in files_types:
-                if file_type in FileTypesFilters.all_full_files():
-                    request_only_update_file = False
-
-        return (
-            limit == 0
-            or files_types == []
-            or request_only_update_file
-            or (store_id and store_id < 0)
-            or self._is_validate_scraper_found_no_files(
-                limit=limit,
-                files_types=files_types,
-                store_id=store_id,
-                when_date=when_date,
-            )
-        )
-
     def is_valid_file_empty(self, file_name):
         """it is valid the file is empty"""
         return file_name is None
@@ -138,21 +103,16 @@ class Engine(ScraperStatus, ABC):
         Logger.info(f"Result length {len(list(intreable_))}")
 
         # raise error if there was nothing to download.
-        if len(list(intreable_)) == 0:
-            if not (
-                files_was_filtered_since_already_download
-                or self.is_validate_scraper_found_no_files(
-                    limit=limit,
-                    files_types=files_types,
-                    store_id=store_id,
-                    when_date=when_date,
-                )
-                or suppress_exception
-            ):
+        if len(list(intreable_)) == 0 and not files_was_filtered_since_already_download:
+            if not suppress_exception:
                 raise ValueError(
                     f"No files to download for file files_types={files_types},"
                     f"limit={limit},store_id={store_id},when_date={when_date}"
                 )
+            Logger.warning(
+                f"No files to download for file files_types={files_types},"
+                f"limit={limit},store_id={store_id},when_date={when_date}"
+            )
         return intreable_
 
     def filter_file_types(self, intreable, limit, files_types, by_function):
@@ -224,6 +184,16 @@ class Engine(ScraperStatus, ABC):
         if os.path.exists(cookie_file):
             os.remove(cookie_file)
 
+    def _validate_scraper_params(self, limit=None, files_types=None, store_id=None):
+        if limit and limit <= 0:
+            raise ValueError(f"limit must be greater than 0, nor {limit}")
+        if files_types and files_types == []:
+            raise ValueError(
+                f"files_types must be a list of not empty file types or 'None', not {files_types}"
+            )
+        if store_id and store_id <= 0:
+            raise ValueError(f"store_id must be greater than 1, not {store_id}")
+
     def scrape(
         self,
         limit=None,
@@ -246,6 +216,9 @@ class Engine(ScraperStatus, ABC):
             filter_nul=filter_null,
             filter_zero=filter_zero,
             suppress_exception=suppress_exception,
+        )
+        self._validate_scraper_params(
+            limit=limit, files_types=files_types, store_id=store_id
         )
         self.make_storage_path_dir()
 

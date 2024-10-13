@@ -38,7 +38,9 @@ class MainScrapperRunner:
         self.multiprocessing = multiprocessing
         self.lookup_in_db = lookup_in_db
 
-    def run(self, limit=None, files_types=None, when_date=False):
+    def run(
+        self, limit=None, files_types=None, when_date=False, suppress_exception=False
+    ):
         """run the scraper"""
         Logger.info(f"Limit is {limit}")
         Logger.info(f"files_types is {files_types}")
@@ -55,6 +57,7 @@ class MainScrapperRunner:
                                 "limit": limit,
                                 "files_types": files_types,
                                 "when_date": when_date,
+                                "suppress_exception": suppress_exception,
                             },
                         ),
                         self.enabled_scrapers,

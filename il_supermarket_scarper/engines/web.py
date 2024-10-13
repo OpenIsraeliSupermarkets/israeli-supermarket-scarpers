@@ -90,20 +90,20 @@ class WebBase(Engine):
 
         download_urls, file_names = self.extract_task_from_entry(all_trs)
 
-        if len(download_urls) > 0:
-            # pylint: disable=duplicate-code
-            file_names, download_urls = self.apply_limit_zip(
-                file_names,
-                download_urls,
-                limit=limit,
-                files_types=files_types,
-                store_id=store_id,
-                when_date=when_date,
-                files_names_to_scrape=files_names_to_scrape,
-                suppress_exception=suppress_exception,
-            )
+        # if len(download_urls) > 0:
+        # pylint: disable=duplicate-code
+        file_names, download_urls = self.apply_limit_zip(
+            file_names,
+            download_urls,
+            limit=limit,
+            files_types=files_types,
+            store_id=store_id,
+            when_date=when_date,
+            files_names_to_scrape=files_names_to_scrape,
+            suppress_exception=suppress_exception,
+        )
 
-            Logger.info(f"After applying limit: Found {len(all_trs)} entries")
+        Logger.info(f"After applying limit: Found {len(all_trs)} entries")
 
         return download_urls, file_names
 
@@ -161,5 +161,6 @@ class WebBase(Engine):
             self.on_download_fail(e, download_urls=download_urls, file_names=file_names)
 
             if suppress_exception:
+                Logger.warning(f"Suppressing exception! {e}")
                 return []
             raise e

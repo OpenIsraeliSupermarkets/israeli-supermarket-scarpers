@@ -82,6 +82,7 @@ class Cerberus(Engine):
             Logger.error_execption(e)
 
             if suppress_exception:
+                Logger.warning(f"Suppressing exception! {e}")
                 return []
             raise e
 
@@ -117,11 +118,11 @@ class Cerberus(Engine):
             if store_id:
                 output_pattern.append(f"{store_id}-")
             if date_pattern:
-                output_pattern.append(date_pattern) 
+                output_pattern.append(date_pattern)
 
             if len(output_pattern) == 0:
                 yield None
-            yield "*"+ "*".join(output_pattern) + "*"
+            yield "*" + "*".join(output_pattern) + "*"
 
     def collect_files_details_from_site(
         self,
