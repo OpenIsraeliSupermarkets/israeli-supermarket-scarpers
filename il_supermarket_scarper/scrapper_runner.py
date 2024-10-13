@@ -81,6 +81,7 @@ class MainScrapperRunner:
         files_types=None,
         store_id=None,
         when_date=None,
+        suppress_exception=False,
     ):
         """scrape one"""
         chain_scrapper_constractor = ScraperFactory.get(chain_scrapper_class)
@@ -101,6 +102,7 @@ class MainScrapperRunner:
             files_names_to_scrape=None,
             filter_null=False,
             filter_zero=False,
+            suppress_exception=suppress_exception,
         )
         Logger.info(f"done scraping {chain_name}")
 
