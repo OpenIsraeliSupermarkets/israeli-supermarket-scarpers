@@ -45,4 +45,6 @@ class ScraperStability(Enum):
         if scraper_enum in ScraperStability.__members__:
             stabler = ScraperStability[scraper_enum].value
 
-        return stabler.failire_valid(limit, files_types, store_id, when_date)
+        return stabler.failire_valid(
+            limit=limit, files_types=files_types, store_id=store_id, when_date=when_date
+        )
