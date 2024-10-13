@@ -147,7 +147,7 @@ class Engine(ScraperStatus, ABC):
                     store_id=store_id,
                     when_date=when_date,
                 )
-                and not suppress_exception
+                or suppress_exception
             ):
                 raise ValueError(
                     f"No files to download for file files_types={files_types},"

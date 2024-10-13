@@ -9,7 +9,6 @@ from il_supermarket_scarper.utils import (
     Logger,
     execute_in_parallel,
     multiple_page_aggregtion,
-    session_and_check_status,
 )
 from .web import WebBase
 
@@ -50,10 +49,12 @@ class MultiPageWeb(WebBase):
 
         results = []
         for arguments in self.build_params(files_types=files_types, store_id=store_id):
-            results.append({
-                "url": self.url + arguments,
-                "method": "GET",
-            })
+            results.append(
+                {
+                    "url": self.url + arguments,
+                    "method": "GET",
+                }
+            )
         return results
 
     def get_number_of_pages(self, response):
@@ -72,7 +73,7 @@ class MultiPageWeb(WebBase):
         )
         return int(pages[0])
 
-    def collect_files_details_from_site(
+    def collect_files_details_from_site(  # pylint: disable=too-many-locals
         self,
         limit=None,
         files_types=None,
@@ -86,12 +87,12 @@ class MultiPageWeb(WebBase):
             files_types=files_types, store_id=store_id, when_date=when_date
         )
         assert len(main_page_requests) > 0, "No pages to scrape"
-        
+
         download_urls = []
         file_names = []
         for main_page_request in main_page_requests:
 
-            main_page_response = session_and_check_status(**main_page_request)
+            main_page_response = self.session_with_cookies_by_chain(**main_page_request)
 
             total_pages = self.get_number_of_pages(main_page_response)
             Logger.info(f"Found {total_pages} pages")
@@ -152,7 +153,7 @@ class MultiPageWeb(WebBase):
         files_types=None,
         store_id=None,
         when_date=None,
-        suppress_exception=False,
+        suppress_exception=True,  # this is nested limit don't fail
     ):
         """additional processing to the links before download"""
         response = self.session_with_cookies_by_chain(**request)

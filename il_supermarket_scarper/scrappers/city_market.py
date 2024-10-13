@@ -67,12 +67,12 @@ class CityMarketShops(MultiPageWeb):
     def get_file_types_id(self, files_types=None):
         """get the file type id"""
         if files_types is None or files_types == FileTypesFilters.all_types():
-            return [{}]
+            return [{"t": "", "f": ""}]
 
         types = []
         for ftype in files_types:
             if ftype == FileTypesFilters.STORE_FILE.name:
-                types.append({"t": 3})
+                types.append({"t": 3, "f": ""})
             if ftype == FileTypesFilters.PRICE_FILE.name:
                 types.append({"t": "1", "f": "0"})
             if ftype == FileTypesFilters.PROMO_FILE.name:
@@ -96,6 +96,6 @@ class CityMarketShops(MultiPageWeb):
                 params["d"] = when_date.strftime("%Y-%m-%d")
             if files_types:
                 params = {**params, **type_params}
-            all_params.append(params)  
+            all_params.append(params)
 
         return ["?" + urllib.parse.urlencode(params) for params in all_params]

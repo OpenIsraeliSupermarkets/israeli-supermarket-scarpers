@@ -79,7 +79,7 @@ class WebBase(Engine):
             files_types=files_types, store_id=store_id, when_date=when_date
         )
         assert len(urls_to_collect_link_from) > 0, "No pages to scrape"
-        
+
         all_trs = []
         for url in urls_to_collect_link_from:
             req_res = session_and_check_status(**url)
