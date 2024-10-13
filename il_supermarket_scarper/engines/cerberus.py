@@ -111,17 +111,17 @@ class Cerberus(Engine):
             date_pattern = when_date.strftime("%Y%m%d")
 
         for type_pattern in self.get_type_pattern(files_types):
-            output_pattern = ""
+            output_pattern = []
             if type_pattern:
-                output_pattern = f"{type_pattern}*" + output_pattern
+                output_pattern.append(type_pattern)
             if store_id:
-                output_pattern = f"*{store_id}-*" + output_pattern
+                output_pattern.append(f"{store_id}-")
             if date_pattern:
-                output_pattern = f"*{date_pattern}" + output_pattern
+                output_pattern.append(date_pattern) 
 
-            if output_pattern == "":
+            if len(output_pattern) == 0:
                 yield None
-            yield output_pattern
+            yield "*"+ "*".join(output_pattern) + "*"
 
     def collect_files_details_from_site(
         self,
