@@ -1,4 +1,4 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 import os
 import re
 import datetime
@@ -31,7 +31,7 @@ class Engine(ScraperStatus, ABC):
         self.chain_id = chain_id
         self.max_threads = max_threads
         self.storage_path = get_output_folder(self.chain.value, folder_name=folder_name)
-        self.assigned_cookie = f"{self.chain.name}_{id(self)}.txt"
+        self.assigned_cookie = f"{self.chain.name}_{id(self)}_cookies.txt"
 
     def get_storage_path(self):
         """the the storage page of the files downloaded"""
@@ -40,6 +40,27 @@ class Engine(ScraperStatus, ABC):
     def is_valid_file_empty(self, file_name):
         """it is valid the file is empty"""
         return file_name is None
+
+    def filter_bad_files(
+        self, files, filter_zero=False, filter_null=False, by_function=lambda x: x
+    ):
+        """filter out bad files"""
+
+        if filter_zero:
+            files = list(
+                filter(lambda x: "0000000000000" not in by_function(x), files)
+            )  # filter out files
+            Logger.info(
+                f"After filtering with '0000000000000': Found {len(files)} files"
+            )
+
+        if filter_null:
+            files = list(
+                filter(lambda x: "NULL" not in by_function(x), files)
+            )  # filter out files
+            Logger.info(f"After filtering with 'NULL': Found {len(files)} files")
+
+        return files
 
     def apply_limit(
         self,
@@ -183,7 +204,7 @@ class Engine(ScraperStatus, ABC):
             body=body,
         )
 
-    def post_scraping(self):
+    def _post_scraping(self):
         """job to do post scraping"""
         if os.path.exists(self.assigned_cookie):
             os.remove(self.assigned_cookie)
@@ -210,7 +231,6 @@ class Engine(ScraperStatus, ABC):
         suppress_exception=False,
     ):
         """run the scraping logic"""
-        self.post_scraping()
         self.on_scraping_start(
             limit=limit,
             files_types=files_types,
@@ -225,6 +245,36 @@ class Engine(ScraperStatus, ABC):
             limit=limit, files_types=files_types, store_id=store_id
         )
         self.make_storage_path_dir()
+
+        try:
+            results = self._scrape(
+                limit=limit,
+                files_types=files_types,
+                store_id=store_id,
+                when_date=when_date,
+                files_names_to_scrape=files_names_to_scrape,
+                filter_null=filter_null,
+                filter_zero=filter_zero,
+                suppress_exception=suppress_exception,
+            )
+            self.on_download_completed(results=results)
+            self.on_scrape_completed(self.get_storage_path())
+        finally:
+            self._post_scraping()
+
+    @abstractmethod
+    def _scrape(
+        self,
+        limit=None,
+        files_types=None,
+        store_id=None,
+        when_date=None,
+        files_names_to_scrape=None,
+        filter_null=False,
+        filter_zero=False,
+        suppress_exception=False,
+    ):
+        """method to be implemeted by the child class"""
 
     def make_storage_path_dir(self):
         """create the storage path"""

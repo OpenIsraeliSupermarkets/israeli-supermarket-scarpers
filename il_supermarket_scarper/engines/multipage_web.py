@@ -79,6 +79,8 @@ class MultiPageWeb(WebBase):
         files_types=None,
         store_id=None,
         when_date=None,
+        filter_null=False,
+        filter_zero=False,
         files_names_to_scrape=None,
         suppress_exception=False,
     ):
@@ -123,6 +125,14 @@ class MultiPageWeb(WebBase):
 
             download_urls.extend(_download_urls)
             file_names.extend(_file_names)
+
+        Logger.info(f"Found {len(download_urls)} files")
+
+        file_names, download_urls = self.filter_bad_files_zip(
+            file_names, download_urls, filter_null=filter_null, filter_zero=filter_zero
+        )
+
+        Logger.info(f"After filtering bad files: Found {len(download_urls)} files")
 
         file_names, download_urls = self.apply_limit_zip(
             file_names,

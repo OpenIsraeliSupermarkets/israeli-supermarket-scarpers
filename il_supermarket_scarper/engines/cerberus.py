@@ -37,7 +37,7 @@ class Cerberus(Engine):
         self.ftp_session = False
 
     @retry_files(num_of_retrys=2)
-    def scrape(
+    def _scrape(
         self,
         limit=None,
         files_types=None,
@@ -50,15 +50,6 @@ class Cerberus(Engine):
     ):
         files = []
         try:
-            super().scrape(
-                limit=limit,
-                files_types=files_types,
-                store_id=store_id,
-                when_date=when_date,
-                filter_null=filter_null,
-                filter_zero=filter_zero,
-                suppress_exception=suppress_exception,
-            )
             files = self.collect_files_details_from_site(
                 limit=limit,
                 files_types=files_types,
@@ -74,8 +65,6 @@ class Cerberus(Engine):
             results = execute_in_parallel(
                 self.persist_from_ftp, list(files), max_threads=self.max_threads
             )
-            self.on_download_completed(results=results)
-            self.on_scrape_completed(self.get_storage_path())
             return results
         except Exception as e:  # pylint: disable=broad-except
             self.on_download_fail(e, files=files)
@@ -149,17 +138,11 @@ class Cerberus(Engine):
 
         Logger.info(f"Found {len(files)} files")
 
-        if filter_zero:
-            files = list(
-                filter(lambda x: "0000000000000" not in x, files)
-            )  # filter out files
-            Logger.info(
-                f"After filtering with '0000000000000': Found {len(files)} files"
-            )
+        files = self.filter_bad_files(
+            files, filter_null=filter_null, filter_zero=filter_zero
+        )
 
-        if filter_null:
-            files = list(filter(lambda x: "NULL" not in x, files))  # filter out files
-            Logger.info(f"After filtering with 'NULL': Found {len(files)} files")
+        Logger.info(f"After filtering bad files: Found {len(files)} files")
 
         files = list(
             filter(lambda x: x.split(".")[-1] in self.target_file_extensions, files)

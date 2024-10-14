@@ -81,7 +81,7 @@ def url_connection_retry(init_timeout=15):
             max_delay=5 * 60,
             logger=Logger,
             timeout=init_timeout,
-            backoff_timeout=5,
+            backoff_timeout=10,
         )
         def inner(*args, **kwargs):
             socket.setdefaulttimeout(kwargs.get("timeout", 15))
@@ -176,18 +176,17 @@ def session_with_cookies(
     """
 
     session = requests.Session()
-    filename = f"{chain_cookie_name}_cookies.txt"
     if chain_cookie_name:
 
         try:
-            with open(filename, "rb") as f:
+            with open(chain_cookie_name, "rb") as f:
                 session.cookies.update(pickle.load(f))
             # session.cookies.load()
         except FileNotFoundError:
             Logger.debug("Didn't find cookie file")
         except Exception as e:
             # There was an issue with reading the file.
-            os.remove(filename)
+            os.remove(chain_cookie_name)
             raise e
 
     Logger.debug(
@@ -209,8 +208,8 @@ def session_with_cookies(
             f" {response_content.status_code}"
         )
 
-    if chain_cookie_name and not os.path.exists(filename):
-        with open(filename, "wb") as f:
+    if chain_cookie_name and not os.path.exists(chain_cookie_name):
+        with open(chain_cookie_name, "wb") as f:
             pickle.dump(session.cookies.get_dict(), f)
 
     return response_content
