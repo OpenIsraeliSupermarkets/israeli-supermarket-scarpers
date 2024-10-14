@@ -47,7 +47,10 @@ class PublishPrice(WebBase):
         """from the trs extract the download urls and file names"""
 
         def get_herf_element(x):
-            return x.find_all("a")[-1]
+            herfs = x.find_all("a")
+            if len(herfs) > 0:
+                return herfs[-1]
+            return None
 
         def get_herf(x):
             return get_herf_element(x).attrs["href"]

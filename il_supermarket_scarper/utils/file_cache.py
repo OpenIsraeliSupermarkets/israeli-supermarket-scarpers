@@ -15,13 +15,13 @@ def file_cache(ttl=None):
     def load_cache(cache_file):
         """Load the cache from the specified cache file if it exists"""
         if os.path.exists(cache_file):
-            with open(cache_file, "r",encoding="utf-8") as f:
+            with open(cache_file, "r", encoding="utf-8") as f:
                 return json.load(f)
         return {}
 
     def save_cache(cache_file, cache_data):
         """Save the cache to the specified cache file"""
-        with open(cache_file, "w",encoding="utf-8") as f:
+        with open(cache_file, "w", encoding="utf-8") as f:
             json.dump(cache_data, f)
 
     def decorator(func):
