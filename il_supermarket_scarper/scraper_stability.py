@@ -10,11 +10,12 @@ class FullyStable:
     def executes_between_midnight_and_morning_and_requested_today(
         cls, when_date=None, **_
     ):
-        """it is stable if the execution is between midnight 
+        """it is stable if the execution is between midnight
         and morning and the requested date is today fails"""
         execution_time = _now()
         return (
             when_date
+            and execution_time.hour >= 0
             and execution_time.hour < 8
             and when_date.date() == execution_time.date()
         )
@@ -26,6 +27,23 @@ class FullyStable:
         return cls.executes_between_midnight_and_morning_and_requested_today(
             when_date=when_date
         )
+
+
+class SmallChain(FullyStable):
+    """define stability for small chain"""
+
+    @classmethod
+    def executes_early_morning_ask_for_alot_of_files(cls, limit=None, **_):
+        """small chain don't upload many files in the morning"""
+        execution_time = _now()
+        return limit and execution_time.hour < 12 and limit > 8
+
+    @classmethod
+    def failire_valid(cls, when_date=None, **_):
+        """return true if the parser is stble"""
+        return super().failire_valid(
+            when_date=when_date
+        ) or cls.executes_early_morning_ask_for_alot_of_files(when_date=when_date)
 
 
 class NetivHased(FullyStable):
@@ -65,6 +83,7 @@ class ScraperStability(Enum):
 
     NETIV_HASED = NetivHased
     SUPER_YUDA = SuperYuda
+    QUIK = SmallChain
 
     @classmethod
     def is_validate_scraper_found_no_files(
