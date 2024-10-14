@@ -1,5 +1,4 @@
 from enum import Enum
-import datetime
 from il_supermarket_scarper.utils import _is_saturday_in_israel, _now
 
 
@@ -62,27 +61,10 @@ class NetivHased(FullyStable):
         )
 
 
-class SuperYuda(FullyStable):
-    """Super Yuda is stablity"""
-
-    @classmethod
-    def executed_after_last_data_upload(cls, when_date=None, **_):
-        """super yuda stop uploading data after 2024-09-26"""
-        return when_date and when_date > datetime.date(2024, 9, 26)
-
-    @classmethod
-    def failire_valid(cls, when_date=None, **_):
-
-        return super().failire_valid(
-            when_date=when_date
-        ) or cls.executed_after_last_data_upload(when_date=when_date)
-
-
 class ScraperStability(Enum):
     """tracker for the stablity of the scraper"""
 
     NETIV_HASED = NetivHased
-    SUPER_YUDA = SuperYuda
     QUIK = SmallChain
 
     @classmethod

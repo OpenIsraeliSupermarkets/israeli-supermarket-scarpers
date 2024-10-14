@@ -182,6 +182,13 @@ def _now():
     return datetime.datetime.now(pytz.timezone("Asia/Jerusalem"))
 
 
+def datetime_in_tlv(year, month, day, hour, minute, second):
+    """return a datedatiem in tlv timezone"""
+    return datetime.datetime(
+        year, month, day, hour, minute, second, tzinfo=pytz.timezone("Asia/Jerusalem")
+    )
+
+
 def _is_saturday_in_israel(date=None):
     if not date:
         date = _now()
