@@ -300,11 +300,8 @@ class Engine(ScraperStatus, ABC):
     @url_connection_retry()
     def retrieve_file(self, file_link, file_save_path, timeout=30):
         """download file"""
-        file_save_path_res = (
-            file_save_path + "." + file_link.split("?")[0].split(".")[-1]
-        )
-        url_retrieve(file_link, file_save_path_res, timeout=timeout)
-        return file_save_path_res
+        url_retrieve(file_link, file_save_path, timeout=timeout)
+        return file_save_path
 
     def save_and_extract(self, arg):
         """download file and extract it"""
@@ -333,6 +330,16 @@ class Engine(ScraperStatus, ABC):
         error = None
         restart_and_retry = False
         try:
+
+            # add ext if possible
+            if not (
+                file_save_path.endswith(".gz") or file_save_path.endswith(".xml")
+            ) and (file_link.endswith(".gz") or file_link.endswith(".xml")):
+                file_save_path = (
+                    file_save_path + "." + file_link.split("?")[0].split(".")[-1]
+                )
+
+            # try to download the file
             try:
                 file_save_path_with_ext = self.retrieve_file(file_link, file_save_path)
             except Exception:  # pylint: disable=broad-except

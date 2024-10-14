@@ -27,11 +27,12 @@ class FullyStable:
             when_date=when_date
         )
 
+
 class SuperFlaky(FullyStable):
     """super flaky is stablity"""
 
     @classmethod
-    def failire_valid(cls, **_):
+    def failire_valid(cls, when_date=None, **_):
         return True
 
 
@@ -48,13 +49,15 @@ class Quik(FullyStable):
     def executes_looking_for_store(cls, files_types=None, **_):
         """if the execution is in saturday"""
         return files_types and files_types == [FileTypesFilters.STORE_FILE.name]
-    
+
     @classmethod
     def failire_valid(cls, when_date=None, limit=None, files_types=None, **_):
         """return true if the parser is stble"""
-        return super().failire_valid(
-            when_date=when_date
-        ) or cls.executes_early_morning_ask_for_alot_of_files(limit=limit) or cls.executes_looking_for_store(files_types=files_types)
+        return (
+            super().failire_valid(when_date=when_date)
+            or cls.executes_early_morning_ask_for_alot_of_files(limit=limit)
+            or cls.executes_looking_for_store(files_types=files_types)
+        )
 
 
 class NetivHased(FullyStable):
@@ -87,51 +90,56 @@ class SalachDabach(FullyStable):
         return super().failire_valid(when_date=when_date) or cls.searching_for_store(
             files_types=files_types
         )
-        
+
+
 class CityMarketGivataim(FullyStable):
     """Netiv Hased is stablity"""
 
     @classmethod
     def searching_for_update_promo(cls, files_types=None, **_):
         """if the execution is in saturday"""
-        return files_types and files_types ==[FileTypesFilters.PROMO_FILE.name]
+        return files_types and files_types == [FileTypesFilters.PROMO_FILE.name]
 
     @classmethod
     def failire_valid(cls, when_date=None, files_types=None, **_):
         """return true if the parser is stble"""
-        return super().failire_valid(when_date=when_date) or cls.searching_for_update_promo(
-            files_types=files_types
-        )
-        
+        return super().failire_valid(
+            when_date=when_date
+        ) or cls.searching_for_update_promo(files_types=files_types)
+
+
 class CityMarketKiratOno(FullyStable):
     """Netiv Hased is stablity"""
 
     @classmethod
     def searching_for_update_promo(cls, files_types=None, **_):
         """if the execution is in saturday"""
-        return files_types and files_types ==[FileTypesFilters.PROMO_FILE.name]
+        return files_types and files_types == [FileTypesFilters.PROMO_FILE.name]
 
     @classmethod
     def failire_valid(cls, when_date=None, files_types=None, **_):
         """return true if the parser is stble"""
-        return super().failire_valid(when_date=when_date) or cls.searching_for_update_promo(
-            files_types=files_types
-        )
-        
+        return super().failire_valid(
+            when_date=when_date
+        ) or cls.searching_for_update_promo(files_types=files_types)
+
+
 class CityMarketKiratGat(FullyStable):
     """Netiv Hased is stablity"""
 
     @classmethod
     def searching_for_update_promo_full(cls, files_types=None, **_):
         """if the execution is in saturday"""
-        return files_types and files_types ==[FileTypesFilters.PROMO_FULL_FILE.name]
+        return files_types and files_types == [FileTypesFilters.PROMO_FULL_FILE.name]
 
     @classmethod
     def failire_valid(cls, when_date=None, files_types=None, **_):
         """return true if the parser is stble"""
-        return super().failire_valid(when_date=when_date) or cls.searching_for_update_promo_full(
-            files_types=files_types
-        )
+        return super().failire_valid(
+            when_date=when_date
+        ) or cls.searching_for_update_promo_full(files_types=files_types)
+
+
 class ScraperStability(Enum):
     """tracker for the stablity of the scraper"""
 
@@ -142,8 +150,7 @@ class ScraperStability(Enum):
     CITY_MARKET_KIRYATONO = CityMarketKiratOno
     CITY_MARKET_KIRYATGAT = CityMarketKiratGat
     MESHMAT_YOSEF_1 = SuperFlaky
-    
-    
+
     @classmethod
     def is_validate_scraper_found_no_files(
         cls, scraper_enum, limit=None, files_types=None, store_id=None, when_date=None

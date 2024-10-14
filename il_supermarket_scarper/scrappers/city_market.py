@@ -52,7 +52,7 @@ class CityMarketShops(MultiPageWeb):
             total_page_xpath="(//li[contains(concat(' ', normalize-space(@class), ' '),"
             + "' pagination-item ')])[last()]/a/@href",
             total_pages_pattern=r"\d+",
-            page_argument="?p",
+            page_argument="&p",
         )
 
     def collect_files_details_from_page(self, html):
@@ -60,8 +60,8 @@ class CityMarketShops(MultiPageWeb):
         links = []
         filenames = []
         for link in html.xpath("//table/tbody/tr"):
-            links.append(link.xpath("td[7]/a/@href")[0] + ".xml.gz")
-            filenames.append(link.xpath("td[3]")[0].text.strip())
+            links.append(self.url + link.xpath("td[7]/a/@href")[0])
+            filenames.append(link.xpath("td[3]")[0].text.strip() + ".xml.gz")
         return links, filenames
 
     def get_file_types_id(self, files_types=None):
@@ -91,7 +91,7 @@ class CityMarketShops(MultiPageWeb):
             params = {"d": "", "s": ""}
 
             if store_id:
-                params["s"] = store_id
+                params["s"] = str(store_id).zfill(3)
             if when_date and isinstance(when_date, datetime.datetime):
                 params["d"] = when_date.strftime("%Y-%m-%d")
             if files_types:
