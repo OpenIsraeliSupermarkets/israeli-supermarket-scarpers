@@ -39,11 +39,11 @@ class SmallChain(FullyStable):
         return limit and execution_time.hour < 12 and limit > 8
 
     @classmethod
-    def failire_valid(cls, when_date=None, **_):
+    def failire_valid(cls, when_date=None, limit=None, **_):
         """return true if the parser is stble"""
         return super().failire_valid(
             when_date=when_date
-        ) or cls.executes_early_morning_ask_for_alot_of_files(when_date=when_date)
+        ) or cls.executes_early_morning_ask_for_alot_of_files(limit=limit)
 
 
 class NetivHased(FullyStable):
