@@ -4,7 +4,13 @@ import tempfile
 import os
 import uuid
 import xml.etree.ElementTree as ET
-from il_supermarket_scarper.utils import FileTypesFilters, Logger, DumpFolderNames, _now
+from il_supermarket_scarper.utils import (
+    FileTypesFilters,
+    Logger,
+    DumpFolderNames,
+    _now,
+    change_xml_encoding,
+)
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
 from il_supermarket_scarper.scraper_stability import ScraperStability
 
@@ -91,16 +97,10 @@ def make_test_case(scraper_enum, store_id):
         def _make_sure_file_is_xml_readable(self, full_file_path):
             """Ensure the file is a valid XML and readable."""
             try:
-                with open(full_file_path, "r", encoding="utf-8") as file:
-                    ET.parse(file)
+                ET.parse(full_file_path)
             except ET.ParseError:
-                raise ValueError(
-                    f"{full_file_path} is not a valid XML file or it is corrupted."
-                )
-            except Exception as e:
-                raise ValueError(
-                    f"An error occurred while reading {full_file_path}: {str(e)}"
-                )
+                change_xml_encoding(full_file_path)
+                ET.parse(full_file_path)
 
         def _clean_scarpe_delete(
             self,

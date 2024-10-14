@@ -40,3 +40,18 @@ def show_text_diff(text1, text2):
 
     # Join the diff output and return
     return "\n".join(diff)
+
+
+def change_xml_encoding(file_path):
+    """change the encoding if failing with utf-8"""
+    with open(file_path, "rb") as file:  # pylint: disable=unspecified-encoding
+        # Read the XML file content
+        content = file.read()
+
+    content = content.decode("ISO-8859-8", errors="replace")
+
+    # Save the file with the new encoding declaration
+    with open(file_path, "wb") as file:
+        file.write(
+            content.replace('encoding="ISO-8859-8"', 'encoding="UTF-8"').encode("utf-8")
+        )
