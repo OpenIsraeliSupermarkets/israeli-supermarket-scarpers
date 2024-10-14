@@ -168,7 +168,7 @@ def make_test_case(scraper_enum, store_id):
                         files_types=file_type,
                         store_id=store_id,
                         when_date=when_date,
-                    ) and not hasattr(scraper, "_is_flaky"):
+                    ):
                         self._make_sure_filter_work(
                             files_found,
                             file_type=file_type,
@@ -186,9 +186,6 @@ def make_test_case(scraper_enum, store_id):
                         self._make_sure_file_is_xml_readable(
                             os.path.join(download_path, file)
                         )
-                except ValueError:
-                    if hasattr(scraper, "_is_flaky"):
-                        pass
                 finally:
                     self._delete_download_folder(dump_path)
 

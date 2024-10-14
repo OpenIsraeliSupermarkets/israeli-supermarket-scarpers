@@ -245,7 +245,7 @@ class Engine(ScraperStatus, ABC):
             limit=limit, files_types=files_types, store_id=store_id
         )
         self.make_storage_path_dir()
-
+        results = []
         try:
             results = self._scrape(
                 limit=limit,
@@ -259,8 +259,14 @@ class Engine(ScraperStatus, ABC):
             )
             self.on_download_completed(results=results)
             self.on_scrape_completed(self.get_storage_path())
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            if not suppress_exception:
+                raise e
+            Logger.warning(f"Suppressing exception! {e}")
         finally:
             self._post_scraping()
+
+        return results
 
     @abstractmethod
     def _scrape(
