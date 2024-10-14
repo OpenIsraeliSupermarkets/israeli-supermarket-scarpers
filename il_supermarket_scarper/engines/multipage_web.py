@@ -153,7 +153,7 @@ class MultiPageWeb(WebBase):
         filenames = []
         for link in html.xpath('//*[@id="gridContainer"]/table/tbody/tr/td[1]/a/@href'):
             links.append(link)
-            filenames.append(ntpath.basename(urlsplit(link).path).split(".")[0])
+            filenames.append(ntpath.basename(urlsplit(link).path))
         return links, filenames
 
     def process_links_before_download(

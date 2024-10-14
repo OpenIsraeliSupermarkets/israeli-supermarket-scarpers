@@ -31,7 +31,7 @@ class SuperPharm(MultiPageWeb):
         filenames = []
         for element in html.xpath("//*/tr")[1:]:  # skip header
             links.append(self.url + element.xpath("./td[6]/a/@href")[0])
-            filenames.append(element.xpath("./td[2]")[0].text.split(".")[0])
+            filenames.append(element.xpath("./td[2]")[0].text)
         return links, filenames
 
     @url_connection_retry()
