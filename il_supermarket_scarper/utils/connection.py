@@ -190,7 +190,9 @@ def session_with_cookies(
             os.remove(filename)
             raise e
 
-    Logger.debug(f"On a new Session requesting url: {method},{url},{body}")
+    Logger.debug(
+        f"On a new Session requesting url: method={method},url={url},body={body}"
+    )
 
     if method == "POST":
         response_content = session.post(url, data=body, timeout=timeout)
@@ -238,12 +240,6 @@ def render_webpage_from_cache(cached_page, extraction):
         content = extraction(page)
         browser.close()
     return content
-
-
-@url_connection_retry()
-def session_and_check_status(url, timeout=15, method="GET", body=None):
-    """use a session to load the response and check status"""
-    return session_with_cookies(url, timeout=timeout, method=method, body=body)
 
 
 def url_retrieve(url, filename, timeout=30):

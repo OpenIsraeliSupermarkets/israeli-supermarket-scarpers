@@ -16,7 +16,6 @@ from .connection import (
     download_connection_retry,
     url_connection_retry,
     disable_when_outside_israel,
-    session_and_check_status,
     session_with_cookies,
     url_retrieve,
     collect_from_ftp,

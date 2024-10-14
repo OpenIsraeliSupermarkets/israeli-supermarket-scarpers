@@ -31,6 +31,7 @@ class Engine(ScraperStatus, ABC):
         self.chain_id = chain_id
         self.max_threads = max_threads
         self.storage_path = get_output_folder(self.chain.value, folder_name=folder_name)
+        self.assigned_cookie = f"{self.chain.name}_{id(self)}.txt"
 
     def get_storage_path(self):
         """the the storage page of the files downloaded"""
@@ -175,14 +176,17 @@ class Engine(ScraperStatus, ABC):
     def session_with_cookies_by_chain(self, url, method="GET", body=None, timeout=15):
         """request resource with cookie by chain name"""
         return session_with_cookies(
-            url, chain_cookie_name=self.chain, timeout=timeout, method=method, body=body
+            url,
+            chain_cookie_name=self.assigned_cookie,
+            timeout=timeout,
+            method=method,
+            body=body,
         )
 
     def post_scraping(self):
         """job to do post scraping"""
-        cookie_file = f"{self.chain}_cookies.txt"
-        if os.path.exists(cookie_file):
-            os.remove(cookie_file)
+        if os.path.exists(self.assigned_cookie):
+            os.remove(self.assigned_cookie)
 
     def _validate_scraper_params(self, limit=None, files_types=None, store_id=None):
         if limit and limit <= 0:

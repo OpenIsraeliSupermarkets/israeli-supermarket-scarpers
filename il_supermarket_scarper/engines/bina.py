@@ -5,7 +5,6 @@ import datetime
 from il_supermarket_scarper.utils import (
     Logger,
     url_connection_retry,
-    session_and_check_status,
     url_retrieve,
     FileTypesFilters,
 )
@@ -118,7 +117,7 @@ class Bina(Aspx):
 
     @url_connection_retry()
     def retrieve_file(self, file_link, file_save_path, timeout=30):
-        response_content = session_and_check_status(
+        response_content = self.session_with_cookies_by_chain(
             file_link,
         )
         spath = json.loads(response_content.content)

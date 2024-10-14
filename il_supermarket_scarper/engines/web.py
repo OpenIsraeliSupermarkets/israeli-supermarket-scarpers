@@ -2,7 +2,6 @@ from bs4 import BeautifulSoup
 from il_supermarket_scarper.utils import (
     Logger,
     execute_in_parallel,
-    session_and_check_status,
     retry_files,
 )
 
@@ -82,7 +81,7 @@ class WebBase(Engine):
 
         all_trs = []
         for url in urls_to_collect_link_from:
-            req_res = session_and_check_status(**url)
+            req_res = self.session_with_cookies_by_chain(**url)
             trs = self.get_data_from_page(req_res)
             all_trs.extend(trs)
 

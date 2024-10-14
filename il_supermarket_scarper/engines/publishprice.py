@@ -1,6 +1,5 @@
 from bs4 import BeautifulSoup
 
-from il_supermarket_scarper.utils import session_and_check_status
 from .web import WebBase
 
 
@@ -30,7 +29,7 @@ class PublishPrice(WebBase):
         self.folder = None
 
     def get_data_from_page(self, req_res):
-        req_res = session_and_check_status(self.url)
+        req_res = self.session_with_cookies_by_chain(self.url)
         soup = BeautifulSoup(req_res.text, features="lxml")
 
         # the developer hard-coded the files names in the html
