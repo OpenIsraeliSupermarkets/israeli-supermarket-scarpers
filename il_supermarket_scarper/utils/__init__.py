@@ -9,6 +9,7 @@ from .status import (
     _is_weekend_in_israel,
     _now,
     datetime_in_tlv,
+    _testing_now,
 )
 from .scraper_status import ScraperStatus
 from .file_types import FileTypesFilters

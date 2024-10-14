@@ -182,6 +182,14 @@ def _now():
     return datetime.datetime.now(pytz.timezone("Asia/Jerusalem"))
 
 
+def _testing_now(hour_consider_stable=10):
+    current_time = _now()
+
+    if current_time.hour < hour_consider_stable:
+        current_time = current_time - datetime.timedelta(hours=hour_consider_stable)
+    return current_time
+
+
 def datetime_in_tlv(year, month, day, hour, minute, second):
     """return a datedatiem in tlv timezone"""
     return datetime.datetime(

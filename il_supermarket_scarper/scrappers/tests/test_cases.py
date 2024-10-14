@@ -8,7 +8,7 @@ from il_supermarket_scarper.utils import (
     FileTypesFilters,
     Logger,
     DumpFolderNames,
-    _now,
+    _testing_now,
     change_xml_encoding,
 )
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
@@ -195,18 +195,18 @@ def make_test_case(scraper_enum, store_id):
 
         def test_scrape_one(self):
             """scrape one file and make sure it exists"""
-            self._clean_scarpe_delete(scraper_enum, limit=1, when_date=_now())
+            self._clean_scarpe_delete(scraper_enum, limit=1, when_date=_testing_now())
 
         def test_scrape_ten(self):
             """scrape ten file and make sure they exists"""
-            self._clean_scarpe_delete(scraper_enum, limit=10, when_date=_now())
+            self._clean_scarpe_delete(scraper_enum, limit=10, when_date=_testing_now())
 
         def test_scrape_promo(self):
             """scrape one promo file and make sure it exists"""
             self._clean_scarpe_delete(
                 scraper_enum,
                 limit=1,
-                when_date=_now(),
+                when_date=_testing_now(),
                 file_type=[FileTypesFilters.PROMO_FILE.name],
             )
 
@@ -215,7 +215,7 @@ def make_test_case(scraper_enum, store_id):
             self._clean_scarpe_delete(
                 scraper_enum,
                 limit=1,
-                when_date=_now(),
+                when_date=_testing_now(),
                 file_type=[FileTypesFilters.PROMO_FULL_FILE.name],
             )
 
@@ -224,7 +224,7 @@ def make_test_case(scraper_enum, store_id):
             self._clean_scarpe_delete(
                 scraper_enum,
                 limit=1,
-                when_date=_now(),
+                when_date=_testing_now(),
                 file_type=[FileTypesFilters.STORE_FILE.name],
             )
 
@@ -233,7 +233,7 @@ def make_test_case(scraper_enum, store_id):
             self._clean_scarpe_delete(
                 scraper_enum,
                 limit=1,
-                when_date=_now(),
+                when_date=_testing_now(),
                 file_type=[FileTypesFilters.PRICE_FILE.name],
             )
 
@@ -242,20 +242,20 @@ def make_test_case(scraper_enum, store_id):
             self._clean_scarpe_delete(
                 scraper_enum,
                 limit=1,
-                when_date=_now(),
+                when_date=_testing_now(),
                 file_type=[FileTypesFilters.PRICE_FULL_FILE.name],
             )
 
         def test_scrape_file_from_single_store(self):
             """test fetching only files from a ceriten store"""
             self._clean_scarpe_delete(
-                scraper_enum, store_id=store_id, when_date=_now(), limit=1
+                scraper_enum, store_id=store_id, when_date=_testing_now(), limit=1
             )
 
         def test_scrape_file_from_single_store_last(self):
             """test fetching latest file only"""
             self._clean_scarpe_delete(
-                scraper_enum, store_id=store_id, when_date=_now(), limit=1
+                scraper_enum, store_id=store_id, when_date=_testing_now(), limit=1
             )
 
     return TestScapers
