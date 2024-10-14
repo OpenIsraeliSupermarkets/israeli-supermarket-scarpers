@@ -28,6 +28,17 @@ class PublishPrice(WebBase):
         )
         self.folder = None
 
+    def get_request_url(
+        self, files_types=None, store_id=None, when_date=None
+    ):  # pylint: disable=unused-argument
+        """get all links to collect download links from"""
+
+        formated = ""
+        if when_date:
+            formated = when_date.strftime("%Y%m%d")
+            formated = f"?p=./{formated}"
+        return [{"url": self.url + formated, "method": "GET"}]
+
     def get_data_from_page(self, req_res):
         req_res = self.session_with_cookies_by_chain(self.url)
         soup = BeautifulSoup(req_res.text, features="lxml")
