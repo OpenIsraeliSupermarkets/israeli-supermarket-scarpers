@@ -195,7 +195,7 @@ def make_test_case(scraper_enum, store_id):
 
         def test_scrape_one(self):
             """scrape one file and make sure it exists"""
-            self._clean_scarpe_delete(scraper_enum, limit=1)
+            self._clean_scarpe_delete(scraper_enum, limit=1, when_date=_now())
 
         def test_scrape_ten(self):
             """scrape ten file and make sure they exists"""
