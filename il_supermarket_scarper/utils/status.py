@@ -5,10 +5,10 @@ import enum
 import holidays
 import pytz
 from .logger import Logger
-from .connection import render_webpage
+from .connection import render_webpage, render_webpage_from_cache
 
 
-def get_statue_page(extraction_type):
+def get_statue_page(extraction_type, source="gov.il"):
     """fetch the gov.il site"""
     url = "https://www.gov.il/he/departments/legalInfo/cpfta_prices_regulations"
     # Create a handle, page, to handle the contents of the website
@@ -23,11 +23,24 @@ def get_statue_page(extraction_type):
             return links.map(link => link.textContent.trim());
         }"""
             )
+        elif extraction_type == "all_text":
+            content = page.evaluate(
+                """
+            () => {
+                return document.body.innerText;
+            }"""
+            )
         else:
             raise ValueError(f"type '{extraction_type}' is not valid.")
         return content
 
-    return render_webpage(url, extraction=get_from_playwrite)
+    if source == "gov.il":
+        return render_webpage(url, extraction=get_from_playwrite)
+    if source == "cache":
+        return render_webpage_from_cache(
+            get_cached_page(), extraction=get_from_playwrite
+        )
+    raise ValueError(f"source '{source}' is not valid.")
 
 
 def get_cached_page():

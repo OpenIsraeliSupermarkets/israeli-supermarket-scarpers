@@ -227,6 +227,19 @@ def render_webpage(url, extraction):
     return content
 
 
+def render_webpage_from_cache(cached_page, extraction):
+    """render website with playwrite from file system cache"""
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page()
+        page.set_content(cached_page)
+        page.wait_for_load_state("networkidle")
+        content = extraction(page)
+        browser.close()
+    return content
+
+
 @url_connection_retry()
 def session_and_check_status(url, timeout=15, method="GET", body=None):
     """use a session to load the response and check status"""
