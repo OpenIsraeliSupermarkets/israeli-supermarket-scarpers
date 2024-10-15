@@ -190,7 +190,7 @@ def session_with_cookies(
             raise e
 
     Logger.debug(
-        f"On a new Session requesting url: method={method},url={url},body={body}"
+        f"On a new Session requesting url: method={method}, url={url}, body={body}"
     )
 
     if method == "POST":
