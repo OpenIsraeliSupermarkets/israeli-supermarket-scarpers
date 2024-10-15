@@ -113,9 +113,13 @@ class Engine(ScraperStatus, ABC):
         elif isinstance(when_date, str) and when_date == "latest":
             intreable_ = self.get_only_latest(by_function, intreable_)
         elif when_date is not None:
-            raise ValueError(f"when_date should be datetime or 'latest', got {when_date}")
+            raise ValueError(
+                f"when_date should be datetime or 'latest', got {when_date}"
+            )
 
-        Logger.info(f"Number of entry after filtering base on time is {len(intreable_)}")
+        Logger.info(
+            f"Number of entry after filtering base on time is {len(intreable_)}"
+        )
 
         # filter by limit if the 'files_types' filter is not on.
         if limit:
