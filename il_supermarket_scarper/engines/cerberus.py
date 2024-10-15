@@ -1,5 +1,5 @@
 import os
-
+import datetime
 
 from il_supermarket_scarper.utils import (
     extract_xml_file_from_gz_file,
@@ -8,6 +8,7 @@ from il_supermarket_scarper.utils import (
     collect_from_ftp,
     fetch_temporary_gz_file_from_ftp,
     retry_files,
+    FileTypesFilters,
 )
 from .engine import Engine
 
@@ -36,7 +37,7 @@ class Cerberus(Engine):
         self.ftp_session = False
 
     @retry_files(num_of_retrys=2)
-    def scrape(
+    def _scrape(
         self,
         limit=None,
         files_types=None,
@@ -45,15 +46,10 @@ class Cerberus(Engine):
         files_names_to_scrape=None,
         filter_null=False,
         filter_zero=False,
+        suppress_exception=False,
     ):
         files = []
         try:
-            super().scrape(
-                limit=limit,
-                files_types=files_types,
-                store_id=store_id,
-                when_date=when_date,
-            )
             files = self.collect_files_details_from_site(
                 limit=limit,
                 files_types=files_types,
@@ -62,19 +58,55 @@ class Cerberus(Engine):
                 store_id=store_id,
                 when_date=when_date,
                 files_names_to_scrape=files_names_to_scrape,
+                suppress_exception=suppress_exception,
             )
             self.on_collected_details(files)
 
             results = execute_in_parallel(
                 self.persist_from_ftp, list(files), max_threads=self.max_threads
             )
-            self.on_download_completed(results=results)
-            self.on_scrape_completed(self.get_storage_path())
             return results
         except Exception as e:  # pylint: disable=broad-except
             self.on_download_fail(e, files=files)
-            Logger.error_execption(e)
-            return []
+            raise e
+
+    def get_type_pattern(self, files_types):
+        """get the file type pattern"""
+        file_type_mapping = {
+            FileTypesFilters.STORE_FILE.name: "store",
+            FileTypesFilters.PRICE_FILE.name: "price",
+            FileTypesFilters.PROMO_FILE.name: "promo",
+            FileTypesFilters.PRICE_FULL_FILE.name: "pricef",
+            FileTypesFilters.PROMO_FULL_FILE.name: "promof",
+        }
+        if files_types is None or files_types == FileTypesFilters.all_types():
+            return [None]
+
+        responses = []
+        for file_type in files_types:
+            if file_type not in file_type_mapping:
+                raise ValueError(f"File type {file_type} not supported")
+            responses.append(file_type_mapping[file_type])
+        return responses
+
+    def build_filter_arg(self, store_id=None, when_date=None, files_types=None):
+        """build the filter arg for the ftp"""
+        date_pattern = None
+        if when_date and isinstance(when_date, datetime.datetime):
+            date_pattern = when_date.strftime("%Y%m%d")
+
+        for type_pattern in self.get_type_pattern(files_types):
+            output_pattern = []
+            if type_pattern:
+                output_pattern.append(type_pattern)
+            if store_id:
+                output_pattern.append(f"{store_id}-")
+            if date_pattern:
+                output_pattern.append(date_pattern)
+
+            if len(output_pattern) == 0:
+                yield None
+            yield "*" + "*".join(output_pattern) + "*"
 
     def collect_files_details_from_site(
         self,
@@ -85,25 +117,27 @@ class Cerberus(Engine):
         store_id=None,
         when_date=None,
         files_names_to_scrape=None,
+        suppress_exception=False,
     ):
         """collect all files to download from the site"""
-        files = collect_from_ftp(
-            self.ftp_host, self.ftp_username, self.ftp_password, self.ftp_path
-        )
+        files = []
+        for filter_arg in self.build_filter_arg(store_id, when_date, files_types):
+            filter_files = collect_from_ftp(
+                self.ftp_host,
+                self.ftp_username,
+                self.ftp_password,
+                self.ftp_path,
+                arg=filter_arg,
+            )
+            files.extend(filter_files)
 
         Logger.info(f"Found {len(files)} files")
 
-        if filter_zero:
-            files = list(
-                filter(lambda x: "0000000000000" not in x, files)
-            )  # filter out files
-            Logger.info(
-                f"After filtering with '0000000000000': Found {len(files)} files"
-            )
+        files = self.filter_bad_files(
+            files, filter_null=filter_null, filter_zero=filter_zero
+        )
 
-        if filter_null:
-            files = list(filter(lambda x: "NULL" not in x, files))  # filter out files
-            Logger.info(f"After filtering with 'NULL': Found {len(files)} files")
+        Logger.info(f"After filtering bad files: Found {len(files)} files")
 
         files = list(
             filter(lambda x: x.split(".")[-1] in self.target_file_extensions, files)
@@ -120,6 +154,7 @@ class Cerberus(Engine):
             store_id=store_id,
             when_date=when_date,
             files_names_to_scrape=files_names_to_scrape,
+            suppress_exception=suppress_exception,
         )
         Logger.info(f"After applying limit: Found {len(files)} files")
 
@@ -136,7 +171,7 @@ class Cerberus(Engine):
             if ext not in [".gz", ".xml"]:
                 raise ValueError(f"File {file_name} extension is not .gz or .xml")
 
-            Logger.info(f"Start persisting file {file_name}")
+            Logger.debug(f"Start persisting file {file_name}")
             temporary_gz_file_path = os.path.join(self.storage_path, file_name)
 
             fetch_temporary_gz_file_from_ftp(
@@ -145,16 +180,17 @@ class Cerberus(Engine):
                 self.ftp_password,
                 self.ftp_path,
                 temporary_gz_file_path,
+                timeout=30,
             )
             downloaded = True
 
             if ext == ".gz":
-                Logger.info(
+                Logger.debug(
                     f"File size is {os.path.getsize(temporary_gz_file_path)} bytes."
                 )
                 extract_xml_file_from_gz_file(temporary_gz_file_path)
 
-            Logger.info(f"Done persisting file {file_name}")
+            Logger.debug(f"Done persisting file {file_name}")
             extract_succefully = True
         except Exception as exception:  # pylint: disable=broad-except
             Logger.error(

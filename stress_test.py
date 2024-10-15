@@ -6,6 +6,7 @@ import pstats
 import cProfile
 import io
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
+from il_supermarket_scarper.utils import _now
 
 
 def format_stats_as_json(profile, project_name):
@@ -46,15 +47,18 @@ if __name__ == "__main__":
         def full_execution(scraper):
             """full execution of the scraper"""
             with tempfile.TemporaryDirectory() as tmpdirname:
-                initer = ScraperFactory.get(scraper)(folder_name=tmpdirname)
-                return initer.scrape()
+                try:
+                    initer = ScraperFactory.get(scraper)(folder_name=tmpdirname)
+                    return initer.scrape(when_date=_now()), ""
+                except Exception as e:  # pylint: disable=broad-exception-caught
+                    return [], str(e)
 
         execution_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         start_time = time.time()
         pr = cProfile.Profile()
         pr.enable()
 
-        files = full_execution(scraper_name)
+        files, error = full_execution(scraper_name)
 
         pr.disable()
 
@@ -66,6 +70,7 @@ if __name__ == "__main__":
             "end_time": end_time,
             "time": end_time - start_time,
             "files": len(files),
+            "error": error,
         }
 
         with open("stress_test_results.json", "w", encoding="utf-8") as f:

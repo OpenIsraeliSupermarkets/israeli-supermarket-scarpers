@@ -1,8 +1,8 @@
 from il_supermarket_scarper.engines.publishprice import PublishPrice
-from il_supermarket_scarper.utils import FlakyScraper, DumpFolderNames
+from il_supermarket_scarper.utils import DumpFolderNames
 
 
-@FlakyScraper
+# @FlakyScraper
 class Quik(PublishPrice):
     """scaper for quik"""
 

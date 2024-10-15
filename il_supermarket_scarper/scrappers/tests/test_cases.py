@@ -4,8 +4,15 @@ import tempfile
 import os
 import uuid
 import xml.etree.ElementTree as ET
-from il_supermarket_scarper.utils import FileTypesFilters, Logger, DumpFolderNames, _now
+from il_supermarket_scarper.utils import (
+    FileTypesFilters,
+    Logger,
+    DumpFolderNames,
+    _testing_now,
+    change_xml_encoding,
+)
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
+from il_supermarket_scarper.scraper_stability import ScraperStability
 
 
 def make_test_case(scraper_enum, store_id):
@@ -45,23 +52,31 @@ def make_test_case(scraper_enum, store_id):
             when_date=None,
         ):
             """make sure the file type filter works"""
+            # make sure the file type is applied
             if file_type:
                 filtered_files = 0
                 for f_type in file_type:
                     filtered_files += len(FileTypesFilters.filter(f_type, files_found))
                 assert len(files_found) == filtered_files
+
+            # check the store id is applied
             if store_id:
                 store_mark = []
                 for file in files_found:
                     store_mark.append(int(file.split("-")[1]))
                 assert len(set(store_mark)) == 1 and len(store_mark) == len(files_found)
-            if when_date:
-                files_sources = []
-                for file in files_found:
-                    source = file.split("-")[:2]
-                    assert source not in files_sources
-                    store_mark.append(source)
+                assert str(store_id) in str(
+                    store_mark[0]
+                ), f"{store_id} not in {store_mark[0]}"
 
+            # check the date time stamp is applied
+            if when_date:
+                for file in files_found:
+                    assert (
+                        when_date.strftime("%Y%m%d") in file
+                    ), f"{when_date} not in {file}"
+
+            # check limit
             assert (
                 limit is None or len(files_found) == limit
             ), f""" Found {files_found} f"files but should be {limit}"""
@@ -79,26 +94,13 @@ def make_test_case(scraper_enum, store_id):
             file_ext = file_name.split(".")[-1]
             assert file_ext == "xml", f" should be xml but {file_ext}, file:{file_name}"
 
-        # def _make_sure_file_is_not_empty(self, scraper, full_file_path):
-        #     """make sure the files is not empty"""
-        #     if not scraper.is_valid_file_empty(full_file_path):
-        #         assert (
-        #             os.path.getsize(full_file_path) != 0
-        #         ), f"{full_file_path} is empty file."
-
         def _make_sure_file_is_xml_readable(self, full_file_path):
             """Ensure the file is a valid XML and readable."""
             try:
-                with open(full_file_path, "r", encoding="utf-8") as file:
-                    ET.parse(file)
+                ET.parse(full_file_path)
             except ET.ParseError:
-                raise ValueError(
-                    f"{full_file_path} is not a valid XML file or it is corrupted."
-                )
-            except Exception as e:
-                raise ValueError(
-                    f"An error occurred while reading {full_file_path}: {str(e)}"
-                )
+                change_xml_encoding(full_file_path)
+                ET.parse(full_file_path)
 
         def _clean_scarpe_delete(
             self,
@@ -132,7 +134,7 @@ def make_test_case(scraper_enum, store_id):
             init_scraper_function = ScraperFactory.get(scraper_enum)
 
             if init_scraper_function is None:
-                Logger.info(f"{scraper_enum} is disabled.")
+                Logger.warning(f"{scraper_enum} is disabled.")
             else:
                 try:
                     scraper = init_scraper_function(folder_name=dump_path)
@@ -144,6 +146,7 @@ def make_test_case(scraper_enum, store_id):
                         "when_date": when_date,
                         "filter_null": True,
                         "filter_zero": True,
+                        "suppress_exception": True,
                     }
 
                     scraper.scrape(**kwarg)
@@ -159,12 +162,13 @@ def make_test_case(scraper_enum, store_id):
                     )
                     files_found = os.listdir(download_path)
 
-                    if not scraper.is_validate_scraper_found_no_files(
+                    if not ScraperStability.is_validate_scraper_found_no_files(
+                        scraper_enum.name,
                         limit=limit,
                         files_types=file_type,
                         store_id=store_id,
                         when_date=when_date,
-                    ) and not hasattr(scraper, "_is_flaky"):
+                    ):
                         self._make_sure_filter_work(
                             files_found,
                             file_type=file_type,
@@ -178,15 +182,10 @@ def make_test_case(scraper_enum, store_id):
                             scraper.get_chain_id(), file
                         )
                         self._make_sure_file_extension_is_xml(file)
-                        # self._make_sure_file_is_not_empty(
-                        #     scraper, os.path.join(download_path, file)
-                        # )
+
                         self._make_sure_file_is_xml_readable(
                             os.path.join(download_path, file)
                         )
-                except ValueError:
-                    if hasattr(scraper, "_is_flaky"):
-                        pass
                 finally:
                     self._delete_download_folder(dump_path)
 
@@ -196,17 +195,18 @@ def make_test_case(scraper_enum, store_id):
 
         def test_scrape_one(self):
             """scrape one file and make sure it exists"""
-            self._clean_scarpe_delete(scraper_enum, limit=1)
+            self._clean_scarpe_delete(scraper_enum, limit=1, when_date=_testing_now())
 
         def test_scrape_ten(self):
             """scrape ten file and make sure they exists"""
-            self._clean_scarpe_delete(scraper_enum, limit=10)
+            self._clean_scarpe_delete(scraper_enum, limit=10, when_date=_testing_now())
 
         def test_scrape_promo(self):
             """scrape one promo file and make sure it exists"""
             self._clean_scarpe_delete(
                 scraper_enum,
                 limit=1,
+                when_date=_testing_now(),
                 file_type=[FileTypesFilters.PROMO_FILE.name],
             )
 
@@ -215,6 +215,7 @@ def make_test_case(scraper_enum, store_id):
             self._clean_scarpe_delete(
                 scraper_enum,
                 limit=1,
+                when_date=_testing_now(),
                 file_type=[FileTypesFilters.PROMO_FULL_FILE.name],
             )
 
@@ -223,6 +224,7 @@ def make_test_case(scraper_enum, store_id):
             self._clean_scarpe_delete(
                 scraper_enum,
                 limit=1,
+                when_date=_testing_now(),
                 file_type=[FileTypesFilters.STORE_FILE.name],
             )
 
@@ -231,6 +233,7 @@ def make_test_case(scraper_enum, store_id):
             self._clean_scarpe_delete(
                 scraper_enum,
                 limit=1,
+                when_date=_testing_now(),
                 file_type=[FileTypesFilters.PRICE_FILE.name],
             )
 
@@ -239,20 +242,20 @@ def make_test_case(scraper_enum, store_id):
             self._clean_scarpe_delete(
                 scraper_enum,
                 limit=1,
+                when_date=_testing_now(),
                 file_type=[FileTypesFilters.PRICE_FULL_FILE.name],
             )
 
         def test_scrape_file_from_single_store(self):
             """test fetching only files from a ceriten store"""
             self._clean_scarpe_delete(
-                scraper_enum,
-                store_id=store_id,
+                scraper_enum, store_id=store_id, when_date=_testing_now(), limit=1
             )
 
         def test_scrape_file_from_single_store_last(self):
             """test fetching latest file only"""
             self._clean_scarpe_delete(
-                scraper_enum, store_id=store_id, when_date=_now(), limit=1
+                scraper_enum, store_id=store_id, when_date=_testing_now(), limit=1
             )
 
     return TestScapers

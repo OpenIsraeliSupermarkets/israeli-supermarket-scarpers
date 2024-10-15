@@ -43,7 +43,7 @@ def execute_in_parallel(
     )
 
     all_done = aggregtion_function(results)
-    print(f"Done with {len(all_done)} tasks in parallel")
+    Logger.info(f"Done with {len(all_done)} tasks in parallel")
     return all_done
 
 

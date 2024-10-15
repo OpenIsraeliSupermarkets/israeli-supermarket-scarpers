@@ -217,7 +217,7 @@ def __retry_files(
     retry_list = []
     all_results = []
     for i in range(num_of_retrys):
-        logger.info(f"Itreation #{i},retry_list={retry_list}")
+        logger.info(f"File Retry: Itreation #{i},retry_list={retry_list}")
 
         if retry_list:
             # replace the value of 'files_names_to_scrape'
@@ -251,14 +251,3 @@ def compute_retry(results):
         else:
             other_results.append(result)
     return files_to_retry, other_results
-
-
-# def filter_spesific_files(download_urls, file_names, retry_list):
-#     """filter the files to retry"""
-#     _download_urls = []
-#     _file_names = []
-#     for download_url, file_name in zip(download_urls, file_names):
-#         if file_name in retry_list:
-#             _download_urls.append(download_url)
-#             _file_names.append(file_name)
-#     return _download_urls, _file_names

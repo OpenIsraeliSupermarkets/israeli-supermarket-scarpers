@@ -3,12 +3,12 @@ import ntpath
 import os
 import time
 import socket
+import pickle
 import random
 from ftplib import FTP_TLS, error_perm
 import subprocess
 
 from http.client import RemoteDisconnected
-from http.cookiejar import MozillaCookieJar
 from http.cookiejar import LoadError
 from urllib.error import URLError
 from urllib3.exceptions import MaxRetryError, ReadTimeoutError
@@ -22,9 +22,9 @@ from requests.exceptions import (
     ChunkedEncodingError,
     ConnectTimeout,
 )
-from cachetools import cached, TTLCache
 from .logger import Logger
 from .retry import retry
+from .file_cache import file_cache
 
 
 exceptions = (
@@ -81,7 +81,7 @@ def url_connection_retry(init_timeout=15):
             max_delay=5 * 60,
             logger=Logger,
             timeout=init_timeout,
-            backoff_timeout=5,
+            backoff_timeout=10,
         )
         def inner(*args, **kwargs):
             socket.setdefaulttimeout(kwargs.get("timeout", 15))
@@ -92,40 +92,19 @@ def url_connection_retry(init_timeout=15):
     return wrapper
 
 
-def cache():
-    """decorator the define the retry logic of connections tring to send get request"""
-
-    def define_key(self, limit=None, files_types=None):
-        key = self.get_chain_name()
-        if limit:
-            key = key + "_" + str(limit)  # + func.__name__
-        if files_types:
-            key = key + "_" + ".".join(files_types)
-
-        return key
-
-    def wrapper(func):
-        @cached(cache=TTLCache(maxsize=1024, ttl=60), key=define_key)
-        def inner(*args, **kwargs):
-            return func(*args, **kwargs)
-
-        return inner
-
-    return wrapper
-
-
-@cached(cache=TTLCache(maxsize=1024, ttl=60))
+@file_cache(ttl=60)
 def get_ip():
     """get the ip of the computer running the code"""
     response = requests.get("https://api.ipify.org?format=json", timeout=15).json()
     return response["ip"]
 
 
-@cached(cache=TTLCache(maxsize=1024, ttl=60))
+@file_cache(ttl=60)
 def get_location():
     """get the estimated location of the computer running the code"""
     ip_address = get_ip()
     response = requests.get(f"https://ipapi.co/{ip_address}/json/", timeout=15).json()
+
     location_data = {
         "ip": ip_address,
         "city": response.get(
@@ -146,18 +125,23 @@ def disable_when_outside_israel(function):
             "can't scarper Gov.il site outside IL region."
         )
 
-    estimated_location = get_location()
+    execute = True
+    try:
+        estimated_location = get_location()
+        execute = not (
+            estimated_location["country"] is not None
+            and estimated_location["country"] != "Israel"
+        )
+    except Exception:  # pylint: disable=broad-exception-caught
+        pass
 
-    if (
-        estimated_location["country"] is not None
-        and estimated_location["country"] != "Israel"
-    ):
-        Logger.info(f"estimated location is {str(estimated_location)}")
-        return _decorator
-    return function
+    if execute:
+        return function
+
+    Logger.info(f"estimated location is {str(estimated_location)}")
+    return _decorator
 
 
-@cached(cache=TTLCache(maxsize=1024, ttl=60 * 5))
 def get_random_user_agent():
     """get random user agent"""
     user_agents = [
@@ -177,39 +161,57 @@ def get_random_user_agent():
 
 
 @url_connection_retry()
-def session_with_cookies(url, timeout=15, chain_cookie_name=None):
-    """request resource with cookies enabled"""
+def session_with_cookies(
+    url, timeout=15, chain_cookie_name=None, method="GET", body=None
+):
+    """
+    Request resource with cookies enabled.
+
+    Parameters:
+    - url: URL to request
+    - timeout: Request timeout
+    - chain_cookie_name: Optional, name for saving/loading cookies
+    - method: HTTP method, defaults to GET
+    - body: Data to be sent in the request body (for POST or PUT requests)
+    """
 
     session = requests.Session()
-
     if chain_cookie_name:
-        filemame = f"{chain_cookie_name}_cookies.txt"
-        session.cookies = MozillaCookieJar(filemame)
+
         try:
-            session.cookies.load()
+            with open(chain_cookie_name, "rb") as f:
+                session.cookies.update(pickle.load(f))
+            # session.cookies.load()
         except FileNotFoundError:
-            Logger.info("didn't find cookie file")
-        except LoadError as e:
-            # there was an issue with reading the file.
-            os.remove(filemame)
+            Logger.debug("Didn't find cookie file")
+        except Exception as e:
+            # There was an issue with reading the file.
+            os.remove(chain_cookie_name)
             raise e
 
-    Logger.info(f"On a new Session requesting url: {url}")
+    Logger.debug(
+        f"On a new Session requesting url: method={method}, url={url}, body={body}"
+    )
 
-    response_content = session.get(url, timeout=timeout)
+    if method == "POST":
+        response_content = session.post(url, data=body, timeout=timeout)
+    else:
+        response_content = session.get(url, timeout=timeout)
 
     if response_content.status_code != 200:
-        Logger.info(
-            f"On Session, Got status code: {response_content.status_code}"
+        Logger.debug(
+            f"On Session, got status code: {response_content.status_code}"
             f", body is {response_content.text} "
         )
         raise ConnectionError(
-            f"response for {url}, returned with status"
+            f"Response for {url}, returned with status"
             f" {response_content.status_code}"
         )
 
-    if chain_cookie_name and not os.path.exists(f"{chain_cookie_name}_cookies.txt"):
-        session.cookies.save()
+    if chain_cookie_name and not os.path.exists(chain_cookie_name):
+        with open(chain_cookie_name, "wb") as f:
+            pickle.dump(session.cookies.get_dict(), f)
+
     return response_content
 
 
@@ -226,10 +228,17 @@ def render_webpage(url, extraction):
     return content
 
 
-@url_connection_retry()
-def session_and_check_status(url, timeout=15):
-    """use a session to load the response and check status"""
-    return session_with_cookies(url, timeout=timeout)
+def render_webpage_from_cache(cached_page, extraction):
+    """render website with playwrite from file system cache"""
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page()
+        page.set_content(cached_page)
+        page.wait_for_load_state("networkidle")
+        content = extraction(page)
+        browser.close()
+    return content
 
 
 def url_retrieve(url, filename, timeout=30):
@@ -256,26 +265,12 @@ def url_retrieve(url, filename, timeout=30):
     if size >= 0 and read < size:
         msg = f"retrieval incomplete: got only {read:d} out of {size:d} bytes"
         raise ValueError(msg, (filename, _request.headers))
-    # with contextlib.closing(requests.get(url, stream=True, timeout=45)) as context:
-    #     context.raise_for_status()
-    #     with open(filename, "wb") as file:
-    #         for chunk in context.iter_content(chunk_size=8_192):
-    #             file.write(chunk)
-    # with open(filename, "wb") as out_file:
-    #     with contextlib.closing(urllib.request.urlopen(url, timeout=45)) as file:
-    #         block_size = 1024 * 8
-    #         while True:
-    #             block = file.read(block_size)
-    #             if not block:
-    #                 break
-    #             out_file.write(block)
-    # import shutil
-    # with urllib.request.urlopen(url) as response, open(filename, 'wb') as out_file:
-    #     shutil.copyfileobj(response, out_file)
 
 
 @url_connection_retry(60 * 5)
-def collect_from_ftp(ftp_host, ftp_username, ftp_password, ftp_path, timeout=60 * 5):
+def collect_from_ftp(
+    ftp_host, ftp_username, ftp_password, ftp_path, arg=None, timeout=60 * 5
+):
     """collect all files to download from the site"""
     Logger.info(
         f"Open connection to FTP server with {ftp_host} "
@@ -285,7 +280,10 @@ def collect_from_ftp(ftp_host, ftp_username, ftp_password, ftp_path, timeout=60 
     ftp_session.trust_server_pasv_ipv4_address = True
     ftp_session.set_pasv(True)
     ftp_session.cwd(ftp_path)
-    files = ftp_session.nlst()
+    if arg:
+        files = ftp_session.nlst(arg)
+    else:
+        files = ftp_session.nlst()
     ftp_session.quit()
     return files
 
@@ -306,7 +304,7 @@ def fetch_temporary_gz_file_from_ftp(
 
 def wget_file(file_link, file_save_path):
     """use wget to download file"""
-    Logger.info(f"trying wget file {file_link} to {file_save_path}.")
+    Logger.debug(f"trying wget file {file_link} to {file_save_path}.")
 
     files_parts = file_link.split(".")
     if len(files_parts) < 2 or files_parts[-1] not in ["gz", "xml"]:
@@ -322,8 +320,8 @@ def wget_file(file_link, file_save_path):
         shell=True,
     ) as process:
         std_out, std_err = process.communicate()
-    Logger.info(f"Wget stdout {std_out}")
-    Logger.info(f"Wget stderr {std_err}")
+    Logger.debug(f"Wget stdout {std_out}")
+    Logger.debug(f"Wget stderr {std_err}")
 
     if not os.path.exists(expected_output_file):
         Logger.error(f"fils is not exists after wget {file_save_path}")

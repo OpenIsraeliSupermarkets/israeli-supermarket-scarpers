@@ -3,11 +3,7 @@ import json
 from il_supermarket_scarper.engines.web import WebBase
 from il_supermarket_scarper.engines import Bina
 
-from il_supermarket_scarper.utils import (
-    _is_saturday_in_israel,
-    _is_holiday_in_israel,
-    DumpFolderNames,
-)
+from il_supermarket_scarper.utils import DumpFolderNames
 
 
 class MeshnatYosef1(WebBase):
@@ -32,12 +28,6 @@ class MeshnatYosef1(WebBase):
         file_names: list = list(map(lambda x: x["name"], all_trs))
 
         return download_urls, file_names
-
-    def _is_validate_scraper_found_no_files(
-        self, limit=None, files_types=None, store_id=None, when_date=None
-    ):
-        # no data on shabat
-        return _is_saturday_in_israel() or _is_holiday_in_israel()
 
 
 class MeshnatYosef2(Bina):

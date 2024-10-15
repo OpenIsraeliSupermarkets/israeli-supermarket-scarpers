@@ -8,6 +8,8 @@ from .status import (
     _is_holiday_in_israel,
     _is_weekend_in_israel,
     _now,
+    datetime_in_tlv,
+    _testing_now,
 )
 from .scraper_status import ScraperStatus
 from .file_types import FileTypesFilters
@@ -15,9 +17,7 @@ from .connection import (
     download_connection_retry,
     url_connection_retry,
     disable_when_outside_israel,
-    session_and_check_status,
     session_with_cookies,
-    cache,
     url_retrieve,
     collect_from_ftp,
     fetch_temporary_gz_file_from_ftp,
@@ -26,7 +26,6 @@ from .connection import (
 from .loop import execute_in_parallel, multiple_page_aggregtion
 from .exceptions import RestartSessionError
 from .retry import retry_files
-from .marking import FlakyScraper
-from .validation import is_valid_chain_name
+from .validation import is_valid_chain_name, change_xml_encoding
 from .folders_name import DumpFolderNames
 from .lock_utils import LockManager, lock_by_string

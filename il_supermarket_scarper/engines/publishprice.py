@@ -1,12 +1,5 @@
 from bs4 import BeautifulSoup
 
-from il_supermarket_scarper.utils import (
-    Logger,
-    session_and_check_status,
-    _is_weekend_in_israel,
-    _is_holiday_in_israel,
-    # _now,
-)
 from .web import WebBase
 
 
@@ -35,22 +28,22 @@ class PublishPrice(WebBase):
         )
         self.folder = None
 
+    def get_request_url(
+        self, files_types=None, store_id=None, when_date=None
+    ):  # pylint: disable=unused-argument
+        """get all links to collect download links from"""
+
+        formated = ""
+        if when_date:
+            formated = when_date.strftime("%Y%m%d")
+            formated = f"?p=./{formated}"
+        return [{"url": self.url + formated, "method": "GET"}]
+
     def get_data_from_page(self, req_res):
+        req_res = self.session_with_cookies_by_chain(self.url)
         soup = BeautifulSoup(req_res.text, features="lxml")
 
-        # target_date = _now().strftime("%Y%m%d")
-        # current_date_page = list(
-        #     filter(lambda x: target_date in str(x.a), soup.find_all("tr"))
-        # )
-        # assert len(current_date_page) == 1, f"can't find {target_date}"
-
-        self.folder = ""
-        Logger.info(f"Looking at folder = {self.folder}")
-
-        req_res = session_and_check_status(self.url + self.folder)
-        soup = BeautifulSoup(req_res.text, features="lxml")
-
-        # the devloper hard coded the files names in the html
+        # the developer hard-coded the files names in the html
         all_trs = (
             soup.find_all("script")[-1]
             .text.replace("const files_html = [", "")
@@ -61,9 +54,13 @@ class PublishPrice(WebBase):
         return list(map(lambda x: BeautifulSoup(x, features="lxml"), all_trs))
 
     def extract_task_from_entry(self, all_trs):
-        # filter empty files
+        """from the trs extract the download urls and file names"""
+
         def get_herf_element(x):
-            return x.find_all("a")[-1]
+            herfs = x.find_all("a")
+            if len(herfs) > 0:
+                return herfs[-1]
+            return None
 
         def get_herf(x):
             return get_herf_element(x).attrs["href"]
@@ -82,26 +79,7 @@ class PublishPrice(WebBase):
         )
 
         download_urls: list = list(
-            map(lambda x: self.url + self.folder + get_path_from_herf(x), all_trs)
+            map(lambda x: self.url + get_path_from_herf(x), all_trs)
         )
         file_names: list = list(map(get_name_from_herf, all_trs))
         return download_urls, file_names
-
-    def _is_validate_scraper_found_no_files(
-        self, limit=None, files_types=None, store_id=None, when_date=None
-    ):
-        return (
-            super()._is_validate_scraper_found_no_files(  # what fails the rest
-                limit=limit,
-                files_types=files_types,
-                store_id=store_id,
-                when_date=when_date,
-            )
-            or (  # if we are looking for one store file in a weekend or holiday
-                store_id and (_is_weekend_in_israel() or _is_holiday_in_israel())
-            )
-            or (  # if we are looking a specific number of file in a weekend or holiday
-                limit is not None
-                and (_is_weekend_in_israel() or _is_holiday_in_israel())
-            )
-        )

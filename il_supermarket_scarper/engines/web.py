@@ -2,7 +2,6 @@ from bs4 import BeautifulSoup
 from il_supermarket_scarper.utils import (
     Logger,
     execute_in_parallel,
-    session_and_check_status,
     retry_files,
 )
 
@@ -26,7 +25,7 @@ class WebBase(Engine):
         self, files_types=None, store_id=None, when_date=None
     ):  # pylint: disable=unused-argument
         """get all links to collect download links from"""
-        return [self.url]
+        return [{"url": self.url, "method": "GET"}]
 
     def extract_task_from_entry(self, all_trs):
         """extract download links and file names from page list"""
@@ -47,6 +46,7 @@ class WebBase(Engine):
         store_id=None,
         when_date=None,
         files_names_to_scrape=None,
+        suppress_exception=False,
     ):
         """apply limit to zip"""
         ziped = self.apply_limit(
@@ -57,28 +57,52 @@ class WebBase(Engine):
             store_id=store_id,
             when_date=when_date,
             files_names_to_scrape=files_names_to_scrape,
+            suppress_exception=suppress_exception,
         )
         if len(ziped) == 0:
             return [], []
         return list(zip(*ziped))
 
-    # @cache()
-    def collect_files_details_from_site(
+    def filter_bad_files_zip(
+        self,
+        file_names,
+        download_urls,
+        filter_null=False,
+        filter_zero=False,
+        by_function=lambda x: x[0],
+    ):
+        """apply bad files filtering to zip"""
+        files = self.filter_bad_files(
+            list(zip(file_names, download_urls)),
+            filter_null=filter_null,
+            filter_zero=filter_zero,
+            by_function=by_function,
+        )
+        if len(files) == 0:
+            return [], []
+        return list(zip(*files))
+
+    def collect_files_details_from_site(  # pylint: disable=too-many-locals
         self,
         limit=None,
         files_types=None,
         store_id=None,
         when_date=None,
+        filter_null=False,
+        filter_zero=False,
         files_names_to_scrape=None,
+        suppress_exception=False,
     ):
         """collect all enteris to download from site"""
+
         urls_to_collect_link_from = self.get_request_url(
             files_types=files_types, store_id=store_id, when_date=when_date
         )
+        assert len(urls_to_collect_link_from) > 0, "No pages to scrape"
 
         all_trs = []
         for url in urls_to_collect_link_from:
-            req_res = session_and_check_status(url)
+            req_res = self.session_with_cookies_by_chain(**url)
             trs = self.get_data_from_page(req_res)
             all_trs.extend(trs)
 
@@ -86,24 +110,32 @@ class WebBase(Engine):
 
         download_urls, file_names = self.extract_task_from_entry(all_trs)
 
-        if len(download_urls) > 0:
-            # pylint: disable=duplicate-code
-            file_names, download_urls = self.apply_limit_zip(
-                file_names,
-                download_urls,
-                limit=limit,
-                files_types=files_types,
-                store_id=store_id,
-                when_date=when_date,
-                files_names_to_scrape=files_names_to_scrape,
-            )
+        Logger.info(f"Found {len(download_urls)} download urls")
 
-            Logger.info(f"After applying limit: Found {len(all_trs)} entries")
+        file_names, download_urls = self.filter_bad_files_zip(
+            file_names, download_urls, filter_null=filter_null, filter_zero=filter_zero
+        )
+
+        Logger.info(f"After filtering bad files: Found {len(download_urls)} files")
+
+        # pylint: disable=duplicate-code
+        file_names, download_urls = self.apply_limit_zip(
+            file_names,
+            download_urls,
+            limit=limit,
+            files_types=files_types,
+            store_id=store_id,
+            when_date=when_date,
+            files_names_to_scrape=files_names_to_scrape,
+            suppress_exception=suppress_exception,
+        )
+
+        Logger.info(f"After applying limit: Found {len(all_trs)} entries")
 
         return download_urls, file_names
 
     @retry_files(num_of_retrys=2)
-    def scrape(
+    def _scrape(
         self,
         limit=None,
         files_types=None,
@@ -112,25 +144,20 @@ class WebBase(Engine):
         files_names_to_scrape=None,
         filter_null=False,
         filter_zero=False,
+        suppress_exception=False,
     ):
         """scarpe the files from multipage sites"""
         download_urls, file_names = [], []
         try:
-            super().scrape(
-                limit,
-                files_types=files_types,
-                store_id=store_id,
-                when_date=when_date,
-                filter_null=filter_null,
-                filter_zero=filter_zero,
-            )
-
             download_urls, file_names = self.collect_files_details_from_site(
                 limit=limit,
                 files_types=files_types,
                 store_id=store_id,
                 when_date=when_date,
+                filter_null=filter_null,
+                filter_zero=filter_zero,
                 files_names_to_scrape=files_names_to_scrape,
+                suppress_exception=suppress_exception,
             )
 
             self.on_collected_details(file_names, download_urls)
@@ -145,12 +172,7 @@ class WebBase(Engine):
             else:
                 results = []
 
-            self.on_download_completed(results=results)
-
-            self.on_scrape_completed(self.get_storage_path())
-            self.post_scraping()
             return results
         except Exception as e:  # pylint: disable=broad-except
             self.on_download_fail(e, download_urls=download_urls, file_names=file_names)
-            Logger.error_execption(e)
-            return []
+            raise e

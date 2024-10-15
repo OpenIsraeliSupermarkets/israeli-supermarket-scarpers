@@ -1,4 +1,4 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 import os
 import re
 import datetime
@@ -31,50 +31,36 @@ class Engine(ScraperStatus, ABC):
         self.chain_id = chain_id
         self.max_threads = max_threads
         self.storage_path = get_output_folder(self.chain.value, folder_name=folder_name)
-        Logger.info(f"Storage path: {self.storage_path}")
+        self.assigned_cookie = f"{self.chain.name}_{id(self)}_cookies.txt"
 
     def get_storage_path(self):
         """the the storage page of the files downloaded"""
         return self.storage_path
 
-    def _is_validate_scraper_found_no_files(
-        self, limit=None, files_types=None, store_id=None, when_date=None
-    ):
-        Logger.info(
-            f"check if fail is allowd with, limit={limit},"
-            f"files_types={files_types},store_id={store_id},when_date={when_date}"
-        )
-        return False
-
-    def is_validate_scraper_found_no_files(
-        self, limit=None, files_types=None, store_id=None, when_date=None
-    ):
-        """return true if its ok the scarper reuturn no enrty"""
-
-        # if all the files requested are the update files, is ok the scaraper failed.
-        request_only_update_file = False
-        if files_types:
-            request_only_update_file = True
-            for file_type in files_types:
-                if file_type in FileTypesFilters.all_full_files():
-                    request_only_update_file = False
-        Logger.info(f"the value of {when_date} should not affect.")
-        return (
-            limit == 0
-            or files_types == []
-            or request_only_update_file
-            or (store_id and store_id < 0)
-            or self._is_validate_scraper_found_no_files(
-                limit=limit,
-                files_types=files_types,
-                store_id=store_id,
-                when_date=when_date,
-            )
-        )
-
     def is_valid_file_empty(self, file_name):
         """it is valid the file is empty"""
         return file_name is None
+
+    def filter_bad_files(
+        self, files, filter_zero=False, filter_null=False, by_function=lambda x: x
+    ):
+        """filter out bad files"""
+
+        if filter_zero:
+            files = list(
+                filter(lambda x: "0000000000000" not in by_function(x), files)
+            )  # filter out files
+            Logger.info(
+                f"After filtering with '0000000000000': Found {len(files)} files"
+            )
+
+        if filter_null:
+            files = list(
+                filter(lambda x: "NULL" not in by_function(x), files)
+            )  # filter out files
+            Logger.info(f"After filtering with 'NULL': Found {len(files)} files")
+
+        return files
 
     def apply_limit(
         self,
@@ -85,11 +71,9 @@ class Engine(ScraperStatus, ABC):
         store_id=None,
         when_date=None,
         files_names_to_scrape=None,
+        suppress_exception=False,
     ):
         """filter the list according to condition"""
-        # assert (
-        #     when_date is not None or limit is None
-        # ), "when_date flag can't be applied with limit."
 
         # filter files already downloaded
         intreable_ = self.filter_already_downloaded(
@@ -129,9 +113,9 @@ class Engine(ScraperStatus, ABC):
         elif isinstance(when_date, str) and when_date == "latest":
             intreable_ = self.get_only_latest(by_function, intreable_)
         elif when_date is not None:
-            raise ValueError(f"when_date should be datetime or bool, got {when_date}")
+            raise ValueError(f"when_date should be datetime or 'latest', got {when_date}")
 
-        Logger.info(f"Number of entry after filter keeping latast is {len(intreable_)}")
+        Logger.info(f"Number of entry after filtering base on time is {len(intreable_)}")
 
         # filter by limit if the 'files_types' filter is not on.
         if limit:
@@ -141,20 +125,16 @@ class Engine(ScraperStatus, ABC):
         Logger.info(f"Result length {len(list(intreable_))}")
 
         # raise error if there was nothing to download.
-        if len(list(intreable_)) == 0:
-            if not (
-                files_was_filtered_since_already_download
-                or self.is_validate_scraper_found_no_files(
-                    limit=limit,
-                    files_types=files_types,
-                    store_id=store_id,
-                    when_date=when_date,
-                )
-            ):
+        if len(list(intreable_)) == 0 and not files_was_filtered_since_already_download:
+            if not suppress_exception:
                 raise ValueError(
                     f"No files to download for file files_types={files_types},"
                     f"limit={limit},store_id={store_id},when_date={when_date}"
                 )
+            Logger.warning(
+                f"No files to download for file files_types={files_types},"
+                f"limit={limit},store_id={store_id},when_date={when_date}"
+            )
         return intreable_
 
     def filter_file_types(self, intreable, limit, files_types, by_function):
@@ -214,15 +194,30 @@ class Engine(ScraperStatus, ABC):
 
         return result
 
-    def session_with_cookies_by_chain(self, url, timeout=15):
+    def session_with_cookies_by_chain(self, url, method="GET", body=None, timeout=15):
         """request resource with cookie by chain name"""
-        return session_with_cookies(url, chain_cookie_name=self.chain, timeout=timeout)
+        return session_with_cookies(
+            url,
+            chain_cookie_name=self.assigned_cookie,
+            timeout=timeout,
+            method=method,
+            body=body,
+        )
 
-    def post_scraping(self):
+    def _post_scraping(self):
         """job to do post scraping"""
-        cookie_file = f"{self.chain}_cookies.txt"
-        if os.path.exists(cookie_file):
-            os.remove(cookie_file)
+        if os.path.exists(self.assigned_cookie):
+            os.remove(self.assigned_cookie)
+
+    def _validate_scraper_params(self, limit=None, files_types=None, store_id=None):
+        if limit and limit <= 0:
+            raise ValueError(f"limit must be greater than 0, nor {limit}")
+        if files_types and files_types == []:
+            raise ValueError(
+                f"files_types must be a list of not empty file types or 'None', not {files_types}"
+            )
+        if store_id and store_id <= 0:
+            raise ValueError(f"store_id must be greater than 1, not {store_id}")
 
     def scrape(
         self,
@@ -233,20 +228,59 @@ class Engine(ScraperStatus, ABC):
         files_names_to_scrape=None,
         filter_null=False,
         filter_zero=False,
+        suppress_exception=False,
     ):
         """run the scraping logic"""
-        self.post_scraping()
         self.on_scraping_start(
             limit=limit,
             files_types=files_types,
             store_id=store_id,
             files_names_to_scrape=files_names_to_scrape,
             when_date=when_date,
-            filter_null=filter_null,
+            filter_nul=filter_null,
             filter_zero=filter_zero,
+            suppress_exception=suppress_exception,
         )
-        Logger.info(f"Starting scraping for {self.chain}")
+        self._validate_scraper_params(
+            limit=limit, files_types=files_types, store_id=store_id
+        )
         self.make_storage_path_dir()
+        results = []
+        try:
+            results = self._scrape(
+                limit=limit,
+                files_types=files_types,
+                store_id=store_id,
+                when_date=when_date,
+                files_names_to_scrape=files_names_to_scrape,
+                filter_null=filter_null,
+                filter_zero=filter_zero,
+                suppress_exception=suppress_exception,
+            )
+            self.on_download_completed(results=results)
+            self.on_scrape_completed(self.get_storage_path())
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            if not suppress_exception:
+                raise e
+            Logger.warning(f"Suppressing exception! {e}")
+        finally:
+            self._post_scraping()
+
+        return results
+
+    @abstractmethod
+    def _scrape(
+        self,
+        limit=None,
+        files_types=None,
+        store_id=None,
+        when_date=None,
+        files_names_to_scrape=None,
+        filter_null=False,
+        filter_zero=False,
+        suppress_exception=False,
+    ):
+        """method to be implemeted by the child class"""
 
     def make_storage_path_dir(self):
         """create the storage path"""
@@ -266,18 +300,15 @@ class Engine(ScraperStatus, ABC):
     @url_connection_retry()
     def retrieve_file(self, file_link, file_save_path, timeout=30):
         """download file"""
-        file_save_path_res = (
-            file_save_path + "." + file_link.split("?")[0].split(".")[-1]
-        )
-        url_retrieve(file_link, file_save_path_res, timeout=timeout)
-        return file_save_path_res
+        url_retrieve(file_link, file_save_path, timeout=timeout)
+        return file_save_path
 
     def save_and_extract(self, arg):
         """download file and extract it"""
 
         file_link, file_name = arg
         file_save_path = os.path.join(self.storage_path, file_name)
-        Logger.info(f"Downloading {file_link} to {file_save_path}")
+        Logger.debug(f"Downloading {file_link} to {file_save_path}")
         (
             downloaded,
             extract_succefully,
@@ -299,6 +330,16 @@ class Engine(ScraperStatus, ABC):
         error = None
         restart_and_retry = False
         try:
+
+            # add ext if possible
+            if not (
+                file_save_path.endswith(".gz") or file_save_path.endswith(".xml")
+            ) and (file_link.endswith(".gz") or file_link.endswith(".xml")):
+                file_save_path = (
+                    file_save_path + "." + file_link.split("?")[0].split(".")[-1]
+                )
+
+            # try to download the file
             try:
                 file_save_path_with_ext = self.retrieve_file(file_link, file_save_path)
             except Exception:  # pylint: disable=broad-except
@@ -306,7 +347,7 @@ class Engine(ScraperStatus, ABC):
             downloaded = True
 
             if file_save_path_with_ext.endswith("gz"):
-                Logger.info(
+                Logger.debug(
                     f"File size is {os.path.getsize(file_save_path_with_ext)} bytes."
                 )
                 extract_xml_file_from_gz_file(file_save_path_with_ext)
@@ -314,7 +355,7 @@ class Engine(ScraperStatus, ABC):
                 os.remove(file_save_path_with_ext)
             extract_succefully = True
 
-            Logger.info(f"Done downloading {file_link}")
+            Logger.debug(f"Done downloading {file_link}")
         except RestartSessionError as exception:
             Logger.error(
                 f"Error downloading {file_link},extract_succefully={extract_succefully}"

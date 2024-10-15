@@ -38,6 +38,20 @@ class Logger:
         cls.enabled = new_status
 
     @classmethod
+    def set_logging_level(cls, level):
+        """set logging level"""
+        if level == "DEBUG":
+            cls.logger.setLevel(logging.DEBUG)
+        elif level == "INFO":
+            cls.logger.setLevel(logging.INFO)
+        elif level == "ERROR":
+            cls.logger.setLevel(logging.ERROR)
+        elif level == "WARNING":
+            cls.logger.setLevel(logging.WARNING)
+        else:
+            cls.logger.setLevel(logging.DEBUG)
+
+    @classmethod
     def info(cls, msg, *args, **kwargs):
         """log info"""
         if cls.enabled:

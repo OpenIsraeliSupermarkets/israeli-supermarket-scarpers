@@ -5,10 +5,10 @@ import enum
 import holidays
 import pytz
 from .logger import Logger
-from .connection import render_webpage
+from .connection import render_webpage, render_webpage_from_cache
 
 
-def get_statue_page(extraction_type):
+def get_statue_page(extraction_type, source="gov.il"):
     """fetch the gov.il site"""
     url = "https://www.gov.il/he/departments/legalInfo/cpfta_prices_regulations"
     # Create a handle, page, to handle the contents of the website
@@ -23,11 +23,24 @@ def get_statue_page(extraction_type):
             return links.map(link => link.textContent.trim());
         }"""
             )
+        elif extraction_type == "all_text":
+            content = page.evaluate(
+                """
+            () => {
+                return document.body.innerText;
+            }"""
+            )
         else:
             raise ValueError(f"type '{extraction_type}' is not valid.")
         return content
 
-    return render_webpage(url, extraction=get_from_playwrite)
+    if source == "gov.il":
+        return render_webpage(url, extraction=get_from_playwrite)
+    if source == "cache":
+        return render_webpage_from_cache(
+            get_cached_page(), extraction=get_from_playwrite
+        )
+    raise ValueError(f"source '{source}' is not valid.")
 
 
 def get_cached_page():
@@ -60,8 +73,8 @@ def get_status():
 def get_status_date():
     """get the date change listed on the gov.il site"""
     line_with_date = get_statue_page(extraction_type="update_date")
-    print(line_with_date)
-    Logger.info(f"line_with_date: {line_with_date}")
+
+    Logger.info(f"date in 'line_with_date' is '{line_with_date}'")
 
     dates = re.findall(
         r"([1-9]|1[0-9]|2[0-9]|3[0-1]|0[0-9])(.|-|\/)([1-9]|1[0-2]|0[0-9])(.|-|\/)(20[0-9][0-9])",
@@ -108,30 +121,34 @@ def convert_unit(size_in_bytes, unit):
 
 def log_folder_details(folder, unit=UnitSize.MB):
     """log details about a folder"""
-    unit_size = 0
-    for path, dirs, files in os.walk(folder):
+    size = 0
+    files_scaned = []
+    Logger.info(f"Found the following files in {folder}")
+
+    for path, _, files in os.walk(folder):
+
         # summerize all files
-        Logger.info(f"Found the following files in {path}:")
-        size = 0
         for file in files:
             if "xml" in file:
                 full_file_path = os.path.join(path, file)
-                fp_size = os.path.getsize(full_file_path)
-                size += fp_size
+                size += os.path.getsize(full_file_path)
+                files_scaned.append(full_file_path)
                 Logger.info(f"- file {full_file_path}: size {size}")
 
-        unit_size = convert_unit(size, unit)
-        Logger.info(f"Found the following folders in {path}:")
-        for sub_folder in dirs:
-            unit_size += log_folder_details(os.path.join(path, sub_folder), unit)
+        # unit_size =
+        # for sub_folder in dirs:
+        #     unit_size += log_folder_details(os.path.join(path, sub_folder), unit)
 
-    Logger.info(f"Total size of {folder}: {unit_size} {unit.name}")
+    Logger.info(
+        f"Folder {folder}: Num of Files= {len(files_scaned)},"
+        f"Size= {convert_unit(size, unit)} {unit.name}"
+    )
 
     return {
-        "size": unit_size,
+        "size": convert_unit(size, unit),
         "unit": unit.name,
         "folder": folder,
-        "folder_content": os.listdir(folder),
+        "folder_content": files_scaned,
     }
 
 
@@ -165,8 +182,25 @@ def _now():
     return datetime.datetime.now(pytz.timezone("Asia/Jerusalem"))
 
 
-def _is_saturday_in_israel():
-    return _now().weekday() == 5
+def _testing_now(hour_consider_stable=12):
+    current_time = _now()
+
+    if current_time.hour < hour_consider_stable:
+        current_time = current_time - datetime.timedelta(hours=hour_consider_stable)
+    return current_time
+
+
+def datetime_in_tlv(year, month, day, hour, minute, second):
+    """return a datedatiem in tlv timezone"""
+    return datetime.datetime(
+        year, month, day, hour, minute, second, tzinfo=pytz.timezone("Asia/Jerusalem")
+    )
+
+
+def _is_saturday_in_israel(date=None):
+    if not date:
+        date = _now()
+    return date.weekday() == 5
 
 
 def _is_friday_in_israel():

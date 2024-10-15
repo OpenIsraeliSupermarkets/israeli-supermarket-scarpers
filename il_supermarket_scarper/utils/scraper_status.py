@@ -76,7 +76,7 @@ class ScraperStatus:
                 ):
                     new_filelist.append(file)
                 else:
-                    Logger.info(
+                    Logger.debug(
                         f"Filtered file {file} since it was already downloaded and extracted"
                     )
             return new_filelist
