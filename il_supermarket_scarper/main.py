@@ -15,6 +15,7 @@ class ScarpingTask:
         dump_folder_name=None,
         lookup_in_db=True,
         multiprocessing=5,
+        suppress_exception=False,
     ):
         """define the runner"""
         self.runner = MainScrapperRunner(
@@ -28,6 +29,7 @@ class ScarpingTask:
         self.limit = limit
         self.files_types = files_types
         self.when_date = when_date
+        self.suppress_exception = suppress_exception
 
     def get_dump_folder_name(self):
         """get the dump folder name"""
@@ -36,5 +38,8 @@ class ScarpingTask:
     def start(self):
         """run the scraping"""
         return self.runner.run(
-            limit=self.limit, files_types=self.files_types, when_date=self.when_date
+            limit=self.limit,
+            files_types=self.files_types,
+            when_date=self.when_date,
+            suppress_exception=self.suppress_exception,
         )
