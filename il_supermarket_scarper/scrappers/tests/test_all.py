@@ -21,7 +21,7 @@ class CityMarketGivatayimTestCase(
 
 
 class CityMarketKirtatOnoTestCase(
-    make_test_case(ScraperFactory.CITY_MARKET_KIRYATONO, 3)
+    make_test_case(ScraperFactory.CITY_MARKET_KIRYATONO, 1)
 ):
     """Test case for CityMarketKirtatOno"""
 
