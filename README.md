@@ -7,7 +7,7 @@ This is a scraper for ALL the supermarket chains listed in the GOV.IL site.
 
 
 
-[![Unit & Integration Tests](https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers/actions/workflows/test-suite.yml/badge.svg?event=push)](https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers/actions/workflows/test-suite.yml)
+[![Unit & Integration Tests](https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-parsers/actions/workflows/test-suite.yml/badge.svg?branch=main&event=push)](https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-parsers/actions/workflows/test-suite.yml)
 [![CodeQL](https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers/actions/workflows/codeql.yml/badge.svg)](https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers/actions/workflows/codeql.yml)
 [![Pylint](https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers/actions/workflows/pylint.yml/badge.svg)](https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers/actions/workflows/pylint.yml)
 [![Publish Docker image](https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers/actions/workflows/docker-publish.yml)
