@@ -306,14 +306,14 @@ def wget_file(file_link, file_save_path):
     """use wget to download file"""
     Logger.debug(f"trying wget file {file_link} to {file_save_path}.")
 
-    files_parts = file_link.split(".")
-    if len(files_parts) < 2 or files_parts[-1] not in ["gz", "xml"]:
-        raise ValueError(
-            f"wget is not supported for file with unkownen extension {file_link}"
-        )
-    expected_output_file = f"{file_save_path}.{files_parts[-1]}"
+    # files_parts = file_link.split(".")
+    # if len(files_parts) < 2 or files_parts[-1] not in ["gz", "xml"]:
+    #     raise ValueError(
+    #         f"wget is not supported for file with unkownen extension {file_link}"
+    #     )
+    # expected_output_file = f"{file_save_path}.{files_parts[-1]}"
     with subprocess.Popen(
-        f"wget --output-document={expected_output_file} {file_link}",
+        f"wget --output-document={file_save_path} '{file_link}'",
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
@@ -323,9 +323,9 @@ def wget_file(file_link, file_save_path):
     Logger.debug(f"Wget stdout {std_out}")
     Logger.debug(f"Wget stderr {std_err}")
 
-    if not os.path.exists(expected_output_file):
+    if not os.path.exists(file_save_path):
         Logger.error(f"fils is not exists after wget {file_save_path}")
         raise FileNotFoundError(
             f"File wasn't downloaded with wget,std_err is {std_err}"
         )
-    return expected_output_file
+    return file_save_path
