@@ -346,7 +346,8 @@ class Engine(ScraperStatus, ABC):
             # try to download the file
             try:
                 file_save_path_with_ext = self.retrieve_file(file_link, file_save_path)
-            except Exception:  # pylint: disable=broad-except
+            except Exception as e:  # pylint: disable=broad-except
+                Logger.warning(f"Error downloading {file_link}: {e}")
                 file_save_path_with_ext = wget_file(file_link, file_save_path)
             downloaded = True
 
