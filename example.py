@@ -8,7 +8,8 @@ if __name__ == "__main__":
         dump_folder_name="dumps",
         lookup_in_db=False,
         multiprocessing=2,
-        enabled_scrapers=[ScraperFactory.KING_STORE.name],
+        limit=1,
+        enabled_scrapers=[ScraperFactory.BAREKET.name],
         # size_estimation_mode=True,  # download files,log size, delete files
         when_date=_now(),
     )
