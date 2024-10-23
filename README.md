@@ -96,10 +96,11 @@ Then running it using:
 
 
     docker run  -v "./dumps:/usr/src/app/dumps" \
-                -e ENABLED_SCRAPERS="BAREKET" \
-                -e ENABLED_FILE_TYPES="STORE_FILE" \
-                -e LIMIT=1 \
-                -e TODAY="2024-10-23 14:35" erlichsefi/israeli-supermarket-scarpers
+                -e ENABLED_SCRAPERS="BAREKET,YAYNO_BITAN" \   # see: il_supermarket_scarper/scrappers_factory.py
+                -e ENABLED_FILE_TYPES="STORE_FILE" \          # see: il_supermarket_scarper/utils/file_types.py
+                -e LIMIT=1 \                                  # number of files you would like to download (remove for unlimited)
+                -e TODAY="2024-10-23 14:35" \                 # the date to download data from
+                erlichsefi/israeli-supermarket-scarpers
 
 
 
