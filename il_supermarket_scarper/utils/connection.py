@@ -306,12 +306,6 @@ def wget_file(file_link, file_save_path):
     """use wget to download file"""
     Logger.debug(f"trying wget file {file_link} to {file_save_path}.")
 
-    # files_parts = file_link.split(".")
-    # if len(files_parts) < 2 or files_parts[-1] not in ["gz", "xml"]:
-    #     raise ValueError(
-    #         f"wget is not supported for file with unkownen extension {file_link}"
-    #     )
-    # expected_output_file = f"{file_save_path}.{files_parts[-1]}"
     with subprocess.Popen(
         f"wget --output-document={file_save_path} '{file_link}'",
         stdout=subprocess.PIPE,
