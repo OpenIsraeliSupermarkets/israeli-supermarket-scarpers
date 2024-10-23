@@ -12,10 +12,10 @@ def load_params():
     if enabled_scrapers:
         enabled_scrapers = enabled_scrapers.split(",")
 
-        not_valid = filter(
+        not_valid = list(filter(
             lambda scraper: scraper not in ScraperFactory.all_scrapers_name(),
             enabled_scrapers,
-        )
+        ))
         if not_valid:
             raise ValueError(f"ENABLED_SCRAPERS contains invalid {not_valid}")
 
@@ -27,26 +27,20 @@ def load_params():
 
         enabled_file_types = enabled_file_types.split(",")
 
-        not_valid = filter(
+        not_valid = list(filter(
             lambda f_types: f_types not in FileTypesFilters.all_types(),
             enabled_file_types,
-        )
+        ))
         if not_valid:
             raise ValueError(f"ENABLED_FILE_TYPES contains invalid {not_valid}")
 
-        kwargs["enabled_file_types"] = enabled_file_types.split(",")
-
-    # validate dump folder
-    data_folder = os.getenv("DATA_FOLDER", None)
-    if not data_folder:
-        raise ValueError("DATA_FOLDER environment variable is required")
-    kwargs["data_folder"] = data_folder
+        kwargs["files_types"] = enabled_file_types
 
     # validate number of processes
     number_of_processes = os.getenv("NUMBER_OF_PROCESSES", None)
     if number_of_processes:
         try:
-            kwargs["number_of_processes"] = int(number_of_processes)
+            kwargs["multiprocessing"] = int(number_of_processes)
         except ValueError:
             raise ValueError("NUMBER_OF_PROCESSES must be an integer")
 
@@ -65,6 +59,7 @@ def load_params():
             kwargs["when_date"] = datetime.datetime.strptime(today, "%Y-%m-%d %H:%M")
         except ValueError:
             raise ValueError("TODAY must be in the format 'YYYY-MM-DD HH:MM'")
+    
     return kwargs
 
 

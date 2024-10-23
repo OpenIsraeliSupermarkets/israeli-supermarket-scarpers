@@ -83,11 +83,25 @@ Running Docker
 The docker is designed to re-run against the same configuration, in every iteration the scraper will collect the files available to download and check if the file already exists before fetching it, either by scanning the dump folder, or checking the mongo/status files.
 
 
-    docker-compose up -d
+Build yourself:
 
-or if you want to use the existing image from docker hub:
+    docker build -t erlichsefi/israeli-supermarket-scarpers --target prod .
+
+or pull the existing image from docker hub:
 
     docker pull erlichsefi/israeli-supermarket-scarpers:latest
+
+
+Then running it using:
+
+
+    docker run  -v "./dumps:/usr/src/app/dumps" \
+                -e ENABLED_SCRAPERS="BAREKET" \
+                -e ENABLED_FILE_TYPES="STORE_FILE" \
+                -e LIMIT=1 \
+                -e TODAY="2024-10-23 14:35" erlichsefi/israeli-supermarket-scarpers
+
+
 
 Contributing
 ------------

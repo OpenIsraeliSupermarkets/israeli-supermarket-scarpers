@@ -1,7 +1,6 @@
 #syntax=docker/dockerfile:1
 
 FROM node:20-bookworm as base
-WORKDIR /usr/src/app
 ARG PY_VERSION="3.11.0"
 
 # setting the enviroment 
@@ -9,9 +8,6 @@ RUN apt-get update --fix-missing -y && \
     apt-get install cron -y && \
     apt-get install libxml2-dev -y && \
     apt-get install libxslt-dev -y 
-
-# playwrite
-RUN npx -y playwright@1.43.0 install --with-deps
     
 
 # setting python and more 
@@ -33,9 +29,10 @@ RUN pyenv install $PY_VERSION
 RUN pyenv global $PY_VERSION
 
 # setup code
+WORKDIR /usr/src/app
 COPY . .
 RUN python -m pip install .
-RUN python -m  playwright install  
+
 
 VOLUME ["/usr/src/app/dumps"]
 
@@ -58,6 +55,10 @@ CMD python main.py
 
 # run test
 FROM base as test
+
+# playwrite
+RUN npx -y playwright@1.43.0 install --with-deps
+RUN python -m  playwright install  
 
 RUN python -m pip install . ".[test]"
 CMD python -m pytest -n 4
