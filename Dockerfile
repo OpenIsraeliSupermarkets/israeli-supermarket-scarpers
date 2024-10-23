@@ -49,11 +49,12 @@ RUN pip install pylint
 # production image
 FROM base as prod
 
-ADD crontab /etc/cron.d
-RUN chmod 0644 /etc/cron.d/crontab
-RUN crontab /etc/cron.d/crontab
-RUN touch /var/log/cron.log
-CMD python example.py && cron & tail -f /var/log/cron.log
+# ADD crontab /etc/cron.d
+# RUN chmod 0644 /etc/cron.d/crontab
+# RUN crontab /etc/cron.d/crontab
+# RUN touch /var/log/cron.log
+# && cron & tail -f /var/log/cron.log
+CMD python main.py 
 
 # run test
 FROM base as test
