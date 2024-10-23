@@ -12,10 +12,12 @@ def load_params():
     if enabled_scrapers:
         enabled_scrapers = enabled_scrapers.split(",")
 
-        not_valid = list(filter(
-            lambda scraper: scraper not in ScraperFactory.all_scrapers_name(),
-            enabled_scrapers,
-        ))
+        not_valid = list(
+            filter(
+                lambda scraper: scraper not in ScraperFactory.all_scrapers_name(),
+                enabled_scrapers,
+            )
+        )
         if not_valid:
             raise ValueError(f"ENABLED_SCRAPERS contains invalid {not_valid}")
 
@@ -27,10 +29,12 @@ def load_params():
 
         enabled_file_types = enabled_file_types.split(",")
 
-        not_valid = list(filter(
-            lambda f_types: f_types not in FileTypesFilters.all_types(),
-            enabled_file_types,
-        ))
+        not_valid = list(
+            filter(
+                lambda f_types: f_types not in FileTypesFilters.all_types(),
+                enabled_file_types,
+            )
+        )
         if not_valid:
             raise ValueError(f"ENABLED_FILE_TYPES contains invalid {not_valid}")
 
@@ -59,7 +63,7 @@ def load_params():
             kwargs["when_date"] = datetime.datetime.strptime(today, "%Y-%m-%d %H:%M")
         except ValueError:
             raise ValueError("TODAY must be in the format 'YYYY-MM-DD HH:MM'")
-    
+
     return kwargs
 
 
