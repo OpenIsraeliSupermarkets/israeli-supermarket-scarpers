@@ -20,10 +20,10 @@ class CityMarketGivatayimTestCase(
     """Test case for CityMarketGivatay"""
 
 
-class CityMarketKirtatOnoTestCase(
-    make_test_case(ScraperFactory.CITY_MARKET_KIRYATONO, 1)
-):
-    """Test case for CityMarketKirtatOno"""
+# class CityMarketKirtatOnoTestCase(
+#     make_test_case(ScraperFactory.CITY_MARKET_KIRYATONO, 1)
+# ):
+#     """Test case for CityMarketKirtatOno"""
 
 
 class CityMarketKiryatGatTestCase(

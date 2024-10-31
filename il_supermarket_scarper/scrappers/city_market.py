@@ -16,6 +16,7 @@ class CityMarketGivatayim(Bina):
         )
 
 
+# removed on 28.10.2024
 class CityMarketKirtatOno(Bina):
     """scraper for city market givatayim"""
 
