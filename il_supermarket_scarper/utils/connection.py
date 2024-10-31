@@ -222,7 +222,7 @@ def render_webpage(url, extraction):
         browser = p.chromium.launch()
         page = browser.new_page()
         page.goto(url)
-        frame.wait_for_load_state("domcontentloaded") 
+        page.wait_for_load_state("domcontentloaded") 
         content = extraction(page)
         browser.close()
     return content
