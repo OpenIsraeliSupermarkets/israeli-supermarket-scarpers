@@ -1,5 +1,4 @@
 name: Reject PR with IgnoreList
-
 on:
   pull_request:
     types: [opened, edited, synchronize]
@@ -13,6 +12,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Fetch all branches
+        run: git fetch --all
 
       - name: Check for restricted authors in commits
         id: check_commit_authors
