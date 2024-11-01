@@ -13,32 +13,11 @@ def get_statue_page(extraction_type, source="gov.il"):
     url = "https://www.gov.il/he/departments/legalInfo/cpfta_prices_regulations"
     # Create a handle, page, to handle the contents of the website
 
-    def get_from_playwrite(page):
-        if extraction_type == "update_date":
-            content = page.locator('//*[@id="metaData_updateDate_0"]').last.inner_text()
-        elif extraction_type == "links_name":
-            content = page.evaluate(
-                """() => {
-            const links = Array.from(document.querySelectorAll('a'));
-            return links.map(link => link.textContent.trim());
-        }"""
-            )
-        elif extraction_type == "all_text":
-            content = page.evaluate(
-                """
-            () => {
-                return document.body.innerText;
-            }"""
-            )
-        else:
-            raise ValueError(f"type '{extraction_type}' is not valid.")
-        return content
-
     if source == "gov.il":
-        return render_webpage(url, extraction=get_from_playwrite)
+        return render_webpage(url, extraction_type=extraction_type)
     if source == "cache":
         return render_webpage_from_cache(
-            get_cached_page(), extraction=get_from_playwrite
+            get_cached_page(), extraction_type=extraction_type
         )
     raise ValueError(f"source '{source}' is not valid.")
 
