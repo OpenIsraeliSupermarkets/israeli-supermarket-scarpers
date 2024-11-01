@@ -11,7 +11,7 @@ class ScraperFactory(Enum):
     YAYNO_BITAN = all_scrappers.YaynotBitan
     COFIX = all_scrappers.Cofix
     CITY_MARKET_GIVATAYIM = all_scrappers.CityMarketGivatayim
-    CITY_MARKET_KIRYATONO = all_scrappers.CityMarketKirtatOno
+    # CITY_MARKET_KIRYATONO = all_scrappers.CityMarketKirtatOno
     CITY_MARKET_KIRYATGAT = all_scrappers.CityMarketKiryatGat
     CITY_MARKET_SHOPS = all_scrappers.CityMarketShops
     DOR_ALON = all_scrappers.DorAlon

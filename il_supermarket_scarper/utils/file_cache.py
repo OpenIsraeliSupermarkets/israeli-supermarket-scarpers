@@ -9,7 +9,7 @@ def file_cache(ttl=None):
 
     def get_cache_file(func_name):
         """Generate a cache file path based on the function name"""
-        cache_dir = "/tmp"
+        cache_dir = ".cache"
         return os.path.join(cache_dir, f"{func_name}_cache.json")
 
     def load_cache(cache_file):
@@ -21,6 +21,8 @@ def file_cache(ttl=None):
 
     def save_cache(cache_file, cache_data):
         """Save the cache to the specified cache file"""
+        if not os.path.exists(".cache"):
+            os.makedirs(".cache")
         with open(cache_file, "w", encoding="utf-8") as f:
             json.dump(cache_data, f)
 
@@ -31,10 +33,10 @@ def file_cache(ttl=None):
             cache_file = get_cache_file(func.__name__)
 
             # Load the cache from the file
-            cache = load_cache("." + cache_file)
+            cache = load_cache(cache_file)
 
             # Generate a cache key from function arguments
-            cache_key = str(args) + str(kwargs)
+            cache_key = generate_cache_key(args, kwargs)
 
             # Check if result is cached and valid
             if cache_key in cache:
@@ -60,6 +62,20 @@ def file_cache(ttl=None):
             save_cache(cache_file, cache)
 
             return result
+
+        def generate_cache_key(args, kwargs):
+            key_parts = []
+            for arg in args:
+                if isinstance(arg, (int, float, str, bool)):
+                    key_parts.append(str(arg))
+                else:
+                    raise ValueError(f"Unsupported argument type: {type(arg)}")
+            for k, v in kwargs.items():
+                if isinstance(v, (int, float, str, bool)):
+                    key_parts.append(f"{k}={v}")
+                else:
+                    raise ValueError(f"Unsupported keyword argument type: {type(v)}")
+            return "|".join(key_parts)
 
         return wrapper
 

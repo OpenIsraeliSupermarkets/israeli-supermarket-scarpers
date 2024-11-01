@@ -132,8 +132,8 @@ def disable_when_outside_israel(function):
             estimated_location["country"] is not None
             and estimated_location["country"] != "Israel"
         )
-    except Exception:  # pylint: disable=broad-exception-caught
-        pass
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        Logger.warning(f"error in getting location {str(e)}")
 
     if execute:
         return function
@@ -215,7 +215,32 @@ def session_with_cookies(
     return response_content
 
 
-def render_webpage(url, extraction):
+def get_from_playwrite(page, extraction_type):
+    """get the content from the page with playwrite"""
+
+    if extraction_type == "update_date":
+        content = page.locator('//*[@id="metaData_updateDate_0"]').last.inner_text()
+    elif extraction_type == "links_name":
+        content = page.evaluate(
+            """() => {
+        const links = Array.from(document.querySelectorAll('a'));
+        return links.map(link => link.textContent.trim());
+    }"""
+        )
+    elif extraction_type == "all_text":
+        content = page.evaluate(
+            """
+        () => {
+            return document.body.innerText;
+        }"""
+        )
+    else:
+        raise ValueError(f"type '{extraction_type}' is not valid.")
+    return content
+
+
+@file_cache(ttl=60)
+def render_webpage(url):
     """render website with playwrite"""
 
     with sync_playwright() as p:
@@ -223,12 +248,18 @@ def render_webpage(url, extraction):
         page = browser.new_page()
         page.goto(url)
         page.wait_for_load_state("networkidle")
-        content = extraction(page)
+        content = page.content()
         browser.close()
     return content
 
 
-def render_webpage_from_cache(cached_page, extraction):
+def get_from_latast_webpage(url, extraction_type):
+    """get the content from the page with playwrite"""
+    content = render_webpage(url)
+    return get_from_webpage(content, extraction_type)
+
+
+def get_from_webpage(cached_page, extraction_type):
     """render website with playwrite from file system cache"""
 
     with sync_playwright() as p:
@@ -236,7 +267,7 @@ def render_webpage_from_cache(cached_page, extraction):
         page = browser.new_page()
         page.set_content(cached_page)
         page.wait_for_load_state("networkidle")
-        content = extraction(page)
+        content = get_from_playwrite(page, extraction_type)
         browser.close()
     return content
 

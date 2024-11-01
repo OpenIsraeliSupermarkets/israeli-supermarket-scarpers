@@ -1,0 +1,40 @@
+name: Reject PR with IgnoreList
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+jobs:
+  check_username:
+    runs-on: ubuntu-latest
+    env:
+      IGNORE_USERS: ${{ secrets.IGNORE_USERS }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Fetch all branches
+        run: git fetch --all
+
+      - name: Check for restricted authors in commits
+        id: check_commit_authors
+        run: |
+          # Convert IGNORE_USERS to an array
+          IFS=',' read -ra IGNORED_USERS <<< "$IGNORE_USERS"
+
+          # Get the commit authors in the pull request
+          COMMIT_AUTHORS=$(git log --pretty=format:"%an" origin/main..HEAD)
+
+          # Check if any commit author matches an ignored user
+          for AUTHOR in "${IGNORED_USERS[@]}"; do
+            if echo "$COMMIT_AUTHORS" | grep -iq "^$AUTHOR$"; then
+              echo "Restricted author '$AUTHOR' found in commits."
+              exit 1
+            fi
+          done
+
+      - name: PR Rejected
+        if: failure()
+        run: |
+          echo "This PR contains commits by restricted authors."
+          exit 1
