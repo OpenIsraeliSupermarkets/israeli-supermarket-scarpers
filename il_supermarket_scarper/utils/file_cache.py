@@ -21,6 +21,8 @@ def file_cache(ttl=None):
 
     def save_cache(cache_file, cache_data):
         """Save the cache to the specified cache file"""
+        if not os.path.exists(".cache"):
+            os.makedirs(".cache")
         with open(cache_file, "w", encoding="utf-8") as f:
             json.dump(cache_data, f)
 
