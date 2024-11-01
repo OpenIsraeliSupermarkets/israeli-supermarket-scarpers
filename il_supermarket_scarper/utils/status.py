@@ -5,7 +5,7 @@ import enum
 import holidays
 import pytz
 from .logger import Logger
-from .connection import render_webpage, render_webpage_from_cache
+from .connection import get_from_latast_webpage, get_from_webpage
 
 
 def get_statue_page(extraction_type, source="gov.il"):
@@ -14,11 +14,9 @@ def get_statue_page(extraction_type, source="gov.il"):
     # Create a handle, page, to handle the contents of the website
 
     if source == "gov.il":
-        return render_webpage(url, extraction_type=extraction_type)
+        return get_from_latast_webpage(url, extraction_type=extraction_type)
     if source == "cache":
-        return render_webpage_from_cache(
-            get_cached_page(), extraction_type=extraction_type
-        )
+        return get_from_webpage(get_cached_page(), extraction_type=extraction_type)
     raise ValueError(f"source '{source}' is not valid.")
 
 
