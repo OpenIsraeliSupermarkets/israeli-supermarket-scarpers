@@ -134,7 +134,6 @@ def disable_when_outside_israel(function):
         )
     except Exception as e:  # pylint: disable=broad-exception-caught
         Logger.warning(f"error in getting location {str(e)}")
-        pass
 
     if execute:
         return function
