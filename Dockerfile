@@ -61,5 +61,5 @@ RUN npx -y playwright@1.43.0 install --with-deps
 RUN python -m  playwright install  
 
 RUN python -m pip install . ".[test]"
-CMD python -m pytest -n 4
+CMD python -m pytest -n 2
 
