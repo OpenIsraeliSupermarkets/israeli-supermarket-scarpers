@@ -44,7 +44,7 @@ class GoodPharmTestCase(make_test_case(ScraperFactory.GOOD_PHARM, 952)):
     """Test case for ScraperFactory.GOOD_PHARM."""
 
 
-class HaziHinamTestCase(make_test_case(ScraperFactory.HAZI_HINAM, 2)):
+class HaziHinamTestCase(make_test_case(ScraperFactory.HAZI_HINAM, 206)):
     """Test case for ScraperFactory.HAZI_HINAM."""
 
 
