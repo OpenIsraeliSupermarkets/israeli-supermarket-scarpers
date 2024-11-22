@@ -6,6 +6,8 @@ from il_supermarket_scarper.utils import DumpFolderNames
 class NetivHased(WebBase):
     """scraper for nativ Hased"""
 
+    utilize_date_param = False
+
     def __init__(self, folder_name=None):
         super().__init__(
             chain=DumpFolderNames.NETIV_HASED,

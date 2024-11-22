@@ -40,7 +40,6 @@ class PublishPrice(WebBase):
         return [{"url": self.url + formated, "method": "GET"}]
 
     def get_data_from_page(self, req_res):
-        req_res = self.session_with_cookies_by_chain(self.url)
         soup = BeautifulSoup(req_res.text, features="lxml")
 
         # the developer hard-coded the files names in the html

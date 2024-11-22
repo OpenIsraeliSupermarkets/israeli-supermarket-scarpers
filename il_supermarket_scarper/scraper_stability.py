@@ -1,6 +1,5 @@
 # pylint: disable=arguments-differ,arguments-renamed
 from enum import Enum
-import datetime
 from il_supermarket_scarper.utils import (
     _is_saturday_in_israel,
     _now,
@@ -51,30 +50,6 @@ class SuperFlaky(FullyStable):
         return True
 
 
-class Quik(FullyStable):
-    """define stability for small chain"""
-
-    @classmethod
-    def executes_early_morning_ask_for_alot_of_files(cls, limit=None, **_):
-        """small chain don't upload many files in the morning"""
-        execution_time = _now()
-        return limit and execution_time.hour < 12 and limit > 8
-
-    @classmethod
-    def executes_looking_for_store(cls, files_types=None, **_):
-        """if the execution is in saturday"""
-        return files_types and files_types == [FileTypesFilters.STORE_FILE.name]
-
-    @classmethod
-    def failire_valid(cls, when_date=None, limit=None, files_types=None, **_):
-        """return true if the parser is stble"""
-        return (
-            super().failire_valid(when_date=when_date)
-            or cls.executes_early_morning_ask_for_alot_of_files(limit=limit)
-            or cls.executes_looking_for_store(files_types=files_types)
-        )
-
-
 class NetivHased(FullyStable):
     """Netiv Hased is stablity"""
 
@@ -84,11 +59,11 @@ class NetivHased(FullyStable):
         return when_date and _is_saturday_in_israel(when_date)
 
     @classmethod
-    def failire_valid(cls, when_date=None, **_):
+    def failire_valid(cls, when_date=None, utilize_date_param=False, **_):
         """return true if the parser is stble"""
-        return super().failire_valid(when_date=when_date) or cls.executed_in_saturday(
-            when_date=when_date
-        )
+        return super().failire_valid(
+            when_date=when_date, utilize_date_param=utilize_date_param
+        ) or cls.executed_in_saturday(when_date=when_date)
 
 
 class CityMarketGivataim(FullyStable):
@@ -178,7 +153,7 @@ class ScraperStability(Enum):
 
     COFIX = DoNotPublishStores
     NETIV_HASED = NetivHased
-    QUIK = Quik
+    QUIK = DoNotPublishStores
     SALACH_DABACH = DoNotPublishStores
     CITY_MARKET_GIVATAYIM = CityMarketGivataim
     CITY_MARKET_KIRYATONO = CityMarketKiratOno

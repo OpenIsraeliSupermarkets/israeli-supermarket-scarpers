@@ -48,7 +48,9 @@ class MultiPageWeb(WebBase):
         """get all links to collect download links from"""
 
         results = []
-        for arguments in self.build_params(files_types=files_types, store_id=store_id):
+        for arguments in self.build_params(
+            files_types=files_types, store_id=store_id, when_date=when_date
+        ):
             results.append(
                 {
                     "url": self.url + arguments,
