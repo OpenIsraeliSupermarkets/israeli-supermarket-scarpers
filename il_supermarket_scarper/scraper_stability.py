@@ -1,4 +1,5 @@
 from enum import Enum
+import datetime
 from il_supermarket_scarper.utils import _is_saturday_in_israel, _now, FileTypesFilters
 
 
@@ -18,6 +19,11 @@ class FullyStable:
             and execution_time.hour < 8
             and when_date.date() == execution_time.date()
         )
+
+    @classmethod
+    def executed_after_date(cls, when_date, date):
+        """check if executed after date"""
+        return when_date > date
 
     @classmethod
     def failire_valid(cls, when_date=None, **_):
@@ -76,22 +82,6 @@ class NetivHased(FullyStable):
         )
 
 
-class SalachDabach(FullyStable):
-    """Netiv Hased is stablity"""
-
-    @classmethod
-    def searching_for_store(cls, files_types=None, **_):
-        """if the execution is in saturday"""
-        return files_types and files_types == [FileTypesFilters.STORE_FILE.name]
-
-    @classmethod
-    def failire_valid(cls, when_date=None, files_types=None, **_):
-        """return true if the parser is stble"""
-        return super().failire_valid(when_date=when_date) or cls.searching_for_store(
-            files_types=files_types
-        )
-
-
 class CityMarketGivataim(FullyStable):
     """Netiv Hased is stablity"""
 
@@ -103,9 +93,13 @@ class CityMarketGivataim(FullyStable):
     @classmethod
     def failire_valid(cls, when_date=None, files_types=None, **_):
         """return true if the parser is stble"""
-        return super().failire_valid(
-            when_date=when_date
-        ) or cls.searching_for_update_promo(files_types=files_types)
+        return (
+            super().failire_valid(when_date=when_date)
+            or cls.searching_for_update_promo(files_types=files_types)
+            or cls.executed_after_date(
+                when_date=when_date, date=datetime.datetime(year=2024, month=11, day=5)
+            )
+        )
 
 
 class CityMarketKiratOno(FullyStable):
@@ -140,16 +134,34 @@ class CityMarketKiratGat(FullyStable):
         ) or cls.searching_for_update_promo_full(files_types=files_types)
 
 
+class DoNotPublishStores(FullyStable):
+    """stablity for chains that doesn't pubish stores"""
+
+    @classmethod
+    def searching_for_store_full(cls, files_types=None, **_):
+        """if the execution is in saturday"""
+        return files_types and files_types == [FileTypesFilters.STORE_FILE.name]
+
+    @classmethod
+    def failire_valid(cls, when_date=None, files_types=None, **_):
+        """return true if the parser is stble"""
+        return super().failire_valid(
+            when_date=when_date
+        ) or cls.searching_for_store_full(files_types=files_types)
+
+
 class ScraperStability(Enum):
     """tracker for the stablity of the scraper"""
 
+    COFIX = DoNotPublishStores
     NETIV_HASED = NetivHased
     QUIK = Quik
-    SALACH_DABACH = SalachDabach
+    SALACH_DABACH = DoNotPublishStores
     CITY_MARKET_GIVATAYIM = CityMarketGivataim
     CITY_MARKET_KIRYATONO = CityMarketKiratOno
     CITY_MARKET_KIRYATGAT = CityMarketKiratGat
     MESHMAT_YOSEF_1 = SuperFlaky
+    YOHANANOF = DoNotPublishStores
 
     @classmethod
     def is_validate_scraper_found_no_files(
