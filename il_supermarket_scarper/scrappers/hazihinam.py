@@ -1,7 +1,7 @@
 import urllib.parse
 import datetime
 from il_supermarket_scarper.engines import MultiPageWeb
-from il_supermarket_scarper.utils import DumpFolderNames, FileTypesFilters
+from il_supermarket_scarper.utils import DumpFolderNames, FileTypesFilters, _now
 
 # class HaziHinam(Cerberus):
 #     """scrper fro hazi hinam"""
@@ -63,14 +63,19 @@ class HaziHinam(MultiPageWeb):
 
         all_params = []
         for type_params in self.get_file_types_id(files_types):
-            params = {"d": "", "s": ""}
 
-            if store_id:
-                params["s"] = "null"
+            # filtering store is not supported
+            # if store_id:
+            #     params["s"] = "null"
             if when_date and isinstance(when_date, datetime.datetime):
-                params["d"] = when_date.strftime("%Y-%m-%d")
-            if files_types:
-                params = {**params, **type_params}
-            all_params.append(params)
+                all_params.append({"d": when_date.strftime("%Y-%m-%d"), **type_params})
+            else:
+                all_params.append({"d": _now().strftime("%Y-%m-%d"), **type_params})
+                all_params.append(
+                    {
+                        "d": (_now() - datetime.timedelta(days=1)).strftime("%Y-%m-%d"),
+                        **type_params,
+                    }
+                )
 
         return ["?" + urllib.parse.urlencode(params) for params in all_params]

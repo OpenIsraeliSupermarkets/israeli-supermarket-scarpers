@@ -96,7 +96,8 @@ class CityMarketGivataim(FullyStable):
         return (
             super().failire_valid(when_date=when_date)
             or cls.searching_for_update_promo(files_types=files_types)
-            or cls.executed_after_date(
+            or when_date
+            and cls.executed_after_date(
                 when_date=when_date, date=datetime.datetime(year=2024, month=11, day=5)
             )
         )
