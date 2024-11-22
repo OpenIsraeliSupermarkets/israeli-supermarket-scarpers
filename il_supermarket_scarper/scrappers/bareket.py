@@ -2,7 +2,6 @@ from il_supermarket_scarper.engines import Bina
 from il_supermarket_scarper.utils import DumpFolderNames
 
 
-# @FlakyScraper
 class Bareket(Bina):
     """scarper for bareket"""
 

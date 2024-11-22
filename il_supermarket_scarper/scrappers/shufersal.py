@@ -7,6 +7,8 @@ from il_supermarket_scarper.utils import DumpFolderNames, FileTypesFilters
 class Shufersal(MultiPageWeb):
     """scaper for shufersal"""
 
+    utilize_date_param = False
+
     def __init__(self, folder_name=None):
         super().__init__(
             url="https://prices.shufersal.co.il/",

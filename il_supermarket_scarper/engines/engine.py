@@ -21,6 +21,8 @@ from il_supermarket_scarper.utils import (
 class Engine(ScraperStatus, ABC):
     """base engine for scraping"""
 
+    utilize_date_param = True
+
     def __init__(self, chain, chain_id, folder_name=None, max_threads=10):
         assert DumpFolderNames.is_valid_folder_name(
             chain

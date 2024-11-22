@@ -1,11 +1,13 @@
 from bs4 import BeautifulSoup
-from il_supermarket_scarper.utils import Logger, _now, FileTypesFilters
+from il_supermarket_scarper.utils import Logger
 from .apsx import Aspx
 
 
 class Matrix(Aspx):
     """scraper for all matrix base site.
     (support adveanced search: follow the instrucation the page)"""
+
+    utilize_date_param = False
 
     def __init__(
         self,
@@ -19,40 +21,40 @@ class Matrix(Aspx):
         super().__init__(chain, chain_id, url, aspx_page, folder_name=folder_name)
         self.chain_hebrew_name = chain_hebrew_name
 
-    def get_file_types_id(self, files_types=None):
-        """get the file type id"""
-        if files_types is None:
-            return "all"
+    # def get_file_types_id(self, files_types=None):
+    #     """get the file type id"""
+    #     if files_types is None:
+    #         return "all"
 
-        types = []
-        for ftype in files_types:
-            if ftype == FileTypesFilters.STORE_FILE.name:
-                types.append("storefull")
-            if ftype == FileTypesFilters.PRICE_FILE.name:
-                types.append("price")
-            if ftype == FileTypesFilters.PROMO_FILE.name:
-                types.append("promo")
-            if ftype == FileTypesFilters.PRICE_FULL_FILE.name:
-                types.append("pricefull")
-            if ftype == FileTypesFilters.PROMO_FULL_FILE.name:
-                types.append("promofull")
-        return types
+    #     types = []
+    #     for ftype in files_types:
+    #         if ftype == FileTypesFilters.STORE_FILE.name:
+    #             types.append("storefull")
+    #         if ftype == FileTypesFilters.PRICE_FILE.name:
+    #             types.append("price")
+    #         if ftype == FileTypesFilters.PROMO_FILE.name:
+    #             types.append("promo")
+    #         if ftype == FileTypesFilters.PRICE_FULL_FILE.name:
+    #             types.append("pricefull")
+    #         if ftype == FileTypesFilters.PROMO_FULL_FILE.name:
+    #             types.append("promofull")
+    #     return types
 
-    def get_when(self, when_date):
-        """get the when date"""
-        if when_date is None:
-            when_date = _now()
-        return when_date.strftime("%d/%m/%Y")
+    # def get_when(self, when_date):
+    #     """get the when date"""
+    #     if when_date is None:
+    #         when_date = _now()
+    #     return when_date.strftime("%d/%m/%Y")
 
-    def get_chain_n_stores__id(self, store_id=None, c_id=None):
-        """get the store id"""
-        if store_id is None:
-            chain_id = str(c_id)  # + "001"
-            store_id = "-1"
-        else:
-            chain_id = str(c_id)
-            store_id = str(c_id) + "001" + str(store_id).zfill(3)
-        return chain_id, store_id
+    # def get_chain_n_stores__id(self, store_id=None, c_id=None):
+    #     """get the store id"""
+    #     if store_id is None:
+    #         chain_id = str(c_id)  # + "001"
+    #         store_id = "-1"
+    #     else:
+    #         chain_id = str(c_id)
+    #         store_id = str(c_id) + "001" + str(store_id).zfill(3)
+    #     return chain_id, store_id
 
     def _build_query_url(self, query_params, base_urls):
         res = []

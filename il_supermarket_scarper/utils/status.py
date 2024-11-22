@@ -155,11 +155,16 @@ def clean_dump_folder(dump_folder):
             os.remove(current_file)
 
 
+def hour_files_expected_to_be_accassible():
+    """the hour (AM) in which the files are expected to be published in IL time"""
+    return 12
+
+
 def _now():
     return datetime.datetime.now(pytz.timezone("Asia/Jerusalem"))
 
 
-def _testing_now(hour_consider_stable=12):
+def _testing_now(hour_consider_stable=hour_files_expected_to_be_accassible()):
     current_time = _now()
 
     if current_time.hour < hour_consider_stable:
