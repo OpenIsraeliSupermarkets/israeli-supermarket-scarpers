@@ -17,6 +17,7 @@ class Cerberus(Engine):
     """scraper for all Cerberus base site. (seems like can't support historical data)"""
 
     target_file_extensions = ["xml", "gz"]
+    utilize_date_param = False
 
     def __init__(
         self,

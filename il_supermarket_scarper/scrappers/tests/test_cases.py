@@ -168,6 +168,7 @@ def make_test_case(scraper_enum, store_id):
                         files_types=file_type,
                         store_id=store_id,
                         when_date=when_date,
+                        utilize_date_param=scraper_enum.value.utilize_date_param,
                     ):
                         self._make_sure_filter_work(
                             files_found,
