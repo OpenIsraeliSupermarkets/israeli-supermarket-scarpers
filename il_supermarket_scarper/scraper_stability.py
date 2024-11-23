@@ -54,9 +54,9 @@ class NetivHased(FullyStable):
     """Netiv Hased is stablity"""
 
     @classmethod
-    def executed_in_saturday(cls, when_date=None, **_):
+    def executed_in_saturday(cls, **_):
         """if the execution is in saturday"""
-        return when_date and _is_saturday_in_israel(when_date)
+        return _is_saturday_in_israel()
 
     @classmethod
     def failire_valid(cls, when_date=None, utilize_date_param=False, **_):
