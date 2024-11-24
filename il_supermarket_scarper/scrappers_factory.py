@@ -2,6 +2,7 @@ import random
 import os
 from enum import Enum
 import il_supermarket_scarper.scrappers as all_scrappers
+from il_supermarket_scarper.scraper_stability import ScraperStability
 
 
 class ScraperFactory(Enum):
@@ -95,4 +96,7 @@ class ScraperFactory(Enum):
             disabled_scrappers = list(map(str.strip, env_var_value.split(",")))
             if enum.name in disabled_scrappers:
                 return False
+        #
+        if ScraperStability.is_validate_scraper_found_no_files(enum):
+            return False
         return True
