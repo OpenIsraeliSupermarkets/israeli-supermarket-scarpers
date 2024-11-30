@@ -97,6 +97,6 @@ class ScraperFactory(Enum):
             if enum.name in disabled_scrappers:
                 return False
         #
-        if ScraperStability.is_validate_scraper_found_no_files(enum):
+        if ScraperStability.is_validate_scraper_found_no_files(enum.name):
             return False
         return True
