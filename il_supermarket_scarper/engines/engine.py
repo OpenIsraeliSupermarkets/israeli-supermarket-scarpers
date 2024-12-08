@@ -264,12 +264,12 @@ class Engine(ScraperStatus, ABC):
                 suppress_exception=suppress_exception,
             )
             self.on_download_completed(results=results)
-            self.on_scrape_completed(self.get_storage_path())
         except Exception as e:  # pylint: disable=broad-exception-caught
             if not suppress_exception:
                 raise e
             Logger.warning(f"Suppressing exception! {e}")
         finally:
+            self.on_scrape_completed(self.get_storage_path())
             self._post_scraping()
 
         return results
