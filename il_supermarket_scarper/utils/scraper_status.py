@@ -111,10 +111,12 @@ class ScraperStatus:
             self.database.insert_documents(self.VERIFIED_DOWNLOADS, documents)
 
     @lock_by_string()
-    def on_scrape_completed(self, folder_name):
+    def on_scrape_completed(self, folder_name, completed_successfully=True):
         """Report when scraping is completed."""
         self._insert_an_update(
-            ScraperStatus.ESTIMATED_SIZE, folder_size=log_folder_details(folder_name)
+            ScraperStatus.ESTIMATED_SIZE,
+            folder_size=log_folder_details(folder_name),
+            completed_successfully=completed_successfully,
         )
 
     @lock_by_string()
