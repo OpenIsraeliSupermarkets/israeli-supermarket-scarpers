@@ -7,7 +7,6 @@ from il_supermarket_scarper.utils import (
     execute_in_parallel,
     collect_from_ftp,
     fetch_temporary_gz_file_from_ftp,
-    retry_files,
     FileTypesFilters,
 )
 from .engine import Engine
@@ -37,7 +36,6 @@ class Cerberus(Engine):
         self.ftp_password = ftp_password
         self.ftp_session = False
 
-    @retry_files(num_of_retrys=2)
     def _scrape(
         self,
         limit=None,

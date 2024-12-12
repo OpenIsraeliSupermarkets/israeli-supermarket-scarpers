@@ -1,9 +1,5 @@
 from bs4 import BeautifulSoup
-from il_supermarket_scarper.utils import (
-    Logger,
-    execute_in_parallel,
-    retry_files,
-)
+from il_supermarket_scarper.utils import Logger, execute_in_parallel
 
 from .engine import Engine
 
@@ -134,7 +130,6 @@ class WebBase(Engine):
 
         return download_urls, file_names
 
-    @retry_files(num_of_retrys=2)
     def _scrape(
         self,
         limit=None,
