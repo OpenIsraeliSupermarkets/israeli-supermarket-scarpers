@@ -22,7 +22,7 @@ class FullyStable:
         and morning and the requested date is today fails"""
         execution_time = _now()
         return (
-            when_date
+            when_date is not None
             and execution_time.hour >= 0
             and execution_time.hour < hour_files_expected_to_be_accassible()
             and (not utilize_date_param or when_date.date() == execution_time.date())
@@ -82,7 +82,7 @@ class CityMarketGivataim(FullyStable):
         return (
             super().failire_valid(when_date=when_date)
             or cls.searching_for_update_promo(files_types=files_types)
-            or when_date
+            or when_date is not None
             and cls.executed_after_date(
                 when_date=when_date,
                 date=datetime_in_tlv(
@@ -158,7 +158,7 @@ class ScraperStability(Enum):
     CITY_MARKET_GIVATAYIM = CityMarketGivataim
     CITY_MARKET_KIRYATONO = CityMarketKiratOno
     CITY_MARKET_KIRYATGAT = CityMarketKiratGat
-    MESHMAT_YOSEF_1 = SuperFlaky
+    # MESHMAT_YOSEF_1 = SuperFlaky
     YOHANANOF = DoNotPublishStores
 
     @classmethod
