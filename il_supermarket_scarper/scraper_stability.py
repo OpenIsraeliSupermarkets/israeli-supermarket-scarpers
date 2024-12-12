@@ -148,6 +148,29 @@ class DoNotPublishStores(FullyStable):
         ) or cls.searching_for_store_full(files_types=files_types)
 
 
+class DoNotPublishPromo(FullyStable):
+    """stablity for chains that doesn't pubish stores"""
+
+    @classmethod
+    def searching_for_promo_full(cls, files_types=None, **_):
+        """if the execution is in saturday"""
+        return files_types and files_types == [
+            FileTypesFilters.PROMO_FILE.name,
+            FileTypesFilters.PROMO_FULL_FILE.name,
+        ]
+
+    @classmethod
+    def failire_valid(
+        cls, when_date=None, files_types=None, utilize_date_param=True, **_
+    ):
+        """return true if the parser is stble"""
+        return super().failire_valid(
+            when_date=when_date,
+            files_types=files_types,
+            utilize_date_param=utilize_date_param,
+        ) or cls.searching_for_promo_full(files_types=files_types)
+
+
 class ScraperStability(Enum):
     """tracker for the stablity of the scraper"""
 
@@ -158,7 +181,7 @@ class ScraperStability(Enum):
     CITY_MARKET_GIVATAYIM = CityMarketGivataim
     CITY_MARKET_KIRYATONO = CityMarketKiratOno
     CITY_MARKET_KIRYATGAT = CityMarketKiratGat
-    # MESHMAT_YOSEF_1 = SuperFlaky
+    MESHMAT_YOSEF_1 = DoNotPublishPromo
     YOHANANOF = DoNotPublishStores
 
     @classmethod

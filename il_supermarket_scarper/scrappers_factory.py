@@ -49,7 +49,7 @@ class ScraperFactory(Enum):
     @classmethod
     def all_listed_scrappers(cls):
         """get all the scarpers and filter disabled scrapers"""
-        return (member.name for member in cls)
+        return list(member.name for member in cls)
 
     @classmethod
     def all_active(cls, limit=None, files_types=None, when_date=None):
