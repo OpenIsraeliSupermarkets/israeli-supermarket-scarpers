@@ -44,5 +44,5 @@ jobs:
     - name: Remove all build
       run: (docker stop scraper-test-run 2>/dev/null || true) && (docker rm scraper-test-run 2>/dev/null || true)
     - name: Test with pytest
-      run:  docker run --rm --name scraper-test-run -e DISABLED_SCRAPPERS="${{ env.DISABLED_SCRAPPERS }}" erlichsefi/israeli-supermarket-scarpers:test &&
+      run:  docker run --memory="1g" -c 0 --rm --name scraper-test-run  erlichsefi/israeli-supermarket-scarpers:test &&
             docker builder prune -f
