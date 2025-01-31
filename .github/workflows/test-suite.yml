@@ -35,7 +35,6 @@ jobs:
     - name: Free disk space
       run: |
         df --human-readable
-        sudo apt clean
         docker 2>/dev/null 1>&2 rmi $(docker image ls --all --quiet) || true
         rm --recursive --force "$AGENT_TOOLSDIRECTORY"
         df --human-readable
