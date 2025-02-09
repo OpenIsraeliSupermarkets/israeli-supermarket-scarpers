@@ -35,8 +35,8 @@ class HaziHinam(MultiPageWeb):
         links = []
         filenames = []
         for link in html.xpath("//table/tbody/tr"):
-            links.append(link.xpath("td[5]/a/@href")[0])
-            filenames.append(link.xpath("td[2]")[0].text.strip() + ".xml.gz")
+            links.append(link.xpath("td[6]/a/@href")[0])
+            filenames.append(link.xpath("td[3]")[0].text.strip() + ".xml.gz")
         return links, filenames
 
     def get_file_types_id(self, files_types=None):
