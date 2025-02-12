@@ -1,6 +1,6 @@
+from datetime import timedelta
 from bs4 import BeautifulSoup
 
-from datetime import timedelta
 from il_supermarket_scarper.utils import _now
 from il_supermarket_scarper.engines.web import WebBase
 
@@ -30,20 +30,20 @@ class Wolt(WebBase):
                     "method": "GET",
                 }
             ]
-        else:
-            perspective = _now()
-            all_pages_to_collect_from = []
-            for days_back in range(10):
-                formatted_date = (perspective - timedelta(days=days_back)).strftime(
-                    "%Y-%m-%d"
-                )
-                all_pages_to_collect_from.append(
-                    {
-                        "url": self.url.replace("index.html", f"{formatted_date}.html"),
-                        "method": "GET",
-                    }
-                )
-            return all_pages_to_collect_from
+
+        perspective = _now()
+        all_pages_to_collect_from = []
+        for days_back in range(10):
+            formatted_date = (perspective - timedelta(days=days_back)).strftime(
+                "%Y-%m-%d"
+            )
+            all_pages_to_collect_from.append(
+                {
+                    "url": self.url.replace("index.html", f"{formatted_date}.html"),
+                    "method": "GET",
+                }
+            )
+        return all_pages_to_collect_from
 
     def get_data_from_page(self, req_res):
         """get the file list from a page"""
