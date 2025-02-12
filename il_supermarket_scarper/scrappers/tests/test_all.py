@@ -156,3 +156,7 @@ class YohananofTestCase(make_test_case(ScraperFactory.YOHANANOF, 1)):
 
 class ZolVeBegadolTestCase(make_test_case(ScraperFactory.ZOL_VEBEGADOL, 4)):
     """Test case for ScraperFactory.ZOL_VEBEGADOL."""
+
+
+class WoltTestCase(make_test_case(ScraperFactory.WOLT, 0)):
+    """Test case for ScraperFactory.Wolt."""
