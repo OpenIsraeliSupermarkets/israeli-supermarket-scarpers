@@ -41,6 +41,7 @@ class DumpFolderNames(Enum):
     YELLOW = "Yellow"
     YOHANANOF = "Yohananof"
     ZOL_VEBEGADOL = "ZolVeBegadol"
+    WOLT = "Wolt"
 
     @classmethod
     def is_valid_folder_name(cls, member):

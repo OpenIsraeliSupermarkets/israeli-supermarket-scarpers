@@ -45,6 +45,7 @@ class ScraperFactory(Enum):
     YELLOW = all_scrappers.Yellow
     YOHANANOF = all_scrappers.Yohananof
     ZOL_VEBEGADOL = all_scrappers.ZolVeBegadol
+    WOLT = all_scrappers.Wolt
 
     @classmethod
     def all_listed_scrappers(cls):

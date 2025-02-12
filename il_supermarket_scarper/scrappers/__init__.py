@@ -36,3 +36,4 @@ from .victory import Victory
 from .yellow import Yellow
 from .yohananof import Yohananof
 from .zolvebegadol import ZolVeBegadol
+from .wolt import Wolt
