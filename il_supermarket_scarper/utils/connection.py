@@ -219,7 +219,7 @@ def get_from_playwrite(page, extraction_type):
     """get the content from the page with playwrite"""
 
     if extraction_type == "update_date":
-        content = page.locator('//*[@id="metaData_updateDate_0"]').last.inner_text()
+        content = page.locator('//*[@id="content"]/div[1]/div/div/div/div[2]/div[6]/div').last.inner_text()
     elif extraction_type == "links_name":
         content = page.evaluate(
             """() => {
