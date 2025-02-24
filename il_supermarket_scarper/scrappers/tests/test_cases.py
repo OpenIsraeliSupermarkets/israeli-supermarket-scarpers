@@ -93,21 +93,15 @@ def make_test_case(scraper_enum, store_id):
 
         def _try_to_recover_xml(self, file_path):
             """try to recover the xml"""
-            try:
-                parser = etree.XMLParser(recover=True, encoding="utf-8")
-                with open(file_path, "rb") as f:
-                    tree = etree.parse(f, parser)
-                fixed_xml = etree.tostring(
-                    tree, pretty_print=True, encoding="utf-8"
-                ).decode("utf-8")
+            parser = etree.XMLParser(recover=True, encoding="utf-8")
+            with open(file_path, "rb") as f:
+                tree = etree.parse(f, parser)
+            fixed_xml = etree.tostring(
+                tree, pretty_print=True, encoding="utf-8"
+            ).decode("utf-8")
 
-                with open(file_path, "w", encoding="utf-8") as f:
-                    f.write(fixed_xml)
-
-                return fixed_xml
-            except Exception as e:  # pylint: disable=broad-exception-caught
-                print(f"Error parsing XML: {e}")
-                return None
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(fixed_xml)
 
         def _make_sure_file_is_xml_readable(self, full_file_path):
             """Ensure the file is a valid XML and readable."""
