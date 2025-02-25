@@ -179,10 +179,9 @@ class Engine(ScraperStatus, ABC):
         #
         groups_value = []
         for file in intreable_:
-            name_split = by_function(file).split("-", maxsplit=2)
-            date_info = name_split[-1].rsplit(".", maxsplit=1)[0]
-
-            if f"-{date_format}" in date_info:
+            # StoresFull7290875100001-000-202502250510'
+            # Promo7290700100008-000-207-20250224-103225
+            if f"-{date_format}" in by_function(file):
                 groups_value.append(file)
 
         return groups_value
