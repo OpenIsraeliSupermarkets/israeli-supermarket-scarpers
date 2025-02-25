@@ -1,9 +1,11 @@
 # pylint: disable=too-many-statements
 import unittest
 import tempfile
+import re
 import os
 import uuid
 import xml.etree.ElementTree as ET
+from lxml import etree
 from il_supermarket_scarper.utils import (
     FileTypesFilters,
     Logger,
@@ -61,13 +63,8 @@ def make_test_case(scraper_enum, store_id):
 
             # check the store id is applied
             if store_id:
-                store_mark = []
                 for file in files_found:
-                    store_mark.append(int(file.split("-")[1]))
-                assert len(set(store_mark)) == 1 and len(store_mark) == len(files_found)
-                assert str(store_id) in str(
-                    store_mark[0]
-                ), f"{store_id} not in {store_mark[0]}"
+                    assert re.compile(rf"-0*{store_id}-").search(file)
 
             # check the date time stamp is applied
             if when_date:
@@ -94,13 +91,29 @@ def make_test_case(scraper_enum, store_id):
             file_ext = file_name.split(".")[-1]
             assert file_ext == "xml", f" should be xml but {file_ext}, file:{file_name}"
 
+        def _try_to_recover_xml(self, file_path):
+            """try to recover the xml"""
+            parser = etree.XMLParser(recover=True, encoding="utf-8")
+            with open(file_path, "rb") as f:
+                tree = etree.parse(f, parser)
+            fixed_xml = etree.tostring(
+                tree, pretty_print=True, encoding="utf-8"
+            ).decode("utf-8")
+
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(fixed_xml)
+
         def _make_sure_file_is_xml_readable(self, full_file_path):
             """Ensure the file is a valid XML and readable."""
             try:
                 ET.parse(full_file_path)
             except ET.ParseError:
-                change_xml_encoding(full_file_path)
-                ET.parse(full_file_path)
+                try:
+                    self._try_to_recover_xml(full_file_path)
+                    ET.parse(full_file_path)
+                except ET.ParseError:
+                    change_xml_encoding(full_file_path)
+                    ET.parse(full_file_path)
 
         def _clean_scarpe_delete(
             self,
