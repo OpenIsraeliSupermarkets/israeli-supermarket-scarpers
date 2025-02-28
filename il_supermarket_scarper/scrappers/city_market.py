@@ -4,6 +4,7 @@ from il_supermarket_scarper.engines import Bina, MultiPageWeb
 from il_supermarket_scarper.utils import DumpFolderNames, FileTypesFilters
 
 
+# removed on 28.02.2025
 class CityMarketGivatayim(Bina):
     """scraper for city market givatayim"""
 

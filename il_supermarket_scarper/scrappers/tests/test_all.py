@@ -14,10 +14,10 @@ class CofixTestCase(make_test_case(ScraperFactory.COFIX, 299)):
     """Test case for ScraperFactory.COFIX."""
 
 
-class CityMarketGivatayimTestCase(
-    make_test_case(ScraperFactory.CITY_MARKET_GIVATAYIM, 1)
-):
-    """Test case for CityMarketGivatay"""
+# class CityMarketGivatayimTestCase(
+#     make_test_case(ScraperFactory.CITY_MARKET_GIVATAYIM, 1)
+# ):
+#     """Test case for CityMarketGivatay"""
 
 
 # class CityMarketKirtatOnoTestCase(
