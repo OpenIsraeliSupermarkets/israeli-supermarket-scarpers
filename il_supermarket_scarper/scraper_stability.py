@@ -178,7 +178,7 @@ class ScraperStability(Enum):
     NETIV_HASED = NetivHased
     QUIK = DoNotPublishStores
     SALACH_DABACH = DoNotPublishStores
-    CITY_MARKET_GIVATAYIM = CityMarketGivataim
+    # CITY_MARKET_GIVATAYIM = CityMarketGivataim
     CITY_MARKET_KIRYATONO = CityMarketKiratOno
     CITY_MARKET_KIRYATGAT = CityMarketKiratGat
     MESHMAT_YOSEF_1 = DoNotPublishPromo
