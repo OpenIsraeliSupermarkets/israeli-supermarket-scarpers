@@ -8,44 +8,48 @@ from il_supermarket_scarper.scraper_stability import ScraperStability
 class ScraperFactory(Enum):
     """all scrapers avaliabe"""
 
-    BAREKET = all_scrappers.Bareket
-    YAYNO_BITAN = all_scrappers.YaynotBitan
-    COFIX = all_scrappers.Cofix
-    CITY_MARKET_GIVATAYIM = all_scrappers.CityMarketGivatayim
+    BAREKET = all_scrappers.Bareket  # עוף והודו ברקת - חנות המפעל בע"מ
+    YAYNO_BITAN = all_scrappers.YaynotBitan  # יינות ביתן
+    COFIX = all_scrappers.Cofix  # קופיקס בע"מ
+    # CITY_MARKET_GIVATAYIM = all_scrappers.CityMarketGivatayim
     # CITY_MARKET_KIRYATONO = all_scrappers.CityMarketKirtatOno
-    CITY_MARKET_KIRYATGAT = all_scrappers.CityMarketKiryatGat
-    CITY_MARKET_SHOPS = all_scrappers.CityMarketShops
-    DOR_ALON = all_scrappers.DorAlon
-    GOOD_PHARM = all_scrappers.GoodPharm
-    HAZI_HINAM = all_scrappers.HaziHinam
-    HET_COHEN = all_scrappers.HetCohen
-    KESHET = all_scrappers.Keshet
-    KING_STORE = all_scrappers.KingStore
-    MAAYAN_2000 = all_scrappers.Maayan2000
-    MAHSANI_ASHUK = all_scrappers.MahsaniAShuk
-    MEGA = all_scrappers.Mega
-    NETIV_HASED = all_scrappers.NetivHased
-    MESHMAT_YOSEF_1 = all_scrappers.MeshnatYosef1
-    MESHMAT_YOSEF_2 = all_scrappers.MeshnatYosef2
-    OSHER_AD = all_scrappers.Osherad
-    POLIZER = all_scrappers.Polizer
-    RAMI_LEVY = all_scrappers.RamiLevy
-    SALACH_DABACH = all_scrappers.SalachDabach
-    SHEFA_BARCART_ASHEM = all_scrappers.ShefaBarcartAshem
-    SHUFERSAL = all_scrappers.Shufersal
-    SHUK_AHIR = all_scrappers.ShukAhir
-    STOP_MARKET = all_scrappers.StopMarket
-    SUPER_PHARM = all_scrappers.SuperPharm
-    SUPER_YUDA = all_scrappers.SuperYuda
-    SUPER_SAPIR = all_scrappers.SuperSapir
-    FRESH_MARKET_AND_SUPER_DOSH = all_scrappers.FreshMarketAndSuperDosh
-    QUIK = all_scrappers.Quik
-    TIV_TAAM = all_scrappers.TivTaam
-    VICTORY = all_scrappers.Victory
-    YELLOW = all_scrappers.Yellow
-    YOHANANOF = all_scrappers.Yohananof
-    ZOL_VEBEGADOL = all_scrappers.ZolVeBegadol
-    WOLT = all_scrappers.Wolt
+    CITY_MARKET_KIRYATGAT = all_scrappers.CityMarketKiryatGat  # סיטי מרקט
+    CITY_MARKET_SHOPS = all_scrappers.CityMarketShops  # סיטי מרקט
+    DOR_ALON = all_scrappers.DorAlon  # דור אלון ניהול מתחמים קמעונאיים בע"מ
+    GOOD_PHARM = all_scrappers.GoodPharm  # גוד פארם בע"מ
+    HAZI_HINAM = all_scrappers.HaziHinam  # כל בו חצי חינם בע"מ
+    HET_COHEN = all_scrappers.HetCohen  # ח. כהן סוכנות מזון ומשקאות בע"מ
+    KESHET = all_scrappers.Keshet  # קשת טעמים בע"מ
+    KING_STORE = all_scrappers.KingStore  # אלמשהדאוי קינג סטור בע"מ
+    MAAYAN_2000 = all_scrappers.Maayan2000  # ג.מ מעיין אלפיים (07) בע"מ
+    MAHSANI_ASHUK = all_scrappers.MahsaniAShuk  # כ.נ מחסני השוק בע"מ
+    MEGA = all_scrappers.Mega  # קרפור \ מגה
+    NETIV_HASED = all_scrappers.NetivHased  # נתיב החסד - סופר חסד בע"מ (כולל ברכל)
+    MESHMAT_YOSEF_1 = (
+        all_scrappers.MeshnatYosef1
+    )  # קיי.טי. יבוא ושיווק בע"מ (משנת יוסף)
+    MESHMAT_YOSEF_2 = (
+        all_scrappers.MeshnatYosef2
+    )  # קיי.טי. יבוא ושיווק בע"מ (משנת יוסף)
+    OSHER_AD = all_scrappers.Osherad  # מרב-מזון כל בע"מ (אושר עד)
+    POLIZER = all_scrappers.Polizer  # פוליצר חדרה (1982) בע"מ
+    RAMI_LEVY = all_scrappers.RamiLevy  # רשת חנויות רמי לוי שיווק השקמה 2006 בע"מ
+    SALACH_DABACH = all_scrappers.SalachDabach  # סאלח דבאח ובניו בע"מ
+    SHEFA_BARCART_ASHEM = all_scrappers.ShefaBarcartAshem  # שפע ברכת השם בע"מ
+    SHUFERSAL = all_scrappers.Shufersal  # שופרסל בע"מ (כולל רשת BE)
+    SHUK_AHIR = all_scrappers.ShukAhir  # שוק העיר (ט.ע.מ.ס) בע"מ
+    STOP_MARKET = all_scrappers.StopMarket  # סטופ מרקט בע"מ
+    SUPER_PHARM = all_scrappers.SuperPharm  # סופר פארם (ישראל) בע"מ
+    SUPER_YUDA = all_scrappers.SuperYuda  # סופר יודה
+    SUPER_SAPIR = all_scrappers.SuperSapir  # סופר ספיר בע"מ
+    FRESH_MARKET_AND_SUPER_DOSH = all_scrappers.FreshMarketAndSuperDosh  # פרשמרקט
+    QUIK = all_scrappers.Quik  # קוויק
+    TIV_TAAM = all_scrappers.TivTaam  # טיב טעם רשתות בע"מ
+    VICTORY = all_scrappers.Victory  # ויקטורי רשת סופרמרקטים בע"מ
+    YELLOW = all_scrappers.Yellow  # יילו
+    YOHANANOF = all_scrappers.Yohananof  # מ. יוחננוף ובניו (1988) בע"מ
+    ZOL_VEBEGADOL = all_scrappers.ZolVeBegadol  # זול ובגדול בע"מ
+    WOLT = all_scrappers.Wolt  # וולט אופריישנס סרוויסס ישראל בע"מ
 
     @classmethod
     def all_listed_scrappers(cls):
