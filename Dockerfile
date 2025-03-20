@@ -5,17 +5,10 @@ ARG PY_VERSION="3.11.0"
 
 # setting the environment 
 RUN apk update && \
-    apk add --no-cache cron && \
-    apk add --no-cache libxml2-dev && \
-    apk add --no-cache libxslt-dev
-    
+    apk add --no-cache cron libxml2-dev libxslt-dev
 
 # setting python and more 
-RUN apk add --no-cache python3 py3-pip && \
-    apk add --no-cache dieharder && \
-    apk add --no-cache wget && \
-    apk clean && \
-    apk autoremove
+RUN apk add --no-cache python3 py3-pip dieharder wget
 
 # setup python
 ENV HOME="/root"
@@ -33,15 +26,12 @@ WORKDIR /usr/src/app
 COPY . .
 RUN python -m pip install .
 
-
 VOLUME ["/usr/src/app/dumps"]
 
 # development container
 FROM base as dev
 RUN apk add --no-cache git
-RUN pip install black
-RUN pip install pylint
-
+RUN pip install black pylint
 
 # production image
 FROM base as prod
@@ -58,7 +48,7 @@ FROM base as test
 
 # playwrite
 RUN npx -y playwright@1.43.0 install --with-deps
-RUN python -m  playwright install  
+RUN python -m playwright install  
 
 RUN python -m pip install . ".[test]"
 CMD python -m pytest -n 2
