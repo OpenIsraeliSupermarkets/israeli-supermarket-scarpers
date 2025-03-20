@@ -355,4 +355,16 @@ def wget_file(file_link, file_save_path):
         raise FileNotFoundError(
             f"File wasn't downloaded with wget,std_err is {std_err}"
         )
+
+    # wget will create file always, so we need to check if there was an error
+    # example for validate case is collecting start and
+    # the file is removed before downloading (change of hour)
+    if "ERROR 403" in std_err or "ERROR 404" in std_err:
+        if os.path.exists(file_save_path):
+            os.remove(file_save_path)
+        Logger.error(f"Got error {std_err} while downloading {file_link}")
+        raise FileNotFoundError(
+            f"File wan't found in the remote, possibly removed between "
+            f"collection and download, std_err is {std_err}"
+        )
     return file_save_path
