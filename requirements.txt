@@ -4,7 +4,8 @@ requests==2.32.2
 lxml==5.2.1
 beautifulsoup4==4.10.0
 pymongo==4.6.3
+dnspython==2.6.1 # patch pymongo vulnerability
 pytz==2022.4
-holidays==0.16
+holidays==0.45
 cachetools==5.2.0
 pytest-playwright==0.4.4
