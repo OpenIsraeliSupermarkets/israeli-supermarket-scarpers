@@ -3,24 +3,24 @@
 FROM node:20.19.0-alpine3.21 as base
 ARG PY_VERSION="3.11.0"
 
-# setting the enviroment 
-RUN apt-get update --fix-missing -y && \
-    apt-get install cron -y && \
-    apt-get install libxml2-dev -y && \
-    apt-get install libxslt-dev -y 
+# setting the environment 
+RUN apk update && \
+    apk add --no-cache cron && \
+    apk add --no-cache libxml2-dev && \
+    apk add --no-cache libxslt-dev
     
 
 # setting python and more 
-RUN apt-get install python3-pip -y && \
-    apt-get install dieharder -y && \
-    apt-get install wget -y && \
-    apt-get clean && \
-    apt-get autoremove
+RUN apk add --no-cache python3 py3-pip && \
+    apk add --no-cache dieharder && \
+    apk add --no-cache wget && \
+    apk clean && \
+    apk autoremove
 
 # setup python
 ENV HOME="/root"
 WORKDIR ${HOME}
-RUN apt-get install -y git libbz2-dev libncurses-dev  libreadline-dev libffi-dev libssl-dev
+RUN apk add --no-cache git libbz2-dev ncurses-dev readline-dev libffi-dev openssl-dev
 RUN git clone --depth=1 https://github.com/pyenv/pyenv.git .pyenv
 ENV PYENV_ROOT="${HOME}/.pyenv"
 ENV PATH="${PYENV_ROOT}/shims:${PYENV_ROOT}/bin:${PATH}"
@@ -38,7 +38,7 @@ VOLUME ["/usr/src/app/dumps"]
 
 # development container
 FROM base as dev
-RUN apt-get -y install git
+RUN apk add --no-cache git
 RUN pip install black
 RUN pip install pylint
 
@@ -62,4 +62,3 @@ RUN python -m  playwright install
 
 RUN python -m pip install . ".[test]"
 CMD python -m pytest -n 2
-
