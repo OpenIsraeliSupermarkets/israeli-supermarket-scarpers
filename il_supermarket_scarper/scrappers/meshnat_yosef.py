@@ -12,7 +12,7 @@ class MeshnatYosef1(WebBase):
     def __init__(self, folder_name=None):
         super().__init__(
             DumpFolderNames.MESHMAT_YOSEF_1,
-            chain_id="333333",
+            chain_id="5144744100002",
             url="https://list-files.w5871031-kt.workers.dev/",
             folder_name=folder_name,
         )
@@ -36,7 +36,7 @@ class MeshnatYosef2(Bina):
     def __init__(self, folder_name=None):
         super().__init__(
             DumpFolderNames.MESHMAT_YOSEF_2,
-            chain_id="2222222",
+            chain_id="5144744100001",
             url_perfix="ktshivuk",
             folder_name=folder_name,
         )
