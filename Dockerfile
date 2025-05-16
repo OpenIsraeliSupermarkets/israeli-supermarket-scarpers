@@ -1,6 +1,6 @@
 #syntax=docker/dockerfile:1
 
-FROM node:20.19.0-bookworm-slim as base
+FROM node:20.19.2-bookworm-slim as base
 ARG PY_VERSION="3.11.0"
 
 # setting the enviroment 
