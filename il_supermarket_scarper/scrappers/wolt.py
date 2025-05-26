@@ -1,7 +1,7 @@
 from datetime import timedelta
 from bs4 import BeautifulSoup
 
-from il_supermarket_scarper.utils import _now
+from il_supermarket_scarper.utils import _now, Logger
 from il_supermarket_scarper.engines.web import WebBase
 
 from il_supermarket_scarper.utils import DumpFolderNames
@@ -57,7 +57,13 @@ class Wolt(WebBase):
 
     def extract_task_from_entry(self, all_trs):
         """extract download links and file names from page list"""
-        download_urls: list = list(map(lambda x: x[1], all_trs))
-        file_names: list = list(map(lambda x: x[0], all_trs))
+        download_urls = []
+        file_names = []
+        for x in all_trs:
+            try:
+                download_urls.append(x[1])
+                file_names.append(x[0])
+            except Exception as e:
+                Logger.warning(f"Error extracting task from entry: {e}")
 
         return download_urls, file_names

@@ -25,10 +25,14 @@ class WebBase(Engine):
 
     def extract_task_from_entry(self, all_trs):
         """extract download links and file names from page list"""
-        download_urls: list = list(map(lambda x: self.url + x.a.attrs["href"], all_trs))
-        file_names: list = list(
-            map(lambda x: x.a.attrs["href"].split(".")[0].split("/")[-1], all_trs)
-        )
+        download_urls = []
+        file_names = []
+        for x in all_trs:
+            try:
+                download_urls.append(self.url + x.a.attrs["href"])
+                file_names.append(x.a.attrs["href"].split(".")[0].split("/")[-1])
+            except Exception as e:
+                Logger.warning(f"Error extracting task from entry: {e}")
 
         return download_urls, file_names
 
