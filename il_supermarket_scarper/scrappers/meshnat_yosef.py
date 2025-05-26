@@ -3,7 +3,7 @@ import json
 from il_supermarket_scarper.engines.web import WebBase
 from il_supermarket_scarper.engines import Bina
 
-from il_supermarket_scarper.utils import DumpFolderNames
+from il_supermarket_scarper.utils import DumpFolderNames, Logger
 
 
 class MeshnatYosef1(WebBase):
@@ -24,8 +24,14 @@ class MeshnatYosef1(WebBase):
 
     def extract_task_from_entry(self, all_trs):
         """extract download links and file names from page list"""
-        download_urls: list = list(map(lambda x: x["url"], all_trs))
-        file_names: list = list(map(lambda x: x["name"], all_trs))
+        download_urls = []
+        file_names = []
+        for x in all_trs:
+            try:
+                download_urls.append(x["url"])
+                file_names.append(x["name"])
+            except (AttributeError, KeyError, IndexError, TypeError) as e:
+                Logger.warning(f"Error extracting task from entry: {e}")
 
         return download_urls, file_names
 

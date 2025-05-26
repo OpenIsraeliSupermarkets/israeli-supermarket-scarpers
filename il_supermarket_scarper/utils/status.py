@@ -194,4 +194,4 @@ def _is_weekend_in_israel():
 
 
 def _is_holiday_in_israel():
-    return _now().date() in holidays.IL()
+    return _now().date() in holidays.CountryHoliday("IL")

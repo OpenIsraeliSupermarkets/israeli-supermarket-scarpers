@@ -18,12 +18,15 @@ class Aspx(WebBase, ABC):
     def extract_task_from_entry(self, all_trs):
         """from the trs extract the download urls and file names"""
 
-        download_urls: list = list(
-            map(lambda x: self.url + self.get_href_from_entry(x), all_trs)
-        )
-        file_names: list = list(
-            map(self.get_file_name_no_ext_from_entry, download_urls)
-        )
+        download_urls = []
+        file_names = []
+        for x in all_trs:
+            try:
+                download_url = self.url + self.get_href_from_entry(x)
+                download_urls.append(download_url)
+                file_names.append(self.get_file_name_no_ext_from_entry(download_url))
+            except (AttributeError, KeyError, IndexError, TypeError) as e:
+                Logger.warning(f"Error extracting task from entry: {e}")
         return download_urls, file_names
 
     @abstractmethod
