@@ -30,7 +30,7 @@ class MeshnatYosef1(WebBase):
             try:
                 download_urls.append(x["url"])
                 file_names.append(x["name"])
-            except Exception as e:
+            except (AttributeError, KeyError, IndexError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")
 
         return download_urls, file_names

@@ -63,7 +63,7 @@ class Wolt(WebBase):
             try:
                 download_urls.append(x[1])
                 file_names.append(x[0])
-            except Exception as e:
+            except (AttributeError, KeyError, IndexError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")
 
         return download_urls, file_names

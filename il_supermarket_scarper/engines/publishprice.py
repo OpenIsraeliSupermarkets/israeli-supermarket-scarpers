@@ -1,7 +1,7 @@
 from bs4 import BeautifulSoup
 
-from .web import WebBase
 from il_supermarket_scarper.utils.logger import Logger
+from .web import WebBase
 
 
 class PublishPrice(WebBase):
@@ -84,7 +84,7 @@ class PublishPrice(WebBase):
             try:
                 download_urls.append(self.url + get_path_from_herf(x))
                 file_names.append(get_name_from_herf(x))
-            except Exception as e:
+            except (AttributeError, KeyError, IndexError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")
 
         return download_urls, file_names

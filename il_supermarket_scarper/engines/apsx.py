@@ -25,7 +25,7 @@ class Aspx(WebBase, ABC):
                 download_url = self.url + self.get_href_from_entry(x)
                 download_urls.append(download_url)
                 file_names.append(self.get_file_name_no_ext_from_entry(download_url))
-            except Exception as e:
+            except (AttributeError, KeyError, IndexError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")
         return download_urls, file_names
 

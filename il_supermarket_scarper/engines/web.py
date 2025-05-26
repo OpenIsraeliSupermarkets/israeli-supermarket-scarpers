@@ -31,7 +31,7 @@ class WebBase(Engine):
             try:
                 download_urls.append(self.url + x.a.attrs["href"])
                 file_names.append(x.a.attrs["href"].split(".")[0].split("/")[-1])
-            except Exception as e:
+            except (AttributeError, KeyError, IndexError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")
 
         return download_urls, file_names
