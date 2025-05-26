@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 from .web import WebBase
 from il_supermarket_scarper.utils.logger import Logger
 
+
 class PublishPrice(WebBase):
     """
     scrape the file of PublishPrice
@@ -85,6 +86,5 @@ class PublishPrice(WebBase):
                 file_names.append(get_name_from_herf(x))
             except Exception as e:
                 Logger.warning(f"Error extracting task from entry: {e}")
-
 
         return download_urls, file_names
