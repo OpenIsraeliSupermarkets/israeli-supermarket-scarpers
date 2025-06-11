@@ -21,13 +21,11 @@ This License Agreement ("Agreement") is a legal agreement between Sefi Erlich ("
 
 3. Contributions
 
-3.1 Contributor License Grant: By submitting any content ("Contribution") to the Repository, the Contributor grants the Licensor an exclusive, perpetual, irrevocable, worldwide, royalty-free license to use, reproduce, modify, distribute, sublicense, and create derivative works from the Contribution for any purpose, including commercial purposes.
+3.1 Contributor License Grant: By submitting any content ("Contribution") to the Repository, the Contributor grants the Licensor a non-exclusive, perpetual, irrevocable, worldwide, royalty-free license to use, reproduce, modify, distribute, sublicense, and create derivative works from the Contribution for any purpose, including commercial purposes.
 
-3.2 Non-Commercial Use by Contributor: Contributors retain the right to use their own Contributions for non-commercial purposes under the same terms as this Agreement.
+3.2 Warranty of Originality: Contributors represent and warrant that their Contributions are original works and do not infringe upon the intellectual property rights of any third party.
 
-3.3 Warranty of Originality: Contributors represent and warrant that their Contributions are original works and do not infringe upon the intellectual property rights of any third party.
-
-3.4 No Commercial Rights for Contributors: Contributors acknowledge that they have no rights to use the Licensed Material or their Contributions for commercial purposes.
+3.3 No Commercial Rights for Contributors: Contributors acknowledge that they have no rights to use the Licensed Material for commercial purposes.
 
 4. Restrictions
 
@@ -60,7 +58,7 @@ This License Agreement ("Agreement") is a legal agreement between Sefi Erlich ("
 
 7.1 Entire Agreement: This Agreement constitutes the entire agreement between the parties concerning the subject matter hereof and supersedes all prior agreements and understandings.
 
-7.2 Modification: The Licensor reserves the right to modify this Agreement at any time. Continued use of the Repository constitutes acceptance of the modified terms.
+7.2 Modification: The Licensor reserves the right to modify this Agreement for new versions of the Licensed Material. Such modifications will not apply retroactively to any version of the Licensed Material you have already obtained.
 
 7.3 Severability: If any provision of this Agreement is found to be unenforceable, the remainder shall remain in full force and effect.
 
