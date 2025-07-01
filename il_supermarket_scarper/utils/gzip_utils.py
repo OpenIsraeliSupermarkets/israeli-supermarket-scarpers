@@ -47,7 +47,7 @@ def report_failed_zip(exception, file_save_path, target_file_name):
         raise ValueError(
             f"Error decoding file:{file_save_path} with "
             f"error: {str(exception)} file size {str(file_size)} ,"
-            f"file_contant {str(file_contant)}"
+            f"trimed_file_contant {str(file_contant)[:100]}"
         )
     except UnicodeDecodeError:
         raise ValueError(
