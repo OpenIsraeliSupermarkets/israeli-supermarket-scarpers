@@ -9,7 +9,8 @@ class ScraperFactory(Enum):
     """all scrapers avaliabe"""
 
     BAREKET = all_scrappers.Bareket  # עוף והודו ברקת - חנות המפעל בע"מ
-    YAYNO_BITAN = all_scrappers.YaynotBitan  # יינות ביתן
+    YAYNO_BITAN_AND_CARREFOUR = all_scrappers.YaynotBitanAndCarrefour  # יינות ביתן
+    # YAYNO_BITAN = all_scrappers.YaynotBitan  # יינות ביתן
     COFIX = all_scrappers.Cofix  # קופיקס בע"מ
     # CITY_MARKET_GIVATAYIM = all_scrappers.CityMarketGivatayim
     # CITY_MARKET_KIRYATONO = all_scrappers.CityMarketKirtatOno

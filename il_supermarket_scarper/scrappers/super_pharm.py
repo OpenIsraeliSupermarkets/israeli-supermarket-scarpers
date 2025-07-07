@@ -18,7 +18,7 @@ class SuperPharm(MultiPageWeb):
     def __init__(self, folder_name=None):
         super().__init__(
             chain=DumpFolderNames.SUPER_PHARM,
-            chain_id="7290172900007", 
+            chain_id="7290172900007",
             url="http://prices.super-pharm.co.il/",
             folder_name=folder_name,
             total_page_xpath='//*[@class="mvc-grid-pager"]/button[last()]/@data-page',
@@ -28,7 +28,7 @@ class SuperPharm(MultiPageWeb):
 
     def collect_files_details_from_page(self, html):
         links = []
-        filenames = [] 
+        filenames = []
         for element in html.xpath("//tbody/tr"):  # skip header
             links.append(self.url + element.xpath("./td[6]/a/@href")[0])
             filenames.append(element.xpath("./td[2]")[0].text)

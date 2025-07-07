@@ -5,7 +5,8 @@ class DumpFolderNames(Enum):
     """all the folder that files will be download to"""
 
     BAREKET = "Bareket"
-    YAYNO_BITAN = "YaynotBitan"
+    # YAYNO_BITAN = "YaynotBitan"
+    YAYNO_BITAN_AND_CARREFOUR = "YaynotBitanAndCarrefour"
     COFIX = "Cofix"
     CITY_MARKET_GIVATAYIM = "CityMarketGivatayim"
     CITY_MARKET_KIRYATONO = "CityMarketKiryatOno"
