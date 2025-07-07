@@ -57,7 +57,7 @@ CMD python main.py
 FROM base as test
 
 # playwrite
-RUN npx -y playwright@1.43.0 install --with-deps
+RUN npx -y playwright@1.53.0 install --with-deps
 RUN python -m  playwright install  
 
 RUN python -m pip install . ".[test]"

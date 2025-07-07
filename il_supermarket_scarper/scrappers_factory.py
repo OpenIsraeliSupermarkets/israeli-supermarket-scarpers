@@ -23,7 +23,7 @@ class ScraperFactory(Enum):
     KING_STORE = all_scrappers.KingStore  # אלמשהדאוי קינג סטור בע"מ
     MAAYAN_2000 = all_scrappers.Maayan2000  # ג.מ מעיין אלפיים (07) בע"מ
     MAHSANI_ASHUK = all_scrappers.MahsaniAShuk  # כ.נ מחסני השוק בע"מ
-    MEGA = all_scrappers.Mega  # קרפור \ מגה
+    # MEGA = all_scrappers.Mega  # קרפור \ מגה
     NETIV_HASED = all_scrappers.NetivHased  # נתיב החסד - סופר חסד בע"מ (כולל ברכל)
     MESHMAT_YOSEF_1 = (
         all_scrappers.MeshnatYosef1
