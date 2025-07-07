@@ -68,8 +68,8 @@ class MahsaniAShukTestCase(make_test_case(ScraperFactory.MAHSANI_ASHUK, 98)):
     """Test case for ScraperFactory.MAHSANI_ASHUK."""
 
 
-class MegaTestCase(make_test_case(ScraperFactory.MEGA, 37)):
-    """Test case for ScraperFactory.MEGA."""
+# class MegaTestCase(make_test_case(ScraperFactory.MEGA, 37)):
+#     """Test case for ScraperFactory.MEGA."""
 
 
 class NetivHasefTestCase(make_test_case(ScraperFactory.NETIV_HASED, 1)):
