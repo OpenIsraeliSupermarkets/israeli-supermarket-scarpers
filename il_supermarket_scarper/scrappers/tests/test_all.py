@@ -6,8 +6,10 @@ class BareketTestCase(make_test_case(ScraperFactory.BAREKET, 5)):
     """Test case for ScraperFactory.BAREKET."""
 
 
-class YaynotBitanTestCase(make_test_case(ScraperFactory.YAYNO_BITAN, 9032)):
-    """Test case for ScraperFactory.YAYNO_BITAN."""
+class YaynotBitanAndCarrefourTestCase(
+    make_test_case(ScraperFactory.YAYNO_BITAN_AND_CARREFOUR, 9032)
+):
+    """Test case for ScraperFactory.YAYNO_BITAN_AND_CARREFOUR."""
 
 
 class CofixTestCase(make_test_case(ScraperFactory.COFIX, 299)):
@@ -68,8 +70,8 @@ class MahsaniAShukTestCase(make_test_case(ScraperFactory.MAHSANI_ASHUK, 98)):
     """Test case for ScraperFactory.MAHSANI_ASHUK."""
 
 
-class MegaTestCase(make_test_case(ScraperFactory.MEGA, 37)):
-    """Test case for ScraperFactory.MEGA."""
+# class MegaTestCase(make_test_case(ScraperFactory.MEGA, 37)):
+#     """Test case for ScraperFactory.MEGA."""
 
 
 class NetivHasefTestCase(make_test_case(ScraperFactory.NETIV_HASED, 1)):

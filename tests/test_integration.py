@@ -29,4 +29,4 @@ def test_scrapers_are_updated():
 def test_update_date():
     """test date the site update"""
     date = get_status_date()
-    assert date.date() == datetime.datetime(2025, 2, 26).date(), "gov il site changed"
+    assert date.date() == datetime.datetime(2025, 7, 1).date(), "gov il site changed"

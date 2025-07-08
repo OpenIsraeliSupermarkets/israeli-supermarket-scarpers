@@ -8,4 +8,4 @@ dnspython==2.6.1 # patch pymongo vulnerability
 pytz==2022.4
 holidays==0.45
 cachetools==5.2.0
-pytest-playwright==0.4.4
+pytest-playwright==0.7.0

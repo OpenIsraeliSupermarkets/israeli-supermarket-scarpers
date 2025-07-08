@@ -1,5 +1,5 @@
 from .bareket import Bareket
-from .bitan import YaynotBitan
+from .bitan import YaynotBitanAndCarrefour
 from .cofix import Cofix
 from .city_market import (
     CityMarketGivatayim,

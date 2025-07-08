@@ -9,7 +9,8 @@ class ScraperFactory(Enum):
     """all scrapers avaliabe"""
 
     BAREKET = all_scrappers.Bareket  # עוף והודו ברקת - חנות המפעל בע"מ
-    YAYNO_BITAN = all_scrappers.YaynotBitan  # יינות ביתן
+    YAYNO_BITAN_AND_CARREFOUR = all_scrappers.YaynotBitanAndCarrefour  # יינות ביתן
+    # YAYNO_BITAN = all_scrappers.YaynotBitan  # יינות ביתן
     COFIX = all_scrappers.Cofix  # קופיקס בע"מ
     # CITY_MARKET_GIVATAYIM = all_scrappers.CityMarketGivatayim
     # CITY_MARKET_KIRYATONO = all_scrappers.CityMarketKirtatOno
@@ -23,7 +24,7 @@ class ScraperFactory(Enum):
     KING_STORE = all_scrappers.KingStore  # אלמשהדאוי קינג סטור בע"מ
     MAAYAN_2000 = all_scrappers.Maayan2000  # ג.מ מעיין אלפיים (07) בע"מ
     MAHSANI_ASHUK = all_scrappers.MahsaniAShuk  # כ.נ מחסני השוק בע"מ
-    MEGA = all_scrappers.Mega  # קרפור \ מגה
+    # MEGA = all_scrappers.Mega  # קרפור \ מגה
     NETIV_HASED = all_scrappers.NetivHased  # נתיב החסד - סופר חסד בע"מ (כולל ברכל)
     MESHMAT_YOSEF_1 = (
         all_scrappers.MeshnatYosef1
