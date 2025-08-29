@@ -5,12 +5,11 @@ from il_supermarket_scarper.utils import DumpFolderNames
 class Yellow(Cerberus):
     """scraper for yellow"""
 
-    def __init__(self, folder_name=None):
+    def __init__(self, streaming_config=None):
         super().__init__(
             chain=DumpFolderNames.YELLOW,
             chain_id="7290644700005",
-            folder_name=folder_name,
+            streaming_config=streaming_config,
             ftp_username="Paz_bo",
             ftp_password="paz468",
-            max_threads=10,
         )

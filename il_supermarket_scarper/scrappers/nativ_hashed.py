@@ -8,10 +8,10 @@ class NetivHased(WebBase):
 
     utilize_date_param = False
 
-    def __init__(self, folder_name=None):
+    def __init__(self, streaming_config=None):
         super().__init__(
             chain=DumpFolderNames.NETIV_HASED,
             chain_id="7290058160839",
             url="http://141.226.203.152/",
-            folder_name=folder_name,
+            streaming_config=streaming_config
         )

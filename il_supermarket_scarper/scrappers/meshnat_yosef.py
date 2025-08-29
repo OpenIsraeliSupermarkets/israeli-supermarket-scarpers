@@ -9,12 +9,12 @@ from il_supermarket_scarper.utils import DumpFolderNames, Logger
 class MeshnatYosef1(WebBase):
     """scraper for meshnat yoosef"""
 
-    def __init__(self, folder_name=None):
+    def __init__(self, streaming_config=None):
         super().__init__(
             DumpFolderNames.MESHMAT_YOSEF_1,
             chain_id="5144744100002",
             url="https://list-files.w5871031-kt.workers.dev/",
-            folder_name=folder_name,
+            streaming_config=streaming_config
         )
 
     def get_data_from_page(self, req_res):
@@ -39,10 +39,10 @@ class MeshnatYosef1(WebBase):
 class MeshnatYosef2(Bina):
     """scaper for Meshnat Yosef"""
 
-    def __init__(self, folder_name=None):
+    def __init__(self, streaming_config=None):
         super().__init__(
             DumpFolderNames.MESHMAT_YOSEF_2,
             chain_id="5144744100001",
             url_perfix="ktshivuk",
-            folder_name=folder_name,
+            streaming_config=streaming_config
         )

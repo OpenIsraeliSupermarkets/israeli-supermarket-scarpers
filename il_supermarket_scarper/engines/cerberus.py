@@ -1,5 +1,6 @@
 import os
 import datetime
+from typing import List, Dict, Any, Optional
 
 from il_supermarket_scarper.utils import (
     extract_xml_file_from_gz_file,
@@ -9,10 +10,10 @@ from il_supermarket_scarper.utils import (
     fetch_temporary_gz_file_from_ftp,
     FileTypesFilters,
 )
-from .engine import Engine
+from .streaming import StreamingEngine, WebStreamingConfig, StorageType
 
 
-class Cerberus(Engine):
+class Cerberus(StreamingEngine):
     """scraper for all Cerberus base site. (seems like can't support historical data)"""
 
     target_file_extensions = ["xml", "gz"]
@@ -22,14 +23,13 @@ class Cerberus(Engine):
         self,
         chain,
         chain_id,
-        folder_name=None,
         ftp_host="url.retail.publishedprices.co.il",
         ftp_path="/",
         ftp_username="",
         ftp_password="",
-        max_threads=5,
-    ):
-        super().__init__(chain, chain_id, folder_name, max_threads)
+        streaming_config: Optional[WebStreamingConfig] = None,
+    ):  
+        super().__init__(chain, chain_id, url=None, streaming_config=streaming_config)
         self.ftp_host = ftp_host
         self.ftp_path = ftp_path
         self.ftp_username = ftp_username
@@ -210,3 +210,60 @@ class Cerberus(Engine):
             "restart_and_retry": restart_and_retry,
             "error": error,
         }
+
+    def discover_links_streaming(self, limit=None, files_types=None, store_id=None, 
+                               when_date=None, files_names_to_scrape=None,
+                               filter_null=False, filter_zero=False, 
+                               suppress_exception=False) -> List[Dict[str, Any]]:
+        """Discover FTP files for streaming processing."""
+        try:
+            # Collect files using existing logic
+            files = self.collect_files_details_from_site(
+                limit=limit,
+                files_types=files_types,
+                filter_null=filter_null,
+                filter_zero=filter_zero,
+                store_id=store_id,
+                when_date=when_date,
+                files_names_to_scrape=files_names_to_scrape,
+                suppress_exception=suppress_exception,
+            )
+            
+            # Convert file names to streaming format
+            links = []
+            for file_name in files:
+                links.append({
+                    'url': f"ftp://{self.ftp_host}{self.ftp_path}{file_name}",
+                    'file_name': file_name,
+                    'original_data': file_name
+                })
+                
+            return links
+            
+        except Exception as e:
+            Logger.error(f"Error discovering FTP files: {e}")
+            if not suppress_exception:
+                raise e
+            return []
+
+    def process_link_data(self, link_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Process a single FTP file link - mostly pass-through for FTP."""
+        # Add processing metadata
+        link_data['processed_at'] = os.getpid()
+        return link_data
+
+    def download_item_data(self, item_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Download a single FTP file using the original persist_from_ftp method."""
+        try:
+            file_name = item_data['original_data']
+            result = self.persist_from_ftp(file_name)
+            
+            return {
+                'file_name': result['file_name'],
+                'content': '',  # Content is saved to disk by persist_from_ftp
+                'download_result': result,
+                'downloaded_at': os.getpid()
+            }
+        except Exception as e:
+            Logger.error(f"Error downloading FTP file {item_data.get('file_name', 'unknown')}: {e}")
+            return None

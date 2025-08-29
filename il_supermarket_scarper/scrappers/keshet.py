@@ -5,10 +5,10 @@ from il_supermarket_scarper.utils import DumpFolderNames
 class Keshet(Cerberus):
     """scaper for keshet tamim"""
 
-    def __init__(self, folder_name=None):
+    def __init__(self, streaming_config=None):
         super().__init__(
             chain=DumpFolderNames.KESHET,
             chain_id="7290785400000",
-            folder_name=folder_name,
             ftp_username="Keshet",
+            streaming_config=streaming_config
         )

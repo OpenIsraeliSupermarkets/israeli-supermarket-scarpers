@@ -1,7 +1,9 @@
 from bs4 import BeautifulSoup
+from typing import Optional
 
 from il_supermarket_scarper.utils.logger import Logger
 from .web import WebBase
+from .streaming import WebStreamingConfig
 
 
 class PublishPrice(WebBase):
@@ -16,16 +18,14 @@ class PublishPrice(WebBase):
         chain,
         chain_id,
         site_infix,
-        folder_name=None,
         domain="prices",
-        max_threads=5,
+        streaming_config: Optional[WebStreamingConfig] = None,
     ):
         super().__init__(
             chain,
             chain_id,
             url=f"https://{domain}.{site_infix}.co.il/",
-            folder_name=folder_name,
-            max_threads=max_threads,
+            streaming_config=streaming_config,
         )
         self.folder = None
 

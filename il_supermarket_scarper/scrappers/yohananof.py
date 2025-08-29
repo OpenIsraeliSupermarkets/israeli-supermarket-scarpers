@@ -5,10 +5,10 @@ from il_supermarket_scarper.utils import DumpFolderNames
 class Yohananof(Cerberus):
     """scraper for yohananof"""
 
-    def __init__(self, folder_name=None):
+    def __init__(self, streaming_config=None):
         super().__init__(
             chain=DumpFolderNames.YOHANANOF,
             chain_id="7290803800003",
-            folder_name=folder_name,
+            streaming_config=streaming_config,
             ftp_username="yohananof",
         )

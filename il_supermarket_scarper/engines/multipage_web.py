@@ -2,6 +2,7 @@ from urllib.parse import urlsplit
 import re
 import ntpath
 from abc import abstractmethod
+from typing import Optional
 from lxml import html as lxml_html
 
 
@@ -11,6 +12,7 @@ from il_supermarket_scarper.utils import (
     multiple_page_aggregtion,
 )
 from .web import WebBase
+from .streaming import WebStreamingConfig
 
 
 class MultiPageWeb(WebBase):
@@ -29,10 +31,11 @@ class MultiPageWeb(WebBase):
                                             tfoot/tr/td/a[6]/@href""",
         total_pages_pattern=r"^\/\?page\=([0-9]{3})$",
         page_argument="page",
-        max_threads=5,
+        streaming_config: Optional[WebStreamingConfig] = None,
     ):
         super().__init__(
-            chain, chain_id, url=url, folder_name=folder_name, max_threads=max_threads
+            chain, chain_id, url=url,
+            streaming_config=streaming_config
         )
         self.total_page_xpath = total_page_xpath
         self.total_pages_pattern = total_pages_pattern

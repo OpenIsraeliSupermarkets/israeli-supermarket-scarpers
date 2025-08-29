@@ -8,12 +8,12 @@ from il_supermarket_scarper.utils import DumpFolderNames, FileTypesFilters
 class CityMarketGivatayim(Bina):
     """scraper for city market givatayim"""
 
-    def __init__(self, folder_name=None):
+    def __init__(self, streaming_config=None):
         super().__init__(
             chain=DumpFolderNames.CITY_MARKET_GIVATAYIM,
             chain_id="5359000000000",
             url_perfix="citymarketgivatayim",
-            folder_name=folder_name,
+            streaming_config=streaming_config
         )
 
 
@@ -21,40 +21,40 @@ class CityMarketGivatayim(Bina):
 class CityMarketKirtatOno(Bina):
     """scraper for city market givatayim"""
 
-    def __init__(self, folder_name=None):
+    def __init__(self, streaming_config=None):
         super().__init__(
             chain=DumpFolderNames.CITY_MARKET_KIRYATONO,
             chain_id="5359000000000",
             url_perfix="citymarketkiryatono",
-            folder_name=folder_name,
+            streaming_config=streaming_config
         )
 
 
 class CityMarketKiryatGat(Bina):
     """scraper for city market givatayim"""
 
-    def __init__(self, folder_name=None):
+    def __init__(self, streaming_config=None):
         super().__init__(
             chain=DumpFolderNames.CITY_MARKET_KIRYATGAT,
             chain_id="7290058266241",
             url_perfix="citymarketkiryatgat",
-            folder_name=folder_name,
+            streaming_config=streaming_config
         )
 
 
 class CityMarketShops(MultiPageWeb):
     """scraper for city market givatayim"""
 
-    def __init__(self, folder_name=None):
+    def __init__(self, streaming_config=None):
         super().__init__(
             chain=DumpFolderNames.CITY_MARKET_SHOPS,
             chain_id="7290000000003",
             url="http://www.citymarket-shops.co.il/",
-            folder_name=folder_name,
             total_page_xpath="(//li[contains(concat(' ', normalize-space(@class), ' '),"
             + "' pagination-item ')])[last()]/a/@href",
             total_pages_pattern=r"\d+",
             page_argument="&p",
+            streaming_config=streaming_config
         )
 
     def collect_files_details_from_page(self, html):

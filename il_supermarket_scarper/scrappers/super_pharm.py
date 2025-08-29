@@ -15,12 +15,12 @@ from il_supermarket_scarper.utils import (
 class SuperPharm(MultiPageWeb):
     """scraper for super pharm"""
 
-    def __init__(self, folder_name=None):
+    def __init__(self, streaming_config=None):
         super().__init__(
             chain=DumpFolderNames.SUPER_PHARM,
             chain_id="7290172900007",
             url="http://prices.super-pharm.co.il/",
-            folder_name=folder_name,
+            streaming_config=streaming_config,
             total_page_xpath='//*[@class="mvc-grid-pager"]/button[last()]/@data-page',
             total_pages_pattern=r"(\d+)$",
             page_argument="&page",

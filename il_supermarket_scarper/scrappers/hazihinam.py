@@ -3,27 +3,17 @@ import datetime
 from il_supermarket_scarper.engines import MultiPageWeb
 from il_supermarket_scarper.utils import DumpFolderNames, FileTypesFilters, _now
 
-# class HaziHinam(Cerberus):
-#     """scrper fro hazi hinam"""
-
-#     def __init__(self, folder_name=None):
-#         super().__init__(
-#             chain=DumpFolderNames.HAZI_HINAM,
-#             chain_id="7290700100008",
-#             folder_name=folder_name,
-#             ftp_username="HaziHinam",
-#         )
 
 
 class HaziHinam(MultiPageWeb):
     """scrper fro hazi hinam"""
 
-    def __init__(self, folder_name=None):
+    def __init__(self, streaming_config=None):
         super().__init__(
             chain=DumpFolderNames.HAZI_HINAM,
             chain_id="7290700100008",
             url="https://shop.hazi-hinam.co.il/Prices",
-            folder_name=folder_name,
+            streaming_config=streaming_config,
             total_page_xpath="(//li[contains(concat(' ', normalize-space(@class), ' '),"
             + "' pagination-item ')])[last()]/a/@href",
             total_pages_pattern=r"\d+",

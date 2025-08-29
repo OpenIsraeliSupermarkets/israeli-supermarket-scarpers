@@ -5,10 +5,10 @@ from il_supermarket_scarper.utils import DumpFolderNames
 class FreshMarketAndSuperDosh(Cerberus):
     """scraper for fresh market and super dush"""
 
-    def __init__(self, folder_name=None):
+    def __init__(self, streaming_config=None):
         super().__init__(
             chain=DumpFolderNames.FRESH_MARKET_AND_SUPER_DOSH,
             chain_id="7290876100000",
-            folder_name=folder_name,
+            streaming_config=streaming_config,
             ftp_username="freshmarket",
         )

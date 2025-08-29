@@ -5,10 +5,10 @@ from il_supermarket_scarper.utils import DumpFolderNames
 class KingStore(Bina):
     """scraper for king store"""
 
-    def __init__(self, folder_name=None):
+    def __init__(self, streaming_config=None):
         super().__init__(
             chain=DumpFolderNames.KING_STORE,
             chain_id="7290058108879",
             url_perfix="kingstore",
-            folder_name=folder_name,
+            streaming_config=streaming_config
         )

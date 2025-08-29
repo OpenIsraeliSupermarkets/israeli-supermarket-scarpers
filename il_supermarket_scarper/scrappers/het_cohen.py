@@ -5,10 +5,10 @@ from il_supermarket_scarper.utils import DumpFolderNames
 class HetCohen(Matrix):
     """scraper for ChetCohen"""
 
-    def __init__(self, folder_name=None):
+    def __init__(self, streaming_config=None):
         super().__init__(
             chain=DumpFolderNames.HET_COHEN,
             chain_id=["7290455000004"],
-            folder_name=folder_name,
             chain_hebrew_name="ח. כהן",
+            streaming_config=streaming_config
         )

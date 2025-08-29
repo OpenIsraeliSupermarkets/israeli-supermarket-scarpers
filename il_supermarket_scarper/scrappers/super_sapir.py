@@ -5,10 +5,10 @@ from il_supermarket_scarper.utils import DumpFolderNames
 class SuperSapir(Bina):
     """scaper for super sapir"""
 
-    def __init__(self, folder_name=None):
+    def __init__(self, streaming_config=None):
         super().__init__(
             chain=DumpFolderNames.SUPER_SAPIR,
             chain_id="7290058156016",
             url_perfix="supersapir",
-            folder_name=folder_name,
+            streaming_config=streaming_config,
         )

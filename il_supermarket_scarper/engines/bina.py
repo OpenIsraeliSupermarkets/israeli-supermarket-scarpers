@@ -1,6 +1,7 @@
 import json
 import urllib.parse
 import datetime
+from typing import Optional
 
 from il_supermarket_scarper.utils import (
     Logger,
@@ -10,6 +11,7 @@ from il_supermarket_scarper.utils import (
 )
 
 from .apsx import Aspx
+from .streaming import WebStreamingConfig
 
 
 class Bina(Aspx):
@@ -25,14 +27,14 @@ class Bina(Aspx):
         url_perfix,
         download_postfix="/Download.aspx?FileNm=",
         domain="binaprojects.com/",
-        folder_name=None,
+        streaming_config: Optional[WebStreamingConfig] = None,
     ):
         super().__init__(
             chain,
             chain_id,
             url=f"http://{url_perfix}.{domain}",
             aspx_page="MainIO_Hok.aspx",
-            folder_name=folder_name,
+            streaming_config=streaming_config,
         )
         self.download_postfix = download_postfix
 

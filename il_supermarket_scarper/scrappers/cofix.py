@@ -5,12 +5,12 @@ from il_supermarket_scarper.utils import FileTypesFilters, DumpFolderNames
 class Cofix(Cerberus):
     """scraper for confix"""
 
-    def __init__(self, folder_name=None):
+    def __init__(self, streaming_config=None):
         super().__init__(
             chain=DumpFolderNames.COFIX,
             chain_id="7291056200008",
-            folder_name=folder_name,
             ftp_username="SuperCofixApp",
+            streaming_config=streaming_config
         )
 
     def is_valid_file_empty(self, file_name):

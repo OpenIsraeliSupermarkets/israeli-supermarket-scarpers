@@ -5,10 +5,10 @@ from il_supermarket_scarper.utils import DumpFolderNames
 class TivTaam(Cerberus):
     """scraper for tiv taam"""
 
-    def __init__(self, folder_name=None):
+    def __init__(self, streaming_config=None):
         super().__init__(
             chain=DumpFolderNames.TIV_TAAM,
             chain_id="7290873255550",
-            folder_name=folder_name,
+            streaming_config=streaming_config,
             ftp_username="TivTaam",
         )

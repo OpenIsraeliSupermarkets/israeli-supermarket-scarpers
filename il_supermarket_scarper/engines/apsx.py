@@ -1,17 +1,21 @@
 from abc import ABC, abstractmethod
+from typing import Optional
 from il_supermarket_scarper.utils import Logger
 
 from .web import WebBase
+from .streaming import WebStreamingConfig
 
 
 class Aspx(WebBase, ABC):
     """class for aspx scapers"""
 
     def __init__(
-        self, chain, chain_id, url, aspx_page, folder_name=None, max_threads=5
+        self, chain, chain_id, url, aspx_page,
+        streaming_config: Optional[WebStreamingConfig] = None
     ):
         super().__init__(
-            chain, chain_id, url, folder_name=folder_name, max_threads=max_threads
+            chain, chain_id, url,
+            streaming_config=streaming_config
         )
         self.aspx_page = aspx_page
 

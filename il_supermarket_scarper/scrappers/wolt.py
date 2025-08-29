@@ -1,21 +1,23 @@
 from datetime import timedelta
 from bs4 import BeautifulSoup
+from typing import Optional
 
 from il_supermarket_scarper.utils import _now, Logger
 from il_supermarket_scarper.engines.web import WebBase
-
+from il_supermarket_scarper.engines.streaming import WebStreamingConfig, StorageType
 from il_supermarket_scarper.utils import DumpFolderNames
+from typing import List, Dict, Any, Optional
 
 
 class Wolt(WebBase):
-    """scraper for wolt"""
+    """scraper for wolt with streaming support"""
 
-    def __init__(self, folder_name=None):
+    def __init__(self, streaming_config: Optional[WebStreamingConfig] = None):
         super().__init__(
-            DumpFolderNames.WOLT,
+            chain=DumpFolderNames.WOLT,
             chain_id="7290058249350",
             url="https://wm-gateway.wolt.com/isr-prices/public/v1/index.html",
-            folder_name=folder_name,
+            streaming_config=streaming_config
         )
 
     def get_request_url(
