@@ -66,7 +66,7 @@ class Cerberus(Engine):
             )
             return results
         except Exception as e:  # pylint: disable=broad-except
-            self.on_download_fail(e, files=files)
+            self.on_download_fail(e, file_names=files)
             raise e
 
     def get_type_pattern(self, files_types):

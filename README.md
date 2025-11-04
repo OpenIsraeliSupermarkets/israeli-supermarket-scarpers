@@ -52,10 +52,10 @@ There are a lot of projects in GitHub trying to scrape the supermarket data, but
 You only need to run the following code to get all the data currently shared by the supermarkets.
 
 ```python
-from il_supermarket_scarper import MainScrapperRunner
+from il_supermarket_scarper import ScarpingTask
 
-scraper = MainScrapperRunner()
-scraper.run()
+scraper = ScarpingTask()
+scraper.start()
 ```
 
 
@@ -67,7 +67,7 @@ Quick start
 
 il_supermarket_scarper can be installed using pip:
 
-    python3 pip install israeli-supermarket-scraper
+    python3 pip install il-supermarket-scraper
 
 If you want to run the latest version of the code, you can install it from the
 repo directly:

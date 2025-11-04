@@ -120,15 +120,15 @@ class ScraperStatus:
         )
 
     @lock_by_string()
-    def on_download_fail(self, execption, **additional_info):
+    def on_download_fail(self, execption, download_urls=None, file_names=None):
         """report when the scraping in failed"""
         self._insert_an_update(
             ScraperStatus.FAILED,
             execption=str(execption),
             traceback=traceback.format_exc(),
-            **additional_info,
+            download_urls=download_urls if download_urls else [],
+            file_names=file_names if file_names else [],
         )
-
     def _insert_an_update(self, status, **additional_info):
         """Insert an update into the MongoDB collection."""
         document = {
