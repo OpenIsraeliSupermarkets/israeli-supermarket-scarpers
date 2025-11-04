@@ -90,7 +90,7 @@ class OsheradTestCase(make_test_case(ScraperFactory.OSHER_AD, 1)):
     """Test case for ScraperFactory.OSHER_AD."""
 
 
-class PolizerTestCase(make_test_case(ScraperFactory.POLIZER, 1)):
+class PolizerTestCase(make_test_case(ScraperFactory.POLIZER, 2)):
     """Test case for ScraperFactory.POLIZER."""
 
 
@@ -102,7 +102,7 @@ class SalachDabachTestCase(make_test_case(ScraperFactory.SALACH_DABACH, 4)):
     """Test case for ScraperFactory.SALACH_DABACH."""
 
 
-class ShefaBarcartAshemTestCase(make_test_case(ScraperFactory.SHEFA_BARCART_ASHEM, 41)):
+class ShefaBarcartAshemTestCase(make_test_case(ScraperFactory.SHEFA_BARCART_ASHEM, 42)):
     """Test case for ScraperFactory.SHEFA_BARCART_ASHEM."""
 
 
