@@ -9,6 +9,6 @@ class DorAlon(Cerberus):
         super().__init__(
             folder_name=folder_name,
             chain=DumpFolderNames.DOR_ALON,
-            chain_id="7290492000005",
+            chain_id=["7290492000005","729049000005"],
             ftp_username="doralon",
         )
