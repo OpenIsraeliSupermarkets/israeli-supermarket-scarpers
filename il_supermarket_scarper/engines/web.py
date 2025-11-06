@@ -1,7 +1,13 @@
 import asyncio
+import gzip
+import io
+import json
+import os
 import threading
+import zipfile
+import requests
 from bs4 import BeautifulSoup
-from il_supermarket_scarper.utils import Logger, execute_in_parallel
+from il_supermarket_scarper.utils import Logger, execute_in_parallel, session_with_cookies
 from typing import List, Dict, Any, Optional
 from .streaming import StreamingEngine, WebStreamingConfig, StorageType
 
@@ -31,8 +37,13 @@ class WebBase(StreamingEngine):
         file_names = []
         for x in all_trs:
             try:
-                download_urls.append(self.url + x.a.attrs["href"])
-                file_names.append(x.a.attrs["href"].split(".")[0].split("/")[-1])
+                href = x.a.attrs["href"]
+                # If href is already an absolute URL, use it directly
+                if href.startswith('http://') or href.startswith('https://'):
+                    download_urls.append(href)
+                else:
+                    download_urls.append(self.url + href)
+                file_names.append(href.split(".")[0].split("/")[-1])
             except (AttributeError, KeyError, IndexError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")
 
@@ -156,15 +167,177 @@ class WebBase(StreamingEngine):
         link_data['processed_at'] = threading.current_thread().name
         return link_data
 
+    def _download_to_memory(self, file_link, file_name):
+        """Download file directly to memory without writing to disk."""
+        try:
+            # Handle Bina-style downloads that need to get SPath first
+            # Only do this if the file_link doesn't look like a direct file URL
+            # (Bina scrapers use Download.aspx?FileNm=... which returns JSON with SPath)
+            # Check for Download.aspx regardless of whether URL is absolute or relative
+            if (hasattr(self, 'session_with_cookies_by_chain') and 
+                'Download.aspx' in file_link and 'FileNm=' in file_link):
+                try:
+                    response_content = self.session_with_cookies_by_chain(file_link)
+                    # Check if response is gzipped (starts with 0x1f 0x8b)
+                    content_bytes_check = response_content.content
+                    if len(content_bytes_check) >= 2 and content_bytes_check[0] == 0x1f and content_bytes_check[1] == 0x8b:
+                        # Response is gzipped, not JSON - this means it's the actual file
+                        Logger.debug(f"SPath response is gzipped file, using directly")
+                        actual_url = file_link
+                        # Use the response content directly
+                        content_bytes = content_bytes_check
+                        # Skip the download step below
+                        skip_download = True
+                    else:
+                        # Response is JSON with SPath
+                        spath = json.loads(response_content.content)
+                        Logger.debug(f"Found spath: {spath}")
+                        url = spath[0]["SPath"]
+                        # If URL is already complete (starts with http), use it directly
+                        if url.startswith('http://') or url.startswith('https://'):
+                            actual_url = url
+                        else:
+                            # Otherwise, construct from base URL if available
+                            actual_url = url
+                        skip_download = False
+                except (json.JSONDecodeError, KeyError, IndexError, UnicodeDecodeError) as e:
+                    Logger.warning(f"Could not parse SPath response, using original URL: {e}")
+                    actual_url = file_link
+                    skip_download = False
+            else:
+                actual_url = file_link
+                skip_download = False
+            
+            # Download to memory - skip if we already have content from SPath response
+            if not skip_download:
+                # Try direct requests first (faster for most cases)
+                try:
+                    response = requests.get(
+                        actual_url, stream=True, timeout=30, headers={"Accept-Encoding": None}
+                    )
+                    response.raise_for_status()
+                    content_bytes = response.content
+                except Exception as e:
+                    # If direct download fails, try using session (for scrapers that need cookies/auth)
+                    if hasattr(self, 'session_with_cookies_by_chain'):
+                        Logger.debug(f"Direct download failed, trying session: {e}")
+                        try:
+                            response_obj = self.session_with_cookies_by_chain(actual_url, method="GET", timeout=30)
+                            content_bytes = response_obj.content
+                        except Exception as session_e:
+                            Logger.error(f"Both direct and session download failed: direct={e}, session={session_e}")
+                            raise
+                    else:
+                        raise
+            
+            if not content_bytes:
+                raise ValueError(f"Empty response from {actual_url}")
+            
+            # Check if it's a gzip file and extract in memory
+            # Always check magic bytes first - gzip starts with 0x1f 0x8b
+            has_gzip_magic = len(content_bytes) >= 2 and content_bytes[0] == 0x1f and content_bytes[1] == 0x8b
+            has_gz_ext = file_link.endswith('.gz') or file_name.endswith('.gz')
+            
+            # If it has gzip magic bytes OR .gz extension, try to decompress
+            if has_gzip_magic or has_gz_ext:
+                try:
+                    # Decompress as gzip
+                    content_bytes = gzip.decompress(content_bytes)
+                    Logger.debug(f"Decompressed gzip file, size: {len(content_bytes)} bytes")
+                except Exception as e:
+                    # If .gz extension but decompression failed, try as zip
+                    if has_gz_ext:
+                        Logger.debug(f"Gzip decompression failed ({type(e).__name__}: {e}), trying zip")
+                        try:
+                            with zipfile.ZipFile(io.BytesIO(content_bytes)) as the_zip:
+                                zip_info = the_zip.infolist()[0]
+                                content_bytes = the_zip.read(zip_info)
+                            Logger.debug(f"Extracted zip file, size: {len(content_bytes)} bytes")
+                        except Exception as zip_e:
+                            Logger.error(f"Could not extract compressed file as gzip ({e}) or zip ({zip_e})")
+                            raise zip_e
+                    else:
+                        # Has magic bytes but decompression failed - this is an error
+                        Logger.error(f"File has gzip magic bytes but decompression failed: {e}")
+                        raise
+            
+            # Decode to string (only after decompression)
+            # Safety check: if decode fails with gzip magic bytes, we must have missed decompression
+            try:
+                content = content_bytes.decode('utf-8')
+            except UnicodeDecodeError as decode_err:
+                # If we get a decode error and see gzip magic bytes, try decompressing
+                if len(content_bytes) >= 2 and content_bytes[0] == 0x1f and content_bytes[1] == 0x8b:
+                    Logger.warning(f"Got decode error but file has gzip magic bytes, attempting decompression")
+                    try:
+                        content_bytes = gzip.decompress(content_bytes)
+                        content = content_bytes.decode('utf-8')
+                        Logger.debug(f"Successfully decompressed and decoded after decode error")
+                    except Exception as decomp_err:
+                        Logger.error(f"Failed to decompress after decode error: {decomp_err}")
+                        raise decode_err
+                else:
+                    raise
+            
+            # Check for errors in content
+            if "link expired" in content:
+                from il_supermarket_scarper.utils import RestartSessionError
+                raise RestartSessionError()
+            
+            return content, True
+            
+        except Exception as e:
+            import traceback
+            Logger.error(f"Error downloading {file_link} to memory: {e}")
+            Logger.debug(f"Traceback: {traceback.format_exc()}")
+            return None, False
+    
     def download_item_data(self, item_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Download a single item using the original save_and_extract method."""
         try:
             original_data = item_data['original_data']
-            result = self.save_and_extract(original_data)
+            file_link, file_name = original_data
+            
+            # Check if using queue storage - download directly to memory
+            use_memory = False
+            if self.streaming_config:
+                storage_type = self.streaming_config.storage.storage_type
+                if isinstance(storage_type, StorageType):
+                    storage_type_value = storage_type.value
+                else:
+                    storage_type_value = storage_type
+                use_memory = storage_type_value == StorageType.QUEUE.value
+            
+            content = ''
+            result = None
+            
+            if use_memory:
+                # Download directly to memory
+                Logger.debug(f"Downloading {file_link} directly to memory for queue")
+                content, success = self._download_to_memory(file_link, file_name)
+                if success:
+                    result = {
+                        "file_name": file_name,
+                        "downloaded": True,
+                        "extract_succefully": True,
+                        "error": None,
+                        "restart_and_retry": False,
+                    }
+                else:
+                    result = {
+                        "file_name": file_name,
+                        "downloaded": False,
+                        "extract_succefully": False,
+                        "error": "Failed to download to memory",
+                        "restart_and_retry": False,
+                    }
+            else:
+                # Use disk-based download (original behavior)
+                result = self.save_and_extract(original_data)
             
             return {
                 'file_name': result['file_name'],
-                'content': '',  # Content is saved to disk by save_and_extract
+                'content': content,
                 'download_result': result,
                 'downloaded_at': threading.current_thread().name
             }

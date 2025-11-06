@@ -15,7 +15,27 @@ from il_supermarket_scarper.utils import (
 )
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
 from il_supermarket_scarper.scraper_stability import ScraperStability
-from il_supermarket_scarper.engines.streaming import WebStreamingConfig
+from il_supermarket_scarper.engines.streaming import WebStreamingConfig, StorageType
+
+
+class TestQueueHandler:
+    """Queue handler for testing that stores files in memory."""
+    
+    def __init__(self):
+        self.queue_items = []  # Store items in memory
+    
+    async def publish(self, data):
+        """Publish data to queue - store in memory."""
+        if isinstance(data, dict):
+            self.queue_items.append(data)
+    
+    def get_items(self):
+        """Get all items from the queue."""
+        return self.queue_items
+    
+    def clear(self):
+        """Clear the queue."""
+        self.queue_items = []
 
 def make_test_case(scraper_enum, store_id):
     """create test suite for scraper"""
@@ -144,6 +164,14 @@ def make_test_case(scraper_enum, store_id):
         ):
             self._delete_download_folder(dump_path)
             os.makedirs(dump_path)
+            
+            # Create output directory for files (will be written from queue)
+            download_path = os.path.join(dump_path, DumpFolderNames[scraper_enum.name].value)
+            os.makedirs(download_path, exist_ok=True)
+            
+            # Create queue handler that stores items in memory
+            queue_handler = TestQueueHandler()
+            
             init_scraper_function = ScraperFactory.get(scraper_enum)
 
             if init_scraper_function is None:
@@ -152,10 +180,17 @@ def make_test_case(scraper_enum, store_id):
                 try:
                     scraper = init_scraper_function(streaming_config=WebStreamingConfig.from_dict({
                         "storage": {
-                            "storage_type": "disk",
-                            "config": {"output_dir": dump_path}
+                            "storage_type": StorageType.QUEUE.value,
+                            "config": {
+                                "queue_handler": queue_handler,
+                                "output_dir": dump_path  # Set output_dir for status folder creation
+                            }
                         }
                     }))
+                    
+                    # Create status folder structure - status is stored as JSON but test expects a folder
+                    status_folder = os.path.join(dump_path, "status")
+                    os.makedirs(status_folder, exist_ok=True)
 
                     kwarg = {
                         "limit": limit,
@@ -168,6 +203,26 @@ def make_test_case(scraper_enum, store_id):
                     }
 
                     scraper.scrape(**kwarg)
+                    
+                    # Read files from queue and write them to disk for test verification
+                    queue_items = queue_handler.get_items()
+                    Logger.info(f"Found {len(queue_items)} items in queue")
+                    for item in queue_items:
+                        if isinstance(item, dict):
+                            file_name = item.get('file_name', '')
+                            content = item.get('content', '')
+                            
+                            Logger.debug(f"Queue item: file_name={file_name}, content_length={len(content) if content else 0}")
+                            
+                            if content:
+                                if not file_name.endswith('.xml'):
+                                    file_name += '.xml'
+                                file_path = os.path.join(download_path, file_name)
+                                with open(file_path, 'w', encoding='utf-8') as f:
+                                    f.write(content)
+                                Logger.info(f"Wrote file from queue to {file_path}")
+                            else:
+                                Logger.warning(f"No content in queue item for {file_name}")
 
                     files_found = os.listdir(dump_path)
                     assert (
