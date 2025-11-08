@@ -63,8 +63,8 @@ class StreamingConfig:
     """Configuration for streaming pipeline stages."""
     link_discovery_cap: int = 100
     processing_cap: int = 50
-    download_cap: int = 20
-    storage_cap: int = 10
+    download_cap: int = 30
+    storage_cap: int = 30
     queue_size: int = 200
     max_retries: int = 3
     retry_delay: float = 1.0
@@ -120,20 +120,10 @@ class StreamingPipeline:
         
     def _start_workers(self):
         """Start worker threads for each pipeline stage."""
-        # Processing workers
-        for i in range(self.config.processing_cap):
-            worker = threading.Thread(
-                target=self._processing_worker,
-                name=f"processing-{i}",
-                daemon=True
-            )
-            worker.start()
-            self._processing_workers.append(worker)
-            
-        # Download workers
+        # Download workers - directly consume from link queue for better performance
         for i in range(self.config.download_cap):
             worker = threading.Thread(
-                target=self._download_worker,
+                target=self._optimized_download_worker,
                 name=f"download-{i}",
                 daemon=True
             )
@@ -156,41 +146,26 @@ class StreamingPipeline:
             for worker in workers:
                 if worker.is_alive():
                     worker.join(timeout=5.0)
-                    
-    def _processing_worker(self):
-        """Worker thread for processing stage."""
+    
+    def _optimized_download_worker(self):
+        """Optimized worker that combines processing and downloading in one step."""
         while self._running:
             try:
-                item = self.link_queue.get(timeout=1.0)
+                item = self.link_queue.get(timeout=0.01)
                 if item is None:
                     continue
-                    
-                # Process the item (to be implemented by subclass)
-                processed_item = self._process_item(item)
                 
-                if processed_item and not self.processing_queue.put(processed_item, timeout=1.0):
-                    Logger.warning("Processing queue full, dropping item")
+                # Process the item inline (avoids queue hop)
+                processed_item = self._process_item(item)
+                if not processed_item:
+                    continue
                     
                 self._stats['items_processed'] += 1
                 
-            except Empty:
-                continue
-            except Exception as e:
-                Logger.error(f"Error in processing worker: {e}")
-                self._stats['errors'] += 1
+                # Download the item immediately
+                downloaded_item = self._download_item(processed_item)
                 
-    def _download_worker(self):
-        """Worker thread for download stage."""
-        while self._running:
-            try:
-                item = self.processing_queue.get(timeout=1.0)
-                if item is None:
-                    continue
-                    
-                # Download the item (to be implemented by subclass)
-                downloaded_item = self._download_item(item)
-                
-                if downloaded_item and not self.download_queue.put(downloaded_item, timeout=1.0):
+                if downloaded_item and not self.download_queue.put(downloaded_item, timeout=0.01):
                     Logger.warning("Download queue full, dropping item")
                     
                 self._stats['items_downloaded'] += 1
@@ -198,26 +173,38 @@ class StreamingPipeline:
             except Empty:
                 continue
             except Exception as e:
-                Logger.error(f"Error in download worker: {e}")
+                Logger.error(f"Error in optimized download worker: {e}")
                 self._stats['errors'] += 1
                 
     def _storage_worker(self):
         """Worker thread for storage stage."""
-        while self._running:
-            try:
-                item = self.download_queue.get(timeout=1.0)
-                if item is None:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            while self._running or not self.download_queue.empty():
+                try:
+                    item = self.download_queue.get(timeout=0.01)
+                    if item is None:
+                        if not self._running:
+                            break
+                        continue
+
+                    # Store the item (to be implemented by subclass)
+                    self._store_item(item)
+                    self._stats['items_stored'] += 1
+
+                except Empty:
+                    if not self._running:
+                        break
                     continue
-                    
-                # Store the item (to be implemented by subclass)
-                self._store_item(item)
-                self._stats['items_stored'] += 1
-                
-            except Empty:
-                continue
-            except Exception as e:
-                Logger.error(f"Error in storage worker: {e}")
-                self._stats['errors'] += 1
+                except Exception as e:
+                    Logger.error(f"Error in storage worker: {e}")
+                    self._stats['errors'] += 1
+        finally:
+            try:
+                loop.close()
+            except Exception:
+                pass
                 
     def _process_item(self, item: Any) -> Optional[Any]:
         """Process a single item. To be overridden by subclasses."""

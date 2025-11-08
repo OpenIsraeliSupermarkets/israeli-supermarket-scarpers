@@ -194,6 +194,10 @@ def make_test_case(scraper_enum, store_id):
                             }
                         }
                     }))
+                    
+                    # Enable legacy mode for non-streaming to use old execute_in_parallel approach
+                    if not streaming:
+                        scraper.use_legacy_mode = True
 
                     # Create status folder structure - status is stored as JSON but test expects a folder
                     status_folder = os.path.join(dump_path, "status")
@@ -311,7 +315,7 @@ def make_test_case(scraper_enum, store_id):
             """test fetching file from today"""
             self._clean_scarpe_delete(scraper_enum, when_date=_testing_now(), limit=1)
 
-        def test_streaming_scrape(self):
+        def test_streaming_scrape(self, limit=20):
             """test streaming scrape"""
             import time
 
@@ -319,16 +323,21 @@ def make_test_case(scraper_enum, store_id):
             collect_results = []
             for i in range(10):
                 start_streaming = time.time()
-                self._clean_scarpe_delete(scraper_enum, limit=10, streaming=True)
+                self._clean_scarpe_delete(scraper_enum, limit=limit, streaming=True)
                 collect_results.append(time.time() - start_streaming)
 
             # Time non-streaming scrape
             non_streaming_results = []
             for i in range(10):
                 start_non_streaming = time.time()
-                self._clean_scarpe_delete(scraper_enum, limit=10, streaming=False)
+                self._clean_scarpe_delete(scraper_enum, limit=limit, streaming=False)
                 non_streaming_results.append(time.time() - start_non_streaming)
 
-
-            assert np.mean(non_streaming_results) < np.mean(collect_results), "Streaming scrape should be faster than non-streaming scrape"
+            streaming_mean = np.mean(collect_results)
+            non_streaming_mean = np.mean(non_streaming_results)
+            Logger.info(f"Streaming avg: {streaming_mean:.2f}s, Non-streaming avg: {non_streaming_mean:.2f}s")
+            Logger.info(f"Streaming times: {[f'{t:.2f}' for t in collect_results]}")
+            Logger.info(f"Non-streaming times: {[f'{t:.2f}' for t in non_streaming_results]}")
+            
+            assert streaming_mean < non_streaming_mean, f"Streaming scrape should be faster than non-streaming scrape: {streaming_mean:.2f}s >= {non_streaming_mean:.2f}s"
     return TestScapers

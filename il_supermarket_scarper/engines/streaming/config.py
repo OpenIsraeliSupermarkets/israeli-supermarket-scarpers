@@ -18,8 +18,8 @@ class StreamingConfig:
     # Pipeline capacity limits
     link_discovery_cap: int = 100
     processing_cap: int = 50
-    download_cap: int = 20
-    storage_cap: int = 10
+    download_cap: int = 30
+    storage_cap: int = 30  # Match download workers to prevent storage bottleneck
     
     # Queue sizes
     queue_size: int = 200

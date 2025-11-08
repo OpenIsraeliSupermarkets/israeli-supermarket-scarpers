@@ -21,6 +21,7 @@ class WebBase(StreamingEngine):
                  streaming_config: Optional[WebStreamingConfig] = None):        
         super().__init__(chain, chain_id, url, streaming_config)
         self.max_retry = streaming_config.max_retry if streaming_config else 2
+        self.use_legacy_mode = False  # Flag to completely bypass streaming
         
     def get_data_from_page(self, req_res):
         """Get the file list from a page - same as original."""
@@ -370,15 +371,18 @@ class WebBase(StreamingEngine):
                 suppress_exception=suppress_exception, limit=limit
             )
             
-            Logger.info(f"Starting streaming processing of {len(links)} links")
+            Logger.info(f"Starting streaming processing of {len(links)} links with {self.streaming_config.streaming.download_cap} download workers and {self.streaming_config.streaming.storage_cap} storage workers")
             
-            # Add links to pipeline for processing
+            expected_items = len(links)
+
+            # Add links to pipeline for processing in bulk (faster)
             for link in links:
-                if not self.add_link_for_processing(link):
-                    Logger.warning(f"Failed to add link to pipeline: {link['file_name']}")
+                # Use non-blocking put for faster submission
+                self._pipeline.link_queue.put(link, block=False)
+                self._pipeline._stats['links_discovered'] += 1
                     
             # Wait for processing to complete
-            await self._wait_for_completion()
+            await self._wait_for_completion(expected_items=expected_items)
             
             # Get final stats
             stats = self.get_streaming_stats()
@@ -406,21 +410,26 @@ class WebBase(StreamingEngine):
         finally:
             await self.stop_streaming()
             
-    async def _wait_for_completion(self, timeout: float = 300.0):
+    async def _wait_for_completion(self, expected_items: Optional[int] = None, timeout: float = 300.0):
         """Wait for the pipeline to finish processing all items."""
         start_time = asyncio.get_event_loop().time()
         
+        check_interval = 0.01
         while (asyncio.get_event_loop().time() - start_time) < timeout:            
+            stats = self.get_streaming_stats()
+            if expected_items is not None and stats['items_stored'] >= expected_items:
+                Logger.info("Reached expected item count, processing complete")
+                break
+
             # Check if all queues are empty and processing is done
             if (self._pipeline and 
                 self._pipeline.link_queue.empty() and
-                self._pipeline.processing_queue.empty() and
-                self._pipeline.download_queue.empty() and
-                self._pipeline.storage_queue.empty()):
-                Logger.info("All queues empty, processing complete")
-                break
+                self._pipeline.download_queue.empty()):
+                if expected_items is None:
+                    Logger.info("All queues empty, processing complete")
+                    break
                 
-            await asyncio.sleep(1.0)
+            await asyncio.sleep(check_interval)
         else:
             Logger.warning(f"Timeout waiting for pipeline completion after {timeout}s")
 
@@ -428,6 +437,15 @@ class WebBase(StreamingEngine):
                 files_names_to_scrape=None, filter_null=False, filter_zero=False,
                 suppress_exception=False):
         """Legacy _scrape method that runs streaming scrape synchronously."""
+        # If legacy mode is enabled, use the old execute_in_parallel approach
+        if self.use_legacy_mode:
+            return self._scrape_legacy(
+                limit=limit, files_types=files_types, store_id=store_id,
+                when_date=when_date, files_names_to_scrape=files_names_to_scrape,
+                filter_null=filter_null, filter_zero=filter_zero,
+                suppress_exception=suppress_exception
+            )
+        
         try:
             # Check if we're already in an event loop
             current_loop = asyncio.get_event_loop()
@@ -464,6 +482,40 @@ class WebBase(StreamingEngine):
                 )
             finally:
                 loop.close()
+    
+    def _scrape_legacy(self, limit=None, files_types=None, store_id=None, when_date=None,
+                      files_names_to_scrape=None, filter_null=False, filter_zero=False,
+                      suppress_exception=False):
+        """Original non-streaming scrape using execute_in_parallel."""
+        try:
+            # Use discover_links_streaming to get links (same discovery as streaming, but different download)
+            links = self.discover_links_streaming(
+                files_types=files_types, store_id=store_id, when_date=when_date,
+                filter_null=filter_null, filter_zero=filter_zero,
+                files_names_to_scrape=files_names_to_scrape,
+                suppress_exception=suppress_exception, limit=limit
+            )
+            
+            Logger.info(f"Legacy mode: Using {self.max_threads} threads for {len(links)} downloads")
+            
+            # Extract original data for legacy download
+            tasks = [link['original_data'] for link in links]
+            
+            # Download in parallel using old approach with limited threads
+            from il_supermarket_scarper.utils import execute_in_parallel
+            results = execute_in_parallel(
+                self.save_and_extract,
+                tasks,
+                max_threads=self.max_threads,
+            )
+            
+            return results
+            
+        except Exception as e:
+            if not suppress_exception:
+                raise e
+            Logger.warning(f"Suppressing legacy scrape exception: {e}")
+            return []
 
     def _scrape_sync(self, limit=None, files_types=None, store_id=None, when_date=None,
                      files_names_to_scrape=None, filter_null=False, filter_zero=False,
@@ -527,4 +579,4 @@ def create_streaming_web_engine(chain, chain_id, url, folder_name=None, max_thre
         'max_threads': max_threads
     })
     
-    return StreamingWebEngine(chain, chain_id, url, folder_name, config)
+    return WebBase(chain, chain_id, url, streaming_config=config)

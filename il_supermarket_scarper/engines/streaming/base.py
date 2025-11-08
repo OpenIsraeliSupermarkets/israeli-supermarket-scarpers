@@ -153,17 +153,17 @@ class StreamingWebPipeline(StreamingPipeline):
     def _store_item(self, item: Any):
         """Store a single item using the configured storage."""
         try:
-            # Run async storage in thread
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
             try:
-                success = loop.run_until_complete(self.storage.store(item))
-                if success:
-                    Logger.debug("Item stored successfully")
-                else:
-                    Logger.warning("Failed to store item")
-            finally:
-                loop.close()
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+
+            success = loop.run_until_complete(self.storage.store(item))
+            if success:
+                Logger.debug("Item stored successfully")
+            else:
+                Logger.warning("Failed to store item")
         except Exception as e:
             Logger.error(f"Error storing item: {e}")
 
