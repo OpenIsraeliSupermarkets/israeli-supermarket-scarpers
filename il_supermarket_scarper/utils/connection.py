@@ -248,8 +248,8 @@ def render_webpage(url):
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page()
-        page.goto(url)
-        page.wait_for_load_state("networkidle")
+        page.goto(url, timeout=60000)
+        page.wait_for_load_state("domcontentloaded", timeout=60000)
         content = page.content()
         browser.close()
     return content
@@ -268,7 +268,7 @@ def get_from_webpage(cached_page, extraction_type):
         browser = p.chromium.launch()
         page = browser.new_page()
         page.set_content(cached_page)
-        page.wait_for_load_state("networkidle")
+        page.wait_for_load_state("domcontentloaded", timeout=60000)
         content = get_from_playwrite(page, extraction_type)
         browser.close()
     return content
