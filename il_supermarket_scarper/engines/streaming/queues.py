@@ -163,7 +163,21 @@ class StreamingPipeline:
                 self._stats['items_processed'] += 1
                 
                 # Download the item immediately
-                downloaded_item = self._download_item(processed_item)
+                # Handle both sync and async _download_item methods
+                result = self._download_item(processed_item)
+                if asyncio.iscoroutine(result):
+                    try:
+                        loop = asyncio.get_event_loop()
+                        if loop.is_running():
+                            # Can't use asyncio.run() with running loop
+                            downloaded_item = asyncio.run_coroutine_threadsafe(result, loop).result()
+                        else:
+                            downloaded_item = loop.run_until_complete(result)
+                    except RuntimeError:
+                        # No event loop in thread, create new one
+                        downloaded_item = asyncio.run(result)
+                else:
+                    downloaded_item = result
                 
                 if downloaded_item and not self.download_queue.put(downloaded_item, timeout=0.01):
                     Logger.warning("Download queue full, dropping item")

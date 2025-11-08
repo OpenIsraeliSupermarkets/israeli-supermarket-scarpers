@@ -199,9 +199,9 @@ class Engine(ScraperStatus, ABC):
 
         return result
 
-    def session_with_cookies_by_chain(self, url, method="GET", body=None, timeout=15):
+    async def session_with_cookies_by_chain(self, url, method="GET", body=None, timeout=15):
         """request resource with cookie by chain name"""
-        return session_with_cookies(
+        return await session_with_cookies(
             url,
             chain_cookie_name=self.assigned_cookie,
             timeout=timeout,

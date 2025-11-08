@@ -9,7 +9,7 @@ from il_supermarket_scarper.utils import (
     url_retrieve,
     FileTypesFilters,
 )
-
+from typing import AsyncGenerator, Dict, Any
 from .apsx import Aspx
 from .streaming import WebStreamingConfig
 
@@ -38,7 +38,7 @@ class Bina(Aspx):
         )
         self.download_postfix = download_postfix
 
-    def file_type_ids(self, file_types):
+    async def file_type_ids(self, file_types) -> AsyncGenerator[int, None]:
         """get the file type id"""
         file_type_mapping = {
             FileTypesFilters.STORE_FILE.name: 1,
@@ -56,17 +56,14 @@ class Bina(Aspx):
                 yield file_type_mapping[file_type]
 
     def _build_query_url(self, query_params, base_urls):
-        res = []
+        
         for base in base_urls:
-            res.append(
-                {
+            yield {
                     "url": base + self.aspx_page + "?" + query_params,
                     "method": "GET",
                 }
-            )
-        return res
 
-    def _get_all_possible_query_string_params(
+    async def _get_all_possible_query_string_params(
         self, files_types=None, store_id=None, when_date=None
     ):
         """get the arguments need to add to the url"""
@@ -86,7 +83,7 @@ class Bina(Aspx):
         # add file types to url
         if files_types:
             chains_urls_with_types = []
-            for files_type in self.file_type_ids(files_types):
+            async for files_type in self.file_type_ids(files_types):
 
                 for chain_url in chains_urls:
                     chains_urls_with_types.append(
@@ -104,7 +101,8 @@ class Bina(Aspx):
             for chains_url in chains_urls:
                 chains_url["WDate"] = when_date.strftime("%d/%m/%Y")
 
-        return [urllib.parse.urlencode(params) for params in chains_urls]
+        for chains_url in chains_urls:
+            yield urllib.parse.urlencode(chains_url)
 
     def get_data_from_page(self, req_res):
         return json.loads(req_res.text)
@@ -118,8 +116,8 @@ class Bina(Aspx):
         return entry.split(self.download_postfix)[-1].split(".")[0]
 
     @url_connection_retry()
-    def retrieve_file(self, file_link, file_save_path, timeout=30):
-        response_content = self.session_with_cookies_by_chain(
+    async def retrieve_file(self, file_link, file_save_path, timeout=30):
+        response_content = await self.session_with_cookies_by_chain(
             file_link,
         )
         spath = json.loads(response_content.content)

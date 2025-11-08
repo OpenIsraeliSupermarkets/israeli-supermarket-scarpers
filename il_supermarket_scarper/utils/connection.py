@@ -47,47 +47,118 @@ exceptions = (
 
 def download_connection_retry():
     """decorator the define the retry logic of connections tring to download files"""
+    import asyncio
 
     def wrapper(func):
-        @retry(
-            exceptions=exceptions,
-            tries=8,
-            delay=2,
-            backoff=2,
-            max_delay=5 * 60,
-            logger=Logger,
-            timeout=15,
-            backoff_timeout=5,
-        )
-        def inner(*args, **kwargs):
-            socket.setdefaulttimeout(kwargs.get("timeout", 15))
-            del kwargs["timeout"]  # function don't get timeout param
-            return func(*args, **kwargs)
+        # Check if function is async
+        is_async = asyncio.iscoroutinefunction(func)
+        
+        if is_async:
+            # Async version with manual retry logic
+            async def inner_async(*args, **kwargs):
+                _tries = 8
+                _delay = 2
+                _timeout = kwargs.get("timeout", 15)
+                
+                # Remove timeout from kwargs as function doesn't get timeout param
+                if "timeout" in kwargs:
+                    del kwargs["timeout"]
+                
+                while _tries:
+                    try:
+                        socket.setdefaulttimeout(_timeout)
+                        return await func(*args, **kwargs)
+                    except exceptions as error:
+                        _tries -= 1
+                        if not _tries:
+                            raise
+                        
+                        Logger.warning(
+                            f"{error}, configured timeout {_timeout}, retrying in {_delay} seconds"
+                        )
+                        Logger.error_execption(error)
+                        
+                        await asyncio.sleep(_delay)
+                        _delay *= 2  # backoff
+                        _delay = min(_delay, 5 * 60)  # max_delay
+                        _timeout += 5  # backoff_timeout
+                        
+                raise ValueError("shouldn't be called!")
+            return inner_async
+        else:
+            # Sync version
+            @retry(
+                exceptions=exceptions,
+                tries=8,
+                delay=2,
+                backoff=2,
+                max_delay=5 * 60,
+                logger=Logger,
+                timeout=15,
+                backoff_timeout=5,
+            )
+            def inner(*args, **kwargs):
+                socket.setdefaulttimeout(kwargs.get("timeout", 15))
+                del kwargs["timeout"]  # function don't get timeout param
+                return func(*args, **kwargs)
 
-        return inner
+            return inner
 
     return wrapper
 
 
 def url_connection_retry(init_timeout=15):
     """decorator the define the retry logic of connections tring to send get request"""
+    import asyncio
 
     def wrapper(func):
-        @retry(
-            exceptions=exceptions,
-            tries=4,
-            delay=2,
-            backoff=2,
-            max_delay=5 * 60,
-            logger=Logger,
-            timeout=init_timeout,
-            backoff_timeout=10,
-        )
-        def inner(*args, **kwargs):
-            socket.setdefaulttimeout(kwargs.get("timeout", 15))
-            return func(*args, **kwargs)
-
-        return inner
+        # Check if function is async
+        is_async = asyncio.iscoroutinefunction(func)
+        
+        if is_async:
+            # Async version with manual retry logic
+            async def inner_async(*args, **kwargs):
+                _tries = 4
+                _delay = 2
+                _timeout = kwargs.get("timeout", init_timeout)
+                
+                while _tries:
+                    try:
+                        socket.setdefaulttimeout(_timeout)
+                        return await func(*args, **kwargs)
+                    except exceptions as error:
+                        _tries -= 1
+                        if not _tries:
+                            raise
+                        
+                        Logger.warning(
+                            f"{error}, configured timeout {_timeout}, retrying in {_delay} seconds"
+                        )
+                        Logger.error_execption(error)
+                        
+                        await asyncio.sleep(_delay)
+                        _delay *= 2  # backoff
+                        _delay = min(_delay, 5 * 60)  # max_delay
+                        _timeout += 10  # backoff_timeout
+                        
+                raise ValueError("shouldn't be called!")
+            return inner_async
+        else:
+            # Sync version
+            @retry(
+                exceptions=exceptions,
+                tries=4,
+                delay=2,
+                backoff=2,
+                max_delay=5 * 60,
+                logger=Logger,
+                timeout=init_timeout,
+                backoff_timeout=10,
+            )
+            def inner(*args, **kwargs):
+                socket.setdefaulttimeout(kwargs.get("timeout", 15))
+                return func(*args, **kwargs)
+            return inner
 
     return wrapper
 
@@ -161,7 +232,7 @@ def get_random_user_agent():
 
 
 @url_connection_retry()
-def session_with_cookies(
+async def session_with_cookies(
     url, timeout=15, chain_cookie_name=None, method="GET", body=None
 ):
     """

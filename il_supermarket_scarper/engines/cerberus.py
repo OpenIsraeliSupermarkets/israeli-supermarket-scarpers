@@ -252,7 +252,7 @@ class Cerberus(StreamingEngine):
         link_data['processed_at'] = os.getpid()
         return link_data
 
-    def download_item_data(self, item_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    async def download_item_data(self, item_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Download a single FTP file using the original persist_from_ftp method."""
         try:
             file_name = item_data['original_data']

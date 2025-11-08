@@ -168,7 +168,7 @@ class WebBase(StreamingEngine):
         link_data['processed_at'] = threading.current_thread().name
         return link_data
 
-    def _download_to_memory(self, file_link, file_name):
+    async def _download_to_memory(self, file_link, file_name):
         """Download file directly to memory without writing to disk."""
         try:
             # Handle Bina-style downloads that need to get SPath first
@@ -178,7 +178,7 @@ class WebBase(StreamingEngine):
             if (hasattr(self, 'session_with_cookies_by_chain') and 
                 'Download.aspx' in file_link and 'FileNm=' in file_link):
                 try:
-                    response_content = self.session_with_cookies_by_chain(file_link)
+                    response_content = await self.session_with_cookies_by_chain(file_link)
                     # Check if response is gzipped (starts with 0x1f 0x8b)
                     content_bytes_check = response_content.content
                     if len(content_bytes_check) >= 2 and content_bytes_check[0] == 0x1f and content_bytes_check[1] == 0x8b:
@@ -223,7 +223,7 @@ class WebBase(StreamingEngine):
                     if hasattr(self, 'session_with_cookies_by_chain'):
                         Logger.debug(f"Direct download failed, trying session: {e}")
                         try:
-                            response_obj = self.session_with_cookies_by_chain(actual_url, method="GET", timeout=30)
+                            response_obj = await self.session_with_cookies_by_chain(actual_url, method="GET", timeout=30)
                             content_bytes = response_obj.content
                         except Exception as session_e:
                             Logger.error(f"Both direct and session download failed: direct={e}, session={session_e}")
@@ -293,7 +293,7 @@ class WebBase(StreamingEngine):
             Logger.debug(f"Traceback: {traceback.format_exc()}")
             return None, False
     
-    def download_item_data(self, item_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    async def download_item_data(self, item_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Download a single item using the original save_and_extract method."""
         try:
             original_data = item_data['original_data']
@@ -315,7 +315,7 @@ class WebBase(StreamingEngine):
             if use_memory:
                 # Download directly to memory
                 Logger.debug(f"Downloading {file_link} directly to memory for queue")
-                content, success = self._download_to_memory(file_link, file_name)
+                content, success = await self._download_to_memory(file_link, file_name)
                 if success:
                     result = {
                         "file_name": file_name,

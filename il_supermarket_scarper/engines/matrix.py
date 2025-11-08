@@ -35,12 +35,12 @@ class Matrix(Aspx):
             )
         return res
 
-    def _get_all_possible_query_string_params(
+    async def _get_all_possible_query_string_params(
         self, files_types=None, store_id=None, when_date=None
     ):
         """get the arguments need to add to the url"""
 
-        return [{}]
+        yield {}
 
     def get_href_from_entry(self, entry):
         """get download link for entry (tr)"""

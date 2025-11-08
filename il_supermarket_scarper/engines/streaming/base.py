@@ -121,7 +121,7 @@ class StreamingEngine(Engine, ABC):
         pass
         
     @abstractmethod
-    def download_item_data(self, item_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    async def download_item_data(self, item_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Download a single item. To be implemented by subclasses.""" 
         pass
 
@@ -142,10 +142,10 @@ class StreamingWebPipeline(StreamingPipeline):
             Logger.error(f"Error processing item: {e}")
             return None
             
-    def _download_item(self, item: Any) -> Optional[Any]:
+    async def _download_item(self, item: Any) -> Optional[Any]:
         """Download a single item using the engine."""
         try:
-            return self.engine.download_item_data(item)
+            return await self.engine.download_item_data(item)
         except Exception as e:
             Logger.error(f"Error downloading item: {e}")
             return None
@@ -204,7 +204,7 @@ class StreamingWebAdapter(StreamingEngine):
         """Process link data - in web engine, this is usually a pass-through."""
         return link_data
         
-    def download_item_data(self, item_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    async def download_item_data(self, item_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Download item using original engine's save_and_extract method."""
         try:
             original_data = item_data['original_data']
