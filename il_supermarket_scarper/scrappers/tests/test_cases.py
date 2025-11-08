@@ -142,6 +142,7 @@ def make_test_case(scraper_enum, store_id):
             limit=None,
             file_type=None,
             when_date=None,
+            streaming=False,
         ):
             with tempfile.TemporaryDirectory() as tmpdirname:
                 self.__clean_scarpe_delete(
@@ -151,6 +152,7 @@ def make_test_case(scraper_enum, store_id):
                     limit=limit,
                     file_type=file_type,
                     when_date=when_date,
+                    streaming=streaming,
                 )
 
         def __clean_scarpe_delete(
@@ -161,33 +163,37 @@ def make_test_case(scraper_enum, store_id):
             limit=None,
             file_type=None,
             when_date=None,
+            streaming=False,
         ):
             self._delete_download_folder(dump_path)
             os.makedirs(dump_path)
-            
+
             # Create output directory for files (will be written from queue)
             download_path = os.path.join(dump_path, DumpFolderNames[scraper_enum.name].value)
             os.makedirs(download_path, exist_ok=True)
-            
+
             # Create queue handler that stores items in memory
             queue_handler = TestQueueHandler()
-            
+
             init_scraper_function = ScraperFactory.get(scraper_enum)
 
             if init_scraper_function is None:
                 Logger.warning(f"{scraper_enum} is disabled.")
             else:
                 try:
+                    # Decide on storage type based on streaming flag
+                    storage_type_value = StorageType.QUEUE.value if streaming else StorageType.DISK.value
+
                     scraper = init_scraper_function(streaming_config=WebStreamingConfig.from_dict({
                         "storage": {
-                            "storage_type": StorageType.QUEUE.value,
+                            "storage_type": storage_type_value,
                             "config": {
-                                "queue_handler": queue_handler,
+                                "queue_handler": queue_handler if streaming else None,
                                 "output_dir": dump_path  # Set output_dir for status folder creation
                             }
                         }
                     }))
-                    
+
                     # Create status folder structure - status is stored as JSON but test expects a folder
                     status_folder = os.path.join(dump_path, "status")
                     os.makedirs(status_folder, exist_ok=True)
@@ -203,26 +209,27 @@ def make_test_case(scraper_enum, store_id):
                     }
 
                     scraper.scrape(**kwarg)
-                    
-                    # Read files from queue and write them to disk for test verification
-                    queue_items = queue_handler.get_items()
-                    Logger.info(f"Found {len(queue_items)} items in queue")
-                    for item in queue_items:
-                        if isinstance(item, dict):
-                            file_name = item.get('file_name', '')
-                            content = item.get('content', '')
-                            
-                            Logger.debug(f"Queue item: file_name={file_name}, content_length={len(content) if content else 0}")
-                            
-                            if content:
-                                if not file_name.endswith('.xml'):
-                                    file_name += '.xml'
-                                file_path = os.path.join(download_path, file_name)
-                                with open(file_path, 'w', encoding='utf-8') as f:
-                                    f.write(content)
-                                Logger.info(f"Wrote file from queue to {file_path}")
-                            else:
-                                Logger.warning(f"No content in queue item for {file_name}")
+
+                    if streaming:
+                        # Read files from queue and write them to disk for test verification
+                        queue_items = queue_handler.get_items()
+                        Logger.info(f"Found {len(queue_items)} items in queue")
+                        for item in queue_items:
+                            if isinstance(item, dict):
+                                file_name = item.get('file_name', '')
+                                content = item.get('content', '')
+
+                                Logger.debug(f"Queue item: file_name={file_name}, content_length={len(content) if content else 0}")
+
+                                if content:
+                                    if not file_name.endswith('.xml'):
+                                        file_name += '.xml'
+                                    file_path = os.path.join(download_path, file_name)
+                                    with open(file_path, 'w', encoding='utf-8') as f:
+                                        f.write(content)
+                                    Logger.info(f"Wrote file from queue to {file_path}")
+                                else:
+                                    Logger.warning(f"No content in queue item for {file_name}")
 
                     files_found = os.listdir(dump_path)
                     assert (
@@ -303,4 +310,26 @@ def make_test_case(scraper_enum, store_id):
             """test fetching file from today"""
             self._clean_scarpe_delete(scraper_enum, when_date=_testing_now(), limit=1)
 
+        def test_streaming_scrape(self):
+            """test streaming scrape"""
+            import time
+
+            # Time streaming scrape
+            start_streaming = time.time()
+            self._clean_scarpe_delete(scraper_enum, limit=10, streaming=True)
+            streaming_duration = time.time() - start_streaming
+
+            # Time non-streaming scrape
+            start_non_streaming = time.time()
+            self._clean_scarpe_delete(scraper_enum, limit=10, streaming=False)
+            non_streaming_duration = time.time() - start_non_streaming
+
+            print(f"Streaming duration: {streaming_duration:.2f} seconds")
+            print(f"Non-streaming duration: {non_streaming_duration:.2f} seconds")
+
+            # Assert streaming is at least as fast as non-streaming (or faster)
+            assert streaming_duration < non_streaming_duration, (
+                f"Streaming scrape should be faster than non-streaming. "
+                f"Streaming: {streaming_duration:.2f}s, Non-streaming: {non_streaming_duration:.2f}s"
+            )
     return TestScapers
