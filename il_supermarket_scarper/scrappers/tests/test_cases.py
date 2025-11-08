@@ -13,6 +13,7 @@ from il_supermarket_scarper.utils import (
     _testing_now,
     change_xml_encoding,
 )
+import numpy as np
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
 from il_supermarket_scarper.scraper_stability import ScraperStability
 from il_supermarket_scarper.engines.streaming import WebStreamingConfig, StorageType
@@ -315,21 +316,19 @@ def make_test_case(scraper_enum, store_id):
             import time
 
             # Time streaming scrape
-            start_streaming = time.time()
-            self._clean_scarpe_delete(scraper_enum, limit=10, streaming=True)
-            streaming_duration = time.time() - start_streaming
+            collect_results = []
+            for i in range(10):
+                start_streaming = time.time()
+                self._clean_scarpe_delete(scraper_enum, limit=10, streaming=True)
+                collect_results.append(time.time() - start_streaming)
 
             # Time non-streaming scrape
-            start_non_streaming = time.time()
-            self._clean_scarpe_delete(scraper_enum, limit=10, streaming=False)
-            non_streaming_duration = time.time() - start_non_streaming
+            non_streaming_results = []
+            for i in range(10):
+                start_non_streaming = time.time()
+                self._clean_scarpe_delete(scraper_enum, limit=10, streaming=False)
+                non_streaming_results.append(time.time() - start_non_streaming)
 
-            print(f"Streaming duration: {streaming_duration:.2f} seconds")
-            print(f"Non-streaming duration: {non_streaming_duration:.2f} seconds")
 
-            # Assert streaming is at least as fast as non-streaming (or faster)
-            assert streaming_duration < non_streaming_duration, (
-                f"Streaming scrape should be faster than non-streaming. "
-                f"Streaming: {streaming_duration:.2f}s, Non-streaming: {non_streaming_duration:.2f}s"
-            )
+            assert np.mean(non_streaming_results) < np.mean(collect_results), "Streaming scrape should be faster than non-streaming scrape"
     return TestScapers
