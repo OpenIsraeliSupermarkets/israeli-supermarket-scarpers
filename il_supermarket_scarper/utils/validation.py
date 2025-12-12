@@ -17,7 +17,7 @@ def find_index_with_substring(array, substring):
 
 
 def show_text_diff(text1, text2):
-    """show the difference between two text strings"""
+    """show the difference between two text strings in a git-like format"""
     # Split the texts into lines for comparison
     text1_lines = text1.splitlines()
     text2_lines = text2.splitlines()
@@ -33,13 +33,38 @@ def show_text_diff(text1, text2):
         ) : find_index_with_substring(text2_lines, "נוסח החוק המעודכן ביותר")
     ]
 
-    # Use difflib to compare the texts
+    # Use difflib to compare the texts with more context
     diff = difflib.unified_diff(
-        text1_lines, text2_lines, lineterm="", fromfile="Text1", tofile="Text2"
+        text1_lines, 
+        text2_lines, 
+        lineterm="", 
+        fromfile="Expected", 
+        tofile="Actual",
+        n=5  # Show 5 lines of context around changes
     )
 
-    # Join the diff output and return
-    return "\n".join(diff)
+    # Format the output for better readability
+    diff_lines = []
+    diff_lines.append("\n" + "=" * 80)
+    diff_lines.append("DIFF:")
+    diff_lines.append("=" * 80)
+    
+    for line in diff:
+        # Add visual markers for different line types
+        if line.startswith("---") or line.startswith("+++"):
+            diff_lines.append(line)
+        elif line.startswith("-"):
+            diff_lines.append(f"- {line[1:]}")  # Removed line
+        elif line.startswith("+"):
+            diff_lines.append(f"+ {line[1:]}")  # Added line
+        elif line.startswith("@@"):
+            diff_lines.append("\n" + line)  # Context marker
+        else:
+            diff_lines.append(f"  {line}")  # Context line
+    
+    diff_lines.append("=" * 80)
+    
+    return "\n".join(diff_lines)
 
 
 def change_xml_encoding(file_path):
