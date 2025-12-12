@@ -35,10 +35,10 @@ def show_text_diff(text1, text2):
 
     # Use difflib to compare the texts with more context
     diff = difflib.unified_diff(
-        text1_lines, 
-        text2_lines, 
-        lineterm="", 
-        fromfile="Expected", 
+        text1_lines,
+        text2_lines,
+        lineterm="",
+        fromfile="Expected",
         tofile="Actual",
         n=5  # Show 5 lines of context around changes
     )
@@ -48,7 +48,7 @@ def show_text_diff(text1, text2):
     diff_lines.append("\n" + "=" * 80)
     diff_lines.append("DIFF:")
     diff_lines.append("=" * 80)
-    
+
     for line in diff:
         # Add visual markers for different line types
         if line.startswith("---") or line.startswith("+++"):
@@ -61,9 +61,9 @@ def show_text_diff(text1, text2):
             diff_lines.append("\n" + line)  # Context marker
         else:
             diff_lines.append(f"  {line}")  # Context line
-    
+
     diff_lines.append("=" * 80)
-    
+
     return "\n".join(diff_lines)
 
 
