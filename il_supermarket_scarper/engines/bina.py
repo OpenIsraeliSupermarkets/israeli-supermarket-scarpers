@@ -7,6 +7,8 @@ from il_supermarket_scarper.utils import (
     url_connection_retry,
     url_retrieve,
     FileTypesFilters,
+    convert_nl_size_to_bytes,
+    UnitSize,
 )
 
 from .apsx import Aspx
@@ -114,6 +116,16 @@ class Bina(Aspx):
     def get_file_name_no_ext_from_entry(self, entry):
         """get the file name without extensions from entey (tr)"""
         return entry.split(self.download_postfix)[-1].split(".")[0]
+
+    def get_file_size_from_entry(self, entry):
+        """
+        Extract file size from a JSON entry.
+        Bina returns JSON objects, check for size field.
+        Returns size in bytes, or None if not found.
+        """
+        # Bina don't support file size in the entry
+        return None
+
 
     @url_connection_retry()
     def retrieve_file(self, file_link, file_save_path, timeout=30):

@@ -234,6 +234,8 @@ class Engine(ScraperStatus, ABC):
         filter_null=False,
         filter_zero=False,
         suppress_exception=False,
+        min_size=None,
+        max_size=None,
     ):
         """run the scraping logic"""
         self.on_scraping_start(
@@ -262,6 +264,8 @@ class Engine(ScraperStatus, ABC):
                 filter_null=filter_null,
                 filter_zero=filter_zero,
                 suppress_exception=suppress_exception,
+                min_size=min_size,
+                max_size=max_size,
             )
             self.on_download_completed(results=results)
         except Exception as e:  # pylint: disable=broad-exception-caught
@@ -288,6 +292,8 @@ class Engine(ScraperStatus, ABC):
         filter_null=False,
         filter_zero=False,
         suppress_exception=False,
+        min_size=None,
+        max_size=None,
     ):
         """method to be implemeted by the child class"""
 
@@ -305,6 +311,51 @@ class Engine(ScraperStatus, ABC):
     def get_chain_name(self):
         """return chain name"""
         return self.chain
+
+    def get_file_size_from_entry(self, entry):
+        """
+        Extract file size from an entry (table row).
+        Returns file size in bytes, or None if size information is not available.
+        Default implementation returns None - should be overridden by subclasses.
+        """
+        return None
+
+    def filter_by_file_size(
+        self, file_names, download_urls, file_sizes, min_size=None, max_size=None
+    ):
+        """
+        Filter files by size (in bytes).
+        Returns filtered (file_names, download_urls, file_sizes) tuples.
+        Entries with None file_size are kept by default.
+        """
+        if min_size is None and max_size is None:
+            return file_names, download_urls, file_sizes
+
+        filtered_names = []
+        filtered_urls = []
+        filtered_sizes = []
+
+        for name, url, size in zip(file_names, download_urls, file_sizes):
+            # Keep entries with None size (can't filter them)
+            if size is None:
+                filtered_names.append(name)
+                filtered_urls.append(url)
+                filtered_sizes.append(size)
+            else:
+                # Apply size filters
+                if min_size is not None and size < min_size:
+                    continue
+                if max_size is not None and size > max_size:
+                    continue
+                filtered_names.append(name)
+                filtered_urls.append(url)
+                filtered_sizes.append(size)
+
+        Logger.info(
+            f"After filtering by file size (min={min_size}, max={max_size}): "
+            f"Found {len(filtered_names)} files (from {len(file_names)})"
+        )
+        return filtered_names, filtered_urls, filtered_sizes
 
     @url_connection_retry()
     def retrieve_file(self, file_link, file_save_path, timeout=30):

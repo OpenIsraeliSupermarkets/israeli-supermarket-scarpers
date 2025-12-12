@@ -46,6 +46,8 @@ class Cerberus(Engine):
         filter_null=False,
         filter_zero=False,
         suppress_exception=False,
+        min_size=None,
+        max_size=None,
     ):
         files = []
         try:
@@ -58,6 +60,8 @@ class Cerberus(Engine):
                 when_date=when_date,
                 files_names_to_scrape=files_names_to_scrape,
                 suppress_exception=suppress_exception,
+                min_size=min_size,
+                max_size=max_size,
             )
             self.on_collected_details(files)
 
@@ -117,6 +121,8 @@ class Cerberus(Engine):
         when_date=None,
         files_names_to_scrape=None,
         suppress_exception=False,
+        min_size=None,
+        max_size=None,
     ):
         """collect all files to download from the site"""
         files = []
@@ -132,14 +138,25 @@ class Cerberus(Engine):
 
         Logger.info(f"Found {len(files)} files")
 
+        # Convert tuples to separate lists for base class filter_by_file_size method
+        if min_size is not None or max_size is not None:
+            file_names = [filename for filename, _ in files]
+            download_urls = [""] * len(files)  # FTP doesn't use URLs, use empty strings
+            file_sizes = [size for _, size in files]
+            file_names, download_urls, file_sizes = super().filter_by_file_size(
+                file_names, download_urls, file_sizes, min_size=min_size, max_size=max_size
+            )
+            # Convert back to tuples
+            files = list(zip(file_names, file_sizes))
+
         files = self.filter_bad_files(
-            files, filter_null=filter_null, filter_zero=filter_zero
+            files, filter_null=filter_null, filter_zero=filter_zero, by_function=lambda x: x[0]
         )
 
         Logger.info(f"After filtering bad files: Found {len(files)} files")
 
         files = list(
-            filter(lambda x: x.split(".")[-1] in self.target_file_extensions, files)
+            filter(lambda x: x[0].split(".")[-1] in self.target_file_extensions, files)
         )
         Logger.info(
             f"After filtering by {self.target_file_extensions}: Found {len(files)} files"
@@ -154,10 +171,12 @@ class Cerberus(Engine):
             when_date=when_date,
             files_names_to_scrape=files_names_to_scrape,
             suppress_exception=suppress_exception,
+            by_function=lambda x: x[0],
         )
         Logger.info(f"After applying limit: Found {len(files)} files")
 
-        return files
+        # Extract just filenames for backward compatibility with persist_from_ftp
+        return [filename for filename, _ in files]
 
     def persist_from_ftp(self, file_name):
         """download file to hard drive and extract it."""

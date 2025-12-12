@@ -85,6 +85,8 @@ class MultiPageWeb(WebBase):
         filter_zero=False,
         files_names_to_scrape=None,
         suppress_exception=False,
+        min_size=None,
+        max_size=None,
     ):
 
         main_page_requests = self.get_request_url(
@@ -94,6 +96,7 @@ class MultiPageWeb(WebBase):
 
         download_urls = []
         file_names = []
+        file_sizes = []
         for main_page_request in main_page_requests:
 
             main_page_response = self.session_with_cookies_by_chain(**main_page_request)
@@ -118,7 +121,7 @@ class MultiPageWeb(WebBase):
                     )
                 )
 
-            _download_urls, _file_names = execute_in_parallel(
+            _download_urls, _file_names, _file_sizes = execute_in_parallel(
                 self.process_links_before_download,
                 list(pages_to_scrape),
                 aggregtion_function=multiple_page_aggregtion,
@@ -127,18 +130,30 @@ class MultiPageWeb(WebBase):
 
             download_urls.extend(_download_urls)
             file_names.extend(_file_names)
+            file_sizes.extend(_file_sizes if _file_sizes else [None] * len(_download_urls))
 
         Logger.info(f"Found {len(download_urls)} files")
 
-        file_names, download_urls = self.filter_bad_files_zip(
-            file_names, download_urls, filter_null=filter_null, filter_zero=filter_zero
+        # Filter by file size if specified
+        if min_size is not None or max_size is not None:
+            file_names, download_urls, file_sizes = self.filter_by_file_size(
+                file_names, download_urls, file_sizes, min_size=min_size, max_size=max_size
+            )
+
+        file_names, download_urls, file_sizes = self.filter_bad_files_zip(
+            file_names,
+            download_urls,
+            file_sizes=file_sizes,
+            filter_null=filter_null,
+            filter_zero=filter_zero,
         )
 
         Logger.info(f"After filtering bad files: Found {len(download_urls)} files")
 
-        file_names, download_urls = self.apply_limit_zip(
+        file_names, download_urls, file_sizes = self.apply_limit_zip(
             file_names,
             download_urls,
+            file_sizes=file_sizes,
             limit=limit,
             files_types=files_types,
             store_id=store_id,
@@ -149,14 +164,44 @@ class MultiPageWeb(WebBase):
 
         return download_urls, file_names
 
+    def get_file_size_from_entry(self, html, link_element):
+        """
+        Extract file size from HTML element.
+        For MultiPageWeb, we need to find the size in the same row as the link.
+        Returns size in bytes, or None if not found.
+        """
+        import re
+        try:
+            # Find the parent row of the link
+            row = link_element.getparent().getparent() if link_element.getparent() else None
+            if row is None:
+                return None
+
+            # Look for size in table cells - typically in a column after the link
+            cells = row.xpath(".//td")
+            for cell in cells:
+                text = cell.text_content().strip() if cell.text_content() else ""
+                # Parse size using the same logic as WebBase
+                size_bytes = self._parse_size_to_bytes(text)
+                if size_bytes is not None:
+                    return size_bytes
+        except (AttributeError, TypeError) as e:
+            Logger.debug(f"Error extracting file size from entry: {e}")
+        return None
+
+
     def collect_files_details_from_page(self, html):
         """collect the details deom one page"""
         links = []
         filenames = []
-        for link in html.xpath('//*[@id="gridContainer"]/table/tbody/tr/td[1]/a/@href'):
+        file_sizes = []
+        link_elements = html.xpath('//*[@id="gridContainer"]/table/tbody/tr/td[1]/a')
+        for link_element in link_elements:
+            link = link_element.get("href")
             links.append(link)
             filenames.append(ntpath.basename(urlsplit(link).path))
-        return links, filenames
+            file_sizes.append(self.get_file_size_from_entry(html, link_element))
+        return links, filenames, file_sizes
 
     def process_links_before_download(
         self,
@@ -172,12 +217,13 @@ class MultiPageWeb(WebBase):
 
         html = lxml_html.fromstring(response.text)
 
-        file_links, filenames = self.collect_files_details_from_page(html)
+        file_links, filenames, file_sizes = self.collect_files_details_from_page(html)
         Logger.info(f"Page {request}: Found {len(file_links)} files")
 
-        filenames, file_links = self.apply_limit_zip(
+        filenames, file_links, file_sizes = self.apply_limit_zip(
             filenames,
             file_links,
+            file_sizes=file_sizes,
             limit=limit,
             files_types=files_types,
             store_id=store_id,
@@ -190,4 +236,4 @@ class MultiPageWeb(WebBase):
             f"Found {len(file_links)} line and {len(filenames)} files"
         )
 
-        return file_links, filenames
+        return file_links, filenames, file_sizes

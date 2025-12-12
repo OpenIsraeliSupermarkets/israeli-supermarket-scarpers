@@ -54,7 +54,7 @@ class PublishPrice(WebBase):
         return list(map(lambda x: BeautifulSoup(x, features="lxml"), all_trs))
 
     def extract_task_from_entry(self, all_trs):
-        """from the trs extract the download urls and file names"""
+        """from the trs extract the download urls, file names, and file sizes"""
 
         def get_herf_element(x):
             herfs = x.find_all("a")
@@ -80,11 +80,13 @@ class PublishPrice(WebBase):
 
         download_urls = []
         file_names = []
+        file_sizes = []
         for x in all_trs:
             try:
                 download_urls.append(self.url + get_path_from_herf(x))
                 file_names.append(get_name_from_herf(x))
+                file_sizes.append(self.get_file_size_from_entry(x))
             except (AttributeError, KeyError, IndexError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")
 
-        return download_urls, file_names
+        return download_urls, file_names, file_sizes
