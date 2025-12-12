@@ -1,7 +1,11 @@
 import urllib.parse
 import datetime
 from il_supermarket_scarper.engines import Bina, MultiPageWeb
-from il_supermarket_scarper.utils import DumpFolderNames, FileTypesFilters, convert_nl_size_to_bytes, UnitSize
+from il_supermarket_scarper.utils import (
+    DumpFolderNames,
+    FileTypesFilters,
+    UnitSize,
+)
 from il_supermarket_scarper.utils.status import convert_unit, string_to_float
 
 
@@ -66,7 +70,13 @@ class CityMarketShops(MultiPageWeb):
         for link in html.xpath("//table/tbody/tr"):
             links.append(self.url + link.xpath("td[7]/a/@href")[0])
             filenames.append(link.xpath("td[3]")[0].text.strip() + ".xml.gz")
-            file_sizes.append(convert_unit(string_to_float(link.xpath("td[6]")[0].text.strip()), UnitSize.KB, UnitSize.BYTES))
+            file_sizes.append(
+                convert_unit(
+                    string_to_float(link.xpath("td[6]")[0].text.strip()),
+                    UnitSize.KB,
+                    UnitSize.BYTES,
+                )
+            )
         return links, filenames, file_sizes
 
     def get_file_types_id(self, files_types=None):

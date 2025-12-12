@@ -29,10 +29,12 @@ class SuperPharm(MultiPageWeb):
     def collect_files_details_from_page(self, html):
         links = []
         filenames = []
+        file_sizes = []
         for element in html.xpath("//tbody/tr"):  # skip header
             links.append(self.url + element.xpath("./td[6]/a/@href")[0])
             filenames.append(element.xpath("./td[2]")[0].text)
-        return links, filenames
+            file_sizes.append(None)  # Super Pharm don't support file size in the entry
+        return links, filenames, file_sizes
 
     @url_connection_retry()
     def retrieve_file(self, file_link, file_save_path, timeout=15):

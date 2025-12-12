@@ -9,6 +9,8 @@ from il_supermarket_scarper.utils import (
     Logger,
     execute_in_parallel,
     multiple_page_aggregtion,
+    convert_nl_size_to_bytes,
+    UnitSize,
 )
 from .web import WebBase
 
@@ -130,14 +132,20 @@ class MultiPageWeb(WebBase):
 
             download_urls.extend(_download_urls)
             file_names.extend(_file_names)
-            file_sizes.extend(_file_sizes if _file_sizes else [None] * len(_download_urls))
+            file_sizes.extend(
+                _file_sizes if _file_sizes else [None] * len(_download_urls)
+            )
 
         Logger.info(f"Found {len(download_urls)} files")
 
         # Filter by file size if specified
         if min_size is not None or max_size is not None:
             file_names, download_urls, file_sizes = self.filter_by_file_size(
-                file_names, download_urls, file_sizes, min_size=min_size, max_size=max_size
+                file_names,
+                download_urls,
+                file_sizes,
+                min_size=min_size,
+                max_size=max_size,
             )
 
         file_names, download_urls, file_sizes = self.filter_bad_files_zip(
@@ -164,16 +172,19 @@ class MultiPageWeb(WebBase):
 
         return download_urls, file_names
 
-    def get_file_size_from_entry(self, html, link_element):
+    def get_file_size_from_entry(self, html, link_element):  # pylint: disable=arguments-differ,unused-argument
         """
         Extract file size from HTML element.
         For MultiPageWeb, we need to find the size in the same row as the link.
         Returns size in bytes, or None if not found.
         """
-        import re
         try:
             # Find the parent row of the link
-            row = link_element.getparent().getparent() if link_element.getparent() else None
+            row = (
+                link_element.getparent().getparent()
+                if link_element.getparent()
+                else None
+            )
             if row is None:
                 return None
 
@@ -182,13 +193,12 @@ class MultiPageWeb(WebBase):
             for cell in cells:
                 text = cell.text_content().strip() if cell.text_content() else ""
                 # Parse size using the same logic as WebBase
-                size_bytes = self._parse_size_to_bytes(text)
+                size_bytes = convert_nl_size_to_bytes(text, to_unit=UnitSize.BYTES)
                 if size_bytes is not None:
                     return size_bytes
         except (AttributeError, TypeError) as e:
             Logger.debug(f"Error extracting file size from entry: {e}")
         return None
-
 
     def collect_files_details_from_page(self, html):
         """collect the details deom one page"""

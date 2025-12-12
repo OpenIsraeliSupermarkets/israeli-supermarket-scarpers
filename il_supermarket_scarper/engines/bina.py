@@ -7,8 +7,6 @@ from il_supermarket_scarper.utils import (
     url_connection_retry,
     url_retrieve,
     FileTypesFilters,
-    convert_nl_size_to_bytes,
-    UnitSize,
 )
 
 from .apsx import Aspx
@@ -125,7 +123,6 @@ class Bina(Aspx):
         """
         # Bina don't support file size in the entry
         return None
-
 
     @url_connection_retry()
     def retrieve_file(self, file_link, file_save_path, timeout=30):

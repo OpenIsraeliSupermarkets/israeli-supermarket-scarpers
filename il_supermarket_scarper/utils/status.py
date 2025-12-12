@@ -126,6 +126,7 @@ def string_to_float(size_str):
     """convert a string to a float"""
     return float(size_str.replace(",", ""))
 
+
 def convert_unit(size_in_bytes, from_unit=UnitSize.BYTES, to_unit=UnitSize.MB):
     """Convert the size from bytes to other units like KB, MB or GB"""
     if from_unit == to_unit:
@@ -143,11 +144,11 @@ def convert_unit(size_in_bytes, from_unit=UnitSize.BYTES, to_unit=UnitSize.MB):
     # Convert bytes to to_unit
     if to_unit == UnitSize.BYTES:
         return bytes_val
-    elif to_unit == UnitSize.KB:
+    if to_unit == UnitSize.KB:
         return bytes_val / 1024
-    elif to_unit == UnitSize.MB:
+    if to_unit == UnitSize.MB:
         return bytes_val / (1024 * 1024)
-    elif to_unit == UnitSize.GB:
+    if to_unit == UnitSize.GB:
         return bytes_val / (1024 * 1024 * 1024)
     return bytes_val
 

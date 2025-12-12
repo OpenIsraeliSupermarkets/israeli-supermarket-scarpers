@@ -40,7 +40,7 @@ def show_text_diff(text1, text2):
         lineterm="",
         fromfile="Expected",
         tofile="Actual",
-        n=5  # Show 5 lines of context around changes
+        n=5,  # Show 5 lines of context around changes
     )
 
     # Format the output for better readability

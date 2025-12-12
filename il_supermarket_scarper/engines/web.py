@@ -32,12 +32,13 @@ class WebBase(Engine):
         """
         try:
             size_bytes = re.search(r"\b\d+(\.\d+)?\s*(KB|MB|GB)\b", entry.text)
-            size_bytes = convert_nl_size_to_bytes(size_bytes.group(0), to_unit=UnitSize.BYTES)
+            size_bytes = convert_nl_size_to_bytes(
+                size_bytes.group(0), to_unit=UnitSize.BYTES
+            )
             return size_bytes
         except (AttributeError, TypeError) as e:
             Logger.debug(f"Error extracting file size from entry: {e}")
         return None
-
 
     def extract_task_from_entry(self, all_trs):
         """extract download links, file names, and file sizes from page list"""
@@ -153,7 +154,11 @@ class WebBase(Engine):
         # Filter by file size if specified
         if min_size is not None or max_size is not None:
             file_names, download_urls, file_sizes = self.filter_by_file_size(
-                file_names, download_urls, file_sizes, min_size=min_size, max_size=max_size
+                file_names,
+                download_urls,
+                file_sizes,
+                min_size=min_size,
+                max_size=max_size,
             )
 
         file_names, download_urls, file_sizes = self.filter_bad_files_zip(

@@ -312,7 +312,7 @@ class Engine(ScraperStatus, ABC):
         """return chain name"""
         return self.chain
 
-    def get_file_size_from_entry(self, entry):
+    def get_file_size_from_entry(self, entry):  # pylint: disable=unused-argument
         """
         Extract file size from an entry (table row).
         Returns file size in bytes, or None if size information is not available.

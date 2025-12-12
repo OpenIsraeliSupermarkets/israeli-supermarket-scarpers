@@ -317,7 +317,7 @@ def collect_from_ftp(
         files = ftp_session.nlst(arg)
     else:
         files = ftp_session.nlst()
-    
+
     # Get file sizes for each file
     files_with_sizes = []
     for filename in files:
@@ -327,7 +327,7 @@ def collect_from_ftp(
         except (error_perm, AttributeError):
             # If size() fails (e.g., for directories or permission issues), use None
             files_with_sizes.append((filename, None))
-    
+
     ftp_session.quit()
     return files_with_sizes
 

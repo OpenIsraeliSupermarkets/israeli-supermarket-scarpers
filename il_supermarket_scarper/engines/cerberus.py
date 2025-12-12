@@ -111,7 +111,7 @@ class Cerberus(Engine):
                 yield None
             yield "*" + "*".join(output_pattern) + "*"
 
-    def collect_files_details_from_site(
+    def collect_files_details_from_site(  # pylint: disable=too-many-locals
         self,
         limit=None,
         files_types=None,
@@ -143,14 +143,21 @@ class Cerberus(Engine):
             file_names = [filename for filename, _ in files]
             download_urls = [""] * len(files)  # FTP doesn't use URLs, use empty strings
             file_sizes = [size for _, size in files]
-            file_names, download_urls, file_sizes = super().filter_by_file_size(
-                file_names, download_urls, file_sizes, min_size=min_size, max_size=max_size
+            file_names, download_urls, file_sizes = self.filter_by_file_size(
+                file_names,
+                download_urls,
+                file_sizes,
+                min_size=min_size,
+                max_size=max_size,
             )
             # Convert back to tuples
             files = list(zip(file_names, file_sizes))
 
         files = self.filter_bad_files(
-            files, filter_null=filter_null, filter_zero=filter_zero, by_function=lambda x: x[0]
+            files,
+            filter_null=filter_null,
+            filter_zero=filter_zero,
+            by_function=lambda x: x[0],
         )
 
         Logger.info(f"After filtering bad files: Found {len(files)} files")

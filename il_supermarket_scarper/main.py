@@ -2,7 +2,7 @@ from .scrapper_runner import MainScrapperRunner
 from .utils.file_types import FileTypesFilters
 
 
-class ScarpingTask:
+class ScarpingTask:  # pylint: disable=too-many-instance-attributes
     """scraping task encapsulated"""
 
     def __init__(

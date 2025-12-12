@@ -1,7 +1,14 @@
 import urllib.parse
 import datetime
 from il_supermarket_scarper.engines import MultiPageWeb
-from il_supermarket_scarper.utils import DumpFolderNames, FileTypesFilters, _now, convert_unit, UnitSize, string_to_float
+from il_supermarket_scarper.utils import (
+    DumpFolderNames,
+    FileTypesFilters,
+    _now,
+    convert_unit,
+    UnitSize,
+    string_to_float,
+)
 
 # class HaziHinam(Cerberus):
 #     """scrper fro hazi hinam"""
@@ -38,7 +45,13 @@ class HaziHinam(MultiPageWeb):
         for link in html.xpath("//table/tbody/tr"):
             links.append(link.xpath("td[6]/a/@href")[0])
             filenames.append(link.xpath("td[3]")[0].text.strip() + ".xml.gz")
-            file_sizes.append(convert_unit(string_to_float(link.xpath("td[5]")[0].text.strip()), UnitSize.KB, UnitSize.BYTES))
+            file_sizes.append(
+                convert_unit(
+                    string_to_float(link.xpath("td[5]")[0].text.strip()),
+                    UnitSize.KB,
+                    UnitSize.BYTES,
+                )
+            )
         return links, filenames, file_sizes
 
     def get_file_types_id(self, files_types=None):
