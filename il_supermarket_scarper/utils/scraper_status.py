@@ -129,6 +129,7 @@ class ScraperStatus:
             download_urls=download_urls if download_urls else [],
             file_names=file_names if file_names else [],
         )
+
     def _insert_an_update(self, status, **additional_info):
         """Insert an update into the MongoDB collection."""
         document = {

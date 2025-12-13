@@ -39,7 +39,13 @@ class MainScrapperRunner:
         self.lookup_in_db = lookup_in_db
 
     def run(
-        self, limit=None, files_types=None, when_date=False, suppress_exception=False
+        self,
+        limit=None,
+        files_types=None,
+        when_date=False,
+        suppress_exception=False,
+        min_size=None,
+        max_size=None,
     ):
         """run the scraper"""
         Logger.info(f"Limit is {limit}")
@@ -58,6 +64,8 @@ class MainScrapperRunner:
                                 "files_types": files_types,
                                 "when_date": when_date,
                                 "suppress_exception": suppress_exception,
+                                "min_size": min_size,
+                                "max_size": max_size,
                             },
                         ),
                         self.enabled_scrapers,
@@ -82,6 +90,8 @@ class MainScrapperRunner:
         store_id=None,
         when_date=None,
         suppress_exception=False,
+        min_size=None,
+        max_size=None,
     ):
         """scrape one"""
         chain_scrapper_constractor = ScraperFactory.get(chain_scrapper_class)
@@ -103,6 +113,8 @@ class MainScrapperRunner:
             filter_null=False,
             filter_zero=False,
             suppress_exception=suppress_exception,
+            min_size=min_size,
+            max_size=max_size,
         )
         Logger.info(f"done scraping {chain_name}")
 

@@ -115,6 +115,15 @@ class Bina(Aspx):
         """get the file name without extensions from entey (tr)"""
         return entry.split(self.download_postfix)[-1].split(".")[0]
 
+    def get_file_size_from_entry(self, entry):
+        """
+        Extract file size from a JSON entry.
+        Bina returns JSON objects, check for size field.
+        Returns size in bytes, or None if not found.
+        """
+        # Bina don't support file size in the entry
+        return None
+
     @url_connection_retry()
     def retrieve_file(self, file_link, file_save_path, timeout=30):
         response_content = self.session_with_cookies_by_chain(

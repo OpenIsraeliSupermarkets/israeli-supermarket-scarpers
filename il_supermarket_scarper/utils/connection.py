@@ -304,7 +304,7 @@ def url_retrieve(url, filename, timeout=30):
 def collect_from_ftp(
     ftp_host, ftp_username, ftp_password, ftp_path, arg=None, timeout=60 * 5
 ):
-    """collect all files to download from the site"""
+    """collect all files to download from the site, returns list of (filename, size) tuples"""
     Logger.info(
         f"Open connection to FTP server with {ftp_host} "
         f", username: {ftp_username} , password: {ftp_password}"
@@ -317,8 +317,19 @@ def collect_from_ftp(
         files = ftp_session.nlst(arg)
     else:
         files = ftp_session.nlst()
+
+    # Get file sizes for each file
+    files_with_sizes = []
+    for filename in files:
+        try:
+            size = ftp_session.size(filename)
+            files_with_sizes.append((filename, size))
+        except (error_perm, AttributeError):
+            # If size() fails (e.g., for directories or permission issues), use None
+            files_with_sizes.append((filename, None))
+
     ftp_session.quit()
-    return files
+    return files_with_sizes
 
 
 @download_connection_retry()
