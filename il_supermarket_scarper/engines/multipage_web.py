@@ -172,7 +172,9 @@ class MultiPageWeb(WebBase):
 
         return download_urls, file_names
 
-    def get_file_size_from_entry(self, html, link_element):  # pylint: disable=arguments-differ,unused-argument
+    def get_file_size_from_entry(
+        self, html, link_element
+    ):  # pylint: disable=arguments-differ,unused-argument
         """
         Extract file size from HTML element.
         For MultiPageWeb, we need to find the size in the same row as the link.
@@ -205,12 +207,30 @@ class MultiPageWeb(WebBase):
         links = []
         filenames = []
         file_sizes = []
-        link_elements = html.xpath('//*[@id="gridContainer"]/table/tbody/tr/td[1]/a')
-        for link_element in link_elements:
+        # Select all rows from the table
+        rows = html.xpath('//*[@id="gridContainer"]/table/tbody/tr')
+        for row in rows:
+            # Extract link from td[1]/a
+            link_elements = row.xpath("./td[1]/a")
+            if not link_elements:
+                continue
+            link_element = link_elements[0]
             link = link_element.get("href")
+            if not link:
+                continue
+
+            # Extract size from td[3] (size column)
+            size_elements = row.xpath("./td[3]")
+            size_text = size_elements[0].text_content().strip() if size_elements else ""
+            size_bytes = (
+                convert_nl_size_to_bytes(size_text, to_unit=UnitSize.BYTES)
+                if size_text
+                else None
+            )
+
             links.append(link)
             filenames.append(ntpath.basename(urlsplit(link).path))
-            file_sizes.append(self.get_file_size_from_entry(html, link_element))
+            file_sizes.append(size_bytes)
         return links, filenames, file_sizes
 
     def process_links_before_download(
