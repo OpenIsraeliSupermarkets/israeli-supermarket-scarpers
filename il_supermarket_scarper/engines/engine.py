@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 import os
 import re
+import random
 import datetime
 
 from il_supermarket_scarper.utils import (
@@ -74,6 +75,7 @@ class Engine(ScraperStatus, ABC):
         when_date=None,
         files_names_to_scrape=None,
         suppress_exception=False,
+        random_selection=False,
     ):
         """filter the list according to condition"""
 
@@ -106,7 +108,11 @@ class Engine(ScraperStatus, ABC):
         # filter by file type
         if files_types:
             intreable_ = self.filter_file_types(
-                intreable_, limit, files_types, by_function
+                intreable_,
+                limit,
+                files_types,
+                by_function,
+                random_selection=random_selection,
             )
         Logger.info(f"Number of entry after filter file type id is {len(intreable_)}")
 
@@ -127,7 +133,11 @@ class Engine(ScraperStatus, ABC):
         if limit:
             assert limit > 0, "Limit must be greater than 0"
             Logger.info(f"Limit: {limit}")
-            intreable_ = intreable_[: min(limit, len(list(intreable_)))]
+            intreable_list = list(intreable_)
+            if random_selection and len(intreable_list) > limit:
+                intreable_ = random.sample(intreable_list, limit)
+            else:
+                intreable_ = intreable_list[: min(limit, len(intreable_list))]
         Logger.info(f"Result length {len(list(intreable_))}")
 
         # raise error if there was nothing to download.
@@ -143,7 +153,9 @@ class Engine(ScraperStatus, ABC):
             )
         return intreable_
 
-    def filter_file_types(self, intreable, limit, files_types, by_function):
+    def filter_file_types(
+        self, intreable, limit, files_types, by_function, random_selection=False
+    ):
         """filter the file types requested"""
         intreable_ = []
         for type_ in files_types:
@@ -151,7 +163,10 @@ class Engine(ScraperStatus, ABC):
                 type_, intreable, by_function=by_function
             )
             if limit:
-                type_files = type_files[: min(limit, len(type_files))]
+                if random_selection and len(type_files) > limit:
+                    type_files = random.sample(type_files, limit)
+                else:
+                    type_files = type_files[: min(limit, len(type_files))]
             intreable_.extend(type_files)
         return intreable_
 
@@ -236,6 +251,7 @@ class Engine(ScraperStatus, ABC):
         suppress_exception=False,
         min_size=None,
         max_size=None,
+        random_selection=False,
     ):
         """run the scraping logic"""
         self.on_scraping_start(
@@ -266,6 +282,7 @@ class Engine(ScraperStatus, ABC):
                 suppress_exception=suppress_exception,
                 min_size=min_size,
                 max_size=max_size,
+                random_selection=random_selection,
             )
             self.on_download_completed(results=results)
         except Exception as e:  # pylint: disable=broad-exception-caught
@@ -294,6 +311,7 @@ class Engine(ScraperStatus, ABC):
         suppress_exception=False,
         min_size=None,
         max_size=None,
+        random_selection=False,
     ):
         """method to be implemeted by the child class"""
 
@@ -384,6 +402,9 @@ class Engine(ScraperStatus, ABC):
             "restart_and_retry": restart_and_retry,
         }
 
+    def _wget_file(self, file_link, file_save_path):
+        return wget_file(file_link, file_save_path)
+
     def _save_and_extract(self, file_link, file_save_path):
         downloaded = False
         extract_succefully = False
@@ -404,7 +425,7 @@ class Engine(ScraperStatus, ABC):
                 file_save_path_with_ext = self.retrieve_file(file_link, file_save_path)
             except Exception as e:  # pylint: disable=broad-except
                 Logger.warning(f"Error downloading {file_link}: {e}")
-                file_save_path_with_ext = wget_file(file_link, file_save_path)
+                file_save_path_with_ext = self._wget_file(file_link, file_save_path)
             downloaded = True
 
             if file_save_path_with_ext.endswith("gz"):

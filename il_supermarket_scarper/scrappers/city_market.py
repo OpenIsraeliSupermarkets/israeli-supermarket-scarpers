@@ -41,7 +41,7 @@ class CityMarketKiryatGat(Bina):
     def __init__(self, folder_name=None):
         super().__init__(
             chain=DumpFolderNames.CITY_MARKET_KIRYATGAT,
-            chain_id=["7290058266241", "7290058266241"],
+            chain_id=["7290058288526", "7290058266241", "7290058288090"],
             url_perfix="citymarketkiryatgat",
             folder_name=folder_name,
         )
