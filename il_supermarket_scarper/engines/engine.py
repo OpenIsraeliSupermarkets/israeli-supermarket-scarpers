@@ -116,6 +116,12 @@ class Engine(ScraperStatus, ABC):
             )
         Logger.info(f"Number of entry after filter file type id is {len(intreable_)}")
 
+        # Warning and filtering for random_selection
+        if random_selection:
+            Logger.warning(
+                "random_selection is enabled. Will select only from files from the last 48 hours."
+            )
+
         if isinstance(when_date, datetime.datetime):
             intreable_ = self.get_by_date(when_date, by_function, intreable_)
         elif isinstance(when_date, str) and when_date == "latest":
@@ -123,6 +129,11 @@ class Engine(ScraperStatus, ABC):
         elif when_date is not None:
             raise ValueError(
                 f"when_date should be datetime or 'latest', got {when_date}"
+            )
+        elif random_selection:
+            # Filter to last 48 hours when random_selection is used and no when_date is specified
+            intreable_ = self.apply_limit_random_selection(
+                intreable_, limit, by_function
             )
 
         Logger.info(
@@ -153,6 +164,13 @@ class Engine(ScraperStatus, ABC):
             )
         return intreable_
 
+    def apply_limit_random_selection(self, intreable, limit, by_function):
+        """apply limit to the intreable"""
+        intreable_ = self.get_last_48_hours(by_function, intreable)
+        if len(intreable_) > limit:
+            return random.sample(intreable_, limit)
+        return intreable_[: min(limit, len(intreable_))]
+
     def filter_file_types(
         self, intreable, limit, files_types, by_function, random_selection=False
     ):
@@ -163,8 +181,10 @@ class Engine(ScraperStatus, ABC):
                 type_, intreable, by_function=by_function
             )
             if limit:
-                if random_selection and len(type_files) > limit:
-                    type_files = random.sample(type_files, limit)
+                if random_selection:
+                    type_files = self.apply_limit_random_selection(
+                        type_files, limit, by_function
+                    )
                 else:
                     type_files = type_files[: min(limit, len(type_files))]
             intreable_.extend(type_files)
@@ -198,6 +218,53 @@ class Engine(ScraperStatus, ABC):
             # Promo7290700100008-000-207-20250224-103225
             if f"-{date_format}" in by_function(file):
                 groups_value.append(file)
+
+        return groups_value
+
+    def get_last_48_hours(self, by_function, intreable_):
+        """get only files from the last 48 hours"""
+        now = datetime.datetime.now()
+        cutoff_time = now - datetime.timedelta(hours=48)
+
+        groups_value = []
+        for file in intreable_:
+            file_name = by_function(file)
+            # Extract date from filename patterns like:
+            # StoresFull7290875100001-000-202502250510 (YYYYMMDDHHMM)
+            # Promo7290700100008-000-207-20250224-103225 (YYYYMMDD-HHMMSS)
+            # Look for date pattern YYYYMMDD followed by optional time
+            # Pattern: -YYYYMMDD followed by optional HHMM, then - or end of string or .
+            date_match = re.search(r"-(\d{8})(\d{4})?(?=-|\.|$)", file_name)
+            if not date_match:
+                # Try pattern with date and time separated by dash: -YYYYMMDD-HHMMSS
+                date_match = re.search(r"-(\d{8})-(\d{6})", file_name)
+                if date_match:
+                    date_str = date_match.group(1)  # YYYYMMDD
+                    time_str = date_match.group(2)[
+                        :4
+                    ]  # Take first 4 digits (HHMM) from HHMMSS
+                    try:
+                        file_datetime = datetime.datetime.strptime(
+                            f"{date_str}{time_str}", "%Y%m%d%H%M"
+                        )
+                        if file_datetime >= cutoff_time:
+                            groups_value.append(file)
+                    except ValueError:
+                        continue
+            else:
+                date_str = date_match.group(1)  # YYYYMMDD
+                time_str = (
+                    date_match.group(2) if date_match.group(2) else "0000"
+                )  # HHMM or default to 0000
+                try:
+                    file_datetime = datetime.datetime.strptime(
+                        f"{date_str}{time_str}", "%Y%m%d%H%M"
+                    )
+                    if file_datetime >= cutoff_time:
+                        groups_value.append(file)
+                except ValueError:
+                    # If parsing fails, skip this file
+                    continue
 
         return groups_value
 

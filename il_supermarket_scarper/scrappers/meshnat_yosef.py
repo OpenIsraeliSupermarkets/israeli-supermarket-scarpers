@@ -52,7 +52,7 @@ class MeshnatYosef2(Bina):
     def __init__(self, folder_name=None):
         super().__init__(
             DumpFolderNames.MESHMAT_YOSEF_2,
-            chain_id=["5144744100001", "7290058289400"],
+            chain_id=["5144744100001", "7290058289400", "2222222"],
             url_perfix="ktshivuk",
             folder_name=folder_name,
         )
