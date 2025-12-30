@@ -161,8 +161,7 @@ def make_test_case(scraper_enum, store_id):
                         "filter_zero": True,
                         "suppress_exception": True,
                         "min_size": 100,
-                        "max_size": 10000000,
-                        "random_selection": True,
+                        "max_size": 10000000
                     }
 
                     scraper.scrape(**kwarg)
