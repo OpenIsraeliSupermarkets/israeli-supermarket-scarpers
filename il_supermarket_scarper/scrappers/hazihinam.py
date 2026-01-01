@@ -33,7 +33,7 @@ class HaziHinam(MultiPageWeb):
             folder_name=folder_name,
             total_page_xpath="(//li[contains(concat(' ', normalize-space(@class), ' '),"
             + "' pagination-item ')])[last()]/a/@href",
-            total_pages_pattern=r"\d+",
+            total_pages_pattern=r"p=(\d+)",
             page_argument="&p",
         )
 

@@ -75,6 +75,9 @@ class MultiPageWeb(WebBase):
             self.total_pages_pattern,
             elements[-1],
         )
+        if len(pages) != 1:
+            raise ValueError(f"Found {len(pages)} pages, expected 1")
+
         return int(pages[0])
 
     def collect_files_details_from_site(  # pylint: disable=too-many-locals

@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import os
 import re
 import random
+import uuid
 import datetime
 
 from il_supermarket_scarper.utils import (
@@ -34,7 +35,7 @@ class Engine(ScraperStatus, ABC):
         self.chain_id = chain_id
         self.max_threads = max_threads
         self.storage_path = get_output_folder(self.chain.value, folder_name=folder_name)
-        self.assigned_cookie = f"{self.chain.name}_{id(self)}_cookies.txt"
+        self.assigned_cookie = f"{self.chain.name}_{uuid.uuid4()}_cookies.txt"
 
     def get_storage_path(self):
         """the the storage page of the files downloaded"""
@@ -281,7 +282,9 @@ class Engine(ScraperStatus, ABC):
 
         return result
 
-    def session_with_cookies_by_chain(self, url, method="GET", body=None, timeout=15):
+    def session_with_cookies_by_chain(
+        self, url, method="GET", body=None, timeout=15, headers=None
+    ):
         """request resource with cookie by chain name"""
         return session_with_cookies(
             url,
@@ -289,6 +292,7 @@ class Engine(ScraperStatus, ABC):
             timeout=timeout,
             method=method,
             body=body,
+            headers=headers,
         )
 
     def _post_scraping(self):

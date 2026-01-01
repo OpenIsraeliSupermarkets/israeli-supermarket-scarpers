@@ -73,6 +73,18 @@ def url_connection_retry(init_timeout=15):
     """decorator the define the retry logic of connections tring to send get request"""
 
     def wrapper(func):
+        # Store the original requested timeout in a closure variable
+        # This will be set by the outer wrapper before retry processes it
+        requested_timeout_ref = [init_timeout]
+
+        def outer_wrapper(*args, **kwargs):
+            # Capture the timeout from the original call before retry processes it
+            original_timeout = kwargs.get("timeout", init_timeout)
+            if original_timeout > requested_timeout_ref[0]:
+                requested_timeout_ref[0] = original_timeout
+            # Now call the retry-decorated function
+            return retry_decorated_func(*args, **kwargs)
+
         @retry(
             exceptions=exceptions,
             tries=4,
@@ -83,11 +95,15 @@ def url_connection_retry(init_timeout=15):
             timeout=init_timeout,
             backoff_timeout=10,
         )
-        def inner(*args, **kwargs):
-            socket.setdefaulttimeout(kwargs.get("timeout", 15))
+        def retry_decorated_func(*args, **kwargs):
+            # Use the higher of retry's timeout or the originally requested timeout
+            retry_timeout = kwargs.get("timeout", init_timeout)
+            actual_timeout = max(retry_timeout, requested_timeout_ref[0])
+            socket.setdefaulttimeout(actual_timeout)
+            kwargs["timeout"] = actual_timeout
             return func(*args, **kwargs)
 
-        return inner
+        return outer_wrapper
 
     return wrapper
 
@@ -160,9 +176,11 @@ def get_random_user_agent():
     return {"User-Agent": str(user_agents[index])}
 
 
-@url_connection_retry()
+@url_connection_retry(
+    init_timeout=60
+)  # Increased default to handle slow servers like Shufersal
 def session_with_cookies(
-    url, timeout=15, chain_cookie_name=None, method="GET", body=None
+    url, timeout=15, chain_cookie_name=None, method="GET", body=None, headers=None
 ):
     """
     Request resource with cookies enabled.
@@ -173,6 +191,7 @@ def session_with_cookies(
     - chain_cookie_name: Optional, name for saving/loading cookies
     - method: HTTP method, defaults to GET
     - body: Data to be sent in the request body (for POST or PUT requests)
+    - headers: Optional dict of custom headers to include in the request
     """
 
     session = requests.Session()
@@ -194,9 +213,11 @@ def session_with_cookies(
     )
 
     if method == "POST":
-        response_content = session.post(url, data=body, timeout=timeout)
+        response_content = session.post(
+            url, data=body, timeout=timeout, headers=headers
+        )
     else:
-        response_content = session.get(url, timeout=timeout)
+        response_content = session.get(url, timeout=timeout, headers=headers)
 
     if response_content.status_code != 200:
         Logger.debug(
