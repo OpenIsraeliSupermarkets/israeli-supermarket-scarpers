@@ -77,7 +77,7 @@ class NetivHased(FullyStable):
     @classmethod
     def failire_valid(cls, when_date=None, utilize_date_param=False, **_):
         """return true if the parser is stble"""
-        return super().failire_valid(
+        return super(cls,NetivHased).failire_valid(
             when_date=when_date, utilize_date_param=utilize_date_param
         ) or cls.executed_in_saturday(when_date=when_date)
 
@@ -100,7 +100,7 @@ class CityMarketGivataim(FullyStable):
     ):
         """return true if the parser is stble"""
         return (
-            super().failire_valid(when_date=when_date)
+            super(cls,CityMarketGivataim).failire_valid(when_date=when_date)
             or cls.searching_for_update_promo(files_types=files_types)
             or when_date is not None
             and cls.executed_after_date(
@@ -129,7 +129,7 @@ class CityMarketKiratOno(FullyStable):
         cls, when_date=None, files_types=None, utilize_date_param=True, **_
     ):
         """return true if the parser is stble"""
-        return super().failire_valid(
+        return super(cls,CityMarketKiratOno).failire_valid(
             when_date=when_date
         ) or cls.searching_for_update_promo(files_types=files_types)
 
@@ -153,7 +153,7 @@ class CityMarketKiratGat(FullyStable):
     ):
         """return true if the parser is stble"""
         return (
-            super().failire_valid(
+            super(cls,CityMarketKiratGat).failire_valid(
                 when_date=when_date,
                 files_types=files_types,
                 utilize_date_param=utilize_date_param,
@@ -179,7 +179,7 @@ class DoNotPublishStores(FullyStable):
         cls, when_date=None, files_types=None, utilize_date_param=True, **_
     ):
         """return true if the parser is stble"""
-        return super().failire_valid(
+        return super(cls,DoNotPublishStores).failire_valid(
             when_date=when_date,
             files_types=files_types,
             utilize_date_param=utilize_date_param,
@@ -206,7 +206,7 @@ class DoNotPublishPromo(FullyStable):
         cls, when_date=None, files_types=None, utilize_date_param=True, **_
     ):
         """return true if the parser is stble"""
-        return super().failire_valid(
+        return super(cls,DoNotPublishPromo).failire_valid(
             when_date=when_date,
             files_types=files_types,
             utilize_date_param=utilize_date_param,
