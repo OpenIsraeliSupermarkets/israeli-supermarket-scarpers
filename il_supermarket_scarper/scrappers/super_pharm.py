@@ -80,8 +80,11 @@ class SuperPharm(MultiPageWeb):
         for ftype in self.get_file_types_id(files_types):
             params = {}
 
-            if store_id:
-                params["store"] = store_id
+            # The new website behavior is to filter base on the store name and not id
+            # so we don't filter base on the store id in the request,
+            #  only post collection filtering.
+            # if store_id:
+            #     params["store"] = store_id
             if when_date and isinstance(when_date, datetime.datetime):
                 params["Date-equals"] = when_date.strftime("%d/%m/%Y")
             if files_types:
