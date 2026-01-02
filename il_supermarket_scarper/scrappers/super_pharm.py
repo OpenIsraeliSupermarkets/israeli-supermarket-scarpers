@@ -78,14 +78,14 @@ class SuperPharm(MultiPageWeb):
 
         all_params = []
         for ftype in self.get_file_types_id(files_types):
-            params = {"type": "", "date": "", "store": ""}
+            params = {}
 
             if store_id:
                 params["store"] = store_id
             if when_date and isinstance(when_date, datetime.datetime):
-                params["date"] = when_date.strftime("%Y-%m-%d")
+                params["Date-equals"] = when_date.strftime("%d/%m/%Y")
             if files_types:
-                params["type"] = ftype
+                params["Category-equals"] = ftype
             all_params.append(params)
 
         return ["?" + urllib.parse.urlencode(params) for params in all_params]
