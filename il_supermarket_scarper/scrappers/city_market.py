@@ -41,7 +41,7 @@ class CityMarketKiryatGat(Bina):
     def __init__(self, folder_name=None):
         super().__init__(
             chain=DumpFolderNames.CITY_MARKET_KIRYATGAT,
-            chain_id="7290058266241",
+            chain_id=["7290058288526", "7290058266241", "7290058288090"],
             url_perfix="citymarketkiryatgat",
             folder_name=folder_name,
         )
@@ -58,7 +58,7 @@ class CityMarketShops(MultiPageWeb):
             folder_name=folder_name,
             total_page_xpath="(//li[contains(concat(' ', normalize-space(@class), ' '),"
             + "' pagination-item ')])[last()]/a/@href",
-            total_pages_pattern=r"\d+",
+            total_pages_pattern=r"p=(\d+)",
             page_argument="&p",
         )
 

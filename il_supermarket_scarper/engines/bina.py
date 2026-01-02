@@ -137,3 +137,14 @@ class Bina(Aspx):
 
         url_retrieve(url, file_save_path + "." + ext, timeout=timeout)
         return file_save_path + "." + ext
+
+    def _wget_file(self, file_link, file_save_path):
+        response_content = self.session_with_cookies_by_chain(
+            file_link,
+        )
+        spath = json.loads(response_content.content)
+        Logger.debug(f"Found spath: {spath}")
+
+        url = spath[0]["SPath"]
+        ext = file_link.split(".")[-1]
+        return super()._wget_file(url, file_save_path.split(".")[0] + "." + ext)

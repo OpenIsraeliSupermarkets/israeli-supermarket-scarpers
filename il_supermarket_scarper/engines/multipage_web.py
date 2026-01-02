@@ -75,6 +75,9 @@ class MultiPageWeb(WebBase):
             self.total_pages_pattern,
             elements[-1],
         )
+        if len(pages) != 1:
+            raise ValueError(f"Found {len(pages)} pages, expected 1")
+
         return int(pages[0])
 
     def collect_files_details_from_site(  # pylint: disable=too-many-locals
@@ -89,6 +92,7 @@ class MultiPageWeb(WebBase):
         suppress_exception=False,
         min_size=None,
         max_size=None,
+        random_selection=False,
     ):
 
         main_page_requests = self.get_request_url(
@@ -124,7 +128,15 @@ class MultiPageWeb(WebBase):
                 )
 
             _download_urls, _file_names, _file_sizes = execute_in_parallel(
-                self.process_links_before_download,
+                lambda req: self.process_links_before_download(
+                    req,
+                    limit=limit,
+                    files_types=files_types,
+                    store_id=store_id,
+                    when_date=when_date,
+                    suppress_exception=suppress_exception,
+                    random_selection=random_selection,
+                ),
                 list(pages_to_scrape),
                 aggregtion_function=multiple_page_aggregtion,
                 max_threads=self.max_threads,
@@ -168,6 +180,7 @@ class MultiPageWeb(WebBase):
             when_date=when_date,
             files_names_to_scrape=files_names_to_scrape,
             suppress_exception=suppress_exception,
+            random_selection=random_selection,
         )
 
         return download_urls, file_names
@@ -241,6 +254,7 @@ class MultiPageWeb(WebBase):
         store_id=None,
         when_date=None,
         suppress_exception=True,  # this is nested limit don't fail
+        random_selection=False,
     ):
         """additional processing to the links before download"""
         response = self.session_with_cookies_by_chain(**request)
@@ -259,6 +273,7 @@ class MultiPageWeb(WebBase):
             store_id=store_id,
             when_date=when_date,
             suppress_exception=suppress_exception,
+            random_selection=random_selection,
         )
 
         Logger.info(

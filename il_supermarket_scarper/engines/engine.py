@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 import os
 import re
+import random
+import uuid
 import datetime
 
 from il_supermarket_scarper.utils import (
@@ -33,7 +35,7 @@ class Engine(ScraperStatus, ABC):
         self.chain_id = chain_id
         self.max_threads = max_threads
         self.storage_path = get_output_folder(self.chain.value, folder_name=folder_name)
-        self.assigned_cookie = f"{self.chain.name}_{id(self)}_cookies.txt"
+        self.assigned_cookie = f"{self.chain.name}_{uuid.uuid4()}_cookies.txt"
 
     def get_storage_path(self):
         """the the storage page of the files downloaded"""
@@ -74,6 +76,7 @@ class Engine(ScraperStatus, ABC):
         when_date=None,
         files_names_to_scrape=None,
         suppress_exception=False,
+        random_selection=False,
     ):
         """filter the list according to condition"""
 
@@ -106,9 +109,19 @@ class Engine(ScraperStatus, ABC):
         # filter by file type
         if files_types:
             intreable_ = self.filter_file_types(
-                intreable_, limit, files_types, by_function
+                intreable_,
+                limit,
+                files_types,
+                by_function,
+                random_selection=random_selection,
             )
         Logger.info(f"Number of entry after filter file type id is {len(intreable_)}")
+
+        # Warning and filtering for random_selection
+        if random_selection:
+            Logger.warning(
+                "random_selection is enabled. Will select only from files from the last 48 hours."
+            )
 
         if isinstance(when_date, datetime.datetime):
             intreable_ = self.get_by_date(when_date, by_function, intreable_)
@@ -117,6 +130,11 @@ class Engine(ScraperStatus, ABC):
         elif when_date is not None:
             raise ValueError(
                 f"when_date should be datetime or 'latest', got {when_date}"
+            )
+        elif random_selection:
+            # Filter to last 48 hours when random_selection is used and no when_date is specified
+            intreable_ = self.apply_limit_random_selection(
+                intreable_, limit, by_function
             )
 
         Logger.info(
@@ -127,7 +145,11 @@ class Engine(ScraperStatus, ABC):
         if limit:
             assert limit > 0, "Limit must be greater than 0"
             Logger.info(f"Limit: {limit}")
-            intreable_ = intreable_[: min(limit, len(list(intreable_)))]
+            intreable_list = list(intreable_)
+            if random_selection and len(intreable_list) > limit:
+                intreable_ = random.sample(intreable_list, limit)
+            else:
+                intreable_ = intreable_list[: min(limit, len(intreable_list))]
         Logger.info(f"Result length {len(list(intreable_))}")
 
         # raise error if there was nothing to download.
@@ -143,7 +165,16 @@ class Engine(ScraperStatus, ABC):
             )
         return intreable_
 
-    def filter_file_types(self, intreable, limit, files_types, by_function):
+    def apply_limit_random_selection(self, intreable, limit, by_function):
+        """apply limit to the intreable"""
+        intreable_ = self.get_last_48_hours(by_function, intreable)
+        if len(intreable_) > limit:
+            return random.sample(intreable_, limit)
+        return intreable_[: min(limit, len(intreable_))]
+
+    def filter_file_types(
+        self, intreable, limit, files_types, by_function, random_selection=False
+    ):
         """filter the file types requested"""
         intreable_ = []
         for type_ in files_types:
@@ -151,7 +182,12 @@ class Engine(ScraperStatus, ABC):
                 type_, intreable, by_function=by_function
             )
             if limit:
-                type_files = type_files[: min(limit, len(type_files))]
+                if random_selection:
+                    type_files = self.apply_limit_random_selection(
+                        type_files, limit, by_function
+                    )
+                else:
+                    type_files = type_files[: min(limit, len(type_files))]
             intreable_.extend(type_files)
         return intreable_
 
@@ -186,6 +222,53 @@ class Engine(ScraperStatus, ABC):
 
         return groups_value
 
+    def get_last_48_hours(self, by_function, intreable_):
+        """get only files from the last 48 hours"""
+        now = datetime.datetime.now()
+        cutoff_time = now - datetime.timedelta(hours=48)
+
+        groups_value = []
+        for file in intreable_:
+            file_name = by_function(file)
+            # Extract date from filename patterns like:
+            # StoresFull7290875100001-000-202502250510 (YYYYMMDDHHMM)
+            # Promo7290700100008-000-207-20250224-103225 (YYYYMMDD-HHMMSS)
+            # Look for date pattern YYYYMMDD followed by optional time
+            # Pattern: -YYYYMMDD followed by optional HHMM, then - or end of string or .
+            date_match = re.search(r"-(\d{8})(\d{4})?(?=-|\.|$)", file_name)
+            if not date_match:
+                # Try pattern with date and time separated by dash: -YYYYMMDD-HHMMSS
+                date_match = re.search(r"-(\d{8})-(\d{6})", file_name)
+                if date_match:
+                    date_str = date_match.group(1)  # YYYYMMDD
+                    time_str = date_match.group(2)[
+                        :4
+                    ]  # Take first 4 digits (HHMM) from HHMMSS
+                    try:
+                        file_datetime = datetime.datetime.strptime(
+                            f"{date_str}{time_str}", "%Y%m%d%H%M"
+                        )
+                        if file_datetime >= cutoff_time:
+                            groups_value.append(file)
+                    except ValueError:
+                        continue
+            else:
+                date_str = date_match.group(1)  # YYYYMMDD
+                time_str = (
+                    date_match.group(2) if date_match.group(2) else "0000"
+                )  # HHMM or default to 0000
+                try:
+                    file_datetime = datetime.datetime.strptime(
+                        f"{date_str}{time_str}", "%Y%m%d%H%M"
+                    )
+                    if file_datetime >= cutoff_time:
+                        groups_value.append(file)
+                except ValueError:
+                    # If parsing fails, skip this file
+                    continue
+
+        return groups_value
+
     @classmethod
     def unique(cls, iterable, by_function=lambda x: x):
         """Returns the type of the file."""
@@ -199,7 +282,9 @@ class Engine(ScraperStatus, ABC):
 
         return result
 
-    def session_with_cookies_by_chain(self, url, method="GET", body=None, timeout=15):
+    def session_with_cookies_by_chain(
+        self, url, method="GET", body=None, timeout=15, headers=None
+    ):
         """request resource with cookie by chain name"""
         return session_with_cookies(
             url,
@@ -207,6 +292,7 @@ class Engine(ScraperStatus, ABC):
             timeout=timeout,
             method=method,
             body=body,
+            headers=headers,
         )
 
     def _post_scraping(self):
@@ -236,6 +322,7 @@ class Engine(ScraperStatus, ABC):
         suppress_exception=False,
         min_size=None,
         max_size=None,
+        random_selection=False,
     ):
         """run the scraping logic"""
         self.on_scraping_start(
@@ -266,6 +353,7 @@ class Engine(ScraperStatus, ABC):
                 suppress_exception=suppress_exception,
                 min_size=min_size,
                 max_size=max_size,
+                random_selection=random_selection,
             )
             self.on_download_completed(results=results)
         except Exception as e:  # pylint: disable=broad-exception-caught
@@ -294,6 +382,7 @@ class Engine(ScraperStatus, ABC):
         suppress_exception=False,
         min_size=None,
         max_size=None,
+        random_selection=False,
     ):
         """method to be implemeted by the child class"""
 
@@ -384,6 +473,9 @@ class Engine(ScraperStatus, ABC):
             "restart_and_retry": restart_and_retry,
         }
 
+    def _wget_file(self, file_link, file_save_path):
+        return wget_file(file_link, file_save_path)
+
     def _save_and_extract(self, file_link, file_save_path):
         downloaded = False
         extract_succefully = False
@@ -404,7 +496,7 @@ class Engine(ScraperStatus, ABC):
                 file_save_path_with_ext = self.retrieve_file(file_link, file_save_path)
             except Exception as e:  # pylint: disable=broad-except
                 Logger.warning(f"Error downloading {file_link}: {e}")
-                file_save_path_with_ext = wget_file(file_link, file_save_path)
+                file_save_path_with_ext = self._wget_file(file_link, file_save_path)
             downloaded = True
 
             if file_save_path_with_ext.endswith("gz"):

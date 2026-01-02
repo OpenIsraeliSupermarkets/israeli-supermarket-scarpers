@@ -67,6 +67,7 @@ class WebBase(Engine):
         when_date=None,
         files_names_to_scrape=None,
         suppress_exception=False,
+        random_selection=False,
     ):
         """apply limit to zip"""
         # Handle both 2-tuple (backward compatibility) and 3-tuple formats
@@ -84,6 +85,7 @@ class WebBase(Engine):
             when_date=when_date,
             files_names_to_scrape=files_names_to_scrape,
             suppress_exception=suppress_exception,
+            random_selection=random_selection,
         )
         if len(ziped) == 0:
             if file_sizes is None:
@@ -131,6 +133,7 @@ class WebBase(Engine):
         suppress_exception=False,
         min_size=None,
         max_size=None,
+        random_selection=False,
     ):
         """collect all enteris to download from site"""
 
@@ -182,13 +185,14 @@ class WebBase(Engine):
             when_date=when_date,
             files_names_to_scrape=files_names_to_scrape,
             suppress_exception=suppress_exception,
+            random_selection=random_selection,
         )
 
         Logger.info(f"After applying limit: Found {len(download_urls)} entries")
 
         return download_urls, file_names
 
-    def _scrape(
+    def _scrape(  # pylint: disable=too-many-locals
         self,
         limit=None,
         files_types=None,
@@ -200,6 +204,7 @@ class WebBase(Engine):
         suppress_exception=False,
         min_size=None,
         max_size=None,
+        random_selection=False,
     ):
         """scarpe the files from multipage sites"""
         download_urls, file_names = [], []
@@ -215,6 +220,7 @@ class WebBase(Engine):
                 suppress_exception=suppress_exception,
                 min_size=min_size,
                 max_size=max_size,
+                random_selection=random_selection,
             )
 
             self.on_collected_details(file_names, download_urls)

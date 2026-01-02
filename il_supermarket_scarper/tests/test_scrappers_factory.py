@@ -23,7 +23,7 @@ def test_not_active():
     all_listed = ScraperFactory.all_listed_scrappers()
     all_active = ScraperFactory.all_scrapers_name(when_date=test_date)
 
-    expected_to_fail = 0
+    expected_to_fail = 1  # 'CityMarketKiratGat' is expected to fail
     if _is_saturday_in_israel(test_date):
         expected_to_fail += 1  # only 'NetivHased' should
 

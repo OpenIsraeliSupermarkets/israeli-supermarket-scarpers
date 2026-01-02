@@ -48,6 +48,7 @@ class Cerberus(Engine):
         suppress_exception=False,
         min_size=None,
         max_size=None,
+        random_selection=False,
     ):
         files = []
         try:
@@ -62,6 +63,7 @@ class Cerberus(Engine):
                 suppress_exception=suppress_exception,
                 min_size=min_size,
                 max_size=max_size,
+                random_selection=random_selection,
             )
             self.on_collected_details(files)
 
@@ -123,6 +125,7 @@ class Cerberus(Engine):
         suppress_exception=False,
         min_size=None,
         max_size=None,
+        random_selection=False,
     ):
         """collect all files to download from the site"""
         files = []
@@ -179,6 +182,7 @@ class Cerberus(Engine):
             files_names_to_scrape=files_names_to_scrape,
             suppress_exception=suppress_exception,
             by_function=lambda x: x[0],
+            random_selection=random_selection,
         )
         Logger.info(f"After applying limit: Found {len(files)} files")
 
