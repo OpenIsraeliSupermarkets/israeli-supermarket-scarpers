@@ -278,6 +278,7 @@ def render_webpage(url):
 
 def get_from_latast_webpage(url, extraction_type):
     """get the content from the page with playwrite"""
+    time.sleep(1)
     content = render_webpage(url)
     return get_from_webpage(content, extraction_type)
 
