@@ -65,8 +65,7 @@ class Cerberus(Engine):
                 max_size=max_size,
                 random_selection=random_selection,
             ):
-                self.register_collected_details(file_name)
-
+                files.append(file_name)
                 yield await self.persist_from_ftp(file_name)
         except Exception as e:  # pylint: disable=broad-except
             self.on_download_fail(e, file_names=files)
@@ -83,8 +82,9 @@ class Cerberus(Engine):
         }
         if files_types is None or files_types == FileTypesFilters.all_types():
             yield None
+            return
 
-        async for file_type in files_types:
+        for file_type in files_types:
             if file_type not in file_type_mapping:
                 raise ValueError(f"File type {file_type} not supported")
             yield file_type_mapping[file_type]
@@ -137,8 +137,8 @@ class Cerberus(Engine):
         
         state = FilterState()
         async for filter_arg in self.build_filter_arg(store_id, when_date, files_types):
-            # Await the thread result to get the list of files
-            files_list = collect_from_ftp(
+            # Get async generator from FTP
+            files_generator = collect_from_ftp(
                 self.ftp_host,
                 self.ftp_username,
                 self.ftp_password,
@@ -146,13 +146,14 @@ class Cerberus(Engine):
                 filter_arg,
             )
             
-            # Convert list to async generator and map (filename, size) -> (filename, size, None)
-            async def convert_to_async_gen(files_list):
-                for file in files_list:
-                    yield (file[0], file[1], None)
+            # Convert (filename, size) -> (filename, url_placeholder, size)
+            async def convert_to_async_gen(files_gen):
+                async for filename, size in files_gen:
+                    # For FTP files, we don't have a URL yet, so use empty string as placeholder
+                    yield (filename, "", size)
 
             files: AsyncGenerator[List[str, str], None] = self.filter_by_file_size(
-                convert_to_async_gen(files_list),
+                convert_to_async_gen(files_generator),
                 min_size=min_size,
                 max_size=max_size,
             )
@@ -182,7 +183,7 @@ class Cerberus(Engine):
             
             # Stream files and count them
             file_count = 0
-            async for filename, _ in files_gen:
+            async for filename, _, _ in files_gen:
                 file_count += 1
                 yield filename
             

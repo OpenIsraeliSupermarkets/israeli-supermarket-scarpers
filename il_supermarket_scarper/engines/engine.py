@@ -155,13 +155,18 @@ class Engine(ScraperStatus, ABC):
                 f"when_date should be datetime or 'latest', got {when_date}"
             )
 
-        # filter by limit if the 'files_types' filter is not on.
+        # Yield files, applying limit if files_types filter is not on
         if limit and not files_types:
             assert limit > 0, "Limit must be greater than 0"
             async for file in intreable_:
                 if state.file_pass_limit < limit:
                     state.file_pass_limit += 1
                     yield file
+        else:
+            # When files_types is set, filter_file_types already applied the limit
+            # Just yield all filtered files
+            async for file in intreable_:
+                yield file
 
         # raise error if there was nothing to download.
         if state.file_pass_limit == 0:
@@ -182,9 +187,13 @@ class Engine(ScraperStatus, ABC):
         """filter the file types requested"""
         
         async for type_ in intreable:
-            if FileTypesFilters.is_file_from_type(
-                by_function(type_), files_types
-            ) and state.file_pass_limit < limit:
+            # Check if the file matches any of the requested file types
+            filename = by_function(type_)
+            matches = any(
+                FileTypesFilters.is_file_from_type(filename, file_type)
+                for file_type in files_types
+            )
+            if matches and state.file_pass_limit < limit:
                 state.file_pass_limit += 1
                 yield type_
 

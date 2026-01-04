@@ -76,10 +76,23 @@ class ScraperStatus:
                     yield file
         else:
             # Fallback: filter according to the disk
-            file_list_on_disk = os.listdir(storage_path)
+            # Check if storage_path exists first
+            if os.path.exists(storage_path):
+                file_list_on_disk = os.listdir(storage_path)
+            else:
+                file_list_on_disk = []
+            
             async for file in filelist:
-                if by_function(file) in file_list_on_disk and by_function(file) in files_names_to_scrape:
-                    yield file
+                # Yield files that are NOT already downloaded (not on disk)
+                # OR if files_names_to_scrape is specified, only yield files in that list
+                if files_names_to_scrape is not None:
+                    # If specific files requested, only yield those that match and aren't downloaded
+                    if by_function(file) in files_names_to_scrape and by_function(file) not in file_list_on_disk:
+                        yield file
+                else:
+                    # No specific files requested, yield all that aren't already downloaded
+                    if by_function(file) not in file_list_on_disk:
+                        yield file
 
     def _add_downloaded_files_to_list(self, results, **_):
         """Add downloaded files to the MongoDB collection."""

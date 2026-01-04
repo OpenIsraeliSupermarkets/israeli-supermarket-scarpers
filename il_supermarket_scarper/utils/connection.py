@@ -6,6 +6,8 @@ import socket
 import pickle
 import random
 import asyncio
+import ssl as ssl_module
+import fnmatch
 from ftplib import FTP_TLS, error_perm
 import subprocess
 
@@ -375,53 +377,75 @@ def url_retrieve(url, filename, timeout=30):
         raise ValueError(msg, (filename, _request.headers))
 
 
-@async_url_connection_retry(60 * 5)
 async def collect_from_ftp(
     ftp_host, ftp_username, ftp_password, ftp_path, arg=None, timeout=60 * 5
 ):
-    """Async version: collect all files to download from the site, returns list of (filename, size) tuples"""
+    """Async generator: yields (filename, size) tuples from the FTP server"""
     Logger.info(
         f"Open async connection to FTP server with {ftp_host} "
         f", username: {ftp_username} , password: {ftp_password}"
     )
     
-    # Create FTP client with TLS support
-    async with aioftp.Client.context(
-        ftp_host,
-        user=ftp_username,
-        password=ftp_password,
-        socket_timeout=timeout,
-        ssl=True,  # Enable TLS/SSL for FTPS
-    ) as client:
-        # Change to the specified directory
-        await client.change_directory(ftp_path)
-        
-        # List files in the directory
-        if arg:
-            # aioftp doesn't have nlst, we need to filter the list
-            all_files = await client.list(arg)
-        else:
-            all_files = await client.list()
-        
-        # Get file sizes for each file
-        files_with_sizes = []
-        for path, info in all_files:
-            filename = str(path)
-            if info['type'] == 'file':
-                # Get size from the info dict
-                size = info.get('size')
-                # If size is a string, convert to int
-                if isinstance(size, str):
+    def _sync_ftp_list():
+        """Synchronous FTP listing using FTP_TLS - returns a list"""
+        ftp = FTP_TLS(ftp_host, ftp_username, ftp_password, timeout=timeout)
+        ftp.trust_server_pasv_ipv4_address = True
+        try:
+            ftp.cwd(ftp_path)
+            
+            # Use MLSD for detailed file information if available, otherwise fall back to NLST + SIZE
+            files_with_sizes = []
+            try:
+                # MLSD provides detailed info including size
+                all_entries = list(ftp.mlsd())
+                
+                for name, facts in all_entries:
+                    if facts.get('type') == 'file':
+                        size_str = facts.get('size')
+                        try:
+                            size = int(size_str) if size_str else None
+                        except (ValueError, TypeError):
+                            size = None
+                        
+                        # Apply glob filter if arg is provided (case-insensitive)
+                        if arg is None or fnmatch.fnmatch(name.lower(), arg.lower()):
+                            files_with_sizes.append((name, size))
+                    elif facts.get('type') in ['dir', 'cdir', 'pdir']:
+                        # Skip directories
+                        pass
+                    else:
+                        # Unknown type - include if matches filter (case-insensitive)
+                        if arg is None or fnmatch.fnmatch(name.lower(), arg.lower()):
+                            files_with_sizes.append((name, None))
+            except error_perm as e:
+                # MLSD not supported, fall back to NLST
+                if arg:
+                    file_list = ftp.nlst(arg)
+                else:
+                    file_list = ftp.nlst()
+                
+                # Get size for each file
+                for filename in file_list:
                     try:
-                        size = int(size)
-                    except ValueError:
+                        ftp.voidcmd('TYPE I')  # Set binary mode
+                        size = ftp.size(filename)
+                    except (error_perm, Exception):
                         size = None
-                files_with_sizes.append((filename, size))
-            else:
-                # Directory or other type - add with None size
-                files_with_sizes.append((filename, None))
-        
-        return files_with_sizes
+                    files_with_sizes.append((filename, size))
+            
+            return files_with_sizes
+        finally:
+            try:
+                ftp.quit()
+            except Exception:
+                ftp.close()
+    
+    # Run synchronous FTP operations in a thread pool and get the list
+    files_list = await asyncio.to_thread(_sync_ftp_list)
+    
+    # Yield each file as an async generator
+    for filename, size in files_list:
+        yield (filename, size)
 
 
 @download_connection_retry()
