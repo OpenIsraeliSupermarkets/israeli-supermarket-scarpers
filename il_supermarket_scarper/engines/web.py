@@ -1,7 +1,9 @@
 import re
+import asyncio
 from bs4 import BeautifulSoup
-from il_supermarket_scarper.utils import Logger, execute_in_parallel
+from il_supermarket_scarper.utils import Logger
 from il_supermarket_scarper.utils import convert_nl_size_to_bytes, UnitSize
+from il_supermarket_scarper.utils.state import FilterState
 from .engine import Engine
 
 
@@ -55,8 +57,9 @@ class WebBase(Engine):
 
         return download_urls, file_names, file_sizes
 
-    def apply_limit_zip(
+    async def apply_limit_zip(
         self,
+        state: FilterState,
         file_names,
         download_urls,
         file_sizes=None,
@@ -76,8 +79,15 @@ class WebBase(Engine):
         else:
             zipped = list(zip(file_names, download_urls, file_sizes))
 
-        ziped = self.apply_limit(
-            zipped,
+        # Convert list to async generator for apply_limit
+        async def list_to_async_gen(items):
+            for item in items:
+                yield item
+        
+        
+        async for item in self.apply_limit(
+            state,
+            list_to_async_gen(zipped),
             limit=limit,
             files_types=files_types,
             by_function=by_function,
@@ -86,12 +96,8 @@ class WebBase(Engine):
             files_names_to_scrape=files_names_to_scrape,
             suppress_exception=suppress_exception,
             random_selection=random_selection,
-        )
-        if len(ziped) == 0:
-            if file_sizes is None:
-                return [], []
-            return [], [], []
-        return list(zip(*ziped))
+        ):
+            yield item
 
     def filter_bad_files_zip(
         self,
@@ -121,7 +127,7 @@ class WebBase(Engine):
             return [], [], []
         return list(zip(*files))
 
-    def collect_files_details_from_site(  # pylint: disable=too-many-locals
+    async def collect_files_details_from_site(  # pylint: disable=too-many-locals
         self,
         limit=None,
         files_types=None,
@@ -144,7 +150,7 @@ class WebBase(Engine):
 
         all_trs = []
         for url in urls_to_collect_link_from:
-            req_res = self.session_with_cookies_by_chain(**url)
+            req_res = await self.session_with_cookies_by_chain(**url)
             trs = self.get_data_from_page(req_res)
             all_trs.extend(trs)
 
@@ -156,13 +162,11 @@ class WebBase(Engine):
 
         # Filter by file size if specified
         if min_size is not None or max_size is not None:
-            file_names, download_urls, file_sizes = self.filter_by_file_size(
-                file_names,
-                download_urls,
-                file_sizes,
+            files = self.filter_by_file_size(
+                 zip(file_names, download_urls, file_sizes),
                 min_size=min_size,
                 max_size=max_size,
-            )
+            )   
 
         file_names, download_urls, file_sizes = self.filter_bad_files_zip(
             file_names,
@@ -175,7 +179,9 @@ class WebBase(Engine):
         Logger.info(f"After filtering bad files: Found {len(download_urls)} files")
 
         # pylint: disable=duplicate-code
-        file_names, download_urls, file_sizes = self.apply_limit_zip(
+        state = FilterState()
+        file_names, download_urls, file_sizes = await self.apply_limit_zip(
+            state,
             file_names,
             download_urls,
             file_sizes=file_sizes,
@@ -190,9 +196,10 @@ class WebBase(Engine):
 
         Logger.info(f"After applying limit: Found {len(download_urls)} entries")
 
-        return download_urls, file_names
+        for download_url, file_name in zip(download_urls, file_names):
+            yield download_url, file_name
 
-    def _scrape(  # pylint: disable=too-many-locals
+    async def _scrape(  # pylint: disable=too-many-locals
         self,
         limit=None,
         files_types=None,
@@ -209,7 +216,7 @@ class WebBase(Engine):
         """scarpe the files from multipage sites"""
         download_urls, file_names = [], []
         try:
-            download_urls, file_names = self.collect_files_details_from_site(
+            async for download_url, file_name in self.collect_files_details_from_site(
                 limit=limit,
                 files_types=files_types,
                 store_id=store_id,
@@ -221,21 +228,24 @@ class WebBase(Engine):
                 min_size=min_size,
                 max_size=max_size,
                 random_selection=random_selection,
-            )
+            ):
+                download_urls.append(download_url)
+                file_names.append(file_name)
 
             self.on_collected_details(file_names, download_urls)
 
             Logger.info(f"collected {len(download_urls)} to download.")
             if len(download_urls) > 0:
-                results = execute_in_parallel(
-                    self.save_and_extract,
-                    list(zip(download_urls, file_names)),
-                    max_threads=self.max_threads,
-                )
+                tasks = [
+                    self.save_and_extract((download_url, file_name))
+                    for download_url, file_name in zip(download_urls, file_names)
+                ]
+                results = await asyncio.gather(*tasks)
             else:
                 results = []
 
-            return results
+            for result in results:
+                yield result
         except Exception as e:  # pylint: disable=broad-except
             self.on_download_fail(e, download_urls=download_urls, file_names=file_names)
             raise e

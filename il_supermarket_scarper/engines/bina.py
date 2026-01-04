@@ -1,10 +1,10 @@
 import json
 import urllib.parse
 import datetime
+import asyncio
 
 from il_supermarket_scarper.utils import (
     Logger,
-    url_connection_retry,
     url_retrieve,
     FileTypesFilters,
 )
@@ -124,9 +124,8 @@ class Bina(Aspx):
         # Bina don't support file size in the entry
         return None
 
-    @url_connection_retry()
-    def retrieve_file(self, file_link, file_save_path, timeout=30):
-        response_content = self.session_with_cookies_by_chain(
+    async def retrieve_file(self, file_link, file_save_path, timeout=30):
+        response_content = await self.session_with_cookies_by_chain(
             file_link,
         )
         spath = json.loads(response_content.content)
@@ -135,11 +134,11 @@ class Bina(Aspx):
         url = spath[0]["SPath"]
         ext = file_link.split(".")[-1]
 
-        url_retrieve(url, file_save_path + "." + ext, timeout=timeout)
+        await asyncio.to_thread(url_retrieve, url, file_save_path + "." + ext, timeout=timeout)
         return file_save_path + "." + ext
 
-    def _wget_file(self, file_link, file_save_path):
-        response_content = self.session_with_cookies_by_chain(
+    async def _wget_file(self, file_link, file_save_path):
+        response_content = await self.session_with_cookies_by_chain(
             file_link,
         )
         spath = json.loads(response_content.content)
@@ -147,4 +146,4 @@ class Bina(Aspx):
 
         url = spath[0]["SPath"]
         ext = file_link.split(".")[-1]
-        return super()._wget_file(url, file_save_path.split(".")[0] + "." + ext)
+        return await super()._wget_file(url, file_save_path.split(".")[0] + "." + ext)

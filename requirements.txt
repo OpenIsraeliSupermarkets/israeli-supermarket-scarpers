@@ -9,3 +9,4 @@ pytz==2022.4
 holidays==0.45
 cachetools==5.2.0
 pytest-playwright==0.7.0
+aioftp==0.22.3

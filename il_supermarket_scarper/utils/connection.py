@@ -5,6 +5,7 @@ import time
 import socket
 import pickle
 import random
+import asyncio
 from ftplib import FTP_TLS, error_perm
 import subprocess
 
@@ -15,6 +16,7 @@ from urllib3.exceptions import MaxRetryError, ReadTimeoutError
 
 
 import requests
+import aioftp
 from playwright.sync_api import sync_playwright
 from requests.exceptions import (
     ReadTimeout,
@@ -102,6 +104,57 @@ def url_connection_retry(init_timeout=15):
             socket.setdefaulttimeout(actual_timeout)
             kwargs["timeout"] = actual_timeout
             return func(*args, **kwargs)
+
+        return outer_wrapper
+
+    return wrapper
+
+
+def async_url_connection_retry(init_timeout=15):
+    """Async decorator for retry logic of connections trying to send requests"""
+
+    def wrapper(func):
+        # Store the original requested timeout in a closure variable
+        requested_timeout_ref = [init_timeout]
+
+        async def outer_wrapper(*args, **kwargs):
+            # Capture the timeout from the original call
+            original_timeout = kwargs.get("timeout", init_timeout)
+            if original_timeout > requested_timeout_ref[0]:
+                requested_timeout_ref[0] = original_timeout
+            
+            # Manual retry logic for async functions
+            _tries = 4
+            _delay = 2
+            backoff = 2
+            max_delay = 5 * 60
+            
+            while _tries:
+                try:
+                    retry_timeout = kwargs.get("timeout", init_timeout)
+                    actual_timeout = max(retry_timeout, requested_timeout_ref[0])
+                    socket.setdefaulttimeout(actual_timeout)
+                    kwargs["timeout"] = actual_timeout
+                    return await func(*args, **kwargs)
+                except exceptions as error:
+                    _tries -= 1
+                    if not _tries:
+                        raise
+                    
+                    if Logger is not None:
+                        Logger.warning(
+                            "%s, configured timeout %s, retrying in %s seconds",
+                            error,
+                            actual_timeout,
+                            _delay,
+                        )
+                        Logger.error_execption(error)
+                    
+                    await asyncio.sleep(_delay)
+                    _delay = min(_delay * backoff, max_delay)
+                    requested_timeout_ref[0] += 10  # backoff_timeout
+            
+            raise ValueError("shouldn't be called!")
 
         return outer_wrapper
 
@@ -322,36 +375,53 @@ def url_retrieve(url, filename, timeout=30):
         raise ValueError(msg, (filename, _request.headers))
 
 
-@url_connection_retry(60 * 5)
-def collect_from_ftp(
+@async_url_connection_retry(60 * 5)
+async def collect_from_ftp(
     ftp_host, ftp_username, ftp_password, ftp_path, arg=None, timeout=60 * 5
 ):
-    """collect all files to download from the site, returns list of (filename, size) tuples"""
+    """Async version: collect all files to download from the site, returns list of (filename, size) tuples"""
     Logger.info(
-        f"Open connection to FTP server with {ftp_host} "
+        f"Open async connection to FTP server with {ftp_host} "
         f", username: {ftp_username} , password: {ftp_password}"
     )
-    ftp_session = FTP_TLS(ftp_host, ftp_username, ftp_password, timeout=timeout)
-    ftp_session.trust_server_pasv_ipv4_address = True
-    ftp_session.set_pasv(True)
-    ftp_session.cwd(ftp_path)
-    if arg:
-        files = ftp_session.nlst(arg)
-    else:
-        files = ftp_session.nlst()
-
-    # Get file sizes for each file
-    files_with_sizes = []
-    for filename in files:
-        try:
-            size = ftp_session.size(filename)
-            files_with_sizes.append((filename, size))
-        except (error_perm, AttributeError):
-            # If size() fails (e.g., for directories or permission issues), use None
-            files_with_sizes.append((filename, None))
-
-    ftp_session.quit()
-    return files_with_sizes
+    
+    # Create FTP client with TLS support
+    async with aioftp.Client.context(
+        ftp_host,
+        user=ftp_username,
+        password=ftp_password,
+        socket_timeout=timeout,
+        ssl=True,  # Enable TLS/SSL for FTPS
+    ) as client:
+        # Change to the specified directory
+        await client.change_directory(ftp_path)
+        
+        # List files in the directory
+        if arg:
+            # aioftp doesn't have nlst, we need to filter the list
+            all_files = await client.list(arg)
+        else:
+            all_files = await client.list()
+        
+        # Get file sizes for each file
+        files_with_sizes = []
+        for path, info in all_files:
+            filename = str(path)
+            if info['type'] == 'file':
+                # Get size from the info dict
+                size = info.get('size')
+                # If size is a string, convert to int
+                if isinstance(size, str):
+                    try:
+                        size = int(size)
+                    except ValueError:
+                        size = None
+                files_with_sizes.append((filename, size))
+            else:
+                # Directory or other type - add with None size
+                files_with_sizes.append((filename, None))
+        
+        return files_with_sizes
 
 
 @download_connection_retry()

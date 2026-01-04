@@ -4,6 +4,7 @@ import tempfile
 import re
 import os
 import uuid
+import asyncio
 import xml.etree.ElementTree as ET
 from lxml import etree
 from il_supermarket_scarper.utils import (
@@ -20,7 +21,7 @@ from il_supermarket_scarper.scraper_stability import ScraperStability
 def make_test_case(scraper_enum, store_id):
     """create test suite for scraper"""
 
-    class TestScapers(unittest.TestCase):
+    class TestScapers(unittest.IsolatedAsyncioTestCase):
         """class with all the tests for scraper"""
 
         def __init__(self, name) -> None:
@@ -115,7 +116,7 @@ def make_test_case(scraper_enum, store_id):
                     change_xml_encoding(full_file_path)
                     ET.parse(full_file_path)
 
-        def _clean_scarpe_delete(
+        async def _clean_scarpe_delete(
             self,
             scraper_enum,
             store_id=None,
@@ -124,7 +125,7 @@ def make_test_case(scraper_enum, store_id):
             when_date=None,
         ):
             with tempfile.TemporaryDirectory() as tmpdirname:
-                self.__clean_scarpe_delete(
+                await self.__clean_scarpe_delete(
                     scraper_enum=scraper_enum,
                     dump_path=tmpdirname,
                     store_id=store_id,
@@ -133,7 +134,7 @@ def make_test_case(scraper_enum, store_id):
                     when_date=when_date,
                 )
 
-        def __clean_scarpe_delete(
+        async def __clean_scarpe_delete(
             self,
             scraper_enum,
             dump_path="temp",
@@ -159,12 +160,12 @@ def make_test_case(scraper_enum, store_id):
                         "when_date": when_date,
                         "filter_null": True,
                         "filter_zero": True,
-                        "suppress_exception": True,
+                        "suppress_exception": False,
                         "min_size": 100,
                         "max_size": 10000000,
                     }
 
-                    scraper.scrape(**kwarg)
+                    await scraper.scrape(**kwarg)
 
                     files_found = os.listdir(dump_path)
                     assert (
@@ -209,40 +210,40 @@ def make_test_case(scraper_enum, store_id):
             """get a temp folder to download the files into"""
             return self.folder_name + str(uuid.uuid4().hex)
 
-        def test_scrape_one(self):
+        async def test_scrape_one(self):
             """scrape one file and make sure it exists"""
-            self._clean_scarpe_delete(scraper_enum, limit=1)
+            await self._clean_scarpe_delete(scraper_enum, limit=1)
 
-        def test_scrape_three(self):
+        async def test_scrape_three(self):
             """scrape three file and make sure they exists"""
-            self._clean_scarpe_delete(scraper_enum, limit=3)
+            await self._clean_scarpe_delete(scraper_enum, limit=3)
 
-        def test_scrape_promo(self):
+        async def test_scrape_promo(self):
             """scrape one promo file and make sure it exists"""
-            self._clean_scarpe_delete(
+            await self._clean_scarpe_delete(
                 scraper_enum,
                 limit=1,
                 file_type=FileTypesFilters.only_promo(),
             )
 
-        def test_scrape_store(self):
+        async def test_scrape_store(self):
             """scrape one store file and make sure it exists"""
-            self._clean_scarpe_delete(
+            await self._clean_scarpe_delete(
                 scraper_enum, limit=1, file_type=FileTypesFilters.only_store()
             )
 
-        def test_scrape_price(self):
+        async def test_scrape_price(self):
             """scrape one price file and make sure it exists"""
-            self._clean_scarpe_delete(
+            await self._clean_scarpe_delete(
                 scraper_enum, limit=1, file_type=FileTypesFilters.only_price()
             )
 
-        def test_scrape_file_from_single_store(self):
+        async def test_scrape_file_from_single_store(self):
             """test fetching only files from a ceriten store"""
-            self._clean_scarpe_delete(scraper_enum, store_id=store_id, limit=1)
+            await self._clean_scarpe_delete(scraper_enum, store_id=store_id, limit=1)
 
-        def test_scrape_file_today(self):
+        async def test_scrape_file_today(self):
             """test fetching file from today"""
-            self._clean_scarpe_delete(scraper_enum, when_date=_testing_now(), limit=1)
+            await self._clean_scarpe_delete(scraper_enum, when_date=_testing_now(), limit=1)
 
     return TestScapers

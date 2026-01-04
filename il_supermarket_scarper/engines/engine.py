@@ -4,7 +4,8 @@ import re
 import random
 import uuid
 import datetime
-
+import asyncio
+from typing import AsyncGenerator
 from il_supermarket_scarper.utils import (
     get_output_folder,
     FileTypesFilters,
@@ -18,7 +19,7 @@ from il_supermarket_scarper.utils import (
     RestartSessionError,
     DumpFolderNames,
 )
-
+from il_supermarket_scarper.utils.state import FilterState
 
 class Engine(ScraperStatus, ABC):
     """base engine for scraping"""
@@ -45,30 +46,37 @@ class Engine(ScraperStatus, ABC):
         """it is valid the file is empty"""
         return file_name is None
 
-    def filter_bad_files(
-        self, files, filter_zero=False, filter_null=False, by_function=lambda x: x
+
+    def is_pass_bad_files_filter(self, file: tuple[str, str], filter_zero=False, filter_null=False, by_function=lambda x: x):
+        """check if the file is pass the bad files filter"""
+        if filter_zero and "0000000000000" in by_function(file):
+            return False
+        if filter_null and "NULL" in by_function(file):
+            return False
+        return True
+
+    async def filter_bad_files(
+        self, files: AsyncGenerator[tuple[str, str], None], filter_zero=False, filter_null=False, by_function=lambda x: x
     ):
         """filter out bad files"""
 
-        if filter_zero:
-            files = list(
-                filter(lambda x: "0000000000000" not in by_function(x), files)
-            )  # filter out files
-            Logger.info(
-                f"After filtering with '0000000000000': Found {len(files)} files"
-            )
+        async for file in files:
+            if not self.is_pass_bad_files_filter(file, filter_zero, filter_null, by_function):
+                continue
+            yield file
 
-        if filter_null:
-            files = list(
-                filter(lambda x: "NULL" not in by_function(x), files)
-            )  # filter out files
-            Logger.info(f"After filtering with 'NULL': Found {len(files)} files")
 
-        return files
-
-    def apply_limit(
+    async def filter_by_store_id(self, state: FilterState, intreable: AsyncGenerator[tuple[str, str], None], store_id=None, by_function=lambda x: x):
+        """filter the files by the store id"""
+        pattern = re.compile(rf"-0*{store_id}-")
+        async for file in intreable:
+            if pattern.search(by_function(file)):
+                yield file
+                
+    async def apply_limit(
         self,
-        intreable,
+        state: FilterState,
+        intreable: AsyncGenerator[tuple[str, str], None],
         limit=None,
         files_types=None,
         by_function=lambda x: x,
@@ -78,44 +86,61 @@ class Engine(ScraperStatus, ABC):
         suppress_exception=False,
         random_selection=False,
     ):
-        """filter the list according to condition"""
+        """filter the list according to condition - streaming version that processes each file at a time"""
+
+        
+        # Collect all input files first (needed for some operations like unique, latest, random_selection)
+        async def stream_to_list(state: FilterState, intreable: AsyncGenerator[tuple[str, str], None]):
+            
+            async for file in intreable:
+                state.total_input += 1
+                yield file
+
+            if state.total_input == 0:
+                if not suppress_exception:
+                    raise ValueError(
+                        f"No files to download for file files_types={files_types},"
+                        f"limit={limit},store_id={store_id},when_date={when_date}"
+                    )
+                Logger.warning(
+                    f"No files to download for file files_types={files_types},"
+                    f"limit={limit},store_id={store_id},when_date={when_date}"
+                )
+                return
+
+        files_list = stream_to_list(state, intreable)
 
         # filter files already downloaded
-        intreable_ = self.filter_already_downloaded(
-            self.storage_path, files_names_to_scrape, intreable, by_function=by_function
+        intreable_: AsyncGenerator[tuple[str, str], None] =  self.filter_already_downloaded(
+            self.storage_path, files_names_to_scrape, files_list, by_function=by_function
         )
+
         Logger.info(
-            f"Number of entry after filter already downloaded is {len(intreable_)}"
-        )
-        files_was_filtered_since_already_download = (
-            len(list(intreable)) != 0 and len(list(intreable_)) == 0
+            f"Number of entry after filter already downloaded is {state.after_already_downloaded}"
         )
 
         # filter unique links
-        intreable_ = self.unique(intreable_, by_function=by_function)
-        Logger.info(f"Number of entry after filter unique links is {len(intreable_)}")
+        intreable_ =  self.unique(state,intreable_, by_function=by_function)
+        Logger.info(f"Number of entry after filter unique links is {state.after_unique}")
 
         # filter by store id
         if store_id:
-            pattern = re.compile(rf"-0*{store_id}-")
-            intreable_ = list(
-                filter(
-                    lambda x: pattern.search(by_function(x)),
-                    intreable_,
-                )
-            )
-        Logger.info(f"Number of entry after filter store id is {len(intreable_)}")
+            intreable_ = self.filter_by_store_id(state, intreable_, store_id, by_function=by_function)
+
+        Logger.info(f"Number of entry after filter store id is {state.after_store_id}")
 
         # filter by file type
         if files_types:
             intreable_ = self.filter_file_types(
+                state,
                 intreable_,
                 limit,
                 files_types,
                 by_function,
                 random_selection=random_selection,
             )
-        Logger.info(f"Number of entry after filter file type id is {len(intreable_)}")
+
+        Logger.info(f"Number of entry after filter file type id is {state.after_file_types}")
 
         # Warning and filtering for random_selection
         if random_selection:
@@ -125,35 +150,21 @@ class Engine(ScraperStatus, ABC):
 
         if isinstance(when_date, datetime.datetime):
             intreable_ = self.get_by_date(when_date, by_function, intreable_)
-        elif isinstance(when_date, str) and when_date == "latest":
-            intreable_ = self.get_only_latest(by_function, intreable_)
         elif when_date is not None:
             raise ValueError(
                 f"when_date should be datetime or 'latest', got {when_date}"
             )
-        elif random_selection:
-            # Filter to last 48 hours when random_selection is used and no when_date is specified
-            intreable_ = self.apply_limit_random_selection(
-                intreable_, limit, by_function
-            )
-
-        Logger.info(
-            f"Number of entry after filtering base on time is {len(intreable_)}"
-        )
 
         # filter by limit if the 'files_types' filter is not on.
-        if limit:
+        if limit and not files_types:
             assert limit > 0, "Limit must be greater than 0"
-            Logger.info(f"Limit: {limit}")
-            intreable_list = list(intreable_)
-            if random_selection and len(intreable_list) > limit:
-                intreable_ = random.sample(intreable_list, limit)
-            else:
-                intreable_ = intreable_list[: min(limit, len(intreable_list))]
-        Logger.info(f"Result length {len(list(intreable_))}")
+            async for file in intreable_:
+                if state.file_pass_limit < limit:
+                    state.file_pass_limit += 1
+                    yield file
 
         # raise error if there was nothing to download.
-        if len(list(intreable_)) == 0 and not files_was_filtered_since_already_download:
+        if state.file_pass_limit == 0:
             if not suppress_exception:
                 raise ValueError(
                     f"No files to download for file files_types={files_types},"
@@ -163,33 +174,19 @@ class Engine(ScraperStatus, ABC):
                 f"No files to download for file files_types={files_types},"
                 f"limit={limit},store_id={store_id},when_date={when_date}"
             )
-        return intreable_
 
-    def apply_limit_random_selection(self, intreable, limit, by_function):
-        """apply limit to the intreable"""
-        intreable_ = self.get_last_48_hours(by_function, intreable)
-        if len(intreable_) > limit:
-            return random.sample(intreable_, limit)
-        return intreable_[: min(limit, len(intreable_))]
 
-    def filter_file_types(
-        self, intreable, limit, files_types, by_function, random_selection=False
+    async def filter_file_types(
+        self, state: FilterState, intreable, limit, files_types, by_function, random_selection=False
     ):
         """filter the file types requested"""
-        intreable_ = []
-        for type_ in files_types:
-            type_files = FileTypesFilters.filter(
-                type_, intreable, by_function=by_function
-            )
-            if limit:
-                if random_selection:
-                    type_files = self.apply_limit_random_selection(
-                        type_files, limit, by_function
-                    )
-                else:
-                    type_files = type_files[: min(limit, len(type_files))]
-            intreable_.extend(type_files)
-        return intreable_
+        
+        async for type_ in intreable:
+            if FileTypesFilters.is_file_from_type(
+                by_function(type_), files_types
+            ) and state.file_pass_limit < limit:
+                state.file_pass_limit += 1
+                yield type_
 
     def get_only_latest(self, by_function, intreable_):
         """get only the last version of the files"""
@@ -208,21 +205,18 @@ class Engine(ScraperStatus, ABC):
                 groups_value[store_info] = file
         return list(groups_value.values())
 
-    def get_by_date(self, requested_date, by_function, intreable_):
+    async def get_by_date(self, requested_date, by_function, intreable_):
         """get by date"""
         #
         date_format = requested_date.strftime("%Y%m%d")
         #
-        groups_value = []
-        for file in intreable_:
+        async for file in intreable_:
             # StoresFull7290875100001-000-202502250510'
             # Promo7290700100008-000-207-20250224-103225
             if f"-{date_format}" in by_function(file):
-                groups_value.append(file)
+                yield file
 
-        return groups_value
-
-    def get_last_48_hours(self, by_function, intreable_):
+    async def get_last_48_hours(self, by_function, intreable_):
         """get only files from the last 48 hours"""
         now = datetime.datetime.now()
         cutoff_time = now - datetime.timedelta(hours=48)
@@ -270,23 +264,20 @@ class Engine(ScraperStatus, ABC):
         return groups_value
 
     @classmethod
-    def unique(cls, iterable, by_function=lambda x: x):
+    async def unique(cls, state: FilterState, iterable, by_function=lambda x: x):
         """Returns the type of the file."""
-        seen = set()
-        result = []
-        for item in iterable:
+        async for item in iterable:
             k = by_function(item)
-            if k not in seen:
-                seen.add(k)
-                result.append(item)
+            if k not in state.unique_seen:
+                state.unique_seen.add(k)
+                yield item
 
-        return result
-
-    def session_with_cookies_by_chain(
+    async def session_with_cookies_by_chain(
         self, url, method="GET", body=None, timeout=15, headers=None
     ):
         """request resource with cookie by chain name"""
-        return session_with_cookies(
+        return await asyncio.to_thread(
+            session_with_cookies,
             url,
             chain_cookie_name=self.assigned_cookie,
             timeout=timeout,
@@ -310,7 +301,7 @@ class Engine(ScraperStatus, ABC):
         if store_id and store_id <= 0:
             raise ValueError(f"store_id must be greater than 1, not {store_id}")
 
-    def scrape(
+    async def scrape(
         self,
         limit=None,
         files_types=None,
@@ -342,7 +333,7 @@ class Engine(ScraperStatus, ABC):
         completed_successfully = True
         results = []
         try:
-            results = self._scrape(
+            async for result in self._scrape(
                 limit=limit,
                 files_types=files_types,
                 store_id=store_id,
@@ -354,7 +345,8 @@ class Engine(ScraperStatus, ABC):
                 min_size=min_size,
                 max_size=max_size,
                 random_selection=random_selection,
-            )
+            ):
+                results.append(result)
             self.on_download_completed(results=results)
         except Exception as e:  # pylint: disable=broad-exception-caught
             if not suppress_exception:
@@ -370,7 +362,7 @@ class Engine(ScraperStatus, ABC):
         return results
 
     @abstractmethod
-    def _scrape(
+    async def _scrape(
         self,
         limit=None,
         files_types=None,
@@ -408,51 +400,45 @@ class Engine(ScraperStatus, ABC):
         Default implementation returns None - should be overridden by subclasses.
         """
         return None
+    
+    def is_pass_file_size_filter(self, file_size, min_size=None, max_size=None):
+        """check if the file size is within the range"""
+        if min_size is None and max_size is None:
+            return True
+        # If file_size is None, we can't filter it, so keep it
+        if file_size is None:
+            return True
+        if min_size is not None and file_size < min_size:
+            return False
+        if max_size is not None and file_size > max_size:
+            return False
+        return True
 
-    def filter_by_file_size(
-        self, file_names, download_urls, file_sizes, min_size=None, max_size=None
+    async def filter_by_file_size(
+        self, files: AsyncGenerator[tuple[str, str, int], None], min_size=None, max_size=None
     ):
         """
         Filter files by size (in bytes).
-        Returns filtered (file_names, download_urls, file_sizes) tuples.
+        Yields filtered (file_name, download_url, file_size) tuples.
         Entries with None file_size are kept by default.
         """
         if min_size is None and max_size is None:
-            return file_names, download_urls, file_sizes
+            # No filtering needed, yield all items
+            async for name, url, size in files:
+                yield name, url, size
+        else:
 
-        filtered_names = []
-        filtered_urls = []
-        filtered_sizes = []
+            async for name, url, size in files:
+                # Keep entries with None size (can't filter them)
+                if self.is_pass_file_size_filter(size, min_size, max_size):
+                    yield name, url, size
 
-        for name, url, size in zip(file_names, download_urls, file_sizes):
-            # Keep entries with None size (can't filter them)
-            if size is None:
-                filtered_names.append(name)
-                filtered_urls.append(url)
-                filtered_sizes.append(size)
-            else:
-                # Apply size filters
-                if min_size is not None and size < min_size:
-                    continue
-                if max_size is not None and size > max_size:
-                    continue
-                filtered_names.append(name)
-                filtered_urls.append(url)
-                filtered_sizes.append(size)
-
-        Logger.info(
-            f"After filtering by file size (min={min_size}, max={max_size}): "
-            f"Found {len(filtered_names)} files (from {len(file_names)})"
-        )
-        return filtered_names, filtered_urls, filtered_sizes
-
-    @url_connection_retry()
-    def retrieve_file(self, file_link, file_save_path, timeout=30):
+    async def retrieve_file(self, file_link, file_save_path, timeout=30):
         """download file"""
-        url_retrieve(file_link, file_save_path, timeout=timeout)
+        await asyncio.to_thread(url_retrieve, file_link, file_save_path, timeout=timeout)
         return file_save_path
 
-    def save_and_extract(self, arg):
+    async def save_and_extract(self, arg):
         """download file and extract it"""
 
         file_link, file_name = arg
@@ -463,7 +449,7 @@ class Engine(ScraperStatus, ABC):
             extract_succefully,
             error,
             restart_and_retry,
-        ) = self._save_and_extract(file_link, file_save_path)
+        ) = await self._save_and_extract(file_link, file_save_path)
 
         return {
             "file_name": file_name,
@@ -473,10 +459,10 @@ class Engine(ScraperStatus, ABC):
             "restart_and_retry": restart_and_retry,
         }
 
-    def _wget_file(self, file_link, file_save_path):
-        return wget_file(file_link, file_save_path)
+    async def _wget_file(self, file_link, file_save_path):
+        return await asyncio.to_thread(wget_file, file_link, file_save_path)
 
-    def _save_and_extract(self, file_link, file_save_path):
+    async def _save_and_extract(self, file_link, file_save_path):
         downloaded = False
         extract_succefully = False
         error = None
@@ -493,19 +479,19 @@ class Engine(ScraperStatus, ABC):
 
             # try to download the file
             try:
-                file_save_path_with_ext = self.retrieve_file(file_link, file_save_path)
+                file_save_path_with_ext = await self.retrieve_file(file_link, file_save_path)
             except Exception as e:  # pylint: disable=broad-except
                 Logger.warning(f"Error downloading {file_link}: {e}")
-                file_save_path_with_ext = self._wget_file(file_link, file_save_path)
+                file_save_path_with_ext = await self._wget_file(file_link, file_save_path)
             downloaded = True
 
             if file_save_path_with_ext.endswith("gz"):
                 Logger.debug(
                     f"File size is {os.path.getsize(file_save_path_with_ext)} bytes."
                 )
-                extract_xml_file_from_gz_file(file_save_path_with_ext)
+                await asyncio.to_thread(extract_xml_file_from_gz_file, file_save_path_with_ext)
 
-                os.remove(file_save_path_with_ext)
+                await asyncio.to_thread(os.remove, file_save_path_with_ext)
             extract_succefully = True
 
             Logger.debug(f"Done downloading {file_link}")

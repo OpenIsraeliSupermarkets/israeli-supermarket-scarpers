@@ -1,14 +1,13 @@
 from urllib.parse import urlsplit
 import re
 import ntpath
+import asyncio
 from abc import abstractmethod
 from lxml import html as lxml_html
 
 
 from il_supermarket_scarper.utils import (
     Logger,
-    execute_in_parallel,
-    multiple_page_aggregtion,
     convert_nl_size_to_bytes,
     UnitSize,
 )
@@ -80,7 +79,7 @@ class MultiPageWeb(WebBase):
 
         return int(pages[0])
 
-    def collect_files_details_from_site(  # pylint: disable=too-many-locals
+    async def collect_files_details_from_site(  # pylint: disable=too-many-locals
         self,
         limit=None,
         files_types=None,
@@ -105,7 +104,7 @@ class MultiPageWeb(WebBase):
         file_sizes = []
         for main_page_request in main_page_requests:
 
-            main_page_response = self.session_with_cookies_by_chain(**main_page_request)
+            main_page_response = await self.session_with_cookies_by_chain(**main_page_request)
 
             total_pages = self.get_number_of_pages(main_page_response)
             Logger.info(f"Found {total_pages} pages")
@@ -127,8 +126,8 @@ class MultiPageWeb(WebBase):
                     )
                 )
 
-            _download_urls, _file_names, _file_sizes = execute_in_parallel(
-                lambda req: self.process_links_before_download(
+            tasks = [
+                self.process_links_before_download(
                     req,
                     limit=limit,
                     files_types=files_types,
@@ -136,29 +135,31 @@ class MultiPageWeb(WebBase):
                     when_date=when_date,
                     suppress_exception=suppress_exception,
                     random_selection=random_selection,
-                ),
-                list(pages_to_scrape),
-                aggregtion_function=multiple_page_aggregtion,
-                max_threads=self.max_threads,
-            )
+                )
+                for req in pages_to_scrape
+            ]
+            page_results = await asyncio.gather(*tasks)
 
-            download_urls.extend(_download_urls)
-            file_names.extend(_file_names)
-            file_sizes.extend(
-                _file_sizes if _file_sizes else [None] * len(_download_urls)
-            )
+            # Aggregate results from all pages
+            for _download_urls, _file_names, _file_sizes in page_results:
+                download_urls.extend(_download_urls)
+                file_names.extend(_file_names)
+                file_sizes.extend(_file_sizes if _file_sizes else [None] * len(_download_urls))
 
         Logger.info(f"Found {len(download_urls)} files")
 
         # Filter by file size if specified
         if min_size is not None or max_size is not None:
-            file_names, download_urls, file_sizes = self.filter_by_file_size(
-                file_names,
-                download_urls,
-                file_sizes,
+            filtered_gen = self.filter_by_file_size(
+                zip(file_names,download_urls, file_sizes),
                 min_size=min_size,
                 max_size=max_size,
             )
+            file_names, download_urls, file_sizes = [], [], []
+            async for name, url, size in filtered_gen:
+                file_names.append(name)
+                download_urls.append(url)
+                file_sizes.append(size)
 
         file_names, download_urls, file_sizes = self.filter_bad_files_zip(
             file_names,
@@ -170,7 +171,7 @@ class MultiPageWeb(WebBase):
 
         Logger.info(f"After filtering bad files: Found {len(download_urls)} files")
 
-        file_names, download_urls, file_sizes = self.apply_limit_zip(
+        file_names, download_urls, file_sizes = await self.apply_limit_zip(
             file_names,
             download_urls,
             file_sizes=file_sizes,
@@ -183,7 +184,8 @@ class MultiPageWeb(WebBase):
             random_selection=random_selection,
         )
 
-        return download_urls, file_names
+        for download_url, file_name in zip(download_urls, file_names):
+            yield download_url, file_name
 
     def get_file_size_from_entry(
         self, html, link_element
@@ -246,7 +248,7 @@ class MultiPageWeb(WebBase):
             file_sizes.append(size_bytes)
         return links, filenames, file_sizes
 
-    def process_links_before_download(
+    async def process_links_before_download(
         self,
         request,
         limit=None,
@@ -257,14 +259,14 @@ class MultiPageWeb(WebBase):
         random_selection=False,
     ):
         """additional processing to the links before download"""
-        response = self.session_with_cookies_by_chain(**request)
+        response = await self.session_with_cookies_by_chain(**request)
 
         html = lxml_html.fromstring(response.text)
 
         file_links, filenames, file_sizes = self.collect_files_details_from_page(html)
         Logger.info(f"Page {request}: Found {len(file_links)} files")
 
-        filenames, file_links, file_sizes = self.apply_limit_zip(
+        filenames, file_links, file_sizes = await self.apply_limit_zip(
             filenames,
             file_links,
             file_sizes=file_sizes,
