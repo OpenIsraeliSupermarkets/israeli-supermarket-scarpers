@@ -34,7 +34,7 @@ class Aspx(WebBase, ABC):
         """list all param to add to the url"""
 
     @abstractmethod
-    def _build_query_url(self, query_params, base_urls):
+    async def _build_query_url(self, query_params, base_urls):
         """build the url with the query params"""
 
     async def get_request_url(self, files_types=None, store_id=None, when_date=None):

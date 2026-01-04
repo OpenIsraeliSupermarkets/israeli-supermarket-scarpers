@@ -3,12 +3,12 @@ from ..logger import Logger
 from .base import AbstractDataBase
 
 
-PYMONGO_INSTALLED = True
+pymongo_installed = True
 try:
     import pymongo
     from pymongo.errors import ServerSelectionTimeoutError
 except ImportError:
-    PYMONGO_INSTALLED = False
+    pymongo_installed = False
 
 
 class MongoDataBase(AbstractDataBase):
@@ -21,7 +21,7 @@ class MongoDataBase(AbstractDataBase):
 
     def create_connection(self):
         """Create a connection to the MongoDB database."""
-        if PYMONGO_INSTALLED:
+        if pymongo_installed:
             url = os.environ.get("MONGO_URL", "localhost")
             port = os.environ.get("MONGO_PORT", "27017")
             self.myclient = pymongo.MongoClient(f"mongodb://{url}:{port}/")
@@ -29,7 +29,7 @@ class MongoDataBase(AbstractDataBase):
 
     def enable_collection_status(self):
         """Enable data collection to MongoDB."""
-        if PYMONGO_INSTALLED:
+        if pymongo_installed:
             self.set_collection_status(True)
             self.create_connection()
         else:

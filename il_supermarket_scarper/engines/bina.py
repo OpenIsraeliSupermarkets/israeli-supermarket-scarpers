@@ -122,6 +122,7 @@ class Bina(Aspx):
         return None
 
     async def retrieve_file(self, file_link, file_save_path, timeout=30):
+        """Retrieve file from Bina website"""
         response_content = await self.session_with_cookies_by_chain(
             file_link,
         )

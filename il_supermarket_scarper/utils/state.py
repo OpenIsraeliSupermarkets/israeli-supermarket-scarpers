@@ -1,4 +1,4 @@
-class FilterState:
+class FilterState:  # pylint: disable=too-many-instance-attributes
     """Track the state of files as they pass through filters"""
 
     def __init__(self):

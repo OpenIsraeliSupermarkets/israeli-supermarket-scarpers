@@ -1,15 +1,14 @@
 from urllib.parse import urlsplit
 import re
 import ntpath
-import asyncio
 from abc import abstractmethod
 from lxml import html as lxml_html
-
 
 from il_supermarket_scarper.utils import (
     Logger,
     convert_nl_size_to_bytes,
     UnitSize,
+    FilterState,
 )
 from .web import WebBase
 
@@ -75,6 +74,60 @@ class MultiPageWeb(WebBase):
 
         return int(pages[0])
 
+    async def generate_all_files(
+        self,
+        limit=None,
+        files_types=None,
+        store_id=None,
+        when_date=None,
+        suppress_exception=False,
+        random_selection=False,
+    ):
+        """generate all files from the site"""
+
+        main_page_requests = self.get_request_url(
+            files_types=files_types, store_id=store_id, when_date=when_date
+        )
+
+        async for main_page_request in main_page_requests:
+
+            main_page_response = await self.session_with_cookies_by_chain(
+                **main_page_request
+            )
+
+            total_pages = self.get_number_of_pages(main_page_response)
+            Logger.info(f"Found {total_pages} pages")
+
+            # if there is only one page, call it again,
+            # in the future, we can skip scrap it again
+            if total_pages is None:
+                pages_to_scrape = [main_page_request]
+            else:
+                pages_to_scrape = list(
+                    map(
+                        lambda page_number, req=main_page_request: {
+                            **req,
+                            "url": req["url"]
+                            + f"{self.page_argument}="
+                            + str(page_number),
+                        },
+                        range(1, total_pages + 1),
+                    )
+                )
+
+            for req in pages_to_scrape:
+
+                async for task in self.process_links_before_download(
+                    req,
+                    limit=limit,
+                    files_types=files_types,
+                    store_id=store_id,
+                    when_date=when_date,
+                    suppress_exception=suppress_exception,
+                    random_selection=random_selection,
+                ):
+                    yield task
+
     async def collect_files_details_from_site(  # pylint: disable=too-many-locals
         self,
         limit=None,
@@ -89,57 +142,17 @@ class MultiPageWeb(WebBase):
         max_size=None,
         random_selection=False,
     ):
-        from il_supermarket_scarper.utils.state import FilterState
 
         state = FilterState()
-
-        async def generate_all_files():
-            main_page_requests = self.get_request_url(
-                files_types=files_types, store_id=store_id, when_date=when_date
-            )
-
-            async for main_page_request in main_page_requests:
-
-                main_page_response = await self.session_with_cookies_by_chain(
-                    **main_page_request
-                )
-
-                total_pages = self.get_number_of_pages(main_page_response)
-                Logger.info(f"Found {total_pages} pages")
-
-                # if there is only one page, call it again,
-                # in the future, we can skip scrap it again
-                if total_pages is None:
-                    pages_to_scrape = [main_page_request]
-                else:
-                    pages_to_scrape = list(
-                        map(
-                            lambda page_number, req=main_page_request: {
-                                **req,
-                                "url": req["url"]
-                                + f"{self.page_argument}="
-                                + str(page_number),
-                            },
-                            range(1, total_pages + 1),
-                        )
-                    )
-
-                for req in pages_to_scrape:
-
-                    async for task in self.process_links_before_download(
-                        req,
-                        limit=limit,
-                        files_types=files_types,
-                        store_id=store_id,
-                        when_date=when_date,
-                        suppress_exception=suppress_exception,
-                        random_selection=random_selection,
-                    ):
-                        yield task
-
-            # Aggregate results from all pages
-
-        files = generate_all_files()
+        # Aggregate results from all pages
+        files = self.generate_all_files(
+            limit=limit,
+            files_types=files_types,
+            store_id=store_id,
+            when_date=when_date,
+            suppress_exception=suppress_exception,
+            random_selection=random_selection,
+        )
 
         # Filter by file size if specified
         if min_size is not None or max_size is not None:
@@ -235,7 +248,7 @@ class MultiPageWeb(WebBase):
             file_sizes.append(size_bytes)
         return links, filenames, file_sizes
 
-    async def process_links_before_download(
+    async def process_links_before_download(  # pylint: disable=too-many-locals
         self,
         request,
         limit=None,
@@ -246,7 +259,6 @@ class MultiPageWeb(WebBase):
         random_selection=False,
     ):
         """additional processing to the links before download"""
-        from il_supermarket_scarper.utils.state import FilterState
 
         response = await self.session_with_cookies_by_chain(**request)
 

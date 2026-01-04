@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 import os
 import re
-import random
 import uuid
 import datetime
 import asyncio
@@ -12,7 +11,6 @@ from il_supermarket_scarper.utils import (
     Logger,
     ScraperStatus,
     extract_xml_file_from_gz_file,
-    url_connection_retry,
     session_with_cookies,
     url_retrieve,
     wget_file,
@@ -22,7 +20,7 @@ from il_supermarket_scarper.utils import (
 from il_supermarket_scarper.utils.state import FilterState
 
 
-class Engine(ScraperStatus, ABC):
+class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
     """base engine for scraping"""
 
     utilize_date_param = True
@@ -79,7 +77,7 @@ class Engine(ScraperStatus, ABC):
 
     async def filter_by_store_id(
         self,
-        state: FilterState,
+        state: FilterState,  # pylint: disable=unused-argument
         intreable: AsyncGenerator[tuple[str, str], None],
         store_id=None,
         by_function=lambda x: x,
@@ -103,9 +101,11 @@ class Engine(ScraperStatus, ABC):
         suppress_exception=False,
         random_selection=False,
     ):
-        """filter the list according to condition - streaming version that processes each file at a time"""
+        """filter the list according to condition - streaming version that
+        processes each file at a time"""
 
-        # Collect all input files first (needed for some operations like unique, latest, random_selection)
+        # Collect all input files first (needed for unique, latest,
+        # random_selection)
         async def stream_to_list(
             state: FilterState, intreable: AsyncGenerator[tuple[str, str], None]
         ):
@@ -216,7 +216,7 @@ class Engine(ScraperStatus, ABC):
         limit,
         files_types,
         by_function,
-        random_selection=False,
+        random_selection=False,  # pylint: disable=unused-argument
     ):
         """filter the file types requested"""
 
@@ -344,7 +344,7 @@ class Engine(ScraperStatus, ABC):
         if store_id and store_id <= 0:
             raise ValueError(f"store_id must be greater than 1, not {store_id}")
 
-    async def scrape(
+    async def scrape(  # pylint: disable=too-many-locals
         self,
         limit=None,
         files_types=None,

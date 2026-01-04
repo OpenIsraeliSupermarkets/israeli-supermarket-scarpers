@@ -6,7 +6,6 @@ import socket
 import pickle
 import random
 import asyncio
-import ssl as ssl_module
 import fnmatch
 from ftplib import FTP_TLS, error_perm
 import subprocess
@@ -18,7 +17,6 @@ from urllib3.exceptions import MaxRetryError, ReadTimeoutError
 
 
 import requests
-import aioftp
 from playwright.sync_api import sync_playwright
 from requests.exceptions import (
     ReadTimeout,
@@ -386,14 +384,14 @@ async def collect_from_ftp(
         f", username: {ftp_username} , password: {ftp_password}"
     )
 
-    def _sync_ftp_list():
+    def _sync_ftp_list():  # pylint: disable=too-many-branches
         """Synchronous FTP listing using FTP_TLS - returns a list"""
         ftp = FTP_TLS(ftp_host, ftp_username, ftp_password, timeout=timeout)
         ftp.trust_server_pasv_ipv4_address = True
         try:
             ftp.cwd(ftp_path)
 
-            # Use MLSD for detailed file information if available, otherwise fall back to NLST + SIZE
+            # Use MLSD for detailed file info if available, fall back to NLST + SIZE
             files_with_sizes = []
             try:
                 # MLSD provides detailed info including size
@@ -417,7 +415,7 @@ async def collect_from_ftp(
                         # Unknown type - include if matches filter (case-insensitive)
                         if arg is None or fnmatch.fnmatch(name.lower(), arg.lower()):
                             files_with_sizes.append((name, None))
-            except error_perm as e:
+            except error_perm:
                 # MLSD not supported, fall back to NLST
                 if arg:
                     file_list = ftp.nlst(arg)
@@ -429,7 +427,10 @@ async def collect_from_ftp(
                     try:
                         ftp.voidcmd("TYPE I")  # Set binary mode
                         size = ftp.size(filename)
-                    except (error_perm, Exception):
+                    except (
+                        error_perm,
+                        Exception,
+                    ):  # pylint: disable=broad-exception-caught
                         size = None
                     files_with_sizes.append((filename, size))
 
@@ -437,7 +438,7 @@ async def collect_from_ftp(
         finally:
             try:
                 ftp.quit()
-            except Exception:
+            except Exception:  # pylint: disable=broad-exception-caught
                 ftp.close()
 
     # Run synchronous FTP operations in a thread pool and get the list

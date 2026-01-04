@@ -1,7 +1,6 @@
 import os
 import traceback
 
-from .logger import Logger
 from .status import log_folder_details
 from .databases import JsonDataBase
 from .status import _now, get_output_folder

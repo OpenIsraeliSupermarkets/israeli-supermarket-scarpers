@@ -9,8 +9,8 @@ from il_supermarket_scarper.utils import (
     fetch_temporary_gz_file_from_ftp,
     FileTypesFilters,
 )
-from .engine import Engine
 from il_supermarket_scarper.utils.state import FilterState
+from .engine import Engine
 
 
 class Cerberus(Engine):

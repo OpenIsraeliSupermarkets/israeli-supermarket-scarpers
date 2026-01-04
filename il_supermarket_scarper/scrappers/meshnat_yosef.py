@@ -30,7 +30,7 @@ class MeshnatYosef1(WebBase):
         # Meshnat Yosef don't support file size in the entry
         return None
 
-    def extract_task_from_entry(self, all_trs):
+    async def extract_task_from_entry(self, all_trs):
         """extract download links, file names, and file sizes from page list"""
         download_urls = []
         file_names = []

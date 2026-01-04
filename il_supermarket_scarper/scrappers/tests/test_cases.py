@@ -4,7 +4,6 @@ import tempfile
 import re
 import os
 import uuid
-import asyncio
 import xml.etree.ElementTree as ET
 from lxml import etree
 from il_supermarket_scarper.utils import (
