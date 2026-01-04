@@ -91,86 +91,72 @@ class MultiPageWeb(WebBase):
         random_selection=False,
     ):
 
-        main_page_requests = self.get_request_url(
-            files_types=files_types, store_id=store_id, when_date=when_date
-        )
-        assert len(main_page_requests) > 0, "No pages to scrape"
+        async def generate_all_files():
+            main_page_requests = self.get_request_url(
+                files_types=files_types, store_id=store_id, when_date=when_date
+            )
 
-        download_urls = []
-        file_names = []
-        file_sizes = []
-        async for main_page_request in main_page_requests:
 
-            main_page_response =  self.session_with_cookies_by_chain(**main_page_request)
+            async for main_page_request in main_page_requests:
 
-            total_pages = self.get_number_of_pages(main_page_response)
-            Logger.info(f"Found {total_pages} pages")
+                main_page_response =  self.session_with_cookies_by_chain(**main_page_request)
 
-            # if there is only one page, call it again,
-            # in the future, we can skip scrap it again
-            if total_pages is None:
-                pages_to_scrape = [main_page_request]
-            else:
-                pages_to_scrape = list(
-                    map(
-                        lambda page_number, req=main_page_request: {
-                            **req,
-                            "url": req["url"]
-                            + f"{self.page_argument}="
-                            + str(page_number),
-                        },
-                        range(1, total_pages + 1),
+                total_pages = self.get_number_of_pages(main_page_response)
+                Logger.info(f"Found {total_pages} pages")
+
+                # if there is only one page, call it again,
+                # in the future, we can skip scrap it again
+                if total_pages is None:
+                    pages_to_scrape = [main_page_request]
+                else:
+                    pages_to_scrape = list(
+                        map(
+                            lambda page_number, req=main_page_request: {
+                                **req,
+                                "url": req["url"]
+                                + f"{self.page_argument}="
+                                + str(page_number),
+                            },
+                            range(1, total_pages + 1),
+                        )
                     )
-                )
-    
-            async for req in pages_to_scrape:
-               
-                 for task in self.process_links_before_download(
-                    req,
-                    limit=limit,
-                    files_types=files_types,
-                    store_id=store_id,
-                    when_date=when_date,
-                    suppress_exception=suppress_exception,
-                    random_selection=random_selection,
-                ):
-                    yield task
+        
+                async for req in pages_to_scrape:
+                
+                    for task in self.process_links_before_download(
+                        req,
+                        limit=limit,
+                        files_types=files_types,
+                        store_id=store_id,
+                        when_date=when_date,
+                        suppress_exception=suppress_exception,
+                        random_selection=random_selection,
+                    ):
+                        yield task
 
             # Aggregate results from all pages
-            for _download_urls, _file_names, _file_sizes in page_results:
-                download_urls.extend(_download_urls)
-                file_names.extend(_file_names)
-                file_sizes.extend(_file_sizes if _file_sizes else [None] * len(_download_urls))
-
-        Logger.info(f"Found {len(download_urls)} files")
+        files = generate_all_files()
 
         # Filter by file size if specified
         if min_size is not None or max_size is not None:
             filtered_gen = self.filter_by_file_size(
-                zip(file_names,download_urls, file_sizes),
+                files,
                 min_size=min_size,
                 max_size=max_size,
             )
-            file_names, download_urls, file_sizes = [], [], []
-            async for name, url, size in filtered_gen:
-                file_names.append(name)
-                download_urls.append(url)
-                file_sizes.append(size)
+        else:
+            filtered_gen = files
 
-        file_names, download_urls, file_sizes = self.filter_bad_files_zip(
-            file_names,
-            download_urls,
-            file_sizes=file_sizes,
+
+        bad_files_filtered = self.filter_bad_files_zip(
+            filtered_gen,
             filter_null=filter_null,
             filter_zero=filter_zero,
         )
 
-        Logger.info(f"After filtering bad files: Found {len(download_urls)} files")
 
-        file_names, download_urls, file_sizes = await self.apply_limit_zip(
-            file_names,
-            download_urls,
-            file_sizes=file_sizes,
+        limited_files = await self.apply_limit_zip(
+            bad_files_filtered,
             limit=limit,
             files_types=files_types,
             store_id=store_id,
@@ -180,7 +166,7 @@ class MultiPageWeb(WebBase):
             random_selection=random_selection,
         )
 
-        for download_url, file_name in zip(download_urls, file_names):
+        async for download_url, file_name, _ in limited_files:
             yield download_url, file_name
 
     def get_file_size_from_entry(
