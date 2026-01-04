@@ -48,7 +48,7 @@ class WebBase(Engine):
     async def extract_task_from_entry(self, all_trs):
         """extract download links, file names, and file sizes from page list"""
 
-        async for x in all_trs:
+        for x in all_trs:
             try:
                 yield self.url + x.a.attrs["href"], x.a.attrs["href"].split(".")[
                     0
@@ -100,6 +100,15 @@ class WebBase(Engine):
             ):
                 yield file
 
+    async def generate_all_files(self, files_types=None, store_id=None, when_date=None):
+        async for url in self.get_request_url(
+            files_types=files_types, store_id=store_id, when_date=when_date
+        ):
+            req_res = await self.session_with_cookies_by_chain(**url)
+            current_trs = self.get_data_from_page(req_res)
+            async for file_entry in self.extract_task_from_entry(current_trs):
+                yield file_entry
+                
     async def collect_files_details_from_site(  # pylint: disable=too-many-locals
         self,
         limit=None,
@@ -118,16 +127,7 @@ class WebBase(Engine):
         state = FilterState()
 
         # Generator to accumulate all extracted files from all pages
-        async def generate_all_files():
-            async for url in self.get_request_url(
-                files_types=files_types, store_id=store_id, when_date=when_date
-            ):
-                req_res = await self.session_with_cookies_by_chain(**url)
-                current_trs = self.get_data_from_page(req_res)
-                async for file_entry in self.extract_task_from_entry(current_trs):
-                    yield file_entry
-
-        extracted_files = generate_all_files()
+        extracted_files = self.generate_all_files(files_types=files_types, store_id=store_id, when_date=when_date)
 
         # Filter by file size if specified
         if min_size is not None or max_size is not None:
