@@ -43,22 +43,19 @@ class MultiPageWeb(WebBase):
     def build_params(self, files_types=None, store_id=None, when_date=None):
         """build the params for the request"""
 
-    def get_request_url(
+    async def get_request_url(
         self, files_types=None, store_id=None, when_date=None
     ):  # pylint: disable=unused-argument
         """get all links to collect download links from"""
 
-        results = []
         for arguments in self.build_params(
             files_types=files_types, store_id=store_id, when_date=when_date
         ):
-            results.append(
-                {
+            yield {
                     "url": self.url + arguments,
                     "method": "GET",
                 }
-            )
-        return results
+            
 
     def get_number_of_pages(self, response):
         """get the number of pages to scarpe"""
@@ -102,9 +99,9 @@ class MultiPageWeb(WebBase):
         download_urls = []
         file_names = []
         file_sizes = []
-        for main_page_request in main_page_requests:
+        async for main_page_request in main_page_requests:
 
-            main_page_response = await self.session_with_cookies_by_chain(**main_page_request)
+            main_page_response =  self.session_with_cookies_by_chain(**main_page_request)
 
             total_pages = self.get_number_of_pages(main_page_response)
             Logger.info(f"Found {total_pages} pages")
@@ -125,9 +122,10 @@ class MultiPageWeb(WebBase):
                         range(1, total_pages + 1),
                     )
                 )
-
-            tasks = [
-                self.process_links_before_download(
+    
+            async for req in pages_to_scrape:
+               
+                 for task in self.process_links_before_download(
                     req,
                     limit=limit,
                     files_types=files_types,
@@ -135,10 +133,8 @@ class MultiPageWeb(WebBase):
                     when_date=when_date,
                     suppress_exception=suppress_exception,
                     random_selection=random_selection,
-                )
-                for req in pages_to_scrape
-            ]
-            page_results = await asyncio.gather(*tasks)
+                ):
+                    yield task
 
             # Aggregate results from all pages
             for _download_urls, _file_names, _file_sizes in page_results:
@@ -259,14 +255,14 @@ class MultiPageWeb(WebBase):
         random_selection=False,
     ):
         """additional processing to the links before download"""
-        response = await self.session_with_cookies_by_chain(**request)
+        response = self.session_with_cookies_by_chain(**request)
 
         html = lxml_html.fromstring(response.text)
 
         file_links, filenames, file_sizes = self.collect_files_details_from_page(html)
         Logger.info(f"Page {request}: Found {len(file_links)} files")
 
-        filenames, file_links, file_sizes = await self.apply_limit_zip(
+        files = await self.apply_limit_zip(
             filenames,
             file_links,
             file_sizes=file_sizes,

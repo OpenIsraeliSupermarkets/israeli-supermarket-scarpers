@@ -56,42 +56,21 @@ class Matrix(Aspx):
     #         store_id = str(c_id) + "001" + str(store_id).zfill(3)
     #     return chain_id, store_id
 
-    def _build_query_url(self, query_params, base_urls):
-        res = []
+    async def _build_query_url(self, query_params, base_urls):
         for base in base_urls:
-            res.append(
-                {
-                    "method": "GET",
-                    "url": base,
-                    # "body": query_params,
-                }
-            )
-        return res
+            yield {
+                "method": "GET",
+                "url": base,
+                # "body": query_params,
+            }
 
     def _get_all_possible_query_string_params(
         self, files_types=None, store_id=None, when_date=None
     ):
         """get the arguments need to add to the url"""
 
-        return [{}]
-        # post_body = []
-        # if isinstance(self.chain_id, list):
-        #     for c_id in self.chain_id:
-        #         chain_id, store_id = self.get_chain_n_stores__id(
-        #             store_id=store_id, c_id=c_id
-        #         )
-        #         post_body.append(
-        #             {
+        yield {}
 
-        #                 "ctl00$TextArea": "",
-        #                 "ctl00$MainContent$chain": chain_id,
-        #                 "ctl00$MainContent$subChain": "-1",
-        #                 "ctl00$MainContent$branch": store_id,
-        #                 "ctl00$MainContent$txtDate": self.get_when(when_date=when_date),
-        #                 "ctl00$MainContent$fileType": "all",
-        #                 # "ctl00$MainContent$btnSearch": "חיפוש",
-        #             }
-        #         )
         # else:
         #     chain_id, store_id = self.get_chain_n_stores__id(
         #         store_id=store_id, c_id=self.chain_id

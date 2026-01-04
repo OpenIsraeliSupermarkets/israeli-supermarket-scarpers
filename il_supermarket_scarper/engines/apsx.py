@@ -32,7 +32,7 @@ class Aspx(WebBase, ABC):
         return download_urls, file_names, file_sizes
 
     @abstractmethod
-    def _get_all_possible_query_string_params(
+    async def _get_all_possible_query_string_params(
         self, files_types=None, store_id=None, when_date=None
     ):
         """list all param to add to the url"""
@@ -41,20 +41,15 @@ class Aspx(WebBase, ABC):
     def _build_query_url(self, query_params, base_urls):
         """build the url with the query params"""
 
-    def get_request_url(self, files_types=None, store_id=None, when_date=None):
+    async def get_request_url(self, files_types=None, store_id=None, when_date=None):
         """build the request given the base url and the query params"""
-        result = []
-        for query_params in self._get_all_possible_query_string_params(
+        
+        async for query_params in self._get_all_possible_query_string_params(
             files_types=files_types, store_id=store_id, when_date=when_date
         ):
-            result.extend(self._build_query_url(query_params, [self.url]))
-        Logger.debug(f"Request url: {result}")
-        return result
-
+            async for url in self._build_query_url(query_params, [self.url]):
+                yield url
+                
     @abstractmethod
     def get_href_from_entry(self, entry):
         """get download link for entry (tr)"""
-
-    @abstractmethod
-    def get_file_name_no_ext_from_entry(self, entry):
-        """get the file name without extensions from entey (tr)"""

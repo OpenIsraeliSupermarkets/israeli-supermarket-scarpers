@@ -53,18 +53,14 @@ class Bina(Aspx):
                     raise ValueError(f"File type {file_type} not supported")
                 yield file_type_mapping[file_type]
 
-    def _build_query_url(self, query_params, base_urls):
-        res = []
+    async def _build_query_url(self, query_params, base_urls):
         for base in base_urls:
-            res.append(
-                {
-                    "url": base + self.aspx_page + "?" + query_params,
-                    "method": "GET",
-                }
-            )
-        return res
+            yield {
+                "url": base + self.aspx_page + "?" + query_params,
+                "method": "GET",
+            }
 
-    def _get_all_possible_query_string_params(
+    async def _get_all_possible_query_string_params(
         self, files_types=None, store_id=None, when_date=None
     ):
         """get the arguments need to add to the url"""
@@ -102,7 +98,8 @@ class Bina(Aspx):
             for chains_url in chains_urls:
                 chains_url["WDate"] = when_date.strftime("%d/%m/%Y")
 
-        return [urllib.parse.urlencode(params) for params in chains_urls]
+        for params in chains_urls:
+            yield urllib.parse.urlencode(params)
 
     def get_data_from_page(self, req_res):
         return json.loads(req_res.text)

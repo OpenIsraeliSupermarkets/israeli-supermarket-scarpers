@@ -20,11 +20,14 @@ class WebBase(Engine):
         soup = BeautifulSoup(req_res.text, features="lxml")
         return soup.find_all("tr")[1:]
 
-    def get_request_url(
+    async def get_request_url(
         self, files_types=None, store_id=None, when_date=None
     ):  # pylint: disable=unused-argument
         """get all links to collect download links from"""
-        return [{"url": self.url, "method": "GET"}]
+        yield {
+            "url": self.url,
+            "method": "GET",
+        }
 
     def get_file_size_from_entry(self, entry):
         """
@@ -42,27 +45,21 @@ class WebBase(Engine):
             Logger.debug(f"Error extracting file size from entry: {e}")
         return None
 
-    def extract_task_from_entry(self, all_trs):
+
+    async def extract_task_from_entry(self, all_trs):
         """extract download links, file names, and file sizes from page list"""
-        download_urls = []
-        file_names = []
-        file_sizes = []
-        for x in all_trs:
+       
+        async for x in all_trs:
             try:
-                download_urls.append(self.url + x.a.attrs["href"])
-                file_names.append(x.a.attrs["href"].split(".")[0].split("/")[-1])
-                file_sizes.append(self.get_file_size_from_entry(x))
+                yield self.url + x.a.attrs["href"], x.a.attrs["href"].split(".")[0].split("/")[-1],self.get_file_size_from_entry(x)
             except (AttributeError, KeyError, IndexError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")
 
-        return download_urls, file_names, file_sizes
 
     async def apply_limit_zip(
         self,
         state: FilterState,
-        file_names,
-        download_urls,
-        file_sizes=None,
+        files,
         limit=None,
         files_types=None,
         by_function=lambda x: x[0],
@@ -73,21 +70,11 @@ class WebBase(Engine):
         random_selection=False,
     ):
         """apply limit to zip"""
-        # Handle both 2-tuple (backward compatibility) and 3-tuple formats
-        if file_sizes is None:
-            zipped = list(zip(file_names, download_urls))
-        else:
-            zipped = list(zip(file_names, download_urls, file_sizes))
-
-        # Convert list to async generator for apply_limit
-        async def list_to_async_gen(items):
-            for item in items:
-                yield item
         
         
         async for item in self.apply_limit(
             state,
-            list_to_async_gen(zipped),
+            files,
             limit=limit,
             files_types=files_types,
             by_function=by_function,
@@ -99,34 +86,19 @@ class WebBase(Engine):
         ):
             yield item
 
-    def filter_bad_files_zip(
+    async def filter_bad_files_zip(
         self,
-        file_names,
-        download_urls,
-        file_sizes=None,
+        files,
         filter_null=False,
         filter_zero=False,
         by_function=lambda x: x[0],
     ):
         """apply bad files filtering to zip"""
-        # Handle both 2-tuple (backward compatibility) and 3-tuple formats
-        if file_sizes is None:
-            files = list(zip(file_names, download_urls))
-        else:
-            files = list(zip(file_names, download_urls, file_sizes))
 
-        files = self.filter_bad_files(
-            files,
-            filter_null=filter_null,
-            filter_zero=filter_zero,
-            by_function=by_function,
-        )
-        if len(files) == 0:
-            if file_sizes is None:
-                return [], []
-            return [], [], []
-        return list(zip(*files))
-
+        async for file in files:
+            if self.is_pass_bad_files_filter(file, filter_zero, filter_null, by_function):
+                yield file
+        
     async def collect_files_details_from_site(  # pylint: disable=too-many-locals
         self,
         limit=None,
@@ -142,51 +114,43 @@ class WebBase(Engine):
         random_selection=False,
     ):
         """collect all enteris to download from site"""
+        state = FilterState()
 
-        urls_to_collect_link_from = self.get_request_url(
-            files_types=files_types, store_id=store_id, when_date=when_date
-        )
-        assert len(urls_to_collect_link_from) > 0, "No pages to scrape"
+        # Generator to accumulate all extracted files from all pages
+        async def generate_all_files():
+            async for url in self.get_request_url(
+                files_types=files_types, store_id=store_id, when_date=when_date
+            ):
+                req_res = await self.session_with_cookies_by_chain(**url)
+                current_trs = self.get_data_from_page(req_res)
+                async for file_entry in self.extract_task_from_entry(current_trs):
+                    yield file_entry
 
-        all_trs = []
-        for url in urls_to_collect_link_from:
-            req_res = await self.session_with_cookies_by_chain(**url)
-            trs = self.get_data_from_page(req_res)
-            all_trs.extend(trs)
-
-        Logger.info(f"Found {len(all_trs)} entries")
-
-        download_urls, file_names, file_sizes = self.extract_task_from_entry(all_trs)
-
-        Logger.info(f"Found {len(download_urls)} download urls")
+        extracted_files = generate_all_files()
 
         # Filter by file size if specified
         if min_size is not None or max_size is not None:
-            files = self.filter_by_file_size(
-                 zip(file_names, download_urls, file_sizes),
+            filtered_files = self.filter_by_file_size(
+                extracted_files,
                 min_size=min_size,
                 max_size=max_size,
-            )   
+            )
+        else:
+            filtered_files = extracted_files   
 
-        file_names, download_urls, file_sizes = self.filter_bad_files_zip(
-            file_names,
-            download_urls,
-            file_sizes=file_sizes,
+        bad_files_filtered = self.filter_bad_files_zip(
+            filtered_files,
             filter_null=filter_null,
             filter_zero=filter_zero,
+            by_function=lambda x: x[1],
         )
 
-        Logger.info(f"After filtering bad files: Found {len(download_urls)} files")
-
-        # pylint: disable=duplicate-code
-        state = FilterState()
-        file_names, download_urls, file_sizes = await self.apply_limit_zip(
+        limited_files = self.apply_limit_zip(
             state,
-            file_names,
-            download_urls,
-            file_sizes=file_sizes,
+            bad_files_filtered,
             limit=limit,
             files_types=files_types,
+            by_function=lambda x: x[1],
             store_id=store_id,
             when_date=when_date,
             files_names_to_scrape=files_names_to_scrape,
@@ -194,9 +158,7 @@ class WebBase(Engine):
             random_selection=random_selection,
         )
 
-        Logger.info(f"After applying limit: Found {len(download_urls)} entries")
-
-        for download_url, file_name in zip(download_urls, file_names):
+        async for download_url, file_name, _ in limited_files:
             yield download_url, file_name
 
     async def _scrape(  # pylint: disable=too-many-locals
