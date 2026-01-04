@@ -85,15 +85,72 @@ class UnitSize(enum.Enum):
     GB = "Gb"
 
 
-def convert_unit(size_in_bytes, unit):
+def convert_nl_size_to_bytes(size_str, to_unit=UnitSize.MB):
+    """
+    Parse human-readable file size string to bytes.
+    Supports formats like: "10.5 MB", "1.2GB", "500 KB", "1234", etc.
+    Returns bytes as integer, or None if parsing fails.
+    """
+    if not size_str:
+        return None
+
+    # Remove any extra whitespace and convert to uppercase
+    size_str = size_str.strip().upper()
+
+    # Pattern to match: number (with optional decimal) followed by optional unit
+    pattern = r"([\d.]+)\s*(B|KB|MB|GB|TB)?"
+    match = re.match(pattern, size_str)
+    if not match:
+        return None
+
+    try:
+        number = string_to_float(match.group(1))
+        unit_str = match.group(2) if match.group(2) else "B"
+        # Map string units to UnitSize enum where possible
+        unit_map = {
+            "B": UnitSize.BYTES,
+            "KB": UnitSize.KB,
+            "MB": UnitSize.MB,
+            "GB": UnitSize.GB,
+            # You can add "TB": UnitSize.TB if desired and defined
+        }
+        from_unit = unit_map.get(unit_str, UnitSize.BYTES)
+        size_in_from_unit = number
+        # convert_unit expects size in bytes, so we need to first get bytes from the given unit
+        return convert_unit(size_in_from_unit, from_unit=from_unit, to_unit=to_unit)
+    except (ValueError, TypeError, KeyError):
+        return None
+
+
+def string_to_float(size_str):
+    """convert a string to a float"""
+    return float(size_str.replace(",", ""))
+
+
+def convert_unit(size_in_bytes, from_unit=UnitSize.BYTES, to_unit=UnitSize.MB):
     """Convert the size from bytes to other units like KB, MB or GB"""
-    if unit == UnitSize.KB:
-        return size_in_bytes / 1024
-    if unit == UnitSize.MB:
-        return size_in_bytes / (1024 * 1024)
-    if unit == UnitSize.GB:
-        return size_in_bytes / (1024 * 1024 * 1024)
-    return size_in_bytes
+    if from_unit == to_unit:
+        return size_in_bytes
+    # Convert size_in_bytes (in from_unit) to bytes
+    if from_unit == UnitSize.KB:
+        bytes_val = size_in_bytes * 1024
+    elif from_unit == UnitSize.MB:
+        bytes_val = size_in_bytes * 1024 * 1024
+    elif from_unit == UnitSize.GB:
+        bytes_val = size_in_bytes * 1024 * 1024 * 1024
+    else:  # from_unit == UnitSize.BYTES
+        bytes_val = size_in_bytes
+
+    # Convert bytes to to_unit
+    if to_unit == UnitSize.BYTES:
+        return bytes_val
+    if to_unit == UnitSize.KB:
+        return bytes_val / 1024
+    if to_unit == UnitSize.MB:
+        return bytes_val / (1024 * 1024)
+    if to_unit == UnitSize.GB:
+        return bytes_val / (1024 * 1024 * 1024)
+    return bytes_val
 
 
 def log_folder_details(folder, unit=UnitSize.MB):

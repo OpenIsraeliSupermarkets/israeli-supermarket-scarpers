@@ -22,18 +22,28 @@ class MeshnatYosef1(WebBase):
         response = json.loads(req_res.text)
         return response
 
+    def get_file_size_from_entry(self, entry):
+        """
+        Extract file size from a JSON entry.
+        Returns size in bytes, or None if not found.
+        """
+        # Meshnat Yosef don't support file size in the entry
+        return None
+
     def extract_task_from_entry(self, all_trs):
-        """extract download links and file names from page list"""
+        """extract download links, file names, and file sizes from page list"""
         download_urls = []
         file_names = []
+        file_sizes = []
         for x in all_trs:
             try:
                 download_urls.append(x["url"])
                 file_names.append(x["name"])
+                file_sizes.append(self.get_file_size_from_entry(x))
             except (AttributeError, KeyError, IndexError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")
 
-        return download_urls, file_names
+        return download_urls, file_names, file_sizes
 
 
 class MeshnatYosef2(Bina):
@@ -42,7 +52,7 @@ class MeshnatYosef2(Bina):
     def __init__(self, streaming_config=None):
         super().__init__(
             DumpFolderNames.MESHMAT_YOSEF_2,
-            chain_id="5144744100001",
+            chain_id=["5144744100001", "7290058289400", "2222222"],
             url_perfix="ktshivuk",
             streaming_config=streaming_config
         )

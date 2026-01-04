@@ -29,10 +29,12 @@ class SuperPharm(MultiPageWeb):
     def collect_files_details_from_page(self, html):
         links = []
         filenames = []
+        file_sizes = []
         for element in html.xpath("//tbody/tr"):  # skip header
             links.append(self.url + element.xpath("./td[6]/a/@href")[0])
             filenames.append(element.xpath("./td[2]")[0].text)
-        return links, filenames
+            file_sizes.append(None)  # Super Pharm don't support file size in the entry
+        return links, filenames, file_sizes
 
     @url_connection_retry()
     def retrieve_file(self, file_link, file_save_path, timeout=15):
@@ -76,14 +78,17 @@ class SuperPharm(MultiPageWeb):
 
         all_params = []
         for ftype in self.get_file_types_id(files_types):
-            params = {"type": "", "date": "", "store": ""}
+            params = {}
 
-            if store_id:
-                params["store"] = store_id
+            # The new website behavior is to filter base on the store name and not id
+            # so we don't filter base on the store id in the request,
+            #  only post collection filtering.
+            # if store_id:
+            #     params["store"] = store_id
             if when_date and isinstance(when_date, datetime.datetime):
-                params["date"] = when_date.strftime("%Y-%m-%d")
+                params["Date-equals"] = when_date.strftime("%d/%m/%Y")
             if files_types:
-                params["type"] = ftype
+                params["Category-equals"] = ftype
             all_params.append(params)
 
         return ["?" + urllib.parse.urlencode(params) for params in all_params]

@@ -1,5 +1,7 @@
 # pylint: disable=arguments-differ,arguments-renamed
 from enum import Enum
+from datetime import datetime
+
 from il_supermarket_scarper.utils import (
     _is_saturday_in_israel,
     _now,
@@ -7,10 +9,16 @@ from il_supermarket_scarper.utils import (
     FileTypesFilters,
     hour_files_expected_to_be_accassible,
 )
+from il_supermarket_scarper.utils.logger import Logger
 
 
 class FullyStable:
     """fully stable is stablity"""
+
+    @classmethod
+    def pass_expiration_date(cls):
+        """return the expiration date"""
+        return datetime(2026, 1, 1)
 
     @classmethod
     def executes_between_midnight_and_morning_and_requested_today(
@@ -46,6 +54,10 @@ class SuperFlaky(FullyStable):
     """super flaky is stablity"""
 
     @classmethod
+    def pass_expiration_date(cls):
+        return datetime(2025, 1, 1)
+
+    @classmethod
     def failire_valid(cls, **_):
         return True
 
@@ -54,20 +66,28 @@ class NetivHased(FullyStable):
     """Netiv Hased is stablity"""
 
     @classmethod
-    def executed_in_saturday(cls, **_):
+    def pass_expiration_date(cls):
+        return datetime(2025, 1, 1)
+
+    @classmethod
+    def executed_in_saturday(cls, when_date=None, **_):
         """if the execution is in saturday"""
-        return _is_saturday_in_israel()
+        return _is_saturday_in_israel(when_date)
 
     @classmethod
     def failire_valid(cls, when_date=None, utilize_date_param=False, **_):
         """return true if the parser is stble"""
-        return super().failire_valid(
+        return super(cls, NetivHased).failire_valid(
             when_date=when_date, utilize_date_param=utilize_date_param
         ) or cls.executed_in_saturday(when_date=when_date)
 
 
 class CityMarketGivataim(FullyStable):
     """Netiv Hased is stablity"""
+
+    @classmethod
+    def pass_expiration_date(cls):
+        return datetime(2025, 1, 1)
 
     @classmethod
     def searching_for_update_promo(cls, files_types=None, **_):
@@ -80,7 +100,7 @@ class CityMarketGivataim(FullyStable):
     ):
         """return true if the parser is stble"""
         return (
-            super().failire_valid(when_date=when_date)
+            super(cls, CityMarketGivataim).failire_valid(when_date=when_date)
             or cls.searching_for_update_promo(files_types=files_types)
             or when_date is not None
             and cls.executed_after_date(
@@ -96,6 +116,10 @@ class CityMarketKiratOno(FullyStable):
     """Netiv Hased is stablity"""
 
     @classmethod
+    def pass_expiration_date(cls):
+        return datetime(2025, 1, 1)
+
+    @classmethod
     def searching_for_update_promo(cls, files_types=None, **_):
         """if the execution is in saturday"""
         return files_types and files_types == [FileTypesFilters.PROMO_FILE.name]
@@ -105,13 +129,18 @@ class CityMarketKiratOno(FullyStable):
         cls, when_date=None, files_types=None, utilize_date_param=True, **_
     ):
         """return true if the parser is stble"""
-        return super().failire_valid(
+        return super(cls, CityMarketKiratOno).failire_valid(
             when_date=when_date
         ) or cls.searching_for_update_promo(files_types=files_types)
 
 
 class CityMarketKiratGat(FullyStable):
     """Netiv Hased is stablity"""
+
+    @classmethod
+    def pass_expiration_date(cls):
+        """return the expiration date"""
+        return datetime(2026, 3, 1)
 
     @classmethod
     def searching_for_update_promo_full(cls, files_types=None, **_):
@@ -123,13 +152,22 @@ class CityMarketKiratGat(FullyStable):
         cls, when_date=None, files_types=None, utilize_date_param=True, **_
     ):
         """return true if the parser is stble"""
-        return super().failire_valid(
-            when_date=when_date
-        ) or cls.searching_for_update_promo_full(files_types=files_types)
+        return (
+            super(cls, CityMarketKiratGat).failire_valid(
+                when_date=when_date,
+                files_types=files_types,
+                utilize_date_param=utilize_date_param,
+            )
+            or True
+        )  # there is an active issue with the site
 
 
 class DoNotPublishStores(FullyStable):
     """stablity for chains that doesn't pubish stores"""
+
+    @classmethod
+    def pass_expiration_date(cls):
+        return datetime(9999, 5, 1)  # quik is only, they don't publish stores
 
     @classmethod
     def searching_for_store_full(cls, files_types=None, **_):
@@ -141,7 +179,31 @@ class DoNotPublishStores(FullyStable):
         cls, when_date=None, files_types=None, utilize_date_param=True, **_
     ):
         """return true if the parser is stble"""
-        return super().failire_valid(
+        return super(cls, DoNotPublishStores).failire_valid(
+            when_date=when_date,
+            files_types=files_types,
+            utilize_date_param=utilize_date_param,
+        ) or cls.searching_for_store_full(files_types=files_types)
+
+
+class SuperYuda(FullyStable):
+    """Super Yuda is stablity"""
+
+    @classmethod
+    def pass_expiration_date(cls):
+        return datetime(2027, 1, 1)
+
+    @classmethod
+    def searching_for_store_full(cls, files_types=None, **_):
+        """if the execution is in saturday"""
+        return files_types and files_types == [FileTypesFilters.STORE_FILE.name]
+
+    @classmethod
+    def failire_valid(
+        cls, when_date=None, files_types=None, utilize_date_param=True, **_
+    ):
+        """return true if the parser is stble"""
+        return super(cls, SuperYuda).failire_valid(
             when_date=when_date,
             files_types=files_types,
             utilize_date_param=utilize_date_param,
@@ -150,6 +212,10 @@ class DoNotPublishStores(FullyStable):
 
 class DoNotPublishPromo(FullyStable):
     """stablity for chains that doesn't pubish stores"""
+
+    @classmethod
+    def pass_expiration_date(cls):
+        return datetime(2027, 1, 1)  # will give it one more year
 
     @classmethod
     def searching_for_promo_full(cls, files_types=None, **_):
@@ -164,7 +230,7 @@ class DoNotPublishPromo(FullyStable):
         cls, when_date=None, files_types=None, utilize_date_param=True, **_
     ):
         """return true if the parser is stble"""
-        return super().failire_valid(
+        return super(cls, DoNotPublishPromo).failire_valid(
             when_date=when_date,
             files_types=files_types,
             utilize_date_param=utilize_date_param,
@@ -174,15 +240,16 @@ class DoNotPublishPromo(FullyStable):
 class ScraperStability(Enum):
     """tracker for the stablity of the scraper"""
 
-    COFIX = DoNotPublishStores
+    # COFIX = DoNotPublishStores
     NETIV_HASED = NetivHased
     QUIK = DoNotPublishStores
-    SALACH_DABACH = DoNotPublishStores
-    # CITY_MARKET_GIVATAYIM = CityMarketGivataim
-    CITY_MARKET_KIRYATONO = CityMarketKiratOno
+    SUPER_YUDA = SuperYuda
+    # SALACH_DABACH = DoNotPublishStores
+    # # CITY_MARKET_GIVATAYIM = CityMarketGivataim
+    # CITY_MARKET_KIRYATONO = CityMarketKiratOno
     CITY_MARKET_KIRYATGAT = CityMarketKiratGat
     MESHMAT_YOSEF_1 = DoNotPublishPromo
-    YOHANANOF = DoNotPublishStores
+    # YOHANANOF = DoNotPublishStores
 
     @classmethod
     def is_validate_scraper_found_no_files(
@@ -200,10 +267,21 @@ class ScraperStability(Enum):
         if scraper_enum in ScraperStability.__members__:
             stabler = ScraperStability[scraper_enum].value
 
-        return stabler.failire_valid(
-            limit=limit,
-            files_types=files_types,
-            store_id=store_id,
-            when_date=when_date,
-            utilize_date_param=utilize_date_param,
+        expected_to_fail = (
+            stabler.failire_valid(
+                limit=limit,
+                files_types=files_types,
+                store_id=store_id,
+                when_date=when_date,
+                utilize_date_param=utilize_date_param,
+            )
+            and stabler.pass_expiration_date() > datetime.now()
         )
+
+        if expected_to_fail:
+            Logger.warning(
+                f"scraper {scraper_enum} is not stable, "
+                f"pass_expiration_date: {stabler.pass_expiration_date().strftime('%Y-%m-%d')}, "
+                f"datetime.now(): {datetime.now().strftime('%Y-%m-%d')}"
+            )
+        return expected_to_fail

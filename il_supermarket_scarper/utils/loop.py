@@ -17,14 +17,17 @@ def multiple_page_aggregtion(pages_to_scrape):
     """format the scraping result to the final input for multipage"""
     download_urls = []
     file_names = []
+    file_sizes = []
     for result in pages_to_scrape:
         if hasattr(result, "result"):
-            page_download_urls, page_file_names = result.result()
+            page_result = result.result()
         else:
-            page_download_urls, page_file_names = result
+            page_result = result
+        page_download_urls, page_file_names, page_file_sizes = page_result
+        file_sizes.extend(page_file_sizes)
         download_urls.extend(page_download_urls)
         file_names.extend(page_file_names)
-    return download_urls, file_names
+    return download_urls, file_names, file_sizes
 
 
 def execute_in_parallel(

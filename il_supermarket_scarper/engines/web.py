@@ -3,11 +3,13 @@ import gzip
 import io
 import json
 import os
+import re
 import threading
 import zipfile
 import requests
 from bs4 import BeautifulSoup
 from il_supermarket_scarper.utils import Logger, execute_in_parallel, session_with_cookies
+from il_supermarket_scarper.utils import convert_nl_size_to_bytes, UnitSize
 from typing import List, Dict, Any, Optional
 from .streaming import StreamingEngine, WebStreamingConfig, StorageType
 
@@ -32,10 +34,27 @@ class WebBase(StreamingEngine):
         """Get all links to collect download links from - same as original."""
         return [{"url": self.url, "method": "GET"}]
 
+    def get_file_size_from_entry(self, entry):
+        """
+        Extract file size from a table row entry.
+        Looks for size information in table cells, typically in human-readable format.
+        Returns size in bytes, or None if not found.
+        """
+        try:
+            size_bytes = re.search(r"\b\d+(\.\d+)?\s*(KB|MB|GB)\b", entry.text)
+            size_bytes = convert_nl_size_to_bytes(
+                size_bytes.group(0), to_unit=UnitSize.BYTES
+            )
+            return size_bytes
+        except (AttributeError, TypeError) as e:
+            Logger.debug(f"Error extracting file size from entry: {e}")
+        return None
+
     def extract_task_from_entry(self, all_trs):
-        """Extract download links and file names from page list - same as original."""
+        """extract download links, file names, and file sizes from page list"""
         download_urls = []
         file_names = []
+        file_sizes = []
         for x in all_trs:
             try:
                 href = x.a.attrs["href"]
@@ -45,10 +64,11 @@ class WebBase(StreamingEngine):
                 else:
                     download_urls.append(self.url + href)
                 file_names.append(href.split(".")[0].split("/")[-1])
+                file_sizes.append(self.get_file_size_from_entry(x))
             except (AttributeError, KeyError, IndexError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")
 
-        return download_urls, file_names
+        return download_urls, file_names, file_sizes
 
     def filter_bad_files_zip(
         self,
@@ -73,6 +93,7 @@ class WebBase(StreamingEngine):
         self,
         file_names,
         download_urls,
+        file_sizes=None,
         limit=None,
         files_types=None,
         by_function=lambda x: x[0],
@@ -80,10 +101,17 @@ class WebBase(StreamingEngine):
         when_date=None,
         files_names_to_scrape=None,
         suppress_exception=False,
+        random_selection=False,
     ):
         """apply limit to zip"""
+        # Handle both 2-tuple (backward compatibility) and 3-tuple formats
+        if file_sizes is None:
+            zipped = list(zip(file_names, download_urls))
+        else:
+            zipped = list(zip(file_names, download_urls, file_sizes))
+
         ziped = self.apply_limit(
-            list(zip(file_names, download_urls)),
+            zipped,
             limit=limit,
             files_types=files_types,
             by_function=by_function,
@@ -91,76 +119,143 @@ class WebBase(StreamingEngine):
             when_date=when_date,
             files_names_to_scrape=files_names_to_scrape,
             suppress_exception=suppress_exception,
+            random_selection=random_selection,
         )
         if len(ziped) == 0:
-            return [], []
+            if file_sizes is None:
+                return [], []
+            return [], [], []
         return list(zip(*ziped))
 
-    def discover_links_streaming(self, files_types=None, store_id=None, when_date=None,
-                               filter_null=False, filter_zero=False, 
-                               files_names_to_scrape=None, suppress_exception=False,
-                               limit=None) -> List[Dict[str, Any]]:
-        """Discover links for streaming processing."""
+    def filter_bad_files_zip(
+        self,
+        file_names,
+        download_urls,
+        file_sizes=None,
+        filter_null=False,
+        filter_zero=False,
+        by_function=lambda x: x[0],
+    ):
+        """apply bad files filtering to zip"""
+        # Handle both 2-tuple (backward compatibility) and 3-tuple formats
+        if file_sizes is None:
+            files = list(zip(file_names, download_urls))
+        else:
+            files = list(zip(file_names, download_urls, file_sizes))
+
+        files = self.filter_bad_files(
+            files,
+            filter_null=filter_null,
+            filter_zero=filter_zero,
+            by_function=by_function,
+        )
+        if len(files) == 0:
+            if file_sizes is None:
+                return [], []
+            return [], [], []
+        return list(zip(*files))
+
+    def collect_files_details_from_site(  # pylint: disable=too-many-locals
+        self,
+        limit=None,
+        files_types=None,
+        store_id=None,
+        when_date=None,
+        filter_null=False,
+        filter_zero=False,
+        files_names_to_scrape=None,
+        suppress_exception=False,
+        min_size=None,
+        max_size=None,
+        random_selection=False,
+    ):
+        """collect all enteris to download from site"""
+
+        urls_to_collect_link_from = self.get_request_url(
+            files_types=files_types, store_id=store_id, when_date=when_date
+        )
+        assert len(urls_to_collect_link_from) > 0, "No pages to scrape"
+
+        all_trs = []
+        for url in urls_to_collect_link_from:
+            req_res = self.session_with_cookies_by_chain(**url)
+            trs = self.get_data_from_page(req_res)
+            all_trs.extend(trs)
+
+        Logger.info(f"Found {len(all_trs)} entries")
+
+        download_urls, file_names, file_sizes = self.extract_task_from_entry(all_trs)
+
+        Logger.info(f"Found {len(download_urls)} download urls")
+
+        # Filter by file size if specified
+        if min_size is not None or max_size is not None:
+            file_names, download_urls, file_sizes = self.filter_by_file_size(
+                file_names,
+                download_urls,
+                file_sizes,
+                min_size=min_size,
+                max_size=max_size,
+            )
+
+        file_names, download_urls, file_sizes = self.filter_bad_files_zip(
+            file_names,
+            download_urls,
+            file_sizes=file_sizes,
+            filter_null=filter_null,
+            filter_zero=filter_zero,
+        )
+
+        Logger.info(f"After filtering bad files: Found {len(download_urls)} files")
+
+        # pylint: disable=duplicate-code
+        file_names, download_urls, file_sizes = self.apply_limit_zip(
+            file_names,
+            download_urls,
+            file_sizes=file_sizes,
+            limit=limit,
+            files_types=files_types,
+            store_id=store_id,
+            when_date=when_date,
+            files_names_to_scrape=files_names_to_scrape,
+            suppress_exception=suppress_exception,
+            random_selection=random_selection,
+        )
+
+        Logger.info(f"After applying limit: Found {len(download_urls)} entries")
+
+        return download_urls, file_names
+
+    def _scrape(  # pylint: disable=too-many-locals
+        self,
+        limit=None,
+        files_types=None,
+        store_id=None,
+        when_date=None,
+        files_names_to_scrape=None,
+        filter_null=False,
+        filter_zero=False,
+        suppress_exception=False,
+        min_size=None,
+        max_size=None,
+        random_selection=False,
+    ):
+        """scarpe the files from multipage sites"""
+        download_urls, file_names = [], []
         try:
-            # Get URLs to collect links from
-            urls_to_collect_link_from = self.get_request_url(
-                files_types=files_types, store_id=store_id, when_date=when_date
-            )
-            
-            if len(urls_to_collect_link_from) == 0:
-                Logger.warning("No pages to scrape")
-                return []
-
-            # Collect all table rows
-            all_trs = []
-            for url in urls_to_collect_link_from:
-                req_res = self.session_with_cookies_by_chain(**url)
-                trs = self.get_data_from_page(req_res)
-                all_trs.extend(trs)
-
-            Logger.info(f"Found {len(all_trs)} entries")
-
-            # Extract download URLs and file names
-            download_urls, file_names = self.extract_task_from_entry(all_trs)
-            Logger.info(f"Found {len(download_urls)} download urls")
-
-            # Apply filtering using original engine methods
-            if filter_null or filter_zero:
-                file_names, download_urls = self.filter_bad_files_zip(
-                    file_names, download_urls, filter_null=filter_null, filter_zero=filter_zero
-                )
-                Logger.info(f"After filtering bad files: Found {len(download_urls)} files")
-
-            # Ensure storage directory exists before filtering (needed for file checks)
-            self.make_storage_path_dir()
-            
-            # Apply limits and filters using original engine methods  
-            file_names, download_urls = self.apply_limit_zip(
-                file_names, download_urls,
-                limit=limit, files_types=files_types,
-                store_id=store_id, when_date=when_date,
+            download_urls, file_names = self.collect_files_details_from_site(
+                limit=limit,
+                files_types=files_types,
+                store_id=store_id,
+                when_date=when_date,
+                filter_null=filter_null,
+                filter_zero=filter_zero,
                 files_names_to_scrape=files_names_to_scrape,
-                suppress_exception=suppress_exception
+                suppress_exception=suppress_exception,
+                min_size=min_size,
+                max_size=max_size,
+                random_selection=random_selection,
             )
-            
-            Logger.info(f"After applying limit: Found {len(download_urls)} entries")
-
-            # Convert to streaming format
-            links = []
-            for url, name in zip(download_urls, file_names):
-                links.append({
-                    'url': url,
-                    'file_name': name,
-                    'original_data': (url, name)
-                })
-                
-            return links
-            
-        except Exception as e:
-            Logger.error(f"Error discovering links: {e}")
-            if not suppress_exception:
-                raise e
-            return []
 
     def process_link_data(self, link_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Process a single link - for web engine this is mostly pass-through."""

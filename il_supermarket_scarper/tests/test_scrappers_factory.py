@@ -19,13 +19,12 @@ def test_stable_scraper():
 
 def test_not_active():
     """test grap between active and not"""
+    test_date = datetime_in_tlv(2024, 12, 12, 0, 0, 0)
     all_listed = ScraperFactory.all_listed_scrappers()
-    all_active = ScraperFactory.all_scrapers_name(
-        when_date=datetime_in_tlv(2024, 12, 12, 0, 0, 0)
-    )
+    all_active = ScraperFactory.all_scrapers_name(when_date=test_date)
 
-    expected_to_fail = 0
-    if _is_saturday_in_israel():
+    expected_to_fail = 1  # 'CityMarketKiratGat' is expected to fail
+    if _is_saturday_in_israel(test_date):
         expected_to_fail += 1  # only 'NetivHased' should
 
     assert len(set(all_listed) - set(all_active)) == expected_to_fail

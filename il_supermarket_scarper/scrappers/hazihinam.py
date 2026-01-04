@@ -1,7 +1,14 @@
 import urllib.parse
 import datetime
 from il_supermarket_scarper.engines import MultiPageWeb
-from il_supermarket_scarper.utils import DumpFolderNames, FileTypesFilters, _now
+from il_supermarket_scarper.utils import (
+    DumpFolderNames,
+    FileTypesFilters,
+    _now,
+    convert_unit,
+    UnitSize,
+    string_to_float,
+)
 
 
 
@@ -16,7 +23,7 @@ class HaziHinam(MultiPageWeb):
             streaming_config=streaming_config,
             total_page_xpath="(//li[contains(concat(' ', normalize-space(@class), ' '),"
             + "' pagination-item ')])[last()]/a/@href",
-            total_pages_pattern=r"\d+",
+            total_pages_pattern=r"p=(\d+)",
             page_argument="&p",
         )
 
@@ -24,10 +31,18 @@ class HaziHinam(MultiPageWeb):
         """collect the details deom one page"""
         links = []
         filenames = []
+        file_sizes = []
         for link in html.xpath("//table/tbody/tr"):
             links.append(link.xpath("td[6]/a/@href")[0])
             filenames.append(link.xpath("td[3]")[0].text.strip() + ".xml.gz")
-        return links, filenames
+            file_sizes.append(
+                convert_unit(
+                    string_to_float(link.xpath("td[5]")[0].text.strip()),
+                    UnitSize.KB,
+                    UnitSize.BYTES,
+                )
+            )
+        return links, filenames, file_sizes
 
     def get_file_types_id(self, files_types=None):
         """get the file type id"""

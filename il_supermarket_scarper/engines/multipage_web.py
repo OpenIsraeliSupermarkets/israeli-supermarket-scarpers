@@ -10,6 +10,8 @@ from il_supermarket_scarper.utils import (
     Logger,
     execute_in_parallel,
     multiple_page_aggregtion,
+    convert_nl_size_to_bytes,
+    UnitSize,
 )
 from .web import WebBase
 from .streaming import WebStreamingConfig
@@ -76,6 +78,9 @@ class MultiPageWeb(WebBase):
             self.total_pages_pattern,
             elements[-1],
         )
+        if len(pages) != 1:
+            raise ValueError(f"Found {len(pages)} pages, expected 1")
+
         return int(pages[0])
 
     def collect_files_details_from_site(  # pylint: disable=too-many-locals
@@ -88,6 +93,9 @@ class MultiPageWeb(WebBase):
         filter_zero=False,
         files_names_to_scrape=None,
         suppress_exception=False,
+        min_size=None,
+        max_size=None,
+        random_selection=False,
     ):
 
         main_page_requests = self.get_request_url(
@@ -97,6 +105,7 @@ class MultiPageWeb(WebBase):
 
         download_urls = []
         file_names = []
+        file_sizes = []
         for main_page_request in main_page_requests:
 
             main_page_response = self.session_with_cookies_by_chain(**main_page_request)
@@ -121,8 +130,16 @@ class MultiPageWeb(WebBase):
                     )
                 )
 
-            _download_urls, _file_names = execute_in_parallel(
-                self.process_links_before_download,
+            _download_urls, _file_names, _file_sizes = execute_in_parallel(
+                lambda req: self.process_links_before_download(
+                    req,
+                    limit=limit,
+                    files_types=files_types,
+                    store_id=store_id,
+                    when_date=when_date,
+                    suppress_exception=suppress_exception,
+                    random_selection=random_selection,
+                ),
                 list(pages_to_scrape),
                 aggregtion_function=multiple_page_aggregtion,
                 max_threads=self.max_threads,
@@ -130,36 +147,107 @@ class MultiPageWeb(WebBase):
 
             download_urls.extend(_download_urls)
             file_names.extend(_file_names)
+            file_sizes.extend(
+                _file_sizes if _file_sizes else [None] * len(_download_urls)
+            )
 
         Logger.info(f"Found {len(download_urls)} files")
 
-        file_names, download_urls = self.filter_bad_files_zip(
-            file_names, download_urls, filter_null=filter_null, filter_zero=filter_zero
+        # Filter by file size if specified
+        if min_size is not None or max_size is not None:
+            file_names, download_urls, file_sizes = self.filter_by_file_size(
+                file_names,
+                download_urls,
+                file_sizes,
+                min_size=min_size,
+                max_size=max_size,
+            )
+
+        file_names, download_urls, file_sizes = self.filter_bad_files_zip(
+            file_names,
+            download_urls,
+            file_sizes=file_sizes,
+            filter_null=filter_null,
+            filter_zero=filter_zero,
         )
 
         Logger.info(f"After filtering bad files: Found {len(download_urls)} files")
 
-        file_names, download_urls = self.apply_limit_zip(
+        file_names, download_urls, file_sizes = self.apply_limit_zip(
             file_names,
             download_urls,
+            file_sizes=file_sizes,
             limit=limit,
             files_types=files_types,
             store_id=store_id,
             when_date=when_date,
             files_names_to_scrape=files_names_to_scrape,
             suppress_exception=suppress_exception,
+            random_selection=random_selection,
         )
 
         return download_urls, file_names
+
+    def get_file_size_from_entry(
+        self, html, link_element
+    ):  # pylint: disable=arguments-differ,unused-argument
+        """
+        Extract file size from HTML element.
+        For MultiPageWeb, we need to find the size in the same row as the link.
+        Returns size in bytes, or None if not found.
+        """
+        try:
+            # Find the parent row of the link
+            row = (
+                link_element.getparent().getparent()
+                if link_element.getparent()
+                else None
+            )
+            if row is None:
+                return None
+
+            # Look for size in table cells - typically in a column after the link
+            cells = row.xpath(".//td")
+            for cell in cells:
+                text = cell.text_content().strip() if cell.text_content() else ""
+                # Parse size using the same logic as WebBase
+                size_bytes = convert_nl_size_to_bytes(text, to_unit=UnitSize.BYTES)
+                if size_bytes is not None:
+                    return size_bytes
+        except (AttributeError, TypeError) as e:
+            Logger.debug(f"Error extracting file size from entry: {e}")
+        return None
 
     def collect_files_details_from_page(self, html):
         """collect the details deom one page"""
         links = []
         filenames = []
-        for link in html.xpath('//*[@id="gridContainer"]/table/tbody/tr/td[1]/a/@href'):
+        file_sizes = []
+        # Select all rows from the table
+        rows = html.xpath('//*[@id="gridContainer"]/table/tbody/tr')
+        for row in rows:
+            # Extract link from td[1]/a
+            link_elements = row.xpath("./td[1]/a")
+            if not link_elements:
+                continue
+            link_element = link_elements[0]
+            link = link_element.get("href")
+            if not link:
+                continue
+
+            # Extract size from td[3] (size column)
+            size_elements = row.xpath("./td[3]")
+            size_text = size_elements[0].text_content().strip() if size_elements else ""
+            size_bytes = (
+                convert_nl_size_to_bytes(size_text, to_unit=UnitSize.BYTES)
+                if size_text
+                else None
+            )
+
             links.append(link)
             filenames.append(ntpath.basename(urlsplit(link).path))
-        return links, filenames
+            file_sizes.append(size_bytes)
+        return links, filenames, file_sizes
 
     def process_links_before_download(
         self,
@@ -169,23 +257,26 @@ class MultiPageWeb(WebBase):
         store_id=None,
         when_date=None,
         suppress_exception=True,  # this is nested limit don't fail
+        random_selection=False,
     ):
         """additional processing to the links before download"""
         response = self.session_with_cookies_by_chain(**request)
 
         html = lxml_html.fromstring(response.text)
 
-        file_links, filenames = self.collect_files_details_from_page(html)
+        file_links, filenames, file_sizes = self.collect_files_details_from_page(html)
         Logger.info(f"Page {request}: Found {len(file_links)} files")
 
-        filenames, file_links = self.apply_limit_zip(
+        filenames, file_links, file_sizes = self.apply_limit_zip(
             filenames,
             file_links,
+            file_sizes=file_sizes,
             limit=limit,
             files_types=files_types,
             store_id=store_id,
             when_date=when_date,
             suppress_exception=suppress_exception,
+            random_selection=random_selection,
         )
 
         Logger.info(
@@ -193,101 +284,4 @@ class MultiPageWeb(WebBase):
             f"Found {len(file_links)} line and {len(filenames)} files"
         )
 
-        return file_links, filenames
-
-    def discover_links_streaming(self, files_types=None, store_id=None, when_date=None,
-                               filter_null=False, filter_zero=False, 
-                               files_names_to_scrape=None, suppress_exception=False,
-                               limit=None) -> List[Dict[str, Any]]:
-        """Discover links for streaming processing using MultiPageWeb flow."""
-        try:
-            # Get request URLs
-            main_page_requests = self.get_request_url(
-                files_types=files_types, store_id=store_id, when_date=when_date
-            )
-            
-            if len(main_page_requests) == 0:
-                Logger.warning("No pages to scrape")
-                return []
-            
-            # Process each main page request to get file links
-            download_urls = []
-            file_names = []
-            
-            for main_page_request in main_page_requests:
-                main_page_response = self.session_with_cookies_by_chain(**main_page_request)
-                total_pages = self.get_number_of_pages(main_page_response)
-                
-                if total_pages is None:
-                    pages_to_scrape = [main_page_request]
-                else:
-                    pages_to_scrape = [
-                        {
-                            **main_page_request,
-                            "url": main_page_request["url"] + f"{self.page_argument}=" + str(page_number),
-                        }
-                        for page_number in range(1, total_pages + 1)
-                    ]
-                
-                # Process each page to get file links
-                for page_request in pages_to_scrape:
-                    page_response = self.session_with_cookies_by_chain(**page_request)
-                    html = lxml_html.fromstring(page_response.text)
-                    file_links, filenames = self.collect_files_details_from_page(html)
-                    
-                    # Make URLs absolute if needed
-                    from urllib.parse import urlparse
-                    for i, link in enumerate(file_links):
-                        if not (link.startswith('http://') or link.startswith('https://')):
-                            # Relative URL - make it absolute
-                            if link.startswith('/'):
-                                # Absolute path on same domain
-                                base_url = urlparse(self.url)
-                                file_links[i] = f"{base_url.scheme}://{base_url.netloc}{link}"
-                            else:
-                                # Relative path
-                                file_links[i] = self.url + ('/' if not self.url.endswith('/') else '') + link
-                    
-                    download_urls.extend(file_links)
-                    file_names.extend(filenames)
-            
-            Logger.info(f"Found {len(download_urls)} download urls")
-            
-            # Apply filtering
-            if filter_null or filter_zero:
-                file_names, download_urls = self.filter_bad_files_zip(
-                    file_names, download_urls, filter_null=filter_null, filter_zero=filter_zero
-                )
-                Logger.info(f"After filtering bad files: Found {len(download_urls)} files")
-            
-            # Ensure storage directory exists
-            self.make_storage_path_dir()
-            
-            # Apply limits and filters
-            file_names, download_urls = self.apply_limit_zip(
-                file_names,
-                download_urls,
-                limit=limit,
-                files_types=files_types,
-                store_id=store_id,
-                when_date=when_date,
-                files_names_to_scrape=files_names_to_scrape,
-                suppress_exception=suppress_exception,
-            )
-            
-            # Convert to streaming format
-            links = []
-            for url, name in zip(download_urls, file_names):
-                links.append({
-                    'url': url,
-                    'file_name': name,
-                    'original_data': (url, name)
-                })
-            
-            return links
-            
-        except Exception as e:
-            Logger.error(f"Error discovering links: {e}")
-            if not suppress_exception:
-                raise
-            return []
+        return file_links, filenames, file_sizes

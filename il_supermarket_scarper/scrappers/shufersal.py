@@ -41,8 +41,13 @@ class Shufersal(MultiPageWeb):
 
     def build_params(self, files_types=None, store_id=None, when_date=None):
         """build the params for the request"""
-        params = {"catID": ",".join(self.get_file_types_id(files_types))}
+        file_type_ids = self.get_file_types_id(files_types)
 
-        if store_id:
-            params["storeId"] = store_id
-        return [f"/FileObject/UpdateCategory?{urllib.parse.urlencode(params)}"]
+        urls = []
+        for file_type_id in file_type_ids:
+            params = {"catID": file_type_id}
+
+            if store_id:
+                params["storeId"] = store_id
+            urls.append(f"/FileObject/UpdateCategory?{urllib.parse.urlencode(params)}")
+        return urls

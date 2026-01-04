@@ -12,7 +12,7 @@ class YaynotBitanAndCarrefourTestCase(
     """Test case for ScraperFactory.YAYNO_BITAN_AND_CARREFOUR."""
 
 
-class CofixTestCase(make_test_case(ScraperFactory.COFIX, 299)):
+class CofixTestCase(make_test_case(ScraperFactory.COFIX, 405)):
     """Test case for ScraperFactory.COFIX."""
 
 

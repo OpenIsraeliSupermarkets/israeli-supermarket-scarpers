@@ -144,7 +144,18 @@ def url_connection_retry(init_timeout=15):
                 raise ValueError("shouldn't be called!")
             return inner_async
         else:
-            # Sync version
+            # Sync version with timeout handling from main
+            # Store the original requested timeout in a closure variable
+            requested_timeout_ref = [init_timeout]
+
+            def outer_wrapper(*args, **kwargs):
+                # Capture the timeout from the original call before retry processes it
+                original_timeout = kwargs.get("timeout", init_timeout)
+                if original_timeout > requested_timeout_ref[0]:
+                    requested_timeout_ref[0] = original_timeout
+                # Now call the retry-decorated function
+                return retry_decorated_func(*args, **kwargs)
+
             @retry(
                 exceptions=exceptions,
                 tries=4,
@@ -155,10 +166,15 @@ def url_connection_retry(init_timeout=15):
                 timeout=init_timeout,
                 backoff_timeout=10,
             )
-            def inner(*args, **kwargs):
-                socket.setdefaulttimeout(kwargs.get("timeout", 15))
+            def retry_decorated_func(*args, **kwargs):
+                # Use the higher of retry's timeout or the originally requested timeout
+                retry_timeout = kwargs.get("timeout", init_timeout)
+                actual_timeout = max(retry_timeout, requested_timeout_ref[0])
+                socket.setdefaulttimeout(actual_timeout)
+                kwargs["timeout"] = actual_timeout
                 return func(*args, **kwargs)
-            return inner
+
+            return outer_wrapper
 
     return wrapper
 
@@ -233,7 +249,7 @@ def get_random_user_agent():
 
 @url_connection_retry()
 async def session_with_cookies(
-    url, timeout=15, chain_cookie_name=None, method="GET", body=None
+    url, timeout=15, chain_cookie_name=None, method="GET", body=None,headers=None
 ):
     """
     Request resource with cookies enabled.
@@ -244,6 +260,7 @@ async def session_with_cookies(
     - chain_cookie_name: Optional, name for saving/loading cookies
     - method: HTTP method, defaults to GET
     - body: Data to be sent in the request body (for POST or PUT requests)
+    - headers: Optional dict of custom headers to include in the request
     """
 
     session = requests.Session()
@@ -265,9 +282,11 @@ async def session_with_cookies(
     )
 
     if method == "POST":
-        response_content = session.post(url, data=body, timeout=timeout)
+        response_content = session.post(
+            url, data=body, timeout=timeout, headers=headers
+        )
     else:
-        response_content = session.get(url, timeout=timeout)
+        response_content = session.get(url, timeout=timeout, headers=headers)
 
     if response_content.status_code != 200:
         Logger.debug(
@@ -319,8 +338,8 @@ def render_webpage(url):
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page()
-        page.goto(url)
-        page.wait_for_load_state("networkidle")
+        page.goto(url, timeout=60000)
+        page.wait_for_load_state("domcontentloaded", timeout=60000)
         content = page.content()
         browser.close()
     return content
@@ -328,6 +347,7 @@ def render_webpage(url):
 
 def get_from_latast_webpage(url, extraction_type):
     """get the content from the page with playwrite"""
+    time.sleep(1)
     content = render_webpage(url)
     return get_from_webpage(content, extraction_type)
 
@@ -339,7 +359,7 @@ def get_from_webpage(cached_page, extraction_type):
         browser = p.chromium.launch()
         page = browser.new_page()
         page.set_content(cached_page)
-        page.wait_for_load_state("networkidle")
+        page.wait_for_load_state("domcontentloaded", timeout=60000)
         content = get_from_playwrite(page, extraction_type)
         browser.close()
     return content
@@ -375,7 +395,7 @@ def url_retrieve(url, filename, timeout=30):
 def collect_from_ftp(
     ftp_host, ftp_username, ftp_password, ftp_path, arg=None, timeout=60 * 5
 ):
-    """collect all files to download from the site"""
+    """collect all files to download from the site, returns list of (filename, size) tuples"""
     Logger.info(
         f"Open connection to FTP server with {ftp_host} "
         f", username: {ftp_username} , password: {ftp_password}"
@@ -388,8 +408,19 @@ def collect_from_ftp(
         files = ftp_session.nlst(arg)
     else:
         files = ftp_session.nlst()
+
+    # Get file sizes for each file
+    files_with_sizes = []
+    for filename in files:
+        try:
+            size = ftp_session.size(filename)
+            files_with_sizes.append((filename, size))
+        except (error_perm, AttributeError):
+            # If size() fails (e.g., for directories or permission issues), use None
+            files_with_sizes.append((filename, None))
+
     ftp_session.quit()
-    return files
+    return files_with_sizes
 
 
 @download_connection_retry()

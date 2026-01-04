@@ -58,14 +58,16 @@ class Wolt(WebBase):
         )
 
     def extract_task_from_entry(self, all_trs):
-        """extract download links and file names from page list"""
+        """extract download links, file names, and file sizes from page list"""
         download_urls = []
         file_names = []
+        file_sizes = []
         for x in all_trs:
             try:
                 download_urls.append(x[1])
                 file_names.append(x[0])
+                file_sizes.append(None)
             except (AttributeError, KeyError, IndexError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")
 
-        return download_urls, file_names
+        return download_urls, file_names, file_sizes
