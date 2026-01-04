@@ -32,18 +32,11 @@ class MeshnatYosef1(WebBase):
 
     async def extract_task_from_entry(self, all_trs):
         """extract download links, file names, and file sizes from page list"""
-        download_urls = []
-        file_names = []
-        file_sizes = []
         for x in all_trs:
             try:
-                download_urls.append(x["url"])
-                file_names.append(x["name"])
-                file_sizes.append(self.get_file_size_from_entry(x))
+                yield x["url"], x["name"], self.get_file_size_from_entry(x)
             except (AttributeError, KeyError, IndexError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")
-
-        return download_urls, file_names, file_sizes
 
 
 class MeshnatYosef2(Bina):
