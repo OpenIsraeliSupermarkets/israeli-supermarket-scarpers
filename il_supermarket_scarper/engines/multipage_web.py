@@ -52,10 +52,9 @@ class MultiPageWeb(WebBase):
             files_types=files_types, store_id=store_id, when_date=when_date
         ):
             yield {
-                    "url": self.url + arguments,
-                    "method": "GET",
-                }
-            
+                "url": self.url + arguments,
+                "method": "GET",
+            }
 
     def get_number_of_pages(self, response):
         """get the number of pages to scarpe"""
@@ -91,6 +90,7 @@ class MultiPageWeb(WebBase):
         random_selection=False,
     ):
         from il_supermarket_scarper.utils.state import FilterState
+
         state = FilterState()
 
         async def generate_all_files():
@@ -98,10 +98,11 @@ class MultiPageWeb(WebBase):
                 files_types=files_types, store_id=store_id, when_date=when_date
             )
 
-
             async for main_page_request in main_page_requests:
 
-                main_page_response = await self.session_with_cookies_by_chain(**main_page_request)
+                main_page_response = await self.session_with_cookies_by_chain(
+                    **main_page_request
+                )
 
                 total_pages = self.get_number_of_pages(main_page_response)
                 Logger.info(f"Found {total_pages} pages")
@@ -122,9 +123,9 @@ class MultiPageWeb(WebBase):
                             range(1, total_pages + 1),
                         )
                     )
-        
+
                 for req in pages_to_scrape:
-                
+
                     async for task in self.process_links_before_download(
                         req,
                         limit=limit,
@@ -137,6 +138,7 @@ class MultiPageWeb(WebBase):
                         yield task
 
             # Aggregate results from all pages
+
         files = generate_all_files()
 
         # Filter by file size if specified
@@ -149,14 +151,12 @@ class MultiPageWeb(WebBase):
         else:
             filtered_gen = files
 
-
         bad_files_filtered = self.filter_bad_files_zip(
             filtered_gen,
             filter_null=filter_null,
             filter_zero=filter_zero,
             by_function=lambda x: x[1],
         )
-
 
         limited_files = self.apply_limit_zip(
             state,
@@ -247,7 +247,7 @@ class MultiPageWeb(WebBase):
     ):
         """additional processing to the links before download"""
         from il_supermarket_scarper.utils.state import FilterState
-        
+
         response = await self.session_with_cookies_by_chain(**request)
 
         html = lxml_html.fromstring(response.text)

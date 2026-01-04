@@ -131,7 +131,9 @@ class Bina(Aspx):
         url = spath[0]["SPath"]
         ext = file_link.split(".")[-1]
 
-        await asyncio.to_thread(url_retrieve, url, file_save_path + "." + ext, timeout=timeout)
+        await asyncio.to_thread(
+            url_retrieve, url, file_save_path + "." + ext, timeout=timeout
+        )
         return file_save_path + "." + ext
 
     async def _wget_file(self, file_link, file_save_path):

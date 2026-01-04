@@ -70,9 +70,12 @@ class ScraperStatus:
         """Filter files already existing in long-term memory or previously downloaded."""
         if self.database.is_collection_enabled() and self.filter_between_itrations:
             async for file in filelist:
-                if not await self.database.find_document(
-                    self.VERIFIED_DOWNLOADS, {"file_name": by_function(file)}
-                ) and by_function(file) in files_names_to_scrape:
+                if (
+                    not await self.database.find_document(
+                        self.VERIFIED_DOWNLOADS, {"file_name": by_function(file)}
+                    )
+                    and by_function(file) in files_names_to_scrape
+                ):
                     yield file
         else:
             # Fallback: filter according to the disk
@@ -81,13 +84,16 @@ class ScraperStatus:
                 file_list_on_disk = os.listdir(storage_path)
             else:
                 file_list_on_disk = []
-            
+
             async for file in filelist:
                 # Yield files that are NOT already downloaded (not on disk)
                 # OR if files_names_to_scrape is specified, only yield files in that list
                 if files_names_to_scrape is not None:
                     # If specific files requested, only yield those that match and aren't downloaded
-                    if by_function(file) in files_names_to_scrape and by_function(file) not in file_list_on_disk:
+                    if (
+                        by_function(file) in files_names_to_scrape
+                        and by_function(file) not in file_list_on_disk
+                    ):
                         yield file
                 else:
                     # No specific files requested, yield all that aren't already downloaded

@@ -35,10 +35,10 @@ class Wolt(WebBase):
             formatted_date = (perspective - timedelta(days=days_back)).strftime(
                 "%Y-%m-%d"
             )
-            yield { 
-                    "url": self.url.replace("index.html", f"{formatted_date}.html"),
-                    "method": "GET",
-                }
+            yield {
+                "url": self.url.replace("index.html", f"{formatted_date}.html"),
+                "method": "GET",
+            }
 
     def get_data_from_page(self, req_res):
         """get the file list from a page"""

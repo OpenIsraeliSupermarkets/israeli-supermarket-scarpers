@@ -12,6 +12,7 @@ from il_supermarket_scarper.utils import (
 from .engine import Engine
 from il_supermarket_scarper.utils.state import FilterState
 
+
 class Cerberus(Engine):
     """scraper for all Cerberus base site. (seems like can't support historical data)"""
 
@@ -112,7 +113,9 @@ class Cerberus(Engine):
         """check if the file extension is valid"""
         return file_name.split(".")[-1] in self.target_file_extensions
 
-    async def filter_by_file_extension(self, files: AsyncGenerator[tuple[str, str, int], None]):
+    async def filter_by_file_extension(
+        self, files: AsyncGenerator[tuple[str, str, int], None]
+    ):
         """filter the files by the file extension"""
         async for file in files:
             if not self.is_file_extension_valid(file[0]):
@@ -134,7 +137,7 @@ class Cerberus(Engine):
         random_selection=False,
     ):
         """collect all files to download from the site"""
-        
+
         state = FilterState()
         async for filter_arg in self.build_filter_arg(store_id, when_date, files_types):
             # Get async generator from FTP
@@ -145,7 +148,7 @@ class Cerberus(Engine):
                 self.ftp_path,
                 filter_arg,
             )
-            
+
             # Convert (filename, size) -> (filename, url_placeholder, size)
             async def convert_to_async_gen(files_gen):
                 async for filename, size in files_gen:
@@ -165,7 +168,9 @@ class Cerberus(Engine):
                 by_function=lambda x: x[0],
             )
 
-            files: AsyncGenerator[tuple[str, str, int], None] = self.filter_by_file_extension(files)
+            files: AsyncGenerator[tuple[str, str, int], None] = (
+                self.filter_by_file_extension(files)
+            )
 
             # apply noraml filter
             files_gen = self.apply_limit(
@@ -180,13 +185,12 @@ class Cerberus(Engine):
                 by_function=lambda x: x[0],
                 random_selection=random_selection,
             )
-            
+
             # Stream files and count them
             file_count = 0
             async for filename, _, _ in files_gen:
                 file_count += 1
                 yield filename
-            
 
     async def persist_from_ftp(self, file_name):
         """download file to hard drive and extract it."""
@@ -219,7 +223,9 @@ class Cerberus(Engine):
                 Logger.debug(
                     f"File size is {os.path.getsize(temporary_gz_file_path)} bytes."
                 )
-                await asyncio.to_thread(extract_xml_file_from_gz_file, temporary_gz_file_path)
+                await asyncio.to_thread(
+                    extract_xml_file_from_gz_file, temporary_gz_file_path
+                )
 
             Logger.debug(f"Done persisting file {file_name}")
             extract_succefully = True
@@ -232,7 +238,11 @@ class Cerberus(Engine):
             error = str(exception)
             restart_and_retry = True
         finally:
-            if ext == ".gz" and temporary_gz_file_path and os.path.exists(temporary_gz_file_path):
+            if (
+                ext == ".gz"
+                and temporary_gz_file_path
+                and os.path.exists(temporary_gz_file_path)
+            ):
                 await asyncio.to_thread(os.remove, temporary_gz_file_path)
 
         return {

@@ -39,13 +39,13 @@ class Aspx(WebBase, ABC):
 
     async def get_request_url(self, files_types=None, store_id=None, when_date=None):
         """build the request given the base url and the query params"""
-        
+
         async for query_params in self._get_all_possible_query_string_params(
             files_types=files_types, store_id=store_id, when_date=when_date
         ):
             async for url in self._build_query_url(query_params, [self.url]):
                 yield url
-                
+
     @abstractmethod
     def get_href_from_entry(self, entry):
         """get download link for entry (tr)"""

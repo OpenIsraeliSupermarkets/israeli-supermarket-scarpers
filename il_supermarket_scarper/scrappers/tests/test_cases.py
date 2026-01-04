@@ -244,6 +244,8 @@ def make_test_case(scraper_enum, store_id):
 
         async def test_scrape_file_today(self):
             """test fetching file from today"""
-            await self._clean_scarpe_delete(scraper_enum, when_date=_testing_now(), limit=1)
+            await self._clean_scarpe_delete(
+                scraper_enum, when_date=_testing_now(), limit=1
+            )
 
     return TestScapers

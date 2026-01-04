@@ -124,13 +124,13 @@ def async_url_connection_retry(init_timeout=15):
             original_timeout = kwargs.get("timeout", init_timeout)
             if original_timeout > requested_timeout_ref[0]:
                 requested_timeout_ref[0] = original_timeout
-            
+
             # Manual retry logic for async functions
             _tries = 4
             _delay = 2
             backoff = 2
             max_delay = 5 * 60
-            
+
             while _tries:
                 try:
                     retry_timeout = kwargs.get("timeout", init_timeout)
@@ -142,7 +142,7 @@ def async_url_connection_retry(init_timeout=15):
                     _tries -= 1
                     if not _tries:
                         raise
-                    
+
                     if Logger is not None:
                         Logger.warning(
                             "%s, configured timeout %s, retrying in %s seconds",
@@ -151,11 +151,11 @@ def async_url_connection_retry(init_timeout=15):
                             _delay,
                         )
                         Logger.error_execption(error)
-                    
+
                     await asyncio.sleep(_delay)
                     _delay = min(_delay * backoff, max_delay)
                     requested_timeout_ref[0] += 10  # backoff_timeout
-            
+
             raise ValueError("shouldn't be called!")
 
         return outer_wrapper
@@ -385,32 +385,32 @@ async def collect_from_ftp(
         f"Open async connection to FTP server with {ftp_host} "
         f", username: {ftp_username} , password: {ftp_password}"
     )
-    
+
     def _sync_ftp_list():
         """Synchronous FTP listing using FTP_TLS - returns a list"""
         ftp = FTP_TLS(ftp_host, ftp_username, ftp_password, timeout=timeout)
         ftp.trust_server_pasv_ipv4_address = True
         try:
             ftp.cwd(ftp_path)
-            
+
             # Use MLSD for detailed file information if available, otherwise fall back to NLST + SIZE
             files_with_sizes = []
             try:
                 # MLSD provides detailed info including size
                 all_entries = list(ftp.mlsd())
-                
+
                 for name, facts in all_entries:
-                    if facts.get('type') == 'file':
-                        size_str = facts.get('size')
+                    if facts.get("type") == "file":
+                        size_str = facts.get("size")
                         try:
                             size = int(size_str) if size_str else None
                         except (ValueError, TypeError):
                             size = None
-                        
+
                         # Apply glob filter if arg is provided (case-insensitive)
                         if arg is None or fnmatch.fnmatch(name.lower(), arg.lower()):
                             files_with_sizes.append((name, size))
-                    elif facts.get('type') in ['dir', 'cdir', 'pdir']:
+                    elif facts.get("type") in ["dir", "cdir", "pdir"]:
                         # Skip directories
                         pass
                     else:
@@ -423,26 +423,26 @@ async def collect_from_ftp(
                     file_list = ftp.nlst(arg)
                 else:
                     file_list = ftp.nlst()
-                
+
                 # Get size for each file
                 for filename in file_list:
                     try:
-                        ftp.voidcmd('TYPE I')  # Set binary mode
+                        ftp.voidcmd("TYPE I")  # Set binary mode
                         size = ftp.size(filename)
                     except (error_perm, Exception):
                         size = None
                     files_with_sizes.append((filename, size))
-            
+
             return files_with_sizes
         finally:
             try:
                 ftp.quit()
             except Exception:
                 ftp.close()
-    
+
     # Run synchronous FTP operations in a thread pool and get the list
     files_list = await asyncio.to_thread(_sync_ftp_list)
-    
+
     # Yield each file as an async generator
     for filename, size in files_list:
         yield (filename, size)

@@ -1,8 +1,6 @@
-
-
 class FilterState:
     """Track the state of files as they pass through filters"""
-    
+
     def __init__(self):
         self.total_input = 0
         self.after_already_downloaded = 0
@@ -14,4 +12,3 @@ class FilterState:
         self.files_was_filtered_since_already_download = False
         self.unique_seen = set()
         self.file_pass_limit = 0
-

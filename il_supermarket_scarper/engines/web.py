@@ -45,16 +45,16 @@ class WebBase(Engine):
             Logger.debug(f"Error extracting file size from entry: {e}")
         return None
 
-
     async def extract_task_from_entry(self, all_trs):
         """extract download links, file names, and file sizes from page list"""
-       
+
         async for x in all_trs:
             try:
-                yield self.url + x.a.attrs["href"], x.a.attrs["href"].split(".")[0].split("/")[-1],self.get_file_size_from_entry(x)
+                yield self.url + x.a.attrs["href"], x.a.attrs["href"].split(".")[
+                    0
+                ].split("/")[-1], self.get_file_size_from_entry(x)
             except (AttributeError, KeyError, IndexError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")
-
 
     async def apply_limit_zip(
         self,
@@ -70,8 +70,7 @@ class WebBase(Engine):
         random_selection=False,
     ):
         """apply limit to zip"""
-        
-        
+
         async for item in self.apply_limit(
             state,
             files,
@@ -96,9 +95,11 @@ class WebBase(Engine):
         """apply bad files filtering to zip"""
 
         async for file in files:
-            if self.is_pass_bad_files_filter(file, filter_zero, filter_null, by_function):
+            if self.is_pass_bad_files_filter(
+                file, filter_zero, filter_null, by_function
+            ):
                 yield file
-        
+
     async def collect_files_details_from_site(  # pylint: disable=too-many-locals
         self,
         limit=None,
@@ -136,7 +137,7 @@ class WebBase(Engine):
                 max_size=max_size,
             )
         else:
-            filtered_files = extracted_files   
+            filtered_files = extracted_files
 
         bad_files_filtered = self.filter_bad_files_zip(
             filtered_files,
