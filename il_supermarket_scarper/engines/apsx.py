@@ -15,21 +15,17 @@ class Aspx(WebBase, ABC):
         )
         self.aspx_page = aspx_page
 
-    def extract_task_from_entry(self, all_trs):
+    async def extract_task_from_entry(self, all_trs):
         """from the trs extract the download urls, file names, and file sizes"""
 
-        download_urls = []
-        file_names = []
-        file_sizes = []
         for x in all_trs:
             try:
                 download_url = self.url + self.get_href_from_entry(x)
-                download_urls.append(download_url)
-                file_names.append(self.get_file_name_no_ext_from_entry(download_url))
-                file_sizes.append(self.get_file_size_from_entry(x))
+                file_name = self.get_file_name_no_ext_from_entry(download_url)
+                file_size = self.get_file_size_from_entry(x)
+                yield download_url, file_name, file_size
             except (AttributeError, KeyError, IndexError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")
-        return download_urls, file_names, file_sizes
 
     @abstractmethod
     async def _get_all_possible_query_string_params(
