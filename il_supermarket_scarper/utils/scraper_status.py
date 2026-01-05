@@ -30,7 +30,7 @@ class ScraperStatus:
     @lock_by_string()
     def on_scraping_start(self, limit, files_types, **additional_info):
         """Report that scraping has started."""
-        self._append_an_update(
+        self._insert_global_status(
             ScraperStatus.STARTED,
             limit=limit,
             files_requested=files_types,
@@ -53,17 +53,36 @@ class ScraperStatus:
         **additional_info,
     ):
         """Report that file details have been collected."""
-        self._append_an_update(
+        # Convert to comma-separated strings to match contract
+        if isinstance(file_name_collected_from_site, list):
+            file_names_str = ", ".join(file_name_collected_from_site)
+        else:
+            file_names_str = file_name_collected_from_site
+            
+        if isinstance(links_collected_from_site, list):
+            links_str = ", ".join(links_collected_from_site)
+        else:
+            links_str = links_collected_from_site
+            
+        self._insert_event(
             ScraperStatus.COLLECTED,
-            file_name_collected_from_site=file_name_collected_from_site,
-            links_collected_from_site=links_collected_from_site,
+            file_names_collected=file_names_str,
+            links_collected=links_str,
             **additional_info,
         )
 
     @lock_by_string()
     def register_downloaded_file(self, results):
         """Report that the file has been downloaded."""
-        self._append_an_update(ScraperStatus.DOWNLOADED, **results)
+        # Map results to contract field names
+        event_data = {
+            "file_name_downloaded": results.get("file_name", ""),
+            "downloaded_successfully": results.get("downloaded", False),
+            "extracted_successfully": results.get("extract_succefully", False),
+            "error_message": results.get("error"),
+            "restart_and_retry": results.get("restart_and_retry", False)
+        }
+        self._insert_event(ScraperStatus.DOWNLOADED, **event_data)
         self._add_downloaded_files_to_list(results)
 
 
@@ -108,12 +127,12 @@ class ScraperStatus:
         if self.database.is_collection_enabled():
             when = _now() 
             if results["extract_succefully"]:
-                self.database.insert_documents(self.VERIFIED_DOWNLOADS, {"file_name": results["file_name"], "when": when})
+                self.database.insert_document(self.VERIFIED_DOWNLOADS, {"file_name": results["file_name"], "when": when})
 
     @lock_by_string()
     def on_scrape_completed(self, folder_name, completed_successfully=True):
         """Report when scraping is completed."""
-        self._append_an_update(
+        self._insert_global_status(
             ScraperStatus.ESTIMATED_SIZE,
             folder_size=log_folder_details(folder_name),
             completed_successfully=completed_successfully,
@@ -122,19 +141,32 @@ class ScraperStatus:
     @lock_by_string()
     def register_download_fail(self, execption, download_urls=None, file_names=None):
         """report when the scraping in failed"""
-        self._append_an_update(
+        # Map to contract field names
+        download_url = download_urls[0] if download_urls else ""
+        file_name = file_names[0] if file_names else ""
+        
+        self._insert_event(
             ScraperStatus.FAILED,
             execption=str(execption),
             traceback=traceback.format_exc(),
-            download_urls=download_urls if download_urls else [],
-            file_names=file_names if file_names else [],
+            download_url=download_url,
+            file_name=file_name,
         )
 
-    def _append_an_update(self, status, **additional_info):
-        """Insert an update into the MongoDB collection."""
+    def _insert_global_status(self, status, **additional_info):
+        """Insert a global status update (started, estimated_size)."""
         document = {
             "status": status,
             "when": _now(),
             **additional_info
         }
-        self.database.insert_document(self.task_id, document)
+        self.database.insert_document("global_status", document)
+    
+    def _insert_event(self, status, **additional_info):
+        """Insert an event update (collected, downloaded, failed)."""
+        document = {
+            "status": status,
+            "when": _now(),
+            **additional_info
+        }
+        self.database.insert_document("events", document)

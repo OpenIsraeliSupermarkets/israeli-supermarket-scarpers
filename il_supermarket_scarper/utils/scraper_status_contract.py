@@ -92,14 +92,13 @@ class ScraperStatusOutput(BaseModel):
         Ensures that for every file name appearing in any event (collect, download, fail, verified),
         there is a reasonable 'story' for that file: collected -> (downloaded or failed) -> (verified or failed)
         """
-        from collections import defaultdict
+        from collections import defaultdict, Counter
 
         # Gather all unique file names across all event types
         file_names_set = set()
 
         for event in self.events:
             if isinstance(event, CollectedStatus):
-                # file_names_collected may be a comma-separated string or a single file
                 collected_names = event.file_names_collected
                 if isinstance(collected_names, str):
                     for fn in collected_names.split(","):
@@ -114,8 +113,9 @@ class ScraperStatusOutput(BaseModel):
         for vd in self.verified_downloads:
             file_names_set.add(vd.file_name)
 
-        # Build per-file event records
+        # Build per-file event records and count status types per file
         per_file = defaultdict(lambda: {'collected': False, 'downloaded': False, 'failed': False, 'verified': False})
+        per_file_status_counter = defaultdict(list)  # List of status "types" per file
 
         for event in self.events:
             if isinstance(event, CollectedStatus):
@@ -125,15 +125,22 @@ class ScraperStatusOutput(BaseModel):
                         fn = fn.strip()
                         if fn:
                             per_file[fn]['collected'] = True
+                            per_file_status_counter[fn].append("collected")
             elif isinstance(event, DownloadedStatus):
-                per_file[event.file_name_downloaded]['downloaded'] = True
+                fn = event.file_name_downloaded
+                per_file[fn]['downloaded'] = True
+                per_file_status_counter[fn].append("downloaded")
             elif isinstance(event, FailedStatus):
-                per_file[event.file_name]['failed'] = True
+                fn = event.file_name
+                per_file[fn]['failed'] = True
+                per_file_status_counter[fn].append("failed")
 
         for vd in self.verified_downloads:
-            per_file[vd.file_name]['verified'] = True
+            fn = vd.file_name
+            per_file[fn]['verified'] = True
+            per_file_status_counter[fn].append("verified")
 
-        # Now, for each file, validate its story:
+        # Now, for each file, validate its story and ensure no duplicate status for file
         for fn, status in per_file.items():
             # Must be collected
             if not status['collected']:
@@ -144,6 +151,10 @@ class ScraperStatusOutput(BaseModel):
             # If downloaded, must be also verified
             if status['downloaded'] and not status['verified']:
                 return False
-            # It's OK if file only failed after being collected
+            # Check duplicate statuses for the same file
+            status_counter = Counter(per_file_status_counter[fn])
+            for stat_name, count in status_counter.items():
+                if count > 1:
+                    return False  # Duplicate status type for a file, not allowed
 
         return True

@@ -15,7 +15,6 @@ from .status import (
 from .scraper_status import ScraperStatus
 from .scraper_status_contract import (
     FolderSizeInfo,
-    DownloadResult,
     StartedStatus,
     CollectedStatus,
     DownloadedStatus,

@@ -149,7 +149,7 @@ def make_test_case(scraper_enum, store_id):
                 status_file_path = os.path.join(status_folder, status_file)
                 with open(status_file_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
-                ScraperStatusOutput(**data)
+                assert ScraperStatusOutput(**data).validate_file_status(), f"Status file {status_file} is not valid"
                 Logger.info(f"Status file {status_file} validated successfully")
 
         async def _clean_scarpe_delete(
