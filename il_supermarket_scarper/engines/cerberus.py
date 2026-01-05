@@ -71,8 +71,7 @@ class Cerberus(Engine):
                     file_name_collected_from_site=file_name,
                     links_collected_from_site=""
                 )
-                result = self.persist_from_ftp(file_name)
-                yield result
+                yield self.persist_from_ftp(file_name)
             except Exception as e:  # pylint: disable=broad-except
                 self.register_download_fail(e, file_name)
                 raise e
@@ -252,7 +251,7 @@ class Cerberus(Engine):
             ):
                 await asyncio.to_thread(os.remove, temporary_gz_file_path)
 
-        return {
+        yield {
             "file_name": file_name,
             "downloaded": downloaded,
             "extract_succefully": extract_succefully,
