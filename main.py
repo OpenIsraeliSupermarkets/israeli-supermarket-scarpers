@@ -64,6 +64,32 @@ def load_params():
         except ValueError:
             raise ValueError("TODAY must be in the format 'YYYY-MM-DD HH:MM'")
 
+    # validate output mode (disk or queue)
+    output_mode = os.getenv("OUTPUT_MODE", "disk").lower()
+    if output_mode not in ["disk", "queue"]:
+        raise ValueError(f"OUTPUT_MODE must be 'disk' or 'queue', but got {output_mode}")
+
+    # Pass output configuration instead of file_output instances
+    # Each scraper will create its own file_output based on its folder name
+    output_configuration = {
+        "output_mode": output_mode,
+    }
+
+    if output_mode == "queue":
+        # Configure queue output
+        queue_type = os.getenv("QUEUE_TYPE", "memory").lower()
+        
+        if queue_type not in ["memory", "kafka"]:
+            raise ValueError(f"QUEUE_TYPE must be 'memory' or 'kafka', but got {queue_type}")
+        
+        output_configuration["queue_type"] = queue_type
+        
+    else:
+        # Disk output configuration (default)        
+        output_configuration["base_storage_path"] = os.getenv("STORAGE_PATH", None)
+    
+    kwargs["output_configuration"] = output_configuration
+
     return kwargs
 
 
