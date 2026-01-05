@@ -4,6 +4,9 @@ import asyncio
 from abc import ABC, abstractmethod
 from typing import Any, Dict
 import os
+import gzip
+import io
+import zipfile
 from .logger import Logger
 from .gzip_utils import extract_xml_file_from_gz_file
 
@@ -157,21 +160,52 @@ class QueueFileOutput(FileOutput):
         file_content: bytes,
         metadata: Dict[str, Any] = None,
     ) -> Dict[str, Any]:
-        """Send file to queue."""
+        """Send file to queue, extracting gzipped files first."""
         saved = False
+        extract_successfully = False
         error = None
 
         try:
-            message = {
-                "file_name": file_name,
-                "file_link": file_link,
-                "file_content": file_content,
-                "metadata": metadata or {},
-            }
+            # Extract gzipped files in-memory before sending to queue
+            if file_name.endswith(".gz"):
+                try:
+                    # Try gzip extraction first
+                    file_content = gzip.decompress(file_content)
+                    # Change extension from .gz to .xml
+                    file_name = os.path.splitext(file_name)[0] + ".xml"
+                    extract_successfully = True
+                    Logger.debug(f"Extracted gzipped file to {file_name}")
+                except (gzip.BadGzipFile, OSError):
+                    # Try zip extraction as fallback
+                    try:
+                        with zipfile.ZipFile(io.BytesIO(file_content)) as the_zip:
+                            zip_info = the_zip.infolist()[0]
+                            with the_zip.open(zip_info) as the_file:
+                                file_content = the_file.read()
+                        # Change extension from .gz to .xml
+                        file_name = os.path.splitext(file_name)[0] + ".xml"
+                        extract_successfully = True
+                        Logger.debug(f"Extracted zipped file to {file_name}")
+                    except Exception as extract_error:
+                        Logger.error(
+                            f"Failed to extract {file_name}: {extract_error}"
+                        )
+                        error = str(extract_error)
+                        extract_successfully = False
+            else:
+                extract_successfully = True
 
-            await self.queue_handler.send(message)
-            saved = True
-            Logger.debug(f"Sent {file_name} to queue")
+            if extract_successfully:
+                message = {
+                    "file_name": file_name,
+                    "file_link": file_link,
+                    "file_content": file_content,
+                    "metadata": metadata or {},
+                }
+
+                await self.queue_handler.send(message)
+                saved = True
+                Logger.debug(f"Sent {file_name} to queue")
 
         except Exception as exception:  # pylint: disable=broad-except
             Logger.error(f"Error sending {file_link} to queue: {exception}")
@@ -181,7 +215,7 @@ class QueueFileOutput(FileOutput):
         return {
             "file_name": file_name,
             "saved": saved,
-            "extract_successfully": saved,  # No extraction needed for queue
+            "extract_successfully": extract_successfully,
             "error": error,
             "metadata": metadata or {},
         }

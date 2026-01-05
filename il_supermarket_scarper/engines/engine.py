@@ -406,7 +406,6 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         )
         self.storage_path.make_sure_accassible()
         completed_successfully = True
-        results = []
         try:
             async for result in self._scrape(
                 limit=limit,
@@ -421,8 +420,9 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 max_size=max_size,
                 random_selection=random_selection,
             ):
-                results.append(result)
-            self.on_download_completed(results=results)
+                self.register_downloaded_file(result)
+                yield result
+                
         except Exception as e:  # pylint: disable=broad-exception-caught
             if not suppress_exception:
                 raise e
@@ -434,7 +434,6 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             )
             self._post_scraping()
 
-        return results
 
     @abstractmethod
     async def _scrape(

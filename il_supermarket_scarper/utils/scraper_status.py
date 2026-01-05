@@ -47,7 +47,7 @@ class ScraperStatus:
         self.filter_between_itrations = True
 
     @lock_by_string()
-    def on_collected_details(
+    def register_collected_file(
         self,
         file_name_collected_from_site,
         links_collected_from_site="",
@@ -62,7 +62,7 @@ class ScraperStatus:
         )
 
     @lock_by_string()
-    def on_download_completed(self, **additional_info):
+    def register_downloaded_file(self, **additional_info):
         """Report that the file has been downloaded."""
         self._insert_an_update(ScraperStatus.DOWNLOADED, **additional_info)
         self._add_downloaded_files_to_list(**additional_info)
@@ -106,15 +106,9 @@ class ScraperStatus:
     def _add_downloaded_files_to_list(self, results, **_):
         """Add downloaded files to the MongoDB collection."""
         if self.database.is_collection_enabled():
-            when = _now()
-
-            documents = []
-            for res in results:
-                if res["extract_succefully"]:
-                    documents.append(
-                        {"file_name": res["file_name"], "when": when},
-                    )
-            self.database.insert_documents(self.VERIFIED_DOWNLOADS, documents)
+            when = _now() 
+            if results["extract_succefully"]:
+                self.database.insert_documents(self.VERIFIED_DOWNLOADS, {"file_name": results["file_name"], "when": when})
 
     @lock_by_string()
     def on_scrape_completed(self, folder_name, completed_successfully=True):
@@ -126,7 +120,7 @@ class ScraperStatus:
         )
 
     @lock_by_string()
-    def on_download_fail(self, execption, download_urls=None, file_names=None):
+    def register_download_fail(self, execption, download_urls=None, file_names=None):
         """report when the scraping in failed"""
         self._insert_an_update(
             ScraperStatus.FAILED,

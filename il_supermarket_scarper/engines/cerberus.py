@@ -51,26 +51,25 @@ class Cerberus(Engine):
         max_size=None,
         random_selection=False,
     ):
-        files = []
-        try:
-            async for file_name in self.collect_files_details_from_site(
-                limit=limit,
-                files_types=files_types,
-                filter_null=filter_null,
-                filter_zero=filter_zero,
-                store_id=store_id,
-                when_date=when_date,
-                files_names_to_scrape=files_names_to_scrape,
-                suppress_exception=suppress_exception,
-                min_size=min_size,
-                max_size=max_size,
-                random_selection=random_selection,
-            ):
-                files.append(file_name)
-                yield await self.persist_from_ftp(file_name)
-        except Exception as e:  # pylint: disable=broad-except
-            self.on_download_fail(e, file_names=files)
-            raise e
+        
+        async for file_name in self.collect_files_details_from_site(
+            limit=limit,
+            files_types=files_types,
+            filter_null=filter_null,
+            filter_zero=filter_zero,
+            store_id=store_id,
+            when_date=when_date,
+            files_names_to_scrape=files_names_to_scrape,
+            suppress_exception=suppress_exception,
+            min_size=min_size,
+            max_size=max_size,
+            random_selection=random_selection,
+        ):
+            try:
+                yield self.persist_from_ftp(file_name)
+            except Exception as e:  # pylint: disable=broad-except
+                self.register_download_fail(e,file_name=file_name)
+                raise e
 
     async def get_type_pattern(self, files_types):
         """get the file type pattern"""
