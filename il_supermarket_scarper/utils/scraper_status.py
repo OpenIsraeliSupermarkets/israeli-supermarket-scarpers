@@ -7,6 +7,7 @@ from .status import _now, get_output_folder
 from .lock_utils import lock_by_string
 from .file_output import FileOutput
 
+
 class ScraperStatus:
     """A class that abstracts the database interface for scraper status."""
 

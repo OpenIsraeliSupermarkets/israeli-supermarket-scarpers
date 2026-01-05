@@ -30,9 +30,7 @@ class Cerberus(Engine):
         max_threads=5,
         file_output=None,
     ):
-        super().__init__(
-            chain, chain_id, folder_name, max_threads, file_output=file_output
-        )
+        super().__init__(chain, chain_id, max_threads, file_output=file_output)
         self.ftp_host = ftp_host
         self.ftp_path = ftp_path
         self.ftp_username = ftp_username
@@ -208,7 +206,9 @@ class Cerberus(Engine):
                 raise ValueError(f"File {file_name} extension is not .gz or .xml")
 
             Logger.debug(f"Start persisting file {file_name}")
-            temporary_gz_file_path = os.path.join(self.storage_path.get_storage_path(), file_name)
+            temporary_gz_file_path = os.path.join(
+                self.storage_path.get_storage_path(), file_name
+            )
 
             await asyncio.to_thread(
                 fetch_temporary_gz_file_from_ftp,

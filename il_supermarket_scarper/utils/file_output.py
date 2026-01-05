@@ -36,6 +36,7 @@ class FileOutput(ABC):
     def make_sure_accassible(self):
         """create the storage path"""
         pass
+
     @abstractmethod
     def get_output_location(self) -> str:
         """Get a string representation of where files are being saved."""

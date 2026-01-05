@@ -61,7 +61,6 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             # Create storage path from folder_name and create DiskFileOutput
             file_output = DiskFileOutput(storage_path=DumpFolderNames[chain].value)
 
-
         # Initialize status tracking (uses folder for status DB location)
         super().__init__(chain.value, "status", file_output=file_output)
 
@@ -455,7 +454,6 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
     ):
         """method to be implemeted by the child class"""
 
-
     def get_chain_id(self):
         """get the chain id as list"""
         if isinstance(self.chain_id, list):
@@ -529,7 +527,9 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
 
         try:
             # Determine file path for temporary download
-            file_save_path = os.path.join(self.storage_path.get_storage_path(), file_name)
+            file_save_path = os.path.join(
+                self.storage_path.get_storage_path(), file_name
+            )
 
             # Add extension if needed
             if not (
