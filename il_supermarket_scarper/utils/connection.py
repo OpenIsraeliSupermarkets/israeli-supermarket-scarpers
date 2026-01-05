@@ -427,10 +427,7 @@ async def collect_from_ftp(
                     try:
                         ftp.voidcmd("TYPE I")  # Set binary mode
                         size = ftp.size(filename)
-                    except (
-                        error_perm,
-                        Exception,
-                    ):  # pylint: disable=broad-exception-caught
+                    except error_perm:
                         size = None
                     files_with_sizes.append((filename, size))
 

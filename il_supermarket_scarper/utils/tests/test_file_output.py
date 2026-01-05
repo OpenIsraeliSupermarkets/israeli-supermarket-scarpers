@@ -1,22 +1,11 @@
 """Tests for file output configuration."""
 
-import pytest
-import os
-import tempfile
-from il_supermarket_scarper.utils import (
-    DiskFileOutput,
-    QueueFileOutput,
-    InMemoryQueueHandler,
-    ScraperConfig,
-)
-
-
-"""Tests for file output configuration."""
-
-import pytest
-import os
-import tempfile
 import asyncio
+import os
+import tempfile
+
+import pytest
+
 from il_supermarket_scarper.utils import (
     DiskFileOutput,
     QueueFileOutput,

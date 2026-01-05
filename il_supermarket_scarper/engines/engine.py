@@ -6,7 +6,6 @@ import datetime
 import asyncio
 from typing import AsyncGenerator, Optional
 from il_supermarket_scarper.utils import (
-    get_output_folder,
     FileTypesFilters,
     Logger,
     ScraperStatus,

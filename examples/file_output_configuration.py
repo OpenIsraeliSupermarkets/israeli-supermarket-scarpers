@@ -52,7 +52,7 @@ async def example_inmemory_queue():
     # Create in-memory queue handler
     queue_handler = InMemoryQueueHandler(queue_name="test_queue")
 
-    # Create queue output
+    # Create queue output (note: need to await send_message, not just call it)
     queue_output = QueueFileOutput(queue_handler)
 
     # Create scraper with queue output
@@ -77,7 +77,7 @@ async def example_kafka_queue():
             bootstrap_servers="localhost:9092", topic="supermarket_files"
         )
 
-        # Create queue output
+        # Create queue output (note: need to await send_message, not just call it)
         queue_output = QueueFileOutput(kafka_handler)
 
         # Create scraper with Kafka output
@@ -99,7 +99,7 @@ async def example_with_scraper_config():
 
     # Create unified configuration - choose disk OR queue
 
-    # Option A: Disk output config
+    # Option A: Disk output config (chain_name provided later via get_file_output)
     disk_config = ScraperConfig.disk(
         folder_name="my_custom_output",
         filter_null=True,
@@ -127,9 +127,12 @@ async def example_with_scraper_config():
     scraper_class = ScraperFactory.get(ScraperFactory.WOLT)
     file_output = config.get_file_output("Wolt", default_folder="output_example")
     scraper = scraper_class(
-        folder_name=config.get_folder_name() or "output_example",
+        folder_name="output_example",
         file_output=file_output,
     )
+
+    # Mark disk_config as used to avoid unused variable warning
+    _ = disk_config
 
     # Use config values in scraping call
     # await scraper.scrape(

@@ -1,5 +1,6 @@
 """Abstract file output interface for saving scraped files."""
 
+import asyncio
 from abc import ABC, abstractmethod
 from typing import Any, Dict
 import os
@@ -30,22 +31,18 @@ class FileOutput(ABC):
         Returns:
             Dict with keys: file_name, saved, error, metadata
         """
-        pass
 
     @abstractmethod
     def make_sure_accassible(self):
         """create the storage path"""
-        pass
 
     @abstractmethod
     def get_output_location(self) -> str:
         """Get a string representation of where files are being saved."""
-        pass
 
     @abstractmethod
     def get_storage_path(self) -> str:
         """Get the file system path for storing status files and metadata."""
-        pass
 
 
 class DiskFileOutput(FileOutput):
@@ -71,8 +68,6 @@ class DiskFileOutput(FileOutput):
         metadata: Dict[str, Any] = None,
     ) -> Dict[str, Any]:
         """Save file to disk and optionally extract if .gz."""
-        import asyncio
-
         saved = False
         extract_successfully = False
         error = None
@@ -199,6 +194,11 @@ class QueueFileOutput(FileOutput):
         """Return the storage path for status files and metadata."""
         return self.storage_path
 
+    def make_sure_accassible(self):
+        """create the storage path"""
+        if not os.path.exists(self.storage_path):
+            os.makedirs(self.storage_path)
+
 
 class AbstractQueueHandler(ABC):
     """Abstract base class for queue handlers (Kafka, RabbitMQ, etc.)."""
@@ -211,17 +211,17 @@ class AbstractQueueHandler(ABC):
         Args:
             message: Dictionary containing file_name, file_link, file_content, metadata
         """
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def get_queue_name(self) -> str:
         """Return the name/identifier of the queue."""
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     async def close(self) -> None:
         """Close the queue connection."""
-        pass
+        raise NotImplementedError
 
 
 class KafkaQueueHandler(AbstractQueueHandler):
@@ -247,9 +247,9 @@ class KafkaQueueHandler(AbstractQueueHandler):
         # Lazy initialization of producer
         if self.producer is None:
             try:
-                # Try to import aiokafka
-                from aiokafka import AIOKafkaProducer
-                import json
+                # Try to import aiokafka (optional dependency)
+                from aiokafka import AIOKafkaProducer  # pylint: disable=import-outside-toplevel
+                import json  # pylint: disable=import-outside-toplevel
 
                 self.producer = AIOKafkaProducer(
                     bootstrap_servers=self.bootstrap_servers,
@@ -301,8 +301,6 @@ class InMemoryQueueHandler(AbstractQueueHandler):
 
     def __init__(self, queue_name: str = "default"):
         """Initialize in-memory queue."""
-        import asyncio
-
         self.queue_name = queue_name
         self.queue = asyncio.Queue()
         self.messages = []  # For debugging/testing
@@ -319,7 +317,6 @@ class InMemoryQueueHandler(AbstractQueueHandler):
 
     async def close(self) -> None:
         """Close queue (no-op for in-memory)."""
-        pass
 
     def get_all_messages(self):
         """Get all messages (for testing)."""

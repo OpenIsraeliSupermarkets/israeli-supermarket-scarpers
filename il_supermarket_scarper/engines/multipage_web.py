@@ -76,10 +76,10 @@ class MultiPageWeb(WebBase):
 
     async def generate_all_files(
         self,
-        limit=None,
         files_types=None,
         store_id=None,
         when_date=None,
+        limit=None,
         suppress_exception=False,
         random_selection=False,
     ):

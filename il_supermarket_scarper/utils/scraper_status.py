@@ -3,7 +3,7 @@ import traceback
 
 from .status import log_folder_details
 from .databases import JsonDataBase
-from .status import _now, get_output_folder
+from .status import _now
 from .lock_utils import lock_by_string
 from .file_output import FileOutput
 

@@ -106,6 +106,7 @@ class WebBase(Engine):
                 yield file
 
     async def generate_all_files(self, files_types=None, store_id=None, when_date=None):
+        """Generate all files from the web site."""
         async for url in self.get_request_url(
             files_types=files_types, store_id=store_id, when_date=when_date
         ):
