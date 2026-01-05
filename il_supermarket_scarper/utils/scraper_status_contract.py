@@ -87,3 +87,6 @@ class ScraperStatusOutput(BaseModel):
     """
     events: List[Union[StartedStatus,CollectedStatus,DownloadedStatus,FailedStatus,EstimatedSizeStatus]] = Field(default_factory=list)
     verified_downloads: List[VerifiedDownload] = Field(default_factory=list)
+    
+    
+    
