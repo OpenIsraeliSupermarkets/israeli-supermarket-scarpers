@@ -134,9 +134,7 @@ def make_test_case(scraper_enum, store_id):
             status_folder = os.path.join(parent_path, "status")
             
             # Status folder might not exist if collection is disabled
-            if not os.path.exists(status_folder):
-                Logger.warning("Status folder not found - skipping format validation")
-                return
+            assert os.path.exists(status_folder), f"Status folder {status_folder} not found"
             
             # Find JSON files in status folder
             status_files = [

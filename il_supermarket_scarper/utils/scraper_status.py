@@ -20,8 +20,7 @@ class ScraperStatus:
 
     def __init__(self, database_name, base_path, file_output: FileOutput) -> None:
         # Use parent directory of storage path for status files
-        storage_path = file_output.get_storage_path()
-        status_path = os.path.dirname(storage_path) if storage_path else base_path
+        status_path = os.path.join(os.path.dirname(file_output.get_storage_path()), "status")
         self.database = JsonDataBase(
             database_name, status_path if status_path else base_path
         )
@@ -62,10 +61,11 @@ class ScraperStatus:
         )
 
     @lock_by_string()
-    def register_downloaded_file(self, **additional_info):
+    def register_downloaded_file(self, results):
         """Report that the file has been downloaded."""
-        self._insert_an_update(ScraperStatus.DOWNLOADED, **additional_info)
-        self._add_downloaded_files_to_list(**additional_info)
+        self._insert_an_update(ScraperStatus.DOWNLOADED, **results)
+        self._add_downloaded_files_to_list(results)
+
 
     async def filter_already_downloaded(
         self, storage_path, files_names_to_scrape, filelist, by_function=lambda x: x

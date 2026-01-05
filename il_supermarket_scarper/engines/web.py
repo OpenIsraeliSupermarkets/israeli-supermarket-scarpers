@@ -208,7 +208,7 @@ class WebBase(Engine):
                 
                 # Download and extract the file
                 result = await self.save_and_extract((download_url, file_name))
-                self.register_downloaded_file(file_name=file_name)
+                self.register_downloaded_file(result)
                 yield result
                 
             except Exception as e:  # pylint: disable=broad-except
