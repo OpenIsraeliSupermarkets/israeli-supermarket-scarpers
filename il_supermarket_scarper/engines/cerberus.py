@@ -3,7 +3,6 @@ import datetime
 import asyncio
 from typing import AsyncGenerator, List
 from il_supermarket_scarper.utils import (
-    extract_xml_file_from_gz_file,
     Logger,
     collect_from_ftp,
     fetch_temporary_gz_file_from_ftp,
@@ -51,7 +50,7 @@ class Cerberus(Engine):
         max_size=None,
         random_selection=False,
     ):
-        
+
         async for file_name in self.collect_files_details_from_site(
             limit=limit,
             files_types=files_types,
@@ -69,7 +68,7 @@ class Cerberus(Engine):
                 # Register that we've collected this file's details
                 self.register_collected_file(
                     file_name_collected_from_site=file_name,
-                    links_collected_from_site=""
+                    links_collected_from_site="",
                 )
                 async for result in self.persist_from_ftp(file_name):
                     yield result

@@ -422,7 +422,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             ):
                 self.register_downloaded_file(result)
                 yield result
-                
+
         except Exception as e:  # pylint: disable=broad-exception-caught
             if not suppress_exception:
                 raise e
@@ -433,7 +433,6 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 self.get_storage_path(), completed_successfully=completed_successfully
             )
             self._post_scraping()
-
 
     @abstractmethod
     async def _scrape(

@@ -36,13 +36,17 @@ class ScraperConfig:  # pylint: disable=too-many-instance-attributes
 
     def is_disk_output(self) -> bool:
         """Check if output is to disk (vs queue)."""
-        return self.folder_name is not None or isinstance(self.file_output, DiskFileOutput)
+        return self.folder_name is not None or isinstance(
+            self.file_output, DiskFileOutput
+        )
 
     def is_queue_output(self) -> bool:
         """Check if output is to a queue."""
         return isinstance(self.file_output, QueueFileOutput)
 
-    def get_file_output(self, chain_name: str, default_folder: str = None) -> FileOutput:
+    def get_file_output(
+        self, chain_name: str, default_folder: str = None
+    ) -> FileOutput:
         """
         Get the file output handler for this config.
 

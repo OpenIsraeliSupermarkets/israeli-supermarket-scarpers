@@ -186,10 +186,8 @@ class QueueFileOutput(FileOutput):
                         file_name = os.path.splitext(file_name)[0] + ".xml"
                         extract_successfully = True
                         Logger.debug(f"Extracted zipped file to {file_name}")
-                    except Exception as extract_error:
-                        Logger.error(
-                            f"Failed to extract {file_name}: {extract_error}"
-                        )
+                    except Exception as extract_error:  # pylint: disable=broad-exception-caught
+                        Logger.error(f"Failed to extract {file_name}: {extract_error}")
                         error = str(extract_error)
                         extract_successfully = False
             else:
@@ -282,8 +280,9 @@ class KafkaQueueHandler(AbstractQueueHandler):
         if self.producer is None:
             try:
                 # Try to import aiokafka (optional dependency)
-                from aiokafka import AIOKafkaProducer  # pylint: disable=import-outside-toplevel
-                import json  # pylint: disable=import-outside-toplevel
+                # pylint: disable=import-outside-toplevel
+                from aiokafka import AIOKafkaProducer
+                import json
 
                 self.producer = AIOKafkaProducer(
                     bootstrap_servers=self.bootstrap_servers,

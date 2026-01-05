@@ -19,11 +19,9 @@ from il_supermarket_scarper.utils import (
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
 from il_supermarket_scarper.scraper_stability import ScraperStability
 from il_supermarket_scarper.utils import (
-    DiskFileOutput,
     QueueFileOutput,
     InMemoryQueueHandler,
 )
-from il_supermarket_scarper.utils.gzip_utils import extract_xml_file_from_gz_file
 
 
 def make_test_case(scraper_enum, store_id):
@@ -132,24 +130,25 @@ def make_test_case(scraper_enum, store_id):
             # Find the status folder (should be sibling to download_path)
             parent_path = os.path.dirname(dump_path)
             status_folder = os.path.join(parent_path, "status")
-            
+
             # Status folder might not exist if collection is disabled
-            assert os.path.exists(status_folder), f"Status folder {status_folder} not found"
-            
+            assert os.path.exists(
+                status_folder
+            ), f"Status folder {status_folder} not found"
+
             # Find JSON files in status folder
-            status_files = [
-                f for f in os.listdir(status_folder)
-                if f.endswith('.json')
-            ]
-            
+            status_files = [f for f in os.listdir(status_folder) if f.endswith(".json")]
+
             assert len(status_files) == 1, "should be only one status file"
-            
+
             # Validate each status file - will raise ValidationError if format shifted
             for status_file in status_files:
                 status_file_path = os.path.join(status_folder, status_file)
                 with open(status_file_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
-                assert ScraperStatusOutput(**data).validate_file_status(), f"Status file {status_file} is not valid"
+                assert ScraperStatusOutput(
+                    **data
+                ).validate_file_status(), f"Status file {status_file} is not valid"
                 Logger.info(f"Status file {status_file} validated successfully")
 
         async def _clean_scarpe_delete(
@@ -170,7 +169,7 @@ def make_test_case(scraper_enum, store_id):
                     when_date=when_date,
                 )
 
-        async def __clean_scarpe_delete(
+        async def __clean_scarpe_delete(  # pylint: disable=too-many-locals
             self,
             scraper_enum,
             dump_path="temp",
@@ -191,17 +190,17 @@ def make_test_case(scraper_enum, store_id):
                     storage_path = get_output_folder(
                         DumpFolderNames[scraper_enum.name].value, dump_path
                     )
-                    
+
                     # Create in-memory queue handler for testing
                     queue_handler = InMemoryQueueHandler(
                         queue_name=f"test_{scraper_enum.name}"
                     )
-                    
+
                     # Use QueueFileOutput instead of DiskFileOutput
                     scraper = init_scraper_function(
                         file_output=QueueFileOutput(queue_handler, storage_path)
                     )
-                    
+
                     # Enable collection status to generate JSON for validation
                     scraper.enable_collection_status()
 
@@ -212,7 +211,7 @@ def make_test_case(scraper_enum, store_id):
                         "when_date": when_date,
                         "filter_null": True,
                         "filter_zero": True,
-                        "suppress_exception": True,
+                        "suppress_exception": False,
                         "min_size": 100,
                         "max_size": 10000000,
                     }
@@ -226,14 +225,14 @@ def make_test_case(scraper_enum, store_id):
                     for message in messages:
                         file_name = message["file_name"]
                         file_content = message["file_content"]
-                        
+
                         # Determine file path
                         file_save_path = os.path.join(storage_path, file_name)
 
                         # Write file to disk
                         with open(file_save_path, "wb") as f:
                             f.write(file_content)
-                        
+
                     files_found = os.listdir(dump_path)
                     assert (
                         len(files_found) == 2

@@ -20,7 +20,9 @@ class ScraperStatus:
 
     def __init__(self, database_name, base_path, file_output: FileOutput) -> None:
         # Use parent directory of storage path for status files
-        status_path = os.path.join(os.path.dirname(file_output.get_storage_path()), "status")
+        status_path = os.path.join(
+            os.path.dirname(file_output.get_storage_path()), "status"
+        )
         self.database = JsonDataBase(
             database_name, status_path if status_path else base_path
         )
@@ -58,12 +60,12 @@ class ScraperStatus:
             file_names_str = ", ".join(file_name_collected_from_site)
         else:
             file_names_str = file_name_collected_from_site
-            
+
         if isinstance(links_collected_from_site, list):
             links_str = ", ".join(links_collected_from_site)
         else:
             links_str = links_collected_from_site
-            
+
         self._insert_event(
             ScraperStatus.COLLECTED,
             file_names_collected=file_names_str,
@@ -80,11 +82,10 @@ class ScraperStatus:
             "downloaded_successfully": results.get("downloaded", False),
             "extracted_successfully": results.get("extract_succefully", False),
             "error_message": results.get("error"),
-            "restart_and_retry": results.get("restart_and_retry", False)
+            "restart_and_retry": results.get("restart_and_retry", False),
         }
         self._insert_event(ScraperStatus.DOWNLOADED, **event_data)
         self._add_downloaded_files_to_list(results)
-
 
     async def filter_already_downloaded(
         self, storage_path, files_names_to_scrape, filelist, by_function=lambda x: x
@@ -125,9 +126,12 @@ class ScraperStatus:
     def _add_downloaded_files_to_list(self, results, **_):
         """Add downloaded files to the MongoDB collection."""
         if self.database.is_collection_enabled():
-            when = _now() 
+            when = _now()
             if results["extract_succefully"]:
-                self.database.insert_document(self.VERIFIED_DOWNLOADS, {"file_name": results["file_name"], "when": when})
+                self.database.insert_document(
+                    self.VERIFIED_DOWNLOADS,
+                    {"file_name": results["file_name"], "when": when},
+                )
 
     @lock_by_string()
     def on_scrape_completed(self, folder_name, completed_successfully=True):
@@ -151,18 +155,10 @@ class ScraperStatus:
 
     def _insert_global_status(self, status, **additional_info):
         """Insert a global status update (started, estimated_size)."""
-        document = {
-            "status": status,
-            "when": _now(),
-            **additional_info
-        }
+        document = {"status": status, "when": _now(), **additional_info}
         self.database.insert_document("global_status", document)
-    
+
     def _insert_event(self, status, **additional_info):
         """Insert an event update (collected, downloaded, failed)."""
-        document = {
-            "status": status,
-            "when": _now(),
-            **additional_info
-        }
+        document = {"status": status, "when": _now(), **additional_info}
         self.database.insert_document("events", document)

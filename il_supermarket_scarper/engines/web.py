@@ -1,5 +1,4 @@
 import re
-import asyncio
 from bs4 import BeautifulSoup
 from il_supermarket_scarper.utils import Logger
 from il_supermarket_scarper.utils import convert_nl_size_to_bytes, UnitSize
@@ -185,7 +184,7 @@ class WebBase(Engine):
         random_selection=False,
     ):
         """scrape the files from multipage sites"""
-        
+
         async for download_url, file_name in self.collect_files_details_from_site(
             limit=limit,
             files_types=files_types,
@@ -203,14 +202,14 @@ class WebBase(Engine):
                 # Register that we've collected this file's details
                 self.register_collected_file(
                     file_name_collected_from_site=file_name,
-                    links_collected_from_site=download_url
+                    links_collected_from_site=download_url,
                 )
-                
+
                 # Download and extract the file
                 result = await self.save_and_extract((download_url, file_name))
                 # Note: register_downloaded_file is called by parent Engine.scrape()
                 yield result
-                
+
             except Exception as e:  # pylint: disable=broad-except
-                self.register_download_fail(e, download_urls=[download_url], file_names=[file_name])
+                self.register_download_fail(e, file_name)
                 raise e
