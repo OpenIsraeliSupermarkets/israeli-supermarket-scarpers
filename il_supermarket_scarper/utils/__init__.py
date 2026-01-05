@@ -13,6 +13,18 @@ from .status import (
     hour_files_expected_to_be_accassible,
 )
 from .scraper_status import ScraperStatus
+from .scraper_status_contract import (
+    FolderSizeInfo,
+    DownloadResult,
+    StartedStatus,
+    CollectedStatus,
+    DownloadedStatus,
+    FailedStatus,
+    EstimatedSizeStatus,
+    VerifiedDownload,
+    StatusEvent,
+    ScraperStatusOutput,
+)
 from .file_types import FileTypesFilters
 from .connection import (
     download_connection_retry,

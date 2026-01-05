@@ -4,6 +4,7 @@ import tempfile
 import re
 import os
 import uuid
+import json
 import xml.etree.ElementTree as ET
 from lxml import etree
 from il_supermarket_scarper.utils import (
@@ -13,6 +14,7 @@ from il_supermarket_scarper.utils import (
     _testing_now,
     change_xml_encoding,
     get_output_folder,
+    ScraperStatusOutput,
 )
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
 from il_supermarket_scarper.scraper_stability import ScraperStability
@@ -122,6 +124,36 @@ def make_test_case(scraper_enum, store_id):
                     change_xml_encoding(full_file_path)
                     ET.parse(full_file_path)
 
+        def _make_sure_status_file_is_valid(self, dump_path):
+            """
+            Validate that the status JSON file matches the expected format contract.
+            Will fail if format has drifted from t.json specification.
+            """
+            # Find the status folder (should be sibling to download_path)
+            parent_path = os.path.dirname(dump_path)
+            status_folder = os.path.join(parent_path, "status")
+            
+            # Status folder might not exist if collection is disabled
+            if not os.path.exists(status_folder):
+                Logger.warning("Status folder not found - skipping format validation")
+                return
+            
+            # Find JSON files in status folder
+            status_files = [
+                f for f in os.listdir(status_folder)
+                if f.endswith('.json')
+            ]
+            
+            assert len(status_files) == 1, "should be only one status file"
+            
+            # Validate each status file - will raise ValidationError if format shifted
+            for status_file in status_files:
+                status_file_path = os.path.join(status_folder, status_file)
+                with open(status_file_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                ScraperStatusOutput(**data)
+                Logger.info(f"Status file {status_file} validated successfully")
+
         async def _clean_scarpe_delete(
             self,
             scraper_enum,
@@ -171,6 +203,9 @@ def make_test_case(scraper_enum, store_id):
                     scraper = init_scraper_function(
                         file_output=QueueFileOutput(queue_handler, storage_path)
                     )
+                    
+                    # Enable collection status to generate JSON for validation
+                    scraper.enable_collection_status()
 
                     kwarg = {
                         "limit": limit,
@@ -184,7 +219,8 @@ def make_test_case(scraper_enum, store_id):
                         "max_size": 10000000,
                     }
 
-                    await scraper.scrape(**kwarg)
+                    async for _ in scraper.scrape(**kwarg):
+                        pass
 
                     # Write queued files to disk for validation
                     os.makedirs(storage_path, exist_ok=True)
@@ -211,6 +247,7 @@ def make_test_case(scraper_enum, store_id):
                     )
                     files_found = os.listdir(download_path)
 
+                    self._make_sure_status_file_is_valid(download_path)
                     if not ScraperStability.is_validate_scraper_found_no_files(
                         scraper_enum.name,
                         limit=limit,
