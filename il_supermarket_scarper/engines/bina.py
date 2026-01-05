@@ -6,6 +6,7 @@ import asyncio
 from il_supermarket_scarper.utils import (
     Logger,
     url_retrieve,
+    url_retrieve_to_memory,
     FileTypesFilters,
 )
 
@@ -136,6 +137,17 @@ class Bina(Aspx):
             url_retrieve, url, file_save_path + "." + ext, timeout=timeout
         )
         return file_save_path + "." + ext
+
+    async def retrieve_file_to_memory(self, file_link, timeout=30):
+        """Retrieve file from Bina website directly to memory"""
+        response_content = await self.session_with_cookies_by_chain(
+            file_link,
+        )
+        spath = json.loads(response_content.content)
+        Logger.debug(f"Found spath: {spath}")
+
+        url = spath[0]["SPath"]
+        return await asyncio.to_thread(url_retrieve_to_memory, url, timeout=timeout)
 
     async def _wget_file(self, file_link, file_save_path):
         response_content = await self.session_with_cookies_by_chain(

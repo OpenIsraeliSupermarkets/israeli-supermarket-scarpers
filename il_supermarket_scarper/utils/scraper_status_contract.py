@@ -108,7 +108,10 @@ class ScraperStatusOutput(BaseModel):
         fail, verified), there is a reasonable 'story' for that file: collected ->
         (downloaded or failed) -> (verified or failed)
         """
-        from collections import defaultdict, Counter  # pylint: disable=import-outside-toplevel
+        from collections import (
+            defaultdict,
+            Counter,
+        )  # pylint: disable=import-outside-toplevel
 
         # Gather all unique file names across all event types
         file_names_set = set()

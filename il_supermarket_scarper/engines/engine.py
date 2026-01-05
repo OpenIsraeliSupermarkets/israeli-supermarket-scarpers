@@ -12,7 +12,9 @@ from il_supermarket_scarper.utils import (
     extract_xml_file_from_gz_file,
     session_with_cookies,
     url_retrieve,
+    url_retrieve_to_memory,
     wget_file,
+    wget_file_to_memory,
     RestartSessionError,
     DumpFolderNames,
     FileOutput,
@@ -511,11 +513,17 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         )
         return file_save_path
 
+    async def retrieve_file_to_memory(self, file_link, timeout=30):
+        """download file directly to memory"""
+        return await asyncio.to_thread(
+            url_retrieve_to_memory, file_link, timeout=timeout
+        )
+
     async def save_and_extract(self, arg):
-        """download file and extract it"""
+        """download file and extract it (in-memory)"""
 
         file_link, file_name = arg
-        Logger.debug(f"Processing {file_link}")
+        Logger.debug(f"Processing {file_link} (in-memory)")
 
         # Download the file content first
         downloaded = False
@@ -523,40 +531,33 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         restart_and_retry = False
 
         try:
-            # Determine file path for temporary download
-            file_save_path = os.path.join(
-                self.storage_path.get_storage_path(), file_name
-            )
-
-            # Add extension if needed
-            if not (
-                file_save_path.endswith(".gz") or file_save_path.endswith(".xml")
-            ) and (file_link.endswith(".gz") or file_link.endswith(".xml")):
-                file_save_path = (
-                    file_save_path + "." + file_link.split("?")[0].split(".")[-1]
+            # Determine file name with extension
+            file_name_with_ext = file_name
+            if not (file_name.endswith(".gz") or file_name.endswith(".xml")) and (
+                file_link.endswith(".gz") or file_link.endswith(".xml")
+            ):
+                file_name_with_ext = (
+                    file_name + "." + file_link.split(".")[-1]
                 )
 
-            # Download file content
+            # Download file content directly to memory
             try:
-                file_save_path_with_ext = await self.retrieve_file(
-                    file_link, file_save_path
-                )
+                file_content = await self.retrieve_file_to_memory(file_link, timeout=30)
             except Exception as e:  # pylint: disable=broad-except
                 Logger.warning(f"Error downloading {file_link}: {e}")
-                file_save_path_with_ext = await self._wget_file(
-                    file_link, file_save_path
+                file_content = await asyncio.to_thread(
+                    wget_file_to_memory, file_link, timeout=30
                 )
             downloaded = True
 
-            # Read file content
-            file_content = await asyncio.to_thread(
-                self._read_file_content, file_save_path_with_ext
-            )
+            # Log file size if it's a gzip file
+            if file_name_with_ext.endswith(".gz"):
+                Logger.debug(f"File size is {len(file_content)} bytes.")
 
             # Use the file output handler to save
             result = await self.storage_path.save_file(
                 file_link=file_link,
-                file_name=os.path.basename(file_save_path_with_ext),
+                file_name=file_name_with_ext,
                 file_content=file_content,
                 metadata={
                     "chain": self.chain.value,
@@ -564,10 +565,6 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                     "original_filename": file_name,
                 },
             )
-
-            # Clean up temporary file if we're using queue output
-            if not isinstance(self.storage_path, DiskFileOutput):
-                await asyncio.to_thread(os.remove, file_save_path_with_ext)
 
             return {
                 "file_name": file_name,

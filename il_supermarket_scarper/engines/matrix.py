@@ -21,41 +21,6 @@ class Matrix(Aspx):
         super().__init__(chain, chain_id, url, aspx_page, file_output=file_output)
         self.chain_hebrew_name = chain_hebrew_name
 
-    # def get_file_types_id(self, files_types=None):
-    #     """get the file type id"""
-    #     if files_types is None:
-    #         return "all"
-
-    #     types = []
-    #     for ftype in files_types:
-    #         if ftype == FileTypesFilters.STORE_FILE.name:
-    #             types.append("storefull")
-    #         if ftype == FileTypesFilters.PRICE_FILE.name:
-    #             types.append("price")
-    #         if ftype == FileTypesFilters.PROMO_FILE.name:
-    #             types.append("promo")
-    #         if ftype == FileTypesFilters.PRICE_FULL_FILE.name:
-    #             types.append("pricefull")
-    #         if ftype == FileTypesFilters.PROMO_FULL_FILE.name:
-    #             types.append("promofull")
-    #     return types
-
-    # def get_when(self, when_date):
-    #     """get the when date"""
-    #     if when_date is None:
-    #         when_date = _now()
-    #     return when_date.strftime("%d/%m/%Y")
-
-    # def get_chain_n_stores__id(self, store_id=None, c_id=None):
-    #     """get the store id"""
-    #     if store_id is None:
-    #         chain_id = str(c_id)  # + "001"
-    #         store_id = "-1"
-    #     else:
-    #         chain_id = str(c_id)
-    #         store_id = str(c_id) + "001" + str(store_id).zfill(3)
-    #     return chain_id, store_id
-
     async def _build_query_url(self, query_params, base_urls):
         for base in base_urls:
             yield {
@@ -70,33 +35,6 @@ class Matrix(Aspx):
         """get the arguments need to add to the url"""
 
         yield {}
-
-        # else:
-        #     chain_id, store_id = self.get_chain_n_stores__id(
-        #         store_id=store_id, c_id=self.chain_id
-        #     )
-        #     post_body.append(
-        #         {
-        #             "ctl00$TextArea": "",
-        #             "ctl00$MainContent$chain": chain_id,
-        #             "ctl00$MainContent$subChain": "-1",
-        #             "ctl00$MainContent$branch": store_id,
-        #             "ctl00$MainContent$txtDate": self.get_when(when_date=when_date),
-        #             "ctl00$MainContent$fileType": "all",
-        #             "ctl00$MainContent$btnSearch": "חיפוש",
-        #         }
-        #     )
-
-        # # add file types to url
-        # if files_types:
-        #     chains_urls_with_types = []
-        #     for files_type in self.get_file_types_id(files_types=files_types):
-        #         for chain_url in post_body:
-        #             chain_url["ctl00$MainContent$fileType"] = files_type
-        #             chains_urls_with_types.append(chain_url)
-        #     post_body = chains_urls_with_types
-
-        # return post_body
 
     def get_href_from_entry(self, entry):
         """get download link for entry (tr)"""

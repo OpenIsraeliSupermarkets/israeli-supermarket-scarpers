@@ -30,9 +30,12 @@ from .connection import (
     disable_when_outside_israel,
     session_with_cookies,
     url_retrieve,
+    url_retrieve_to_memory,
     collect_from_ftp,
     fetch_temporary_gz_file_from_ftp,
+    fetch_file_from_ftp_to_memory,
     wget_file,
+    wget_file_to_memory,
 )
 from .loop import execute_in_parallel, multiple_page_aggregtion
 from .exceptions import RestartSessionError

@@ -1,4 +1,5 @@
 import contextlib
+import io
 import ntpath
 import os
 import time
@@ -375,6 +376,30 @@ def url_retrieve(url, filename, timeout=30):
         raise ValueError(msg, (filename, _request.headers))
 
 
+def url_retrieve_to_memory(url, timeout=30):
+    """Download URL content directly to memory (BytesIO)."""
+    with contextlib.closing(
+        requests.get(
+            url, stream=True, timeout=timeout, headers={"Accept-Encoding": None}
+        )
+    ) as _request:
+        _request.raise_for_status()
+        size = int(_request.headers.get("Content-Length", "-1"))
+        read = 0
+        file_buffer = io.BytesIO()
+        for chunk in _request.iter_content(chunk_size=None):
+            time.sleep(0.5)
+            read += len(chunk)
+            file_buffer.write(chunk)
+
+    if size >= 0 and read < size:
+        msg = f"retrieval incomplete: got only {read:d} out of {size:d} bytes"
+        raise ValueError(msg, (url, _request.headers))
+
+    file_buffer.seek(0)  # Reset to beginning for reading
+    return file_buffer.getvalue()  # Return bytes
+
+
 async def collect_from_ftp(
     ftp_host, ftp_username, ftp_password, ftp_path, arg=None, timeout=60 * 5
 ):
@@ -499,6 +524,62 @@ async def fetch_temporary_gz_file_from_ftp(
     raise ValueError("shouldn't be called!")
 
 
+async def fetch_file_from_ftp_to_memory(
+    ftp_host, ftp_username, ftp_password, ftp_path, file_name, timeout=15
+):
+    """Download a file from FTP server directly to memory (BytesIO)."""
+    Logger.info(
+        f"Downloading file from FTP server to memory: {ftp_host} "
+        f", username: {ftp_username} , password: {ftp_password}, file: {file_name}"
+    )
+
+    def _sync_ftp_download_to_memory(ftp_timeout):
+        """Synchronous FTP download using FTP_TLS to BytesIO"""
+        socket.setdefaulttimeout(ftp_timeout)
+        file_buffer = io.BytesIO()
+        ftp = FTP_TLS(ftp_host, ftp_username, ftp_password, timeout=ftp_timeout)
+        ftp.trust_server_pasv_ipv4_address = True
+        ftp.cwd(ftp_path)
+        ftp.retrbinary("RETR " + file_name, file_buffer.write)
+        ftp.quit()
+        file_buffer.seek(0)  # Reset to beginning for reading
+        return file_buffer.getvalue()  # Return bytes
+
+    # Manual retry logic for async functions (matching download_connection_retry parameters)
+    _tries = 8
+    _delay = 2
+    backoff = 2
+    max_delay = 5 * 60
+    _timeout = timeout
+    backoff_timeout = 5
+
+    while _tries:
+        try:
+            file_content = await asyncio.to_thread(
+                _sync_ftp_download_to_memory, _timeout
+            )
+            return file_content
+        except exceptions as error:
+            _tries -= 1
+            if not _tries:
+                raise
+
+            if Logger is not None:
+                Logger.warning(
+                    "%s, configured timeout %s, retrying in %s seconds",
+                    error,
+                    _timeout,
+                    _delay,
+                )
+                Logger.error_execption(error)
+
+            await asyncio.sleep(_delay)
+            _delay = min(_delay * backoff, max_delay)
+            _timeout += backoff_timeout
+
+    raise ValueError("shouldn't be called!")
+
+
 def wget_file(file_link, file_save_path):
     """use wget to download file"""
     Logger.debug(f"trying wget file {file_link} to {file_save_path}.")
@@ -532,3 +613,14 @@ def wget_file(file_link, file_save_path):
             f"collection and download, std_err is {std_err}"
         )
     return file_save_path
+
+
+def wget_file_to_memory(file_link, timeout=30):
+    """Download file to memory using requests (fallback when wget fails)."""
+    Logger.debug(f"trying to download file {file_link} to memory (requests fallback).")
+    try:
+        # Use requests as a fallback when wget fails
+        return url_retrieve_to_memory(file_link, timeout=timeout)
+    except Exception as e:
+        Logger.error(f"Failed to download {file_link} to memory: {e}")
+        raise FileNotFoundError(f"File wasn't downloaded to memory, error: {str(e)}")

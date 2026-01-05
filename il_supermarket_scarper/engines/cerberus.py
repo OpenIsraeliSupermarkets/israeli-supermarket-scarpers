@@ -1,11 +1,10 @@
-import os
 import datetime
 import asyncio
 from typing import AsyncGenerator, List
 from il_supermarket_scarper.utils import (
     Logger,
     collect_from_ftp,
-    fetch_temporary_gz_file_from_ftp,
+    fetch_file_from_ftp_to_memory,
     FileTypesFilters,
 )
 from il_supermarket_scarper.utils.state import FilterState
@@ -197,42 +196,32 @@ class Cerberus(Engine):
                 yield filename
 
     async def persist_from_ftp(self, file_name):
-        """download file to hard drive and extract it."""
+        """download file to memory and extract it."""
         downloaded = False
         extract_succefully = False
         restart_and_retry = False
         error = None
         ext = None
-        temporary_gz_file_path = None
         try:
-            ext = os.path.splitext(file_name)[1]
-            if ext not in [".gz", ".xml"]:
+            ext = file_name.split(".")[-1] if "." in file_name else ""
+            if ext not in ["gz", "xml"]:
                 raise ValueError(f"File {file_name} extension is not .gz or .xml")
 
-            Logger.debug(f"Start persisting file {file_name}")
-            temporary_gz_file_path = os.path.join(
-                self.storage_path.get_storage_path(), file_name
-            )
+            Logger.debug(f"Start persisting file {file_name} (in-memory)")
 
-            await fetch_temporary_gz_file_from_ftp(
+            # Download file directly to memory
+            file_content = await fetch_file_from_ftp_to_memory(
                 self.ftp_host,
                 self.ftp_username,
                 self.ftp_password,
                 self.ftp_path,
-                temporary_gz_file_path,
+                file_name,
                 30,
             )
             downloaded = True
 
-            if ext == ".gz":
-                Logger.debug(
-                    f"File size is {os.path.getsize(temporary_gz_file_path)} bytes."
-                )
-
-            # Read file content
-            file_content = await asyncio.to_thread(
-                self._read_file_content, temporary_gz_file_path
-            )
+            if ext == "gz":
+                Logger.debug(f"File size is {len(file_content)} bytes.")
 
             # Use the file output handler to save
             result = await self.storage_path.save_file(
@@ -258,10 +247,6 @@ class Cerberus(Engine):
             Logger.error_execption(exception)
             error = str(exception)
             restart_and_retry = True
-        finally:
-            # Clean up temporary file
-            if temporary_gz_file_path and os.path.exists(temporary_gz_file_path):
-                await asyncio.to_thread(os.remove, temporary_gz_file_path)
 
         yield {
             "file_name": file_name,
