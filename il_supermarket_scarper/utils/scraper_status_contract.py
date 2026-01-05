@@ -1,26 +1,12 @@
 """Data classes defining the output format contract for scraper status."""
 
 from datetime import datetime
+from re import S
 from typing import List, Optional, Any, Dict, Union
 from pydantic import BaseModel, Field
 
 
-class FolderSizeInfo(BaseModel):
-    """Information about the size and contents of a folder."""
-    size: float
-    unit: str
-    folder: str
-    folder_content: List[str] = Field(default_factory=list)
-
-
-class DownloadResult(BaseModel):
-    """Result of a file download operation."""
-    file_name: str
-    downloaded: bool
-    extract_succefully: bool
-    error: Optional[str]
-    restart_and_retry: bool
-
+# -- Global Status --
 
 class StartedStatus(BaseModel):
     """Status event when scraping starts."""
@@ -36,30 +22,12 @@ class StartedStatus(BaseModel):
     suppress_exception: bool = False
 
 
-class CollectedStatus(BaseModel):
-    """Status event when file details are collected."""
-    status: str = "collected"
-    when: Optional[datetime] = None
-    file_name_collected_from_site: Union[str, List[str]] = Field(default_factory=list)
-    links_collected_from_site: Union[str, List[str]] = Field(default_factory=list)
-
-
-class DownloadedStatus(BaseModel):
-    """Status event when files are downloaded."""
-    status: str = "downloaded"
-    when: Optional[datetime] = None
-    results: Union[DownloadResult, List[DownloadResult], Dict[str, Any]] = Field(default_factory=list)
-
-
-class FailedStatus(BaseModel):
-    """Status event when scraping fails."""
-    status: str = "fail"
-    when: Optional[datetime] = None
-    execption: str = ""
-    traceback: str = ""
-    download_urls: List[str] = Field(default_factory=list)
-    file_names: List[str] = Field(default_factory=list)
-
+class FolderSizeInfo(BaseModel):
+    """Information about the size and contents of a folder."""
+    size: float
+    unit: str
+    folder: str
+    folder_content: List[str] = Field(default_factory=list)
 
 class EstimatedSizeStatus(BaseModel):
     """Status event when scraping is completed."""
@@ -68,6 +36,33 @@ class EstimatedSizeStatus(BaseModel):
     folder_size: Optional[FolderSizeInfo] = None
     completed_successfully: bool = True
 
+# -- Events Status --
+class CollectedStatus(BaseModel):
+    """Status event when file details are collected."""
+    status: str = "collected"
+    when: Optional[datetime] = None
+    file_names_collected: str
+    links_collected: str
+
+
+class DownloadedStatus(BaseModel):
+    """Status event when files are downloaded."""
+    status: str = "downloaded"
+    when: Optional[datetime] = None
+    file_name_downloaded: str
+    downloaded_successfully: bool
+    extracted_successfully: bool
+    error_message: Optional[str] = None
+    restart_and_retry: bool = False
+
+class FailedStatus(BaseModel):
+    """Status event when scraping fails."""
+    status: str = "fail"
+    when: Optional[datetime] = None
+    execption: str = ""
+    traceback: str = ""
+    download_url: str
+    file_name: str
 
 class VerifiedDownload(BaseModel):
     """Record of a verified downloaded file."""
@@ -85,7 +80,8 @@ class ScraperStatusOutput(BaseModel):
     - Values are lists of status events
     - Special key "verified_downloads" contains the list of verified downloads
     """
-    events: List[Union[StartedStatus,CollectedStatus,DownloadedStatus,FailedStatus,EstimatedSizeStatus]] = Field(default_factory=list)
+    global_status: List[Union[StartedStatus,EstimatedSizeStatus]] = Field(default_factory=list)
+    events: List[Union[CollectedStatus,DownloadedStatus,FailedStatus]] = Field(default_factory=list)
     verified_downloads: List[VerifiedDownload] = Field(default_factory=list)
     
     
