@@ -23,7 +23,6 @@ class MainScrapperRunner:
         self,
         size_estimation_mode=False,
         enabled_scrapers=None,
-        dump_folder_name=None,
         multiprocessing=5,
         lookup_in_db=True,
         output_configuration=None,
@@ -45,7 +44,6 @@ class MainScrapperRunner:
 
         self.enabled_scrapers = enabled_scrapers
         Logger.info(f"Enabled scrapers: {self.enabled_scrapers}")
-        self.dump_folder_name = dump_folder_name
         self.multiprocessing = multiprocessing
         self.lookup_in_db = lookup_in_db
         self.file_output_config = output_configuration or {"output_mode": "disk", "base_storage_path": "dumps"}

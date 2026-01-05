@@ -12,7 +12,6 @@ class ScarpingTask:  # pylint: disable=too-many-instance-attributes
         limit=None,
         when_date=None,
         files_types=FileTypesFilters.all_types(),
-        dump_folder_name=None,
         lookup_in_db=True,
         multiprocessing=5,
         suppress_exception=False,
@@ -24,22 +23,16 @@ class ScarpingTask:  # pylint: disable=too-many-instance-attributes
         self.runner = MainScrapperRunner(
             size_estimation_mode=size_estimation_mode,
             enabled_scrapers=enabled_scrapers,
-            dump_folder_name=dump_folder_name,
             lookup_in_db=lookup_in_db,
             multiprocessing=multiprocessing,
             output_configuration=output_configuration,
         )
-        self.dump_folder_name = dump_folder_name
         self.limit = limit
         self.files_types = files_types
         self.when_date = when_date
         self.suppress_exception = suppress_exception
         self.min_size = min_size
         self.max_size = max_size
-
-    def get_dump_folder_name(self):
-        """get the dump folder name"""
-        return self.dump_folder_name
 
     def start(self):
         """run the scraping"""
