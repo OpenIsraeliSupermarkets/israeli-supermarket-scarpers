@@ -16,7 +16,12 @@ from il_supermarket_scarper.utils import (
 )
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
 from il_supermarket_scarper.scraper_stability import ScraperStability
-from il_supermarket_scarper.utils.file_output import DiskFileOutput
+from il_supermarket_scarper.utils import (
+    DiskFileOutput,
+    QueueFileOutput,
+    InMemoryQueueHandler,
+)
+from il_supermarket_scarper.utils.gzip_utils import extract_xml_file_from_gz_file
 
 
 def make_test_case(scraper_enum, store_id):
@@ -156,8 +161,15 @@ def make_test_case(scraper_enum, store_id):
                     storage_path = get_output_folder(
                         DumpFolderNames[scraper_enum.name].value, dump_path
                     )
+                    
+                    # Create in-memory queue handler for testing
+                    queue_handler = InMemoryQueueHandler(
+                        queue_name=f"test_{scraper_enum.name}"
+                    )
+                    
+                    # Use QueueFileOutput instead of DiskFileOutput
                     scraper = init_scraper_function(
-                        file_output=DiskFileOutput(storage_path)
+                        file_output=QueueFileOutput(queue_handler, storage_path)
                     )
 
                     kwarg = {
@@ -174,6 +186,20 @@ def make_test_case(scraper_enum, store_id):
 
                     await scraper.scrape(**kwarg)
 
+                    # Write queued files to disk for validation
+                    os.makedirs(storage_path, exist_ok=True)
+                    messages = queue_handler.get_all_messages()
+                    for message in messages:
+                        file_name = message["file_name"]
+                        file_content = message["file_content"]
+                        
+                        # Determine file path
+                        file_save_path = os.path.join(storage_path, file_name)
+
+                        # Write file to disk
+                        with open(file_save_path, "wb") as f:
+                            f.write(file_content)
+                        
                     files_found = os.listdir(dump_path)
                     assert (
                         len(files_found) == 2
