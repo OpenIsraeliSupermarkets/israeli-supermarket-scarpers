@@ -57,7 +57,7 @@ class DownloadedStatus(BaseModel):
 
 class FailedStatus(BaseModel):
     """Status event when scraping fails."""
-    status: str = "fail"
+    status: str = "failed"
     when: Optional[datetime] = None
     execption: str = ""
     traceback: str = ""
@@ -85,4 +85,65 @@ class ScraperStatusOutput(BaseModel):
     verified_downloads: List[VerifiedDownload] = Field(default_factory=list)
     
     
-    
+    def validate_file_status(self) -> bool:
+        """
+        Validate that the status file is valid.
+
+        Ensures that for every file name appearing in any event (collect, download, fail, verified),
+        there is a reasonable 'story' for that file: collected -> (downloaded or failed) -> (verified or failed)
+        """
+        from collections import defaultdict
+
+        # Gather all unique file names across all event types
+        file_names_set = set()
+
+        for event in self.events:
+            if isinstance(event, CollectedStatus):
+                # file_names_collected may be a comma-separated string or a single file
+                collected_names = event.file_names_collected
+                if isinstance(collected_names, str):
+                    for fn in collected_names.split(","):
+                        fn = fn.strip()
+                        if fn:
+                            file_names_set.add(fn)
+            elif isinstance(event, DownloadedStatus):
+                file_names_set.add(event.file_name_downloaded)
+            elif isinstance(event, FailedStatus):
+                file_names_set.add(event.file_name)
+
+        for vd in self.verified_downloads:
+            file_names_set.add(vd.file_name)
+
+        # Build per-file event records
+        per_file = defaultdict(lambda: {'collected': False, 'downloaded': False, 'failed': False, 'verified': False})
+
+        for event in self.events:
+            if isinstance(event, CollectedStatus):
+                collected_names = event.file_names_collected
+                if isinstance(collected_names, str):
+                    for fn in collected_names.split(","):
+                        fn = fn.strip()
+                        if fn:
+                            per_file[fn]['collected'] = True
+            elif isinstance(event, DownloadedStatus):
+                per_file[event.file_name_downloaded]['downloaded'] = True
+            elif isinstance(event, FailedStatus):
+                per_file[event.file_name]['failed'] = True
+
+        for vd in self.verified_downloads:
+            per_file[vd.file_name]['verified'] = True
+
+        # Now, for each file, validate its story:
+        for fn, status in per_file.items():
+            # Must be collected
+            if not status['collected']:
+                return False
+            # Must be either downloaded OR failed
+            if not (status['downloaded'] or status['failed']):
+                return False
+            # If downloaded, must be also verified
+            if status['downloaded'] and not status['verified']:
+                return False
+            # It's OK if file only failed after being collected
+
+        return True

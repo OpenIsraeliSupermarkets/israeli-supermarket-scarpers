@@ -14,7 +14,7 @@ class ScraperStatus:
     STARTED = "started"
     COLLECTED = "collected"
     DOWNLOADED = "downloaded"
-    FAILED = "fail"
+    FAILED = "failed"
     ESTIMATED_SIZE = "estimated_size"
     VERIFIED_DOWNLOADS = "verified_downloads"
 
