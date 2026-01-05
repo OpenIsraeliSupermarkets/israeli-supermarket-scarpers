@@ -76,15 +76,6 @@ class VerifiedDownload(BaseModel):
 
 
 # Union type for all possible status events
-StatusEvent = Union[
-    StartedStatus,
-    CollectedStatus,
-    DownloadedStatus,
-    FailedStatus,
-    EstimatedSizeStatus,
-]
-
-
 class ScraperStatusOutput(BaseModel):
     """
     Complete output format for scraper status.
@@ -94,5 +85,5 @@ class ScraperStatusOutput(BaseModel):
     - Values are lists of status events
     - Special key "verified_downloads" contains the list of verified downloads
     """
-    tasks: Dict[str, List[Dict[str, Any]]] = Field(default_factory=dict)
+    events: List[Union[StartedStatus,CollectedStatus,DownloadedStatus,FailedStatus,EstimatedSizeStatus]] = Field(default_factory=list)
     verified_downloads: List[VerifiedDownload] = Field(default_factory=list)

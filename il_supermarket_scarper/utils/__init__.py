@@ -22,7 +22,6 @@ from .scraper_status_contract import (
     FailedStatus,
     EstimatedSizeStatus,
     VerifiedDownload,
-    StatusEvent,
     ScraperStatusOutput,
 )
 from .file_types import FileTypesFilters
