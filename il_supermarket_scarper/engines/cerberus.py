@@ -71,7 +71,8 @@ class Cerberus(Engine):
                     file_name_collected_from_site=file_name,
                     links_collected_from_site=""
                 )
-                yield self.persist_from_ftp(file_name)
+                async for result in self.persist_from_ftp(file_name):
+                    yield result
             except Exception as e:  # pylint: disable=broad-except
                 self.register_download_fail(e, file_name)
                 raise e
@@ -214,7 +215,7 @@ class Cerberus(Engine):
                 self.storage_path.get_storage_path(), file_name
             )
 
-            fetch_temporary_gz_file_from_ftp(
+            await fetch_temporary_gz_file_from_ftp(
                 self.ftp_host,
                 self.ftp_username,
                 self.ftp_password,
