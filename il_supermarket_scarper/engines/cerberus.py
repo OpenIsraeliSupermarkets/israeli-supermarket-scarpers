@@ -23,14 +23,16 @@ class Cerberus(Engine):
         self,
         chain,
         chain_id,
-        folder_name=None,
         ftp_host="url.retail.publishedprices.co.il",
         ftp_path="/",
         ftp_username="",
         ftp_password="",
         max_threads=5,
+        file_output=None,
     ):
-        super().__init__(chain, chain_id, folder_name, max_threads)
+        super().__init__(
+            chain, chain_id, folder_name, max_threads, file_output=file_output
+        )
         self.ftp_host = ftp_host
         self.ftp_path = ftp_path
         self.ftp_username = ftp_username

@@ -32,3 +32,12 @@ from .folders_name import DumpFolderNames
 from .lock_utils import LockManager, lock_by_string
 from .status import convert_unit, UnitSize, convert_nl_size_to_bytes, string_to_float
 from .state import FilterState
+from .file_output import (
+    FileOutput,
+    DiskFileOutput,
+    QueueFileOutput,
+    AbstractQueueHandler,
+    KafkaQueueHandler,
+    InMemoryQueueHandler,
+)
+from .scraper_config import ScraperConfig

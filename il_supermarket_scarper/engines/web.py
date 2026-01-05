@@ -10,8 +10,14 @@ from .engine import Engine
 class WebBase(Engine):
     """scrape the file of websites that the only why to download them is via web"""
 
-    def __init__(self, chain, chain_id, url, folder_name=None, max_threads=5):
-        super().__init__(chain, chain_id, folder_name, max_threads=max_threads)
+    def __init__(self, chain, chain_id, url, max_threads=5, file_output=None):
+        super().__init__(
+            chain,
+            chain_id,
+            folder_name,
+            max_threads=max_threads,
+            file_output=file_output,
+        )
         self.url = url
         self.max_retry = 2
 
@@ -108,7 +114,7 @@ class WebBase(Engine):
             current_trs = self.get_data_from_page(req_res)
             async for file_entry in self.extract_task_from_entry(current_trs):
                 yield file_entry
-                
+
     async def collect_files_details_from_site(  # pylint: disable=too-many-locals
         self,
         limit=None,
@@ -127,7 +133,9 @@ class WebBase(Engine):
         state = FilterState()
 
         # Generator to accumulate all extracted files from all pages
-        extracted_files = self.generate_all_files(files_types=files_types, store_id=store_id, when_date=when_date)
+        extracted_files = self.generate_all_files(
+            files_types=files_types, store_id=store_id, when_date=when_date
+        )
 
         # Filter by file size if specified
         if min_size is not None or max_size is not None:

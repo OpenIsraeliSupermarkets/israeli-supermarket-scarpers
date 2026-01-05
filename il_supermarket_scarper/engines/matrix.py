@@ -16,9 +16,9 @@ class Matrix(Aspx):
         url="https://laibcatalog.co.il/",
         aspx_page="NBCompetitionRegulations.aspx",
         chain_hebrew_name=None,
-        folder_name=None,
+        file_output=None,
     ):
-        super().__init__(chain, chain_id, url, aspx_page, folder_name=folder_name)
+        super().__init__(chain, chain_id, url, aspx_page, file_output=file_output)
         self.chain_hebrew_name = chain_hebrew_name
 
     # def get_file_types_id(self, files_types=None):

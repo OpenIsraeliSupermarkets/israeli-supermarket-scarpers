@@ -24,15 +24,15 @@ class MultiPageWeb(WebBase):
         chain,
         chain_id,
         url,
-        folder_name=None,
         total_page_xpath="""//*[@id="gridContainer"]/table/
                                             tfoot/tr/td/a[6]/@href""",
         total_pages_pattern=r"^\/\?page\=([0-9]{3})$",
         page_argument="page",
         max_threads=5,
+        file_output=None,
     ):
         super().__init__(
-            chain, chain_id, url=url, folder_name=folder_name, max_threads=max_threads
+            chain, chain_id, url=url, max_threads=max_threads, file_output=file_output
         )
         self.total_page_xpath = total_page_xpath
         self.total_pages_pattern = total_pages_pattern

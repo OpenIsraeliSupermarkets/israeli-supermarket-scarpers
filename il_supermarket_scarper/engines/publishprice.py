@@ -16,16 +16,16 @@ class PublishPrice(WebBase):
         chain,
         chain_id,
         site_infix,
-        folder_name=None,
         domain="prices",
         max_threads=5,
+        file_output=None,
     ):
         super().__init__(
             chain,
             chain_id,
             url=f"https://{domain}.{site_infix}.co.il/",
-            folder_name=folder_name,
             max_threads=max_threads,
+            file_output=file_output,
         )
         self.folder = None
 

@@ -5,10 +5,10 @@ from il_supermarket_scarper.utils import DumpFolderNames
 class ZolVeBegadol(Bina):
     """scraper dfor zol-ve-begodol"""
 
-    def __init__(self, folder_name=None):
+    def __init__(self, file_output=None):
         super().__init__(
             chain=DumpFolderNames.ZOL_VEBEGADOL,
             chain_id="7290058173198",
             url_perfix="zolvebegadol",
-            folder_name=folder_name,
+            file_output=file_output,
         )

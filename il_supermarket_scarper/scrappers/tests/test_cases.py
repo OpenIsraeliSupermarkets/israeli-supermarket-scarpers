@@ -15,6 +15,7 @@ from il_supermarket_scarper.utils import (
 )
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
 from il_supermarket_scarper.scraper_stability import ScraperStability
+from il_supermarket_scarper.utils.file_output import DiskFileOutput
 
 
 def make_test_case(scraper_enum, store_id):
@@ -150,7 +151,9 @@ def make_test_case(scraper_enum, store_id):
                 Logger.warning(f"{scraper_enum} is disabled.")
             else:
                 try:
-                    scraper = init_scraper_function(folder_name=dump_path)
+                    scraper = init_scraper_function(
+                        file_output=DiskFileOutput(dump_path)
+                    )
 
                     kwarg = {
                         "limit": limit,

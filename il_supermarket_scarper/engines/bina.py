@@ -25,14 +25,14 @@ class Bina(Aspx):
         url_perfix,
         download_postfix="/Download.aspx?FileNm=",
         domain="binaprojects.com/",
-        folder_name=None,
+        file_output=None,
     ):
         super().__init__(
             chain,
             chain_id,
             url=f"http://{url_perfix}.{domain}",
             aspx_page="MainIO_Hok.aspx",
-            folder_name=folder_name,
+            file_output=file_output,
         )
         self.download_postfix = download_postfix
 
