@@ -30,7 +30,7 @@ class ScraperStatus:
     @lock_by_string()
     def on_scraping_start(self, limit, files_types, **additional_info):
         """Report that scraping has started."""
-        self._insert_an_update(
+        self._append_an_update(
             ScraperStatus.STARTED,
             limit=limit,
             files_requested=files_types,
@@ -53,7 +53,7 @@ class ScraperStatus:
         **additional_info,
     ):
         """Report that file details have been collected."""
-        self._insert_an_update(
+        self._append_an_update(
             ScraperStatus.COLLECTED,
             file_name_collected_from_site=file_name_collected_from_site,
             links_collected_from_site=links_collected_from_site,
@@ -63,7 +63,7 @@ class ScraperStatus:
     @lock_by_string()
     def register_downloaded_file(self, results):
         """Report that the file has been downloaded."""
-        self._insert_an_update(ScraperStatus.DOWNLOADED, **results)
+        self._append_an_update(ScraperStatus.DOWNLOADED, **results)
         self._add_downloaded_files_to_list(results)
 
 
@@ -113,7 +113,7 @@ class ScraperStatus:
     @lock_by_string()
     def on_scrape_completed(self, folder_name, completed_successfully=True):
         """Report when scraping is completed."""
-        self._insert_an_update(
+        self._append_an_update(
             ScraperStatus.ESTIMATED_SIZE,
             folder_size=log_folder_details(folder_name),
             completed_successfully=completed_successfully,
@@ -122,7 +122,7 @@ class ScraperStatus:
     @lock_by_string()
     def register_download_fail(self, execption, download_urls=None, file_names=None):
         """report when the scraping in failed"""
-        self._insert_an_update(
+        self._append_an_update(
             ScraperStatus.FAILED,
             execption=str(execption),
             traceback=traceback.format_exc(),
@@ -130,11 +130,11 @@ class ScraperStatus:
             file_names=file_names if file_names else [],
         )
 
-    def _insert_an_update(self, status, **additional_info):
+    def _append_an_update(self, status, **additional_info):
         """Insert an update into the MongoDB collection."""
         document = {
             "status": status,
             "when": _now(),
-            **additional_info,
+            **additional_info
         }
         self.database.insert_document(self.task_id, document)
