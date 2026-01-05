@@ -1,4 +1,5 @@
 import os
+import asyncio
 
 from multiprocessing import Pool
 
@@ -47,7 +48,7 @@ class MainScrapperRunner:
         self.dump_folder_name = dump_folder_name
         self.multiprocessing = multiprocessing
         self.lookup_in_db = lookup_in_db
-        self.file_output_config = output_configuration or {"output_mode": "disk"}
+        self.file_output_config = output_configuration or {"output_mode": "disk", "base_storage_path": "dumps"}
 
     def _create_file_output_for_scraper(self, scraper_name, config):
         """Create a file_output instance for a specific scraper based on config."""
@@ -111,9 +112,9 @@ class MainScrapperRunner:
     def scrape_one_wrap(self, arg):
         """scrape one warper"""
         args, kwargs = arg
-        return self.scrape_one(args, **kwargs)
+        return asyncio.run(self.scrape_one(args, **kwargs))
 
-    def scrape_one(
+    async def scrape_one(
         self,
         chain_scrapper_class,
         limit=None,

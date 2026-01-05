@@ -94,10 +94,10 @@ class ScraperStatus:
         if self.database.is_collection_enabled() and self.filter_between_itrations:
             async for file in filelist:
                 if (
-                    not await self.database.find_document(
+                    not self.database.find_document(
                         self.VERIFIED_DOWNLOADS, {"file_name": by_function(file)}
                     )
-                    and by_function(file) in files_names_to_scrape
+                    and (files_names_to_scrape is None or by_function(file) in files_names_to_scrape)
                 ):
                     yield file
         else:

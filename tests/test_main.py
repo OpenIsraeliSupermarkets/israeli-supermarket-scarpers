@@ -27,7 +27,8 @@ def test_main_with_limit():
 def test_main_with_one_scarper():
     """the limit only for enabled scarpers"""
     scrapper_done = ScarpingTask(
-        limit=1, enabled_scrapers=ScraperFactory.sample(n=1)
+        limit=1, 
+        enabled_scrapers=ScraperFactory.sample(n=1)
     ).start()
     assert len(scrapper_done) == 1
 
