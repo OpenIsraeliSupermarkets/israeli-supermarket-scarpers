@@ -139,17 +139,13 @@ class ScraperStatus:
         )
 
     @lock_by_string()
-    def register_download_fail(self, execption, download_urls=None, file_names=None):
+    def register_download_fail(self, error, file_name: str):
         """report when the scraping in failed"""
         # Map to contract field names
-        download_url = download_urls[0] if download_urls else ""
-        file_name = file_names[0] if file_names else ""
-        
         self._insert_event(
             ScraperStatus.FAILED,
-            execption=str(execption),
+            error_message=str(error),
             traceback=traceback.format_exc(),
-            download_url=download_url,
             file_name=file_name,
         )
 

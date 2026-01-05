@@ -66,9 +66,15 @@ class Cerberus(Engine):
             random_selection=random_selection,
         ):
             try:
-                yield self.persist_from_ftp(file_name)
+                # Register that we've collected this file's details
+                self.register_collected_file(
+                    file_name_collected_from_site=file_name,
+                    links_collected_from_site=""
+                )
+                result = self.persist_from_ftp(file_name)
+                yield result
             except Exception as e:  # pylint: disable=broad-except
-                self.register_download_fail(e,file_name=file_name)
+                self.register_download_fail(e, file_name)
                 raise e
 
     async def get_type_pattern(self, files_types):
