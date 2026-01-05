@@ -214,8 +214,7 @@ class Cerberus(Engine):
                 self.storage_path.get_storage_path(), file_name
             )
 
-            await asyncio.to_thread(
-                fetch_temporary_gz_file_from_ftp,
+            fetch_temporary_gz_file_from_ftp(
                 self.ftp_host,
                 self.ftp_username,
                 self.ftp_password,
@@ -229,12 +228,28 @@ class Cerberus(Engine):
                 Logger.debug(
                     f"File size is {os.path.getsize(temporary_gz_file_path)} bytes."
                 )
-                await asyncio.to_thread(
-                    extract_xml_file_from_gz_file, temporary_gz_file_path
-                )
+
+            # Read file content
+            file_content = await asyncio.to_thread(
+                self._read_file_content, temporary_gz_file_path
+            )
+
+            # Use the file output handler to save
+            result = await self.storage_path.save_file(
+                file_link="",  # FTP doesn't have a URL
+                file_name=file_name,
+                file_content=file_content,
+                metadata={
+                    "chain": self.chain.value,
+                    "chain_id": self.chain_id,
+                    "original_filename": file_name,
+                    "source": "ftp",
+                },
+            )
 
             Logger.debug(f"Done persisting file {file_name}")
-            extract_succefully = True
+            extract_succefully = result.get("extract_successfully", False)
+            error = result.get("error")
         except Exception as exception:  # pylint: disable=broad-except
             Logger.error(
                 f"Error downloading {file_name},extract_succefully={extract_succefully}"
@@ -244,11 +259,8 @@ class Cerberus(Engine):
             error = str(exception)
             restart_and_retry = True
         finally:
-            if (
-                ext == ".gz"
-                and temporary_gz_file_path
-                and os.path.exists(temporary_gz_file_path)
-            ):
+            # Clean up temporary file
+            if temporary_gz_file_path and os.path.exists(temporary_gz_file_path):
                 await asyncio.to_thread(os.remove, temporary_gz_file_path)
 
         yield {

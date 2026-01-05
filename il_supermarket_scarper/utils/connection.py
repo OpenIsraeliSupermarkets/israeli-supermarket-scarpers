@@ -446,18 +446,57 @@ async def collect_from_ftp(
         yield (filename, size)
 
 
-@download_connection_retry()
-def fetch_temporary_gz_file_from_ftp(
+async def fetch_temporary_gz_file_from_ftp(
     ftp_host, ftp_username, ftp_password, ftp_path, temporary_gz_file_path, timeout=15
 ):
     """download a file from a cerberus base site."""
-    with open(temporary_gz_file_path, "wb") as file_ftp:
-        file_name = ntpath.basename(temporary_gz_file_path)
-        ftp = FTP_TLS(ftp_host, ftp_username, ftp_password, timeout=timeout)
-        ftp.trust_server_pasv_ipv4_address = True
-        ftp.cwd(ftp_path)
-        ftp.retrbinary("RETR " + file_name, file_ftp.write)
-        ftp.quit()
+    Logger.info(
+        f"Downloading file from FTP server with {ftp_host} "
+        f", username: {ftp_username} , password: {ftp_password}"
+    )
+
+    def _sync_ftp_download(ftp_timeout):
+        """Synchronous FTP download using FTP_TLS"""
+        socket.setdefaulttimeout(ftp_timeout)
+        with open(temporary_gz_file_path, "wb") as file_ftp:
+            file_name = ntpath.basename(temporary_gz_file_path)
+            ftp = FTP_TLS(ftp_host, ftp_username, ftp_password, timeout=ftp_timeout)
+            ftp.trust_server_pasv_ipv4_address = True
+            ftp.cwd(ftp_path)
+            ftp.retrbinary("RETR " + file_name, file_ftp.write)
+            ftp.quit()
+
+    # Manual retry logic for async functions (matching download_connection_retry parameters)
+    _tries = 8
+    _delay = 2
+    backoff = 2
+    max_delay = 5 * 60
+    _timeout = timeout
+    backoff_timeout = 5
+
+    while _tries:
+        try:
+            await asyncio.to_thread(_sync_ftp_download, _timeout)
+            return
+        except exceptions as error:
+            _tries -= 1
+            if not _tries:
+                raise
+
+            if Logger is not None:
+                Logger.warning(
+                    "%s, configured timeout %s, retrying in %s seconds",
+                    error,
+                    _timeout,
+                    _delay,
+                )
+                Logger.error_execption(error)
+
+            await asyncio.sleep(_delay)
+            _delay = min(_delay * backoff, max_delay)
+            _timeout += backoff_timeout
+
+    raise ValueError("shouldn't be called!")
 
 
 def wget_file(file_link, file_save_path):
