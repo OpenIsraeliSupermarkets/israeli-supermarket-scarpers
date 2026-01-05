@@ -25,7 +25,7 @@ async def example_disk_output():
     scraper = scraper_class(folder_name="output_example")
 
     # Automatically creates DiskFileOutput for that folder
-    print(f"Output location: {scraper.file_output.get_output_location()}")
+    print(f"Output location: {scraper.storage_path.get_output_location()}")
     print(f"Storage path: {scraper.storage_path}")
 
 

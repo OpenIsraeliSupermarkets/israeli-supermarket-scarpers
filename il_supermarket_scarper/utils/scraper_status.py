@@ -5,7 +5,7 @@ from .status import log_folder_details
 from .databases import JsonDataBase
 from .status import _now, get_output_folder
 from .lock_utils import lock_by_string
-
+from .file_output import FileOutput
 
 class ScraperStatus:
     """A class that abstracts the database interface for scraper status."""
@@ -17,9 +17,12 @@ class ScraperStatus:
     ESTIMATED_SIZE = "estimated_size"
     VERIFIED_DOWNLOADS = "verified_downloads"
 
-    def __init__(self, database_name, base_path, folder_name=None) -> None:
+    def __init__(self, database_name, base_path, file_output: FileOutput) -> None:
+        # Use parent directory of storage path for status files
+        storage_path = file_output.get_storage_path()
+        status_path = os.path.dirname(storage_path) if storage_path else base_path
         self.database = JsonDataBase(
-            database_name, get_output_folder(base_path, folder_name=folder_name)
+            database_name, status_path if status_path else base_path
         )
         self.task_id = _now().strftime("%Y%m%d%H%M%S")
         self.filter_between_itrations = False

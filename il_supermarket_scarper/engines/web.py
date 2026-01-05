@@ -14,7 +14,6 @@ class WebBase(Engine):
         super().__init__(
             chain,
             chain_id,
-            folder_name,
             max_threads=max_threads,
             file_output=file_output,
         )

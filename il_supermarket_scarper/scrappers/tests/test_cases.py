@@ -12,6 +12,7 @@ from il_supermarket_scarper.utils import (
     DumpFolderNames,
     _testing_now,
     change_xml_encoding,
+    get_output_folder,
 )
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
 from il_supermarket_scarper.scraper_stability import ScraperStability
@@ -151,8 +152,12 @@ def make_test_case(scraper_enum, store_id):
                 Logger.warning(f"{scraper_enum} is disabled.")
             else:
                 try:
+                    # Create storage path with chain subdirectory
+                    storage_path = get_output_folder(
+                        DumpFolderNames[scraper_enum.name].value, dump_path
+                    )
                     scraper = init_scraper_function(
-                        file_output=DiskFileOutput(dump_path)
+                        file_output=DiskFileOutput(storage_path)
                     )
 
                     kwarg = {

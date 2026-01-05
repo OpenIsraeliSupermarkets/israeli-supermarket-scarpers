@@ -55,50 +55,25 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         self.chain = chain
         self.chain_id = chain_id
         self.max_threads = max_threads
-        self.folder_name = folder_name
 
         # Determine storage path
         if file_output is None:
             # Create storage path from folder_name and create DiskFileOutput
-            self.storage_path = get_output_folder(
-                self.chain.value, folder_name=folder_name
-            )
-            self.file_output = DiskFileOutput(self.storage_path)
-            status_folder = folder_name
-        else:
-            # Use provided file_output
-            # If it's a DiskFileOutput and doesn't end with chain name, append it
-            if isinstance(file_output, DiskFileOutput):
-                base_path = file_output.get_storage_path()
-                # Check if path already ends with chain name
-                if not base_path.endswith(self.chain.value):
-                    # Append chain name to create proper structure
-                    self.storage_path = os.path.join(base_path, self.chain.value)
-                    self.file_output = DiskFileOutput(self.storage_path)
-                    status_folder = base_path
-                else:
-                    # Path already includes chain name
-                    self.storage_path = base_path
-                    self.file_output = file_output
-                    status_folder = os.path.dirname(self.storage_path)
-            else:
-                # Non-disk output (e.g., queue) - use as-is
-                self.file_output = file_output
-                self.storage_path = file_output.get_storage_path()
-                status_folder = os.path.dirname(self.storage_path)
+            file_output = DiskFileOutput(storage_path=DumpFolderNames[chain].value)
+
 
         # Initialize status tracking (uses folder for status DB location)
-        super().__init__(chain.value, "status", folder_name=status_folder)
+        super().__init__(chain.value, "status", file_output=file_output)
 
         self.assigned_cookie = f"{self.chain.name}_{uuid.uuid4()}_cookies.txt"
-
+        self.storage_path = file_output
         Logger.info(
-            f"Initialized {self.chain.value} scraper with output: {self.file_output.get_output_location()}"
+            f"Initialized {self.chain.value} scraper with output: {self.storage_path}"
         )
 
     def get_storage_path(self):
         """the the storage page of the files downloaded"""
-        return self.storage_path
+        return self.storage_path.get_storage_path()
 
     def is_valid_file_empty(self, file_name):
         """it is valid the file is empty"""
@@ -190,7 +165,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         # filter files already downloaded
         intreable_: AsyncGenerator[tuple[str, str], None] = (
             self.filter_already_downloaded(
-                self.storage_path,
+                self.storage_path.get_storage_path(),
                 files_names_to_scrape,
                 files_list,
                 by_function=by_function,
@@ -431,7 +406,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         self._validate_scraper_params(
             limit=limit, files_types=files_types, store_id=store_id
         )
-        self.make_storage_path_dir()
+        self.storage_path.make_sure_accassible()
         completed_successfully = True
         results = []
         try:
@@ -480,10 +455,6 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
     ):
         """method to be implemeted by the child class"""
 
-    def make_storage_path_dir(self):
-        """create the storage path"""
-        if not os.path.exists(self.storage_path):
-            os.makedirs(self.storage_path)
 
     def get_chain_id(self):
         """get the chain id as list"""
@@ -558,7 +529,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
 
         try:
             # Determine file path for temporary download
-            file_save_path = os.path.join(self.storage_path, file_name)
+            file_save_path = os.path.join(self.storage_path.get_storage_path(), file_name)
 
             # Add extension if needed
             if not (
@@ -586,7 +557,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             )
 
             # Use the file output handler to save
-            result = await self.file_output.save_file(
+            result = await self.storage_path.save_file(
                 file_link=file_link,
                 file_name=os.path.basename(file_save_path_with_ext),
                 file_content=file_content,
@@ -598,7 +569,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             )
 
             # Clean up temporary file if we're using queue output
-            if not isinstance(self.file_output, DiskFileOutput):
+            if not isinstance(self.storage_path, DiskFileOutput):
                 await asyncio.to_thread(os.remove, file_save_path_with_ext)
 
             return {

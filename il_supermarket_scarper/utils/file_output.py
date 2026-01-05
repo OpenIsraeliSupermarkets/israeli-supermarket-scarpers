@@ -33,6 +33,10 @@ class FileOutput(ABC):
         pass
 
     @abstractmethod
+    def make_sure_accassible(self):
+        """create the storage path"""
+        pass
+    @abstractmethod
     def get_output_location(self) -> str:
         """Get a string representation of where files are being saved."""
         pass
@@ -111,6 +115,11 @@ class DiskFileOutput(FileOutput):
             "error": error,
             "metadata": metadata or {},
         }
+
+    def make_sure_accassible(self):
+        """create the storage path"""
+        if not os.path.exists(self.storage_path):
+            os.makedirs(self.storage_path)
 
     def _write_file(self, file_path: str, content: bytes):
         """Write bytes to file (sync operation for thread)."""
