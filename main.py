@@ -90,7 +90,7 @@ def load_params():
 
     else:
         # Disk output configuration (default)
-        output_configuration["base_storage_path"] = os.getenv("STORAGE_PATH", None)
+        output_configuration["base_storage_path"] = os.getenv("STORAGE_PATH", "dumps")
 
     kwargs["output_configuration"] = output_configuration
 
@@ -100,5 +100,5 @@ def load_params():
 if __name__ == "__main__":
 
     args = load_params()
-
+    
     ScarpingTask(**args).start()

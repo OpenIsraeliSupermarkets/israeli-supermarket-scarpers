@@ -261,7 +261,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 FileTypesFilters.is_file_from_type(filename, file_type)
                 for file_type in files_types
             )
-            if matches and state.file_pass_limit < limit:
+            if limit is None or (matches and state.file_pass_limit < limit):
                 state.file_pass_limit += 1
                 yield type_
 

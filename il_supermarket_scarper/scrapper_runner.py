@@ -54,9 +54,17 @@ class MainScrapperRunner:
     def _create_file_output_for_scraper(self, scraper_name, config):
         """Create a file_output instance for a specific scraper based on config."""
         target_folder = DumpFolderNames[scraper_name].value
-        if config is None or config.get("output_mode") == "disk":
+        
+        # Use default config if None
+        if config is None:
+            config = {
+                "output_mode": "disk",
+                "base_storage_path": "dumps",
+            }
+        
+        if config.get("output_mode") == "disk":
             # Disk output mode
-            base_path = config.get("base_storage_path")
+            base_path = config.get("base_storage_path", "dumps")
             return DiskFileOutput(storage_path=os.path.join(base_path, target_folder))
 
         elif config.get("output_mode") == "queue":
@@ -91,35 +99,38 @@ class MainScrapperRunner:
         Logger.info(f"Start scraping {','.join(self.enabled_scrapers)}.")
 
         with Pool(self.multiprocessing) as pool:
-            result = pool.map(
+            result = pool.starmap(
                 self.scrape_one_wrap,
-                list(
-                    map(
-                        lambda chainScrapperClass: (
-                            chainScrapperClass,
-                            {
-                                "limit": limit,
-                                "files_types": files_types,
-                                "when_date": when_date,
-                                "suppress_exception": suppress_exception,
-                                "min_size": min_size,
-                                "max_size": max_size,
-                                "file_output_config": self.file_output_config,
-                            },
-                        ),
-                        self.enabled_scrapers,
+                [
+                    (
+                        chainScrapperClass,
+                        {
+                            "limit": limit,
+                            "files_types": files_types,
+                            "when_date": when_date,
+                            "suppress_exception": False,
+                            "min_size": min_size,
+                            "max_size": max_size,
+                            "file_output_config": self.file_output_config,
+                        },
                     )
-                ),
+                    for chainScrapperClass in self.enabled_scrapers
+                ],
             )
 
         Logger.info("Done scraping all supermarkets.")
 
         return result
 
-    def scrape_one_wrap(self, arg):
-        """scrape one warper"""
-        args, kwargs = arg
-        return asyncio.run(self.scrape_one(args, **kwargs))
+    def scrape_one_wrap(self, chainScrapperClass, kwargs):
+        """scrape one wrapper, each with its own event loop"""
+        import asyncio
+        loop = asyncio.new_event_loop()
+        try:
+            asyncio.set_event_loop(loop)
+            return loop.run_until_complete(self.scrape_one(chainScrapperClass, **kwargs))
+        finally:
+            loop.close()
 
     async def scrape_one(
         self,
@@ -151,7 +162,7 @@ class MainScrapperRunner:
             scraper.enable_collection_status()
             scraper.enable_aggregation_between_runs()
 
-        scraper.scrape(
+        async for _ in scraper.scrape(
             limit=limit,
             files_types=files_types,
             store_id=store_id,
@@ -162,7 +173,8 @@ class MainScrapperRunner:
             suppress_exception=suppress_exception,
             min_size=min_size,
             max_size=max_size,
-        )
+        ):
+            pass
         Logger.info(f"done scraping {chain_name}")
 
         folder_with_files = scraper.get_storage_path()

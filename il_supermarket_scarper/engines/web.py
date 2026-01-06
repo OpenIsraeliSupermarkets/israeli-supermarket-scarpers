@@ -40,9 +40,11 @@ class WebBase(Engine):
         Returns size in bytes, or None if not found.
         """
         try:
-            size_bytes = re.search(r"\b\d+(\.\d+)?\s*(KB|MB|GB)\b", entry.text)
+            size_match = re.search(r"\b\d+(\.\d+)?\s*(KB|MB|GB)\b", entry.text)
+            if size_match is None:
+                return None
             size_bytes = convert_nl_size_to_bytes(
-                size_bytes.group(0), to_unit=UnitSize.BYTES
+                size_match.group(0), to_unit=UnitSize.BYTES
             )
             return size_bytes
         except (AttributeError, TypeError) as e:
