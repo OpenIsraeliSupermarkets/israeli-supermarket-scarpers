@@ -536,9 +536,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             if not (file_name.endswith(".gz") or file_name.endswith(".xml")) and (
                 file_link.endswith(".gz") or file_link.endswith(".xml")
             ):
-                file_name_with_ext = (
-                    file_name + "." + file_link.split(".")[-1]
-                )
+                file_name_with_ext = file_name + "." + file_link.split(".")[-1]
 
             # Download file content directly to memory
             try:

@@ -46,7 +46,10 @@ class MainScrapperRunner:
         Logger.info(f"Enabled scrapers: {self.enabled_scrapers}")
         self.multiprocessing = multiprocessing
         self.lookup_in_db = lookup_in_db
-        self.file_output_config = output_configuration or {"output_mode": "disk", "base_storage_path": "dumps"}
+        self.file_output_config = output_configuration or {
+            "output_mode": "disk",
+            "base_storage_path": "dumps",
+        }
 
     def _create_file_output_for_scraper(self, scraper_name, config):
         """Create a file_output instance for a specific scraper based on config."""
@@ -55,17 +58,23 @@ class MainScrapperRunner:
             # Disk output mode
             base_path = config.get("base_storage_path")
             return DiskFileOutput(storage_path=os.path.join(base_path, target_folder))
-  
+
         elif config.get("output_mode") == "queue":
             # Queue output mode
             queue_type = config.get("queue_type", "memory")
-                        
+
             if queue_type == "memory":
                 return QueueFileOutput(InMemoryQueueHandler(queue_name=target_folder))
-                
+
             elif queue_type == "kafka":
-                bootstrap_servers = config.get("kafka_bootstrap_servers", "localhost:9092")
-                return QueueFileOutput(KafkaQueueHandler(bootstrap_servers=bootstrap_servers, topic=target_folder))
+                bootstrap_servers = config.get(
+                    "kafka_bootstrap_servers", "localhost:9092"
+                )
+                return QueueFileOutput(
+                    KafkaQueueHandler(
+                        bootstrap_servers=bootstrap_servers, topic=target_folder
+                    )
+                )
 
     def run(
         self,
@@ -127,14 +136,14 @@ class MainScrapperRunner:
         """scrape one"""
         chain_scrapper_constractor = ScraperFactory.get(chain_scrapper_class)
         Logger.info(f"Starting scrapper {chain_scrapper_constractor}")
-        
+
         # Create file_output for this specific scraper based on its folder name
         file_output = self._create_file_output_for_scraper(
             chain_scrapper_class, file_output_config
         )
         # Create scraper with file_output if provided
         scraper = chain_scrapper_constractor(file_output=file_output)
-        
+
         chain_name = scraper.get_chain_name()
 
         Logger.info(f"scraping {chain_name}")
