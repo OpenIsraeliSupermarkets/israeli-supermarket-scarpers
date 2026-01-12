@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import List, Optional, Union
 from pydantic import BaseModel, Field
-
+from collections import defaultdict
 
 # -- Global Status --
 
@@ -99,39 +99,27 @@ class ScraperStatusOutput(BaseModel):
     )
     verified_downloads: List[VerifiedDownload] = Field(default_factory=list)
 
-    def validate_file_status(self) -> bool:  # pylint: disable=too-many-branches
+    @staticmethod
+    def _extract_file_names_from_collected_status(collected_names: str) -> List[str]:
+        """Extract and clean file names from a comma-separated string."""
+        file_names = []
+        if isinstance(collected_names, str):
+            for fn in collected_names.split(","):
+                fn = fn.strip()
+                if fn:
+                    file_names.append(fn)
+        return file_names
+
+    def _build_per_file_status_data(self) -> tuple[dict, dict]:
         """
-        Validate that the status file is valid.
+        Build per-file status records and status counters.
 
-        Ensures that for every file name appearing in any event (collect, download,
-        fail, verified), there is a reasonable 'story' for that file: collected ->
-        (downloaded or failed) -> (verified or failed)
+        Returns:
+            A tuple of (per_file_dict, per_file_status_counter_dict)
+            - per_file_dict: Maps file name to status flags (collected, downloaded, failed, verified)
+            - per_file_status_counter_dict: Maps file name to list of status types for duplicate detection
         """
-        from collections import (
-            defaultdict,
-            Counter,
-        )  # pylint: disable=import-outside-toplevel
 
-        # Gather all unique file names across all event types
-        file_names_set = set()
-
-        for event in self.events:
-            if isinstance(event, CollectedStatus):
-                collected_names = event.file_names_collected
-                if isinstance(collected_names, str):
-                    for fn in collected_names.split(","):
-                        fn = fn.strip()
-                        if fn:
-                            file_names_set.add(fn)
-            elif isinstance(event, DownloadedStatus):
-                file_names_set.add(event.file_name_downloaded)
-            elif isinstance(event, FailedStatus):
-                file_names_set.add(event.file_name)
-
-        for vd in self.verified_downloads:
-            file_names_set.add(vd.file_name)
-
-        # Build per-file event records and count status types per file
         per_file = defaultdict(
             lambda: {
                 "collected": False,
@@ -140,17 +128,16 @@ class ScraperStatusOutput(BaseModel):
                 "verified": False,
             }
         )
-        per_file_status_counter = defaultdict(list)  # List of status "types" per file
+        per_file_status_counter = defaultdict(list)
 
         for event in self.events:
             if isinstance(event, CollectedStatus):
-                collected_names = event.file_names_collected
-                if isinstance(collected_names, str):
-                    for fn in collected_names.split(","):
-                        fn = fn.strip()
-                        if fn:
-                            per_file[fn]["collected"] = True
-                            per_file_status_counter[fn].append("collected")
+                file_names = self._extract_file_names_from_collected_status(
+                    event.file_names_collected
+                )
+                for fn in file_names:
+                    per_file[fn]["collected"] = True
+                    per_file_status_counter[fn].append("collected")
             elif isinstance(event, DownloadedStatus):
                 fn = event.file_name_downloaded
                 per_file[fn]["downloaded"] = True
@@ -165,21 +152,55 @@ class ScraperStatusOutput(BaseModel):
             per_file[fn]["verified"] = True
             per_file_status_counter[fn].append("verified")
 
-        # Now, for each file, validate its story and ensure no duplicate status for file
+        return per_file, per_file_status_counter
+
+    @staticmethod
+    def _validate_file_lifecycle(file_name: str, status: dict) -> bool:
+        """
+        Validate a single file's lifecycle.
+
+        Rules:
+        - Must be collected
+        - Must be either downloaded OR failed
+        - If downloaded, must also be verified
+        """
+        # Must be collected
+        if not status["collected"]:
+            return False
+        # Must be either downloaded OR failed
+        if not (status["downloaded"] or status["failed"]):
+            return False
+        # If downloaded, must be also verified
+        if status["downloaded"] and not status["verified"]:
+            return False
+        return True
+
+    @staticmethod
+    def _has_duplicate_statuses(status_counter_list: list) -> bool:
+        """Check if a file has duplicate status types."""
+        from collections import Counter  # pylint: disable=import-outside-toplevel
+
+        status_counter = Counter(status_counter_list)
+        for count in status_counter.values():
+            if count > 1:
+                return True  # Duplicate status type found
+        return False
+
+    def validate_file_status(self) -> bool:
+        """
+        Validate that the status file is valid.
+
+        Ensures that for every file name appearing in any event (collect, download,
+        fail, verified), there is a reasonable 'story' for that file: collected ->
+        (downloaded or failed) -> (verified or failed)
+        """
+        per_file, per_file_status_counter = self._build_per_file_status_data()
+
+        # Validate each file's lifecycle and check for duplicates
         for fn, status in per_file.items():
-            # Must be collected
-            if not status["collected"]:
+            if not self._validate_file_lifecycle(fn, status):
                 return False
-            # Must be either downloaded OR failed
-            if not (status["downloaded"] or status["failed"]):
+            if self._has_duplicate_statuses(per_file_status_counter[fn]):
                 return False
-            # If downloaded, must be also verified
-            if status["downloaded"] and not status["verified"]:
-                return False
-            # Check duplicate statuses for the same file
-            status_counter = Counter(per_file_status_counter[fn])
-            for _stat_name, count in status_counter.items():
-                if count > 1:
-                    return False  # Duplicate status type for a file, not allowed
 
         return True

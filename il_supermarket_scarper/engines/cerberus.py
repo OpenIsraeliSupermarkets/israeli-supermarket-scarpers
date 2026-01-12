@@ -1,5 +1,4 @@
 import datetime
-import asyncio
 from typing import AsyncGenerator, List
 from il_supermarket_scarper.utils import (
     Logger,

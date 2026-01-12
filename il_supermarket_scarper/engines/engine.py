@@ -75,7 +75,10 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         self.assigned_cookie = f"{self.chain.name}_{uuid.uuid4()}_cookies.txt"
         self.storage_path = file_output
         Logger.info(
-            f"Initialized {self.chain.value} scraper with output: {self.storage_path.get_output_location()}"
+            f"Initialized {self.chain.value} scraper with"
+            f"output: {self.storage_path.get_output_location()}"
+            f"status database: {status_database}"
+            f"file output: {file_output}"
         )
 
     def get_storage_path(self):
