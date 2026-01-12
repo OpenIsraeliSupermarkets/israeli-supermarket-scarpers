@@ -2,10 +2,11 @@ import os
 import traceback
 
 from .status import log_folder_details
-from .databases import JsonDataBase
+from .databases import JsonDataBase, AbstractDataBase
 from .status import _now
 from .lock_utils import lock_by_string
 from .file_output import FileOutput
+from typing import Optional
 
 
 class ScraperStatus:
@@ -18,15 +19,16 @@ class ScraperStatus:
     ESTIMATED_SIZE = "estimated_size"
     VERIFIED_DOWNLOADS = "verified_downloads"
 
-    def __init__(self, database_name, status_output: FileOutput = None, file_output: FileOutput = None) -> None:
-        # Use parent directory of storage path for status files
-        if status_output is None:
+    def __init__(self, database_name, status_database: Optional[AbstractDataBase] = None, file_output: Optional[FileOutput] = None) -> None:
+        # Use provided database or create default JsonDataBase
+        if status_database is None:
+            # Default: use JSON database in status subdirectory of file output path
             status_path = os.path.join(
                 os.path.dirname(file_output.get_storage_path()), "status"
             )
-            self.database = JsonDataBase(
-                database_name, status_path
-            )
+            self.database = JsonDataBase(database_name, status_path)
+        else:
+            self.database = status_database
         self.task_id = _now().strftime("%Y%m%d%H%M%S")
 
     @lock_by_string()

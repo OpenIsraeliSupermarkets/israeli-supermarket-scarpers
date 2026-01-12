@@ -19,7 +19,7 @@ class PublishPrice(WebBase):
         domain="prices",
         max_threads=5,
         file_output=None,
-        status_output=None,
+        status_database=None,
     ):
         super().__init__(
             chain,
@@ -27,7 +27,7 @@ class PublishPrice(WebBase):
             url=f"https://{domain}.{site_infix}.co.il/",
             max_threads=max_threads,
             file_output=file_output,
-            status_output=status_output,
+            status_database=status_database,
         )
         self.folder = None
 

@@ -8,7 +8,7 @@ class JsonDataBase(AbstractDataBase):
     """A class that represents a JSON-based database."""
 
     def __init__(self, database_name, base_path="json_db") -> None:
-        super().__init__(database_name, collection_status=True)
+        super().__init__(database_name)
         self.base_path = base_path
         self.database_file = f"{self.database_name}.json"
         self._ensure_db_directory_exists()

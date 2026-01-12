@@ -27,9 +27,9 @@ class Cerberus(Engine):
         ftp_password="",
         max_threads=5,
         file_output=None,
-        status_output=None,
+        status_database=None,
     ):
-        super().__init__(chain, chain_id, max_threads, file_output=file_output, status_output=status_output)
+        super().__init__(chain, chain_id, max_threads, file_output=file_output, status_database=status_database)
         self.ftp_host = ftp_host
         self.ftp_path = ftp_path
         self.ftp_username = ftp_username

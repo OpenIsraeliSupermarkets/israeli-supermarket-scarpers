@@ -89,41 +89,35 @@ class MainScrapperRunner:
                     )
                 )
 
-    def _create_status_output_for_scraper(self, scraper_name, config):
-        """Create a status output handler for a specific scraper based on config."""
+    def _create_status_database_for_scraper(self, scraper_name, config):
+        """Create a status database instance for a specific scraper based on config."""
+        from .utils.databases import JsonDataBase, MongoDataBase
+        
         target_folder = DumpFolderNames[scraper_name].value
+        database_name = target_folder
         
         # Use default config if None
         if config is None:
             config = {
-                "output_mode": "disk",
-                "base_storage_path": "dumps/status",
+                "database_type": "json",
+                "base_path": "dumps/status",
             }
         
-        if config.get("output_mode") == "disk":
-            # Disk output mode
-            base_path = config.get("base_storage_path", "dumps/status")
-            return DiskFileOutput(storage_path=os.path.join(base_path, target_folder))
-
-        elif config.get("output_mode") == "queue":
-            # Queue output mode
-            queue_type = config.get("queue_type", "memory")
-
-            if queue_type == "memory":
-                return QueueFileOutput(
-                    InMemoryQueueHandler(queue_name=f"{target_folder}_status")
-                )
-
-            elif queue_type == "kafka":
-                bootstrap_servers = config.get(
-                    "kafka_bootstrap_servers", "localhost:9092"
-                )
-                return QueueFileOutput(
-                    KafkaQueueHandler(
-                        bootstrap_servers=bootstrap_servers,
-                        topic=f"{target_folder}_status"
-                    )
-                )
+        database_type = config.get("database_type", "json")
+        
+        if database_type == "json":
+            # JSON file database
+            base_path = config.get("base_path", "dumps/status")
+            return JsonDataBase(database_name, base_path=os.path.join(base_path, target_folder))
+        
+        elif database_type == "mongo":
+            # MongoDB database
+            db = MongoDataBase(database_name)
+            db.create_connection()
+            return db
+        
+        else:
+            raise ValueError(f"Unknown database_type: {database_type}. Must be 'json' or 'mongo'")
 
     def run(
         self,
@@ -153,7 +147,7 @@ class MainScrapperRunner:
                             "min_size": min_size,
                             "max_size": max_size,
                             "file_output_config": self.file_output_config,
-                            "status_output_config": self.status_config,
+                            "status_database_config": self.status_config,
                         },
                     )
                     for chainScrapperClass in self.enabled_scrapers
@@ -185,7 +179,7 @@ class MainScrapperRunner:
         min_size=None,
         max_size=None,
         file_output_config=None,
-        status_output_config=None,
+        status_database_config=None,
     ):
         """scrape one"""
         chain_scrapper_constractor = ScraperFactory.get(chain_scrapper_class)
@@ -197,14 +191,14 @@ class MainScrapperRunner:
         )
         
         # Create status output for this specific scraper
-        status_output = self._create_status_output_for_scraper(
-            chain_scrapper_class, status_output_config
+        status_database = self._create_status_database_for_scraper(
+            chain_scrapper_class, status_database_config
         )
         
-        # Create scraper with both file_output and status_output
+        # Create scraper with both file_output and status_database
         scraper = chain_scrapper_constractor(
             file_output=file_output,
-            status_output=status_output
+            status_database=status_database
         )
 
         chain_name = scraper.get_chain_name()

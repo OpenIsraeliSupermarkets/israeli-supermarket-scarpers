@@ -8,10 +8,10 @@ class Aspx(WebBase, ABC):
     """class for aspx scapers"""
 
     def __init__(
-        self, chain, chain_id, url, aspx_page, max_threads=5, file_output=None, status_output=None
+        self, chain, chain_id, url, aspx_page, max_threads=5, file_output=None, status_database=None
     ):
         super().__init__(
-            chain, chain_id, url, max_threads=max_threads, file_output=file_output, status_output=status_output
+            chain, chain_id, url, max_threads=max_threads, file_output=file_output, status_database=status_database
         )
         self.aspx_page = aspx_page
 
