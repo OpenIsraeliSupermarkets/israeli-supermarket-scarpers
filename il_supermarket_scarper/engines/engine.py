@@ -34,6 +34,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         chain_id,
         max_threads=10,
         file_output: Optional[FileOutput] = None,
+        status_output: Optional[FileOutput] = None,
     ):
         """
         Initialize scraper engine.
@@ -44,10 +45,13 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             folder_name: Output folder name (used if file_output not provided)
             max_threads: Maximum concurrent threads
             file_output: Optional custom file output handler
+            status_output: Optional custom status output handler
 
         Note:
             If file_output is provided, it takes precedence over folder_name.
             Otherwise, a DiskFileOutput is created from folder_name.
+            If status_output is not provided, defaults to a status subdirectory
+            in the parent of file_output path.
         """
         assert DumpFolderNames.is_valid_folder_name(
             chain
@@ -62,13 +66,13 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             # Create storage path from folder_name and create DiskFileOutput
             file_output = DiskFileOutput(storage_path=DumpFolderNames[chain].value)
 
-        # Initialize status tracking (uses folder for status DB location)
-        super().__init__(chain.value, "status", file_output=file_output)
+        super().__init__(chain.value, status_output=status_output, file_output=file_output)
 
         self.assigned_cookie = f"{self.chain.name}_{uuid.uuid4()}_cookies.txt"
         self.storage_path = file_output
         Logger.info(
-            f"Initialized {self.chain.value} scraper with output: {self.storage_path}"
+            f"Initialized {self.chain.value} scraper with output: {self.storage_path.get_output_location()}, "
+            f"status output: {status_output.get_output_location()}"
         )
 
     def get_storage_path(self):

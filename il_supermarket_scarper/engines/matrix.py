@@ -17,8 +17,9 @@ class Matrix(Aspx):
         aspx_page="NBCompetitionRegulations.aspx",
         chain_hebrew_name=None,
         file_output=None,
+        status_output=None,
     ):
-        super().__init__(chain, chain_id, url, aspx_page, file_output=file_output)
+        super().__init__(chain, chain_id, url, aspx_page, file_output=file_output, status_output=status_output)
         self.chain_hebrew_name = chain_hebrew_name
 
     async def _build_query_url(self, query_params, base_urls):

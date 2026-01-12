@@ -18,14 +18,15 @@ class ScraperStatus:
     ESTIMATED_SIZE = "estimated_size"
     VERIFIED_DOWNLOADS = "verified_downloads"
 
-    def __init__(self, database_name, base_path, file_output: FileOutput) -> None:
+    def __init__(self, database_name, status_output: FileOutput = None, file_output: FileOutput = None) -> None:
         # Use parent directory of storage path for status files
-        status_path = os.path.join(
-            os.path.dirname(file_output.get_storage_path()), "status"
-        )
-        self.database = JsonDataBase(
-            database_name, status_path if status_path else base_path
-        )
+        if status_output is None:
+            status_path = os.path.join(
+                os.path.dirname(file_output.get_storage_path()), "status"
+            )
+            self.database = JsonDataBase(
+                database_name, status_path
+            )
         self.task_id = _now().strftime("%Y%m%d%H%M%S")
 
     @lock_by_string()

@@ -30,9 +30,10 @@ class MultiPageWeb(WebBase):
         page_argument="page",
         max_threads=5,
         file_output=None,
+        status_output=None,
     ):
         super().__init__(
-            chain, chain_id, url=url, max_threads=max_threads, file_output=file_output
+            chain, chain_id, url=url, max_threads=max_threads, file_output=file_output, status_output=status_output
         )
         self.total_page_xpath = total_page_xpath
         self.total_pages_pattern = total_pages_pattern

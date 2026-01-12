@@ -18,6 +18,7 @@ class ScarpingTask:  # pylint: disable=too-many-instance-attributes
         min_size=None,
         max_size=None,
         output_configuration=None,
+        status_configuration=None,
     ):
         """define the runner"""
         self.runner = MainScrapperRunner(
@@ -26,6 +27,7 @@ class ScarpingTask:  # pylint: disable=too-many-instance-attributes
             lookup_in_db=lookup_in_db,
             multiprocessing=multiprocessing,
             output_configuration=output_configuration,
+            status_configuration=status_configuration,
         )
         self.limit = limit
         self.files_types = files_types

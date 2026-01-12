@@ -26,6 +26,7 @@ class MainScrapperRunner:
         multiprocessing=5,
         lookup_in_db=True,
         output_configuration=None,
+        status_configuration=None,
     ):
         assert isinstance(enabled_scrapers, list) or enabled_scrapers is None
 
@@ -49,6 +50,10 @@ class MainScrapperRunner:
         self.file_output_config = output_configuration or {
             "output_mode": "disk",
             "base_storage_path": "dumps",
+        }
+        self.status_config = status_configuration or {
+            "output_mode": "disk",
+            "base_storage_path": "dumps/status",
         }
 
     def _create_file_output_for_scraper(self, scraper_name, config):
@@ -84,6 +89,42 @@ class MainScrapperRunner:
                     )
                 )
 
+    def _create_status_output_for_scraper(self, scraper_name, config):
+        """Create a status output handler for a specific scraper based on config."""
+        target_folder = DumpFolderNames[scraper_name].value
+        
+        # Use default config if None
+        if config is None:
+            config = {
+                "output_mode": "disk",
+                "base_storage_path": "dumps/status",
+            }
+        
+        if config.get("output_mode") == "disk":
+            # Disk output mode
+            base_path = config.get("base_storage_path", "dumps/status")
+            return DiskFileOutput(storage_path=os.path.join(base_path, target_folder))
+
+        elif config.get("output_mode") == "queue":
+            # Queue output mode
+            queue_type = config.get("queue_type", "memory")
+
+            if queue_type == "memory":
+                return QueueFileOutput(
+                    InMemoryQueueHandler(queue_name=f"{target_folder}_status")
+                )
+
+            elif queue_type == "kafka":
+                bootstrap_servers = config.get(
+                    "kafka_bootstrap_servers", "localhost:9092"
+                )
+                return QueueFileOutput(
+                    KafkaQueueHandler(
+                        bootstrap_servers=bootstrap_servers,
+                        topic=f"{target_folder}_status"
+                    )
+                )
+
     def run(
         self,
         limit=None,
@@ -112,6 +153,7 @@ class MainScrapperRunner:
                             "min_size": min_size,
                             "max_size": max_size,
                             "file_output_config": self.file_output_config,
+                            "status_output_config": self.status_config,
                         },
                     )
                     for chainScrapperClass in self.enabled_scrapers
@@ -143,6 +185,7 @@ class MainScrapperRunner:
         min_size=None,
         max_size=None,
         file_output_config=None,
+        status_output_config=None,
     ):
         """scrape one"""
         chain_scrapper_constractor = ScraperFactory.get(chain_scrapper_class)
@@ -152,8 +195,17 @@ class MainScrapperRunner:
         file_output = self._create_file_output_for_scraper(
             chain_scrapper_class, file_output_config
         )
-        # Create scraper with file_output if provided
-        scraper = chain_scrapper_constractor(file_output=file_output)
+        
+        # Create status output for this specific scraper
+        status_output = self._create_status_output_for_scraper(
+            chain_scrapper_class, status_output_config
+        )
+        
+        # Create scraper with both file_output and status_output
+        scraper = chain_scrapper_constractor(
+            file_output=file_output,
+            status_output=status_output
+        )
 
         chain_name = scraper.get_chain_name()
 

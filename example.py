@@ -6,6 +6,7 @@ Logger.set_logging_level("INFO")
 if __name__ == "__main__":
     scraper = ScarpingTask(
         output_configuration={"output_mode": "disk", "base_storage_path": "dumps"},
+        status_configuration={"output_mode": "disk", "base_storage_path": "status_logs"},
         lookup_in_db=False,
         multiprocessing=2,
         limit=1,
