@@ -27,7 +27,6 @@ class ScraperStatus:
             database_name, status_path if status_path else base_path
         )
         self.task_id = _now().strftime("%Y%m%d%H%M%S")
-        self.filter_between_itrations = False
 
     @lock_by_string()
     def on_scraping_start(self, limit, files_types, **additional_info):
