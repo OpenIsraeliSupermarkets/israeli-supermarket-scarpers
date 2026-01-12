@@ -54,52 +54,47 @@ class JsonDataBase(AbstractDataBase):
 
     def insert_documents(self, collection_name, document):
         """Insert a document into a collection inside the JSON database."""
-        if self.collection_status:
 
-            data = self._read_database()
-            # Ensure the collection exists in the database
-            if collection_name not in data:
-                data[collection_name] = []
+        data = self._read_database()
+        # Ensure the collection exists in the database
+        if collection_name not in data:
+            data[collection_name] = []
 
-            # Add the new document to the collection
-            data[collection_name].extend(document)
+        # Add the new document to the collection
+        data[collection_name].extend(document)
 
-            # Save the updated data back to the file
-            self._write_database(data)
+        # Save the updated data back to the file
+        self._write_database(data)
 
     def insert_document(self, collection_name, document):
         """Insert a document into a collection inside the JSON database."""
-        if self.collection_status:
-            data = self._read_database()
-            # Ensure the collection exists in the database
-            if collection_name not in data:
-                data[collection_name] = []
+        data = self._read_database()
+        # Ensure the collection exists in the database
+        if collection_name not in data:
+            data[collection_name] = []
 
-            # Add the new document to the collection
-            data[collection_name].append(document)
+        # Add the new document to the collection
+        data[collection_name].append(document)
 
-            # Save the updated data back to the file
-            self._write_database(data)
+        # Save the updated data back to the file
+        self._write_database(data)
 
     def find_document(self, collection_name, query):
         """Find a document in a collection based on a query."""
-        if self.collection_status:
-            file_path = self._get_database_file_path()
+        file_path = self._get_database_file_path()
 
-            if os.path.exists(file_path):
-                with open(file_path, "r", encoding="utf-8") as file:
-                    try:
-                        data = json.load(file)
+        if os.path.exists(file_path):
+            with open(file_path, "r", encoding="utf-8") as file:
+                try:
+                    data = json.load(file)
 
-                        # Check if the collection exists
-                        if collection_name in data:
-                            # Filter the documents in the collection based on the query
-                            for document in data[collection_name]:
-                                if all(
-                                    item in document.items() for item in query.items()
-                                ):
-                                    return document
-                    except json.JSONDecodeError:
-                        Logger.warning(f"File {file_path} is corrupted.")
-
-        return None
+                    # Check if the collection exists
+                    if collection_name in data:
+                        # Filter the documents in the collection based on the query
+                        for document in data[collection_name]:
+                            if all(
+                                item in document.items() for item in query.items()
+                            ):
+                                return document
+                except json.JSONDecodeError:
+                    Logger.warning(f"File {file_path} is corrupted.")

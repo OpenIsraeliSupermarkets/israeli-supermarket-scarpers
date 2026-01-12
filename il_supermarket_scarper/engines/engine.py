@@ -72,7 +72,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         self.storage_path = file_output
         Logger.info(
             f"Initialized {self.chain.value} scraper with output: {self.storage_path.get_output_location()}, "
-            f"status output: {status_database.get_output_location()}"
+            f"status database: {status_database.get_database_name()}"
         )
 
     def get_storage_path(self):
@@ -136,7 +136,6 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         store_id=None,
         when_date=None,
         files_names_to_scrape=None,
-        suppress_exception=False,
         random_selection=False,
     ):
         """filter the list according to condition - streaming version that
@@ -153,11 +152,6 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 yield file
 
             if state.total_input == 0:
-                if not suppress_exception:
-                    raise ValueError(
-                        f"No files to download for file files_types={files_types},"
-                        f"limit={limit},store_id={store_id},when_date={when_date}"
-                    )
                 Logger.warning(
                     f"No files to download for file files_types={files_types},"
                     f"limit={limit},store_id={store_id},when_date={when_date}"
@@ -169,7 +163,6 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         # filter files already downloaded
         intreable_: AsyncGenerator[tuple[str, str], None] = (
             self.filter_already_downloaded(
-                self.storage_path.get_storage_path(),
                 files_names_to_scrape,
                 files_list,
                 by_function=by_function,
@@ -237,11 +230,6 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
 
         # raise error if there was nothing to download.
         if state.file_pass_limit == 0:
-            if not suppress_exception:
-                raise ValueError(
-                    f"No files to download for file files_types={files_types},"
-                    f"limit={limit},store_id={store_id},when_date={when_date}"
-                )
             Logger.warning(
                 f"No files to download for file files_types={files_types},"
                 f"limit={limit},store_id={store_id},when_date={when_date}"
@@ -391,7 +379,6 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         files_names_to_scrape=None,
         filter_null=False,
         filter_zero=False,
-        suppress_exception=False,
         min_size=None,
         max_size=None,
         random_selection=False,
@@ -405,7 +392,6 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             when_date=when_date,
             filter_nul=filter_null,
             filter_zero=filter_zero,
-            suppress_exception=suppress_exception,
         )
         self._validate_scraper_params(
             limit=limit, files_types=files_types, store_id=store_id
@@ -421,7 +407,6 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 files_names_to_scrape=files_names_to_scrape,
                 filter_null=filter_null,
                 filter_zero=filter_zero,
-                suppress_exception=suppress_exception,
                 min_size=min_size,
                 max_size=max_size,
                 random_selection=random_selection,
@@ -450,7 +435,6 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         files_names_to_scrape=None,
         filter_null=False,
         filter_zero=False,
-        suppress_exception=False,
         min_size=None,
         max_size=None,
         random_selection=False,

@@ -81,7 +81,6 @@ class MultiPageWeb(WebBase):
         store_id=None,
         when_date=None,
         limit=None,
-        suppress_exception=False,
         random_selection=False,
     ):
         """generate all files from the site"""
@@ -124,7 +123,6 @@ class MultiPageWeb(WebBase):
                     files_types=files_types,
                     store_id=store_id,
                     when_date=when_date,
-                    suppress_exception=suppress_exception,
                     random_selection=random_selection,
                 ):
                     yield task
@@ -138,7 +136,6 @@ class MultiPageWeb(WebBase):
         filter_null=False,
         filter_zero=False,
         files_names_to_scrape=None,
-        suppress_exception=False,
         min_size=None,
         max_size=None,
         random_selection=False,
@@ -151,7 +148,6 @@ class MultiPageWeb(WebBase):
             files_types=files_types,
             store_id=store_id,
             when_date=when_date,
-            suppress_exception=suppress_exception,
             random_selection=random_selection,
         )
 
@@ -181,7 +177,6 @@ class MultiPageWeb(WebBase):
             store_id=store_id,
             when_date=when_date,
             files_names_to_scrape=files_names_to_scrape,
-            suppress_exception=suppress_exception,
             random_selection=random_selection,
         )
 
@@ -256,7 +251,6 @@ class MultiPageWeb(WebBase):
         files_types=None,
         store_id=None,
         when_date=None,
-        suppress_exception=True,  # this is nested limit don't fail
         random_selection=False,
     ):
         """additional processing to the links before download"""
@@ -282,7 +276,6 @@ class MultiPageWeb(WebBase):
             by_function=lambda x: x[1],
             store_id=store_id,
             when_date=when_date,
-            suppress_exception=suppress_exception,
             random_selection=random_selection,
         )
 

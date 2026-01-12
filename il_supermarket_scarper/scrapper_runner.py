@@ -124,7 +124,6 @@ class MainScrapperRunner:
         limit=None,
         files_types=None,
         when_date=False,
-        suppress_exception=False,
         min_size=None,
         max_size=None,
     ):
@@ -143,7 +142,6 @@ class MainScrapperRunner:
                             "limit": limit,
                             "files_types": files_types,
                             "when_date": when_date,
-                            "suppress_exception": False,
                             "min_size": min_size,
                             "max_size": max_size,
                             "file_output_config": self.file_output_config,
@@ -175,7 +173,6 @@ class MainScrapperRunner:
         files_types=None,
         store_id=None,
         when_date=None,
-        suppress_exception=False,
         min_size=None,
         max_size=None,
         file_output_config=None,
@@ -213,7 +210,6 @@ class MainScrapperRunner:
             files_names_to_scrape=None,
             filter_null=False,
             filter_zero=False,
-            suppress_exception=suppress_exception,
             min_size=min_size,
             max_size=max_size,
         ):

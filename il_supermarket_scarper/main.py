@@ -14,7 +14,6 @@ class ScarpingTask:  # pylint: disable=too-many-instance-attributes
         files_types=FileTypesFilters.all_types(),
         lookup_in_db=True,
         multiprocessing=5,
-        suppress_exception=False,
         min_size=None,
         max_size=None,
         output_configuration=None,
@@ -32,7 +31,6 @@ class ScarpingTask:  # pylint: disable=too-many-instance-attributes
         self.limit = limit
         self.files_types = files_types
         self.when_date = when_date
-        self.suppress_exception = suppress_exception
         self.min_size = min_size
         self.max_size = max_size
 
@@ -42,7 +40,6 @@ class ScarpingTask:  # pylint: disable=too-many-instance-attributes
             limit=self.limit,
             files_types=self.files_types,
             when_date=self.when_date,
-            suppress_exception=self.suppress_exception,
             min_size=self.min_size,
             max_size=self.max_size,
         )

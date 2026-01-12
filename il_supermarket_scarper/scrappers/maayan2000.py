@@ -5,10 +5,10 @@ from il_supermarket_scarper.utils import DumpFolderNames
 class Maayan2000(Bina):
     """scaper for maayan 2000"""
 
-    def __init__(self, file_output=None):
+    def __init__(self, file_output=None, status_database=None):
         super().__init__(
             chain=DumpFolderNames.MAAYAN_2000,
             chain_id="7290058159628",
             url_perfix="maayan2000",
-            file_output=file_output,
+            file_output=file_output, status_database=status_database,
         )

@@ -7,6 +7,11 @@ class AbstractDataBase(ABC):
     def __init__(self, database_name) -> None:
         self.database_name = database_name.replace(" ", "_").lower()
 
+
+    def get_database_name(self):
+        """Get the name of the database."""
+        return self.database_name
+
     @abstractmethod
     def insert_document(self, collection_name, document):
         """Insert a document into a collection."""

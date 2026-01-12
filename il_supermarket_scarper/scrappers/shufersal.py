@@ -9,14 +9,14 @@ class Shufersal(MultiPageWeb):
 
     utilize_date_param = False
 
-    def __init__(self, file_output=None):
+    def __init__(self, file_output=None, status_database=None):
         super().__init__(
             url="https://prices.shufersal.co.il/",
             total_page_xpath="""//*[@id="gridContainer"]/table/tfoot/tr/td/a[6]/@href""",
             total_pages_pattern=r"[?&]page=([0-9]+)",
             chain=DumpFolderNames.SHUFERSAL,
             chain_id="7290027600007",
-            file_output=file_output,
+            file_output=file_output, status_database=status_database,
             page_argument="&page",
         )
 

@@ -73,7 +73,6 @@ class WebBase(Engine):
         store_id=None,
         when_date=None,
         files_names_to_scrape=None,
-        suppress_exception=False,
         random_selection=False,
     ):
         """apply limit to zip"""
@@ -87,7 +86,6 @@ class WebBase(Engine):
             store_id=store_id,
             when_date=when_date,
             files_names_to_scrape=files_names_to_scrape,
-            suppress_exception=suppress_exception,
             random_selection=random_selection,
         ):
             yield item
@@ -126,7 +124,6 @@ class WebBase(Engine):
         filter_null=False,
         filter_zero=False,
         files_names_to_scrape=None,
-        suppress_exception=False,
         min_size=None,
         max_size=None,
         random_selection=False,
@@ -165,7 +162,6 @@ class WebBase(Engine):
             store_id=store_id,
             when_date=when_date,
             files_names_to_scrape=files_names_to_scrape,
-            suppress_exception=suppress_exception,
             random_selection=random_selection,
         )
 
@@ -181,7 +177,6 @@ class WebBase(Engine):
         files_names_to_scrape=None,
         filter_null=False,
         filter_zero=False,
-        suppress_exception=False,
         min_size=None,
         max_size=None,
         random_selection=False,
@@ -196,7 +191,6 @@ class WebBase(Engine):
             filter_null=filter_null,
             filter_zero=filter_zero,
             files_names_to_scrape=files_names_to_scrape,
-            suppress_exception=suppress_exception,
             min_size=min_size,
             max_size=max_size,
             random_selection=random_selection,

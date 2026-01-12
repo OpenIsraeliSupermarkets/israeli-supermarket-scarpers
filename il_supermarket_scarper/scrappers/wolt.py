@@ -10,12 +10,12 @@ from il_supermarket_scarper.utils import DumpFolderNames
 class Wolt(WebBase):
     """scraper for wolt"""
 
-    def __init__(self, file_output=None):
+    def __init__(self, file_output=None, status_database=None):
         super().__init__(
             DumpFolderNames.WOLT,
             chain_id="7290058249350",
             url="https://wm-gateway.wolt.com/isr-prices/public/v1/index.html",
-            file_output=file_output,
+            file_output=file_output, status_database=status_database,
         )
 
     async def get_request_url(

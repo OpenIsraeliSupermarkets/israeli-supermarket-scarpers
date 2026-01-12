@@ -5,10 +5,10 @@ from il_supermarket_scarper.utils import DumpFolderNames
 class Yohananof(Cerberus):
     """scraper for yohananof"""
 
-    def __init__(self, file_output=None):
+    def __init__(self, file_output=None, status_database=None):
         super().__init__(
             chain=DumpFolderNames.YOHANANOF,
             chain_id="7290803800003",
-            file_output=file_output,
+            file_output=file_output, status_database=status_database,
             ftp_username="yohananof",
         )
