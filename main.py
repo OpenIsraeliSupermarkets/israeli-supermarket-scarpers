@@ -3,10 +3,9 @@ import os
 from il_supermarket_scarper import ScarpingTask, ScraperFactory, FileTypesFilters
 
 
-def load_params():  # pylint: disable=too-many-branches
+def load_configuration():  # pylint: disable=too-many-branches
     """load params from env variables with validation"""
     kwargs = {}
-
     # validate scrapers
     enabled_scrapers = os.getenv("ENABLED_SCRAPERS", None)
     if enabled_scrapers:
@@ -47,22 +46,6 @@ def load_params():  # pylint: disable=too-many-branches
             kwargs["multiprocessing"] = int(number_of_processes)
         except ValueError:
             raise ValueError("NUMBER_OF_PROCESSES must be an integer")
-
-    # validate limit
-    limit = os.getenv("LIMIT", None)
-    if limit:
-        try:
-            kwargs["limit"] = int(limit)
-        except ValueError:
-            raise ValueError(f"LIMIT must be an integer, but got {limit}")
-
-    # validate today
-    today = os.getenv("TODAY", None)
-    if today:
-        try:
-            kwargs["when_date"] = datetime.datetime.strptime(today, "%Y-%m-%d %H:%M")
-        except ValueError:
-            raise ValueError("TODAY must be in the format 'YYYY-MM-DD HH:MM'")
 
     # validate output mode (disk or queue)
     output_mode = os.getenv("OUTPUT_MODE", "disk").lower()
@@ -107,7 +90,7 @@ def load_params():  # pylint: disable=too-many-branches
 
     if status_database_type == "json":
         # JSON database configuration (default)
-        status_configuration["base_path"] = os.getenv("STATUS_DATABASE_PATH", "status")
+        status_configuration["base_path"] = os.getenv("STATUS_DATABASE_PATH", "dumps/status")
     # For mongo, connection details are read from environment variables in MongoDataBase itself
     # (MONGO_URL, MONGO_PORT)
 
@@ -116,10 +99,32 @@ def load_params():  # pylint: disable=too-many-branches
     return kwargs
 
 
+def load_runtime_params():
+    # validate limit
+    kwargs = {}
+    limit = os.getenv("LIMIT", None)
+    if limit:
+        try:
+            kwargs["limit"] = int(limit)
+        except ValueError:
+            raise ValueError(f"LIMIT must be an integer, but got {limit}")
+
+    # validate today
+    today = os.getenv("TODAY", None)
+    if today:
+        try:
+            kwargs["when_date"] = datetime.datetime.strptime(today, "%Y-%m-%d %H:%M")
+        except ValueError:
+            raise ValueError("TODAY must be in the format 'YYYY-MM-DD HH:MM'")
+
+    return kwargs
+
+
 if __name__ == "__main__":
 
-    args = load_params()
+    args = load_configuration()
+    limit_and_when_date = load_runtime_params()
 
     task = ScarpingTask(**args)
 
-    task.start()
+    task.start(**limit_and_when_date)

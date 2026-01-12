@@ -28,7 +28,7 @@ class ScarpingTask:  # pylint: disable=too-many-instance-attributes
         self.min_size = min_size
         self.max_size = max_size
 
-    def start(self, limit, when_date):
+    def start(self, limit=None, when_date=None):
         """run the scraping"""
         return self.runner.run(
             limit=limit,

@@ -1,5 +1,5 @@
 import os
-import asyncio
+import datetime
 
 from multiprocessing import Pool
 
@@ -14,6 +14,7 @@ from .utils import (
     InMemoryQueueHandler,
     KafkaQueueHandler,
     FilterState,
+    _now,
 )
 
 
@@ -176,6 +177,7 @@ class MainScrapperRunner:
         self,
         chain_scrapper_class,
         limit=None,
+        single_pass=False,
         files_types=None,
         store_id=None,
         when_date=None,
@@ -185,7 +187,7 @@ class MainScrapperRunner:
         status_database_config=None,
     ):
         """scrape one"""
-        state = FilterState()
+
         chain_scrapper_constractor = ScraperFactory.get(chain_scrapper_class)
         Logger.info(f"Starting scrapper {chain_scrapper_constractor}")
 
@@ -208,19 +210,82 @@ class MainScrapperRunner:
 
         Logger.info(f"scraping {chain_name}")
 
-        async for _ in scraper.scrape(
-            state=state,
-            limit=limit,
-            files_types=files_types,
-            store_id=store_id,
-            when_date=when_date,
-            files_names_to_scrape=None,
-            filter_null=False,
-            filter_zero=False,
-            min_size=min_size,
-            max_size=max_size,
-        ):
-            pass
+        # Track state across multiple runs
+        state = FilterState()
+        run_count = 0
+        initial_when_date = when_date
+
+        # Loop until one of the exit conditions is met
+        while True:
+            run_count += 1
+            Logger.info(f"[{chain_name}] Starting run #{run_count}")
+
+            # Run the scraper
+            collected_now_count = 0
+            async for _ in scraper.scrape(
+                state=state,
+                limit=limit,
+                files_types=files_types,
+                store_id=store_id,
+                when_date=when_date,
+                files_names_to_scrape=None,
+                filter_null=False,
+                filter_zero=False,
+                min_size=min_size,
+                max_size=max_size,
+            ):
+                collected_now_count += 1
+
+            Logger.info(
+                f"[{chain_name}] Run #{run_count} completed. "
+                f"Files found: {collected_now_count}, "
+                f"Total files: {state.file_pass_limit}"
+            )
+
+            # Check exit conditions
+            should_exit = False
+            exit_reason = None
+
+            # Condition 1: Limit reached
+            if limit is not None and state.file_pass_limit >= limit:
+                should_exit = True
+                exit_reason = f"limit reached ({state.file_pass_limit}/{limit})"
+
+            # Condition 2: Single pass completed
+            elif single_pass:
+                should_exit = True
+                exit_reason = "single pass completed"
+
+            # Condition 3: when_date provided, day has passed, and no new files found
+            elif initial_when_date is not None and isinstance(
+                initial_when_date, datetime.datetime
+            ):
+                current_date = _now().date()
+                when_date_date = initial_when_date.date()
+
+                # Check if the day has passed
+                if current_date > when_date_date:
+                    # If no files were found in this run, exit
+                    if collected_now_count == 0:
+                        should_exit = True
+                        exit_reason = (
+                            f"day has passed ({when_date_date} -> {current_date}) "
+                            f"and no additional files found"
+                        )
+                    else:
+                        # Day passed but files were found, continue
+                        Logger.info(
+                            f"[{chain_name}] Day has passed but found {collected_now_count} "
+                            f"files, continuing..."
+                        )
+
+            if should_exit:
+                Logger.info(f"[{chain_name}] Exiting loop: {exit_reason}")
+                break
+
+            # If we're continuing, log that we'll run again
+            Logger.info(f"[{chain_name}] Continuing to next run...")
+
         Logger.info(f"done scraping {chain_name}")
 
         folder_with_files = scraper.get_storage_path()
