@@ -20,7 +20,6 @@ class StartedStatus(BaseModel):
     when_date: Optional[datetime] = None
     filter_nul: bool = False
     filter_zero: bool = False
-    suppress_exception: bool = False
 
 
 class FolderSizeInfo(BaseModel):

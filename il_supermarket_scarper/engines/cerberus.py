@@ -6,7 +6,8 @@ from il_supermarket_scarper.utils import (
     collect_from_ftp,
     fetch_file_from_ftp_to_memory,
     FileTypesFilters,
-)
+    ScrapingResult,
+)   
 from il_supermarket_scarper.utils.state import FilterState
 from .engine import Engine
 
@@ -245,10 +246,10 @@ class Cerberus(Engine):
             error = str(exception)
             restart_and_retry = True
 
-        yield {
-            "file_name": file_name,
-            "downloaded": downloaded,
-            "extract_succefully": extract_succefully,
-            "restart_and_retry": restart_and_retry,
-            "error": error,
-        }
+        yield ScrapingResult(
+            file_name=file_name,
+            downloaded=downloaded,
+            extract_succefully=extract_succefully,
+            restart_and_retry=restart_and_retry,
+            error=error,
+        )

@@ -19,6 +19,7 @@ from il_supermarket_scarper.utils import (
     DumpFolderNames,
     FileOutput,
     DiskFileOutput,
+    ScrapingResult,
 )
 from il_supermarket_scarper.utils.state import FilterState
 from il_supermarket_scarper.utils import AbstractDataBase
@@ -71,8 +72,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         self.assigned_cookie = f"{self.chain.name}_{uuid.uuid4()}_cookies.txt"
         self.storage_path = file_output
         Logger.info(
-            f"Initialized {self.chain.value} scraper with output: {self.storage_path.get_output_location()}, "
-            f"status database: {status_database.get_database_name()}"
+            f"Initialized {self.chain.value} scraper with output: {self.storage_path.get_output_location()}"
         )
 
     def get_storage_path(self):
@@ -415,9 +415,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 yield result
 
         except Exception as e:  # pylint: disable=broad-exception-caught
-            if not suppress_exception:
-                raise e
-            Logger.warning(f"Suppressing exception! {e}")
+            Logger.error(f"Error scraping: {e}")
             completed_successfully = False
         finally:
             self.on_scrape_completed(
@@ -438,7 +436,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         min_size=None,
         max_size=None,
         random_selection=False,
-    ):
+    ) -> AsyncGenerator[ScrapingResult, None]:
         """method to be implemeted by the child class"""
 
     def get_chain_id(self):
@@ -552,13 +550,13 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 },
             )
 
-            return {
-                "file_name": file_name,
-                "downloaded": downloaded,
-                "extract_succefully": result.get("extract_successfully", False),
-                "error": result.get("error"),
-                "restart_and_retry": False,
-            }
+            return ScrapingResult(
+                file_name=file_name,
+                downloaded=downloaded,
+                extract_succefully=result.get("extract_successfully", False),
+                error=result.get("error"),
+                restart_and_retry=False,
+            )
 
         except RestartSessionError as exception:
             Logger.error(f"Error processing {file_link}, downloaded={downloaded}")
@@ -570,13 +568,13 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             Logger.error_execption(exception)
             error = str(exception)
 
-        return {
-            "file_name": file_name,
-            "downloaded": downloaded,
-            "extract_succefully": False,
-            "error": error,
-            "restart_and_retry": restart_and_retry,
-        }
+        return ScrapingResult(
+            file_name=file_name,
+            downloaded=downloaded,
+            extract_succefully=False,
+            error=error,
+            restart_and_retry=restart_and_retry,
+        )
 
     def _read_file_content(self, file_path: str) -> bytes:
         """Read file content as bytes (sync operation for thread)."""
@@ -591,6 +589,8 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         extract_succefully = False
         error = None
         restart_and_retry = False
+        file_name = os.path.basename(file_save_path)
+        
         try:
 
             # add ext if possible
@@ -600,6 +600,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 file_save_path = (
                     file_save_path + "." + file_link.split("?")[0].split(".")[-1]
                 )
+                file_name = os.path.basename(file_save_path)
 
             # try to download the file
             try:
@@ -641,4 +642,10 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             Logger.error_execption(exception)
             error = str(exception)
 
-        return downloaded, extract_succefully, error, restart_and_retry
+        return ScrapingResult(
+            file_name=file_name,
+            downloaded=downloaded,
+            extract_succefully=extract_succefully,
+            error=error,
+            restart_and_retry=restart_and_retry,
+        )

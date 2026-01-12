@@ -7,6 +7,7 @@ from .status import _now
 from .lock_utils import lock_by_string
 from .file_output import FileOutput
 from typing import Optional
+from .scraping_result import ScrapingResult
 
 
 class ScraperStatus:
@@ -68,15 +69,15 @@ class ScraperStatus:
         )
 
     @lock_by_string()
-    def register_downloaded_file(self, results):
+    def register_downloaded_file(self, results: ScrapingResult):
         """Report that the file has been downloaded."""
         # Map results to contract field names
         event_data = {
-            "file_name_downloaded": results.get("file_name", ""),
-            "downloaded_successfully": results.get("downloaded", False),
-            "extracted_successfully": results.get("extract_succefully", False),
-            "error_message": results.get("error"),
-            "restart_and_retry": results.get("restart_and_retry", False),
+            "file_name_downloaded": results.file_name,
+            "downloaded_successfully": results.downloaded,
+            "extracted_successfully": results.extract_succefully,
+            "error_message": results.error,
+            "restart_and_retry": results.restart_and_retry,
         }
         self._insert_event(ScraperStatus.DOWNLOADED, **event_data)
         self._add_downloaded_files_to_list(results)
@@ -93,16 +94,16 @@ class ScraperStatus:
             if not already_downloaded and required_file:
                 yield file
 
-    def _add_downloaded_files_to_list(self, results, **_):
+    def _add_downloaded_files_to_list(self, results: ScrapingResult):
         """Add downloaded files to the database collection."""
-        if results["extract_succefully"]:
+        if results.extract_succefully:
             self.database.insert_document(
                 self.VERIFIED_DOWNLOADS,
-                {"file_name": results["file_name"], "when": _now()},
+                {"file_name": results.file_name, "when": _now()},
             )
 
     @lock_by_string()
-    def on_scrape_completed(self, folder_name, completed_successfully=True):
+    def on_scrape_completed(self, folder_name: str, completed_successfully: bool = True):
         """Report when scraping is completed."""
         self._insert_global_status(
             ScraperStatus.ESTIMATED_SIZE,

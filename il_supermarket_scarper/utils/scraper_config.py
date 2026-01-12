@@ -28,9 +28,6 @@ class ScraperConfig:  # pylint: disable=too-many-instance-attributes
     min_size: int = 100  # bytes
     max_size: int = 10_000_000  # 10 MB
 
-    # Scraping options
-    suppress_exception: bool = False
-
     # Additional metadata to include with files
     metadata: dict = field(default_factory=dict)
 

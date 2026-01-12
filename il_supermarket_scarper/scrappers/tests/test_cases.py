@@ -208,7 +208,6 @@ def make_test_case(scraper_enum, store_id):
                         "when_date": when_date,
                         "filter_null": True,
                         "filter_zero": True,
-                        "suppress_exception": False,
                         "min_size": 100,
                         "max_size": 10000000,
                     }

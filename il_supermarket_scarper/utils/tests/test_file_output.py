@@ -78,7 +78,6 @@ class TestFileOutput:
         assert config.filter_zero is True
         assert config.min_size == 100
         assert config.max_size == 10_000_000
-        assert config.suppress_exception is False
         assert config.folder_name is None
         assert config.file_output is None
 
