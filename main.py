@@ -94,6 +94,25 @@ def load_params():
 
     kwargs["output_configuration"] = output_configuration
 
+    # Configure status database (json or mongo)
+    status_database_type = os.getenv("STATUS_DATABASE_TYPE", "json").lower()
+    if status_database_type not in ["json", "mongo"]:
+        raise ValueError(
+            f"STATUS_DATABASE_TYPE must be 'json' or 'mongo', but got {status_database_type}"
+        )
+
+    status_configuration = {
+        "database_type": status_database_type,
+    }
+
+    if status_database_type == "json":
+        # JSON database configuration (default)
+        status_configuration["base_path"] = os.getenv("STATUS_DATABASE_PATH", "dumps/status")
+    # For mongo, connection details are read from environment variables in MongoDataBase itself
+    # (MONGO_URL, MONGO_PORT)
+
+    kwargs["status_configuration"] = status_configuration
+
     return kwargs
 
 

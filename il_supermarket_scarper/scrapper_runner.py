@@ -52,8 +52,8 @@ class MainScrapperRunner:
             "base_storage_path": "dumps",
         }
         self.status_config = status_configuration or {
-            "output_mode": "disk",
-            "base_storage_path": "dumps/status",
+            "database_type": "json",
+            "base_path": "dumps/status",
         }
 
     def _create_file_output_for_scraper(self, scraper_name, config):
