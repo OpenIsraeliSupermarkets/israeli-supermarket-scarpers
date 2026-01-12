@@ -42,43 +42,28 @@ class Cerberus(Engine):
         self.ftp_password = ftp_password
         self.ftp_session = False
 
-    async def _scrape(
-        self,
-        limit=None,
-        files_types=None,
-        store_id=None,
-        when_date=None,
-        files_names_to_scrape=None,
-        filter_null=False,
-        filter_zero=False,
-        min_size=None,
-        max_size=None,
-        random_selection=False,
-    ):
-
-        async for file_name in self.collect_files_details_from_site(
-            limit=limit,
-            files_types=files_types,
-            filter_null=filter_null,
-            filter_zero=filter_zero,
-            store_id=store_id,
-            when_date=when_date,
-            files_names_to_scrape=files_names_to_scrape,
-            min_size=min_size,
-            max_size=max_size,
-            random_selection=random_selection,
-        ):
-            try:
-                # Register that we've collected this file's details
-                self.register_collected_file(
-                    file_name_collected_from_site=file_name,
-                    links_collected_from_site="",
-                )
-                async for result in self.persist_from_ftp(file_name):
-                    yield result
-            except Exception as e:  # pylint: disable=broad-except
-                self.register_download_fail(e, file_name)
-                raise e
+    async def process_file(self, file_details):
+        """Process a single file from Cerberus. file_details is file_name string."""
+        file_name = file_details
+        
+        # Register that we've collected this file's details
+        self.register_collected_file(
+            file_name_collected_from_site=file_name,
+            links_collected_from_site="",
+        )
+        
+        # Process file from FTP - persist_from_ftp yields a ScrapingResult
+        async for result in self.persist_from_ftp(file_name):
+            return result
+        
+        # Should not reach here, but return error result if we do
+        return ScrapingResult(
+            file_name=file_name,
+            downloaded=False,
+            extract_succefully=False,
+            error="No result from persist_from_ftp",
+            restart_and_retry=False,
+        )
 
     async def get_type_pattern(self, files_types):
         """get the file type pattern"""

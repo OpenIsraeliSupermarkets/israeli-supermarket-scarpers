@@ -246,6 +246,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         limit,
         files_types,
         by_function,
+        random_selection=False,
     ) -> AsyncGenerator[tuple[str, str], None]:
         """filter the file types requested"""
 
@@ -427,7 +428,34 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             self._post_scraping()
 
     @abstractmethod
-    async def _scrape(
+    async def collect_files_details_from_site(
+        self,
+        limit=None,
+        files_types=None,
+        store_id=None,
+        when_date=None,
+        files_names_to_scrape=None,
+        filter_null=False,
+        filter_zero=False,
+        min_size=None,
+        max_size=None,
+        random_selection=False,
+    ) -> AsyncGenerator:
+        """Collect file details from the site. Should yield file details (format depends on subclass)."""
+
+    @abstractmethod
+    async def process_file(self, file_details) -> ScrapingResult:
+        """
+        Process a single file and return ScrapingResult.
+        
+        Args:
+            file_details: File details from collect_files_details_from_site (format depends on subclass)
+        
+        Returns:
+            ScrapingResult: Result of processing the file
+        """
+
+    async def _scrape(  # pylint: disable=too-many-locals
         self,
         limit=None,
         files_types=None,
@@ -440,7 +468,112 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         max_size=None,
         random_selection=False,
     ) -> AsyncGenerator[ScrapingResult, None]:
-        """method to be implemeted by the child class"""
+        """scrape the files with concurrent streaming downloads"""
+        
+        # Semaphore to limit concurrent downloads
+        semaphore = asyncio.Semaphore(self.max_threads)
+        
+        # Helper function to process a single file with semaphore
+        async def process_file_with_semaphore(file_details):
+            async with semaphore:
+                try:
+                    return await self.process_file(file_details)
+                except Exception as e:  # pylint: disable=broad-except
+                    Logger.error(f"Error in process_file: {e}")
+                    # Try to extract file_name from file_details for error reporting
+                    file_name = (
+                        file_details
+                        if isinstance(file_details, str)
+                        else file_details[1]
+                        if isinstance(file_details, tuple) and len(file_details) > 1
+                        else "unknown"
+                    )
+                    self.register_download_fail(e, file_name)
+                    return ScrapingResult(
+                        file_name=file_name,
+                        downloaded=False,
+                        extract_succefully=False,
+                        error=str(e),
+                        restart_and_retry=False,
+                    )
+        
+        # Get the file generator
+        files_generator = self.collect_files_details_from_site(
+            limit=limit,
+            files_types=files_types,
+            store_id=store_id,
+            when_date=when_date,
+            filter_null=filter_null,
+            filter_zero=filter_zero,
+            files_names_to_scrape=files_names_to_scrape,
+            min_size=min_size,
+            max_size=max_size,
+            random_selection=random_selection,
+        )
+        
+        # Set to track pending tasks (task -> file_details mapping)
+        pending_tasks = {}
+        generator_exhausted = False
+        
+        try:
+            while True:
+                # Add new tasks from generator up to max_threads limit
+                while not generator_exhausted and len(pending_tasks) < self.max_threads:
+                    try:
+                        file_details = await files_generator.__anext__()
+                        task = asyncio.create_task(
+                            process_file_with_semaphore(file_details)
+                        )
+                        pending_tasks[task] = file_details
+                    except StopAsyncIteration:
+                        generator_exhausted = True
+                        break
+                
+                # If no pending tasks and generator is exhausted, we're done
+                if not pending_tasks and generator_exhausted:
+                    break
+                
+                # Wait for at least one task to complete
+                if pending_tasks:
+                    done, pending = await asyncio.wait(
+                        pending_tasks.keys(),
+                        return_when=asyncio.FIRST_COMPLETED
+                    )
+                    
+                    # Process completed tasks
+                    for task in done:
+                        file_details = pending_tasks.pop(task)
+                        try:
+                            result = await task
+                            yield result
+                        except Exception as e:  # pylint: disable=broad-except
+                            Logger.error(f"Error processing task: {e}")
+                            # Try to extract file_name from file_details for error reporting
+                            file_name = (
+                                file_details
+                                if isinstance(file_details, str)
+                                else file_details[1]
+                                if isinstance(file_details, tuple) and len(file_details) > 1
+                                else "unknown"
+                            )
+                            yield ScrapingResult(
+                                file_name=file_name,
+                                downloaded=False,
+                                extract_succefully=False,
+                                error=str(e),
+                                restart_and_retry=False,
+                            )
+                else:
+                    # No pending tasks but generator might still have items
+                    # This shouldn't happen, but break to be safe
+                    break
+        finally:
+            # Clean up any remaining tasks
+            if pending_tasks:
+                for task in pending_tasks:
+                    task.cancel()
+                # Wait for cancellations to complete
+                await asyncio.gather(*pending_tasks, return_exceptions=True)
 
     def get_chain_id(self):
         """get the chain id as list"""

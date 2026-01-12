@@ -176,45 +176,16 @@ class WebBase(Engine):
         async for download_url, file_name, _ in limited_files:
             yield download_url, file_name
 
-    async def _scrape(  # pylint: disable=too-many-locals
-        self,
-        limit=None,
-        files_types=None,
-        store_id=None,
-        when_date=None,
-        files_names_to_scrape=None,
-        filter_null=False,
-        filter_zero=False,
-        min_size=None,
-        max_size=None,
-        random_selection=False,
-    ):
-        """scrape the files from multipage sites"""
-
-        async for download_url, file_name in self.collect_files_details_from_site(
-            limit=limit,
-            files_types=files_types,
-            store_id=store_id,
-            when_date=when_date,
-            filter_null=filter_null,
-            filter_zero=filter_zero,
-            files_names_to_scrape=files_names_to_scrape,
-            min_size=min_size,
-            max_size=max_size,
-            random_selection=random_selection,
-        ):
-            try:
-                # Register that we've collected this file's details
-                self.register_collected_file(
-                    file_name_collected_from_site=file_name,
-                    links_collected_from_site=download_url,
-                )
-
-                # Download and extract the file
-                result = await self.save_and_extract((download_url, file_name))
-                # Note: register_downloaded_file is called by parent Engine.scrape()
-                yield result
-
-            except Exception as e:  # pylint: disable=broad-except
-                self.register_download_fail(e, file_name)
-                raise e
+    async def process_file(self, file_details):
+        """Process a single file from WebBase. file_details is (download_url, file_name) tuple."""
+        download_url, file_name = file_details
+        
+        # Register that we've collected this file's details
+        self.register_collected_file(
+            file_name_collected_from_site=file_name,
+            links_collected_from_site=download_url,
+        )
+        
+        # Download and extract the file
+        result = await self.save_and_extract((download_url, file_name))
+        return result
