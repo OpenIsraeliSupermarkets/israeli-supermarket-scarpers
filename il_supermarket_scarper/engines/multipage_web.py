@@ -3,7 +3,7 @@ import re
 import ntpath
 from abc import abstractmethod
 from lxml import html as lxml_html
-
+from typing import AsyncGenerator
 from il_supermarket_scarper.utils import (
     Logger,
     convert_nl_size_to_bytes,
@@ -87,7 +87,7 @@ class MultiPageWeb(WebBase):
         when_date=None,
         limit=None,
         random_selection=False,
-    ):
+    ) -> AsyncGenerator[tuple[str, str], None]:
         """generate all files from the site"""
 
         main_page_requests = self.get_request_url(
