@@ -86,10 +86,10 @@ class ScraperStatus:
     ):
         """Filter files already existing in long-term memory or previously downloaded."""
         async for file in filelist:
-            already_downloaded = self.database.find_document(
+            already_downloaded = self.database.already_downloaded(
                 self.VERIFIED_DOWNLOADS, {"file_name": by_function(file)}
             )
-            required_file = files_names_to_scrape is not None and by_function(file) in files_names_to_scrape
+            required_file = files_names_to_scrape is None or by_function(file) in files_names_to_scrape
             if not already_downloaded and required_file:
                 yield file
 

@@ -79,7 +79,7 @@ class JsonDataBase(AbstractDataBase):
         # Save the updated data back to the file
         self._write_database(data)
 
-    def find_document(self, collection_name, query):
+    def already_downloaded(self, collection_name, query):
         """Find a document in a collection based on a query."""
         file_path = self._get_database_file_path()
 
@@ -95,6 +95,7 @@ class JsonDataBase(AbstractDataBase):
                             if all(
                                 item in document.items() for item in query.items()
                             ):
-                                return document
+                                return True
                 except json.JSONDecodeError:
                     Logger.warning(f"File {file_path} is corrupted.")
+        return False

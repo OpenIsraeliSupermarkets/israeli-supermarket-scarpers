@@ -31,6 +31,6 @@ class MongoDataBase(AbstractDataBase):
         """Insert a document into a MongoDB collection."""
         self.store_db[collection_name].insert_one(document)
 
-    def find_document(self, collection_name, query):
+    def already_downloaded(self, collection_name, query):
         """Find a document in a MongoDB collection."""
         return self.store_db[collection_name].find_one(query)

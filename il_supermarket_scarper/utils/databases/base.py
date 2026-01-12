@@ -17,6 +17,7 @@ class AbstractDataBase(ABC):
         """Insert a document into a collection."""
 
     @abstractmethod
-    def find_document(self, collection_name, query):
-        """Find a document in a collection based on a query."""
+    def already_downloaded(self, collection_name, query):
+        """Check if a document is already downloaded based on a query."""
+        pass
 
