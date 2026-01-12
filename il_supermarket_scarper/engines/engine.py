@@ -219,16 +219,18 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 f"when_date should be datetime or 'latest', got {when_date}"
             )
 
-        # Yield files, applying limit if files_types filter is not on
+        # If filter by limit without type
         if limit and not files_types:
             assert limit > 0, "Limit must be greater than 0"
             async for file in intreable_:
-                if state.file_pass_limit < limit:
+                if limit is None:
+                    yield file
+                elif state.file_pass_limit < limit:
                     state.file_pass_limit += 1
                     yield file
+                else:
+                    break  # Stop consuming once limit is reached
         else:
-            # When files_types is set, filter_file_types already applied the limit
-            # Just yield all filtered files
             async for file in intreable_:
                 yield file
 
@@ -257,9 +259,15 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 FileTypesFilters.is_file_from_type(filename, file_type)
                 for file_type in files_types
             )
-            if limit is None or (matches and state.file_pass_limit < limit):
-                state.file_pass_limit += 1
-                yield type_
+            if matches:
+                if limit is None:
+                    yield type_
+                elif state.file_pass_limit < limit:
+                    state.file_pass_limit += 1
+                    yield type_
+                else:
+                    break
+            # If file doesn't match the requested types, skip it (don't yield)
 
     def get_only_latest(self, by_function, intreable_):
         """get only the last version of the files"""
