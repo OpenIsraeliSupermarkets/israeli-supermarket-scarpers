@@ -201,9 +201,6 @@ def make_test_case(scraper_enum, store_id):
                         file_output=QueueFileOutput(queue_handler, storage_path)
                     )
 
-                    # Enable collection status to generate JSON for validation
-                    scraper.enable_collection_status()
-
                     kwarg = {
                         "limit": limit,
                         "files_types": file_type,

@@ -158,9 +158,6 @@ class MainScrapperRunner:
         chain_name = scraper.get_chain_name()
 
         Logger.info(f"scraping {chain_name}")
-        if self.lookup_in_db:
-            scraper.enable_collection_status()
-            scraper.enable_aggregation_between_runs()
 
         async for _ in scraper.scrape(
             limit=limit,
