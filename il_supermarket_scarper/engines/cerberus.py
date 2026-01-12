@@ -45,17 +45,17 @@ class Cerberus(Engine):
     async def process_file(self, file_details):
         """Process a single file from Cerberus. file_details is file_name string."""
         file_name = file_details
-        
+
         # Register that we've collected this file's details
         self.register_collected_file(
             file_name_collected_from_site=file_name,
             links_collected_from_site="",
         )
-        
+
         # Process file from FTP - persist_from_ftp yields a ScrapingResult
         async for result in self.persist_from_ftp(file_name):
             return result
-        
+
         # Should not reach here, but return error result if we do
         return ScrapingResult(
             file_name=file_name,
@@ -117,6 +117,7 @@ class Cerberus(Engine):
 
     async def collect_files_details_from_site(  # pylint: disable=too-many-locals
         self,
+        state: FilterState,
         limit=None,
         files_types=None,
         filter_null=False,
@@ -130,7 +131,6 @@ class Cerberus(Engine):
     ):
         """collect all files to download from the site"""
 
-        state = FilterState()
         async for filter_arg in self.build_filter_arg(store_id, when_date, files_types):
             # Get async generator from FTP
             files_generator = collect_from_ftp(

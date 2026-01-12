@@ -55,7 +55,7 @@ class Aspx(WebBase, ABC):
     def get_href_from_entry(self, entry):
         """get download link for entry (tr)"""
         pass
-    
+
     @abstractmethod
     async def _build_query_url(self, query_params, base_urls):
         """build the url with the query params"""
@@ -68,5 +68,3 @@ class Aspx(WebBase, ABC):
         ):
             async for url in self._build_query_url(query_params, [self.url]):
                 yield url
-
-

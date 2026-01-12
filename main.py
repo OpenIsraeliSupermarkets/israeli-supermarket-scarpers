@@ -5,7 +5,7 @@ from il_supermarket_scarper import ScarpingTask, ScraperFactory, FileTypesFilter
 
 def load_params():  # pylint: disable=too-many-branches
     """load params from env variables with validation"""
-    kwargs = {"lookup_in_db": True}
+    kwargs = {}
 
     # validate scrapers
     enabled_scrapers = os.getenv("ENABLED_SCRAPERS", None)
@@ -120,4 +120,6 @@ if __name__ == "__main__":
 
     args = load_params()
 
-    ScarpingTask(**args).start()
+    task = ScarpingTask(**args)
+
+    task.start()

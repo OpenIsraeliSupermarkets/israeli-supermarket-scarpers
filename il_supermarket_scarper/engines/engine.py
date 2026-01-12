@@ -173,23 +173,14 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             )
         )
 
-        Logger.info(
-            f"Number of entry after filter already downloaded is {state.after_already_downloaded}"
-        )
-
         # filter unique links
         intreable_ = self.unique(state, intreable_, by_function=by_function)
-        Logger.info(
-            f"Number of entry after filter unique links is {state.after_unique}"
-        )
 
         # filter by store id
         if store_id:
             intreable_ = self.filter_by_store_id(
                 intreable_, store_id, by_function=by_function
             )
-
-        Logger.info(f"Number of entry after filter store id is {state.after_store_id}")
 
         # filter by file type
         if files_types:
@@ -201,10 +192,6 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 by_function,
                 random_selection=random_selection,
             )
-
-        Logger.info(
-            f"Number of entry after filter file type id is {state.after_file_types}"
-        )
 
         # Warning and filtering for random_selection
         if random_selection:
@@ -384,6 +371,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
 
     async def scrape(  # pylint: disable=too-many-locals
         self,
+        state: FilterState = None,
         limit=None,
         files_types=None,
         store_id=None,
@@ -410,8 +398,12 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         )
         self.storage_path.make_sure_accassible()
         completed_successfully = True
+
+        if state is None:
+            state = FilterState()
         try:
             async for result in self._scrape(
+                state,
                 limit=limit,
                 files_types=files_types,
                 store_id=store_id,
@@ -438,6 +430,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
     @abstractmethod
     async def collect_files_details_from_site(
         self,
+        state: FilterState,
         limit=None,
         files_types=None,
         store_id=None,
@@ -455,16 +448,17 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
     async def process_file(self, file_details) -> ScrapingResult:
         """
         Process a single file and return ScrapingResult.
-        
+
         Args:
             file_details: File details from collect_files_details_from_site (format depends on subclass)
-        
+
         Returns:
             ScrapingResult: Result of processing the file
         """
 
     async def _scrape(  # pylint: disable=too-many-locals
         self,
+        state: FilterState,
         limit=None,
         files_types=None,
         store_id=None,
@@ -477,10 +471,10 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         random_selection=False,
     ) -> AsyncGenerator[ScrapingResult, None]:
         """scrape the files with concurrent streaming downloads"""
-        
+
         # Semaphore to limit concurrent downloads
         semaphore = asyncio.Semaphore(self.max_threads)
-        
+
         # Helper function to process a single file with semaphore
         async def process_file_with_semaphore(file_details):
             async with semaphore:
@@ -492,9 +486,11 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                     file_name = (
                         file_details
                         if isinstance(file_details, str)
-                        else file_details[1]
-                        if isinstance(file_details, tuple) and len(file_details) > 1
-                        else "unknown"
+                        else (
+                            file_details[1]
+                            if isinstance(file_details, tuple) and len(file_details) > 1
+                            else "unknown"
+                        )
                     )
                     self.register_download_fail(e, file_name)
                     return ScrapingResult(
@@ -504,9 +500,10 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                         error=str(e),
                         restart_and_retry=False,
                     )
-        
+
         # Get the file generator
         files_generator = self.collect_files_details_from_site(
+            state,
             limit=limit,
             files_types=files_types,
             store_id=store_id,
@@ -518,11 +515,11 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             max_size=max_size,
             random_selection=random_selection,
         )
-        
+
         # Set to track pending tasks (task -> file_details mapping)
         pending_tasks = {}
         generator_exhausted = False
-        
+
         try:
             while True:
                 # Add new tasks from generator up to max_threads limit
@@ -536,18 +533,17 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                     except StopAsyncIteration:
                         generator_exhausted = True
                         break
-                
+
                 # If no pending tasks and generator is exhausted, we're done
                 if not pending_tasks and generator_exhausted:
                     break
-                
+
                 # Wait for at least one task to complete
                 if pending_tasks:
                     done, pending = await asyncio.wait(
-                        pending_tasks.keys(),
-                        return_when=asyncio.FIRST_COMPLETED
+                        pending_tasks.keys(), return_when=asyncio.FIRST_COMPLETED
                     )
-                    
+
                     # Process completed tasks
                     for task in done:
                         file_details = pending_tasks.pop(task)
@@ -560,9 +556,12 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                             file_name = (
                                 file_details
                                 if isinstance(file_details, str)
-                                else file_details[1]
-                                if isinstance(file_details, tuple) and len(file_details) > 1
-                                else "unknown"
+                                else (
+                                    file_details[1]
+                                    if isinstance(file_details, tuple)
+                                    and len(file_details) > 1
+                                    else "unknown"
+                                )
                             )
                             yield ScrapingResult(
                                 file_name=file_name,

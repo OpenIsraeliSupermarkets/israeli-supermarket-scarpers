@@ -134,6 +134,7 @@ class MultiPageWeb(WebBase):
 
     async def collect_files_details_from_site(  # pylint: disable=too-many-locals
         self,
+        state: FilterState,
         limit=None,
         files_types=None,
         store_id=None,
@@ -146,7 +147,6 @@ class MultiPageWeb(WebBase):
         random_selection=False,
     ):
 
-        state = FilterState()
         # Aggregate results from all pages
         files = self.generate_all_files(
             limit=limit,
@@ -251,6 +251,7 @@ class MultiPageWeb(WebBase):
 
     async def process_links_before_download(  # pylint: disable=too-many-locals
         self,
+        state: FilterState,
         request,
         limit=None,
         files_types=None,
@@ -272,7 +273,6 @@ class MultiPageWeb(WebBase):
             for url, name, size in zip(file_links, filenames, file_sizes):
                 yield url, name, size
 
-        state = FilterState()
         limited_files = self.apply_limit_zip(
             state,
             generate_from_lists(),

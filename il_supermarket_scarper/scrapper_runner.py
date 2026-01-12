@@ -13,6 +13,7 @@ from .utils import (
     QueueFileOutput,
     InMemoryQueueHandler,
     KafkaQueueHandler,
+    FilterState,
 )
 
 
@@ -24,7 +25,6 @@ class MainScrapperRunner:
         size_estimation_mode=False,
         enabled_scrapers=None,
         multiprocessing=5,
-        lookup_in_db=True,
         output_configuration=None,
         status_configuration=None,
     ):
@@ -46,7 +46,6 @@ class MainScrapperRunner:
         self.enabled_scrapers = enabled_scrapers
         Logger.info(f"Enabled scrapers: {self.enabled_scrapers}")
         self.multiprocessing = multiprocessing
-        self.lookup_in_db = lookup_in_db
         self.file_output_config = output_configuration or {
             "output_mode": "disk",
             "base_storage_path": "dumps",
@@ -186,6 +185,7 @@ class MainScrapperRunner:
         status_database_config=None,
     ):
         """scrape one"""
+        state = FilterState()
         chain_scrapper_constractor = ScraperFactory.get(chain_scrapper_class)
         Logger.info(f"Starting scrapper {chain_scrapper_constractor}")
 
@@ -209,6 +209,7 @@ class MainScrapperRunner:
         Logger.info(f"scraping {chain_name}")
 
         async for _ in scraper.scrape(
+            state=state,
             limit=limit,
             files_types=files_types,
             store_id=store_id,
