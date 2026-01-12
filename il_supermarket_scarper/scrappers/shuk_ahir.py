@@ -10,5 +10,6 @@ class ShukAhir(Bina):
             chain=DumpFolderNames.SHUK_AHIR,
             chain_id="7290058148776",
             url_perfix="shuk-hayir",
-            file_output=file_output, status_database=status_database,
+            file_output=file_output,
+            status_database=status_database,
         )

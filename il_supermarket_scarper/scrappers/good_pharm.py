@@ -10,5 +10,6 @@ class GoodPharm(Bina):
             chain=DumpFolderNames.GOOD_PHARM,
             chain_id="7290058197699",
             url_perfix="goodpharm",
-            file_output=file_output, status_database=status_database,
+            file_output=file_output,
+            status_database=status_database,
         )

@@ -14,7 +14,8 @@ class MeshnatYosef1(WebBase):
             DumpFolderNames.MESHMAT_YOSEF_1,
             chain_id="5144744100002",
             url="https://list-files.w5871031-kt.workers.dev/",
-            file_output=file_output, status_database=status_database,
+            file_output=file_output,
+            status_database=status_database,
         )
 
     def get_data_from_page(self, req_res):
@@ -47,5 +48,6 @@ class MeshnatYosef2(Bina):
             DumpFolderNames.MESHMAT_YOSEF_2,
             chain_id=["5144744100001", "7290058289400", "2222222"],
             url_perfix="ktshivuk",
-            file_output=file_output, status_database=status_database,
+            file_output=file_output,
+            status_database=status_database,
         )

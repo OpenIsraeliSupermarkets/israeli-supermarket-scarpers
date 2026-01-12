@@ -59,14 +59,14 @@ class MainScrapperRunner:
     def _create_file_output_for_scraper(self, scraper_name, config):
         """Create a file_output instance for a specific scraper based on config."""
         target_folder = DumpFolderNames[scraper_name].value
-        
+
         # Use default config if None
         if config is None:
             config = {
                 "output_mode": "disk",
                 "base_storage_path": "dumps",
             }
-        
+
         if config.get("output_mode") == "disk":
             # Disk output mode
             base_path = config.get("base_storage_path", "dumps")
@@ -92,32 +92,36 @@ class MainScrapperRunner:
     def _create_status_database_for_scraper(self, scraper_name, config):
         """Create a status database instance for a specific scraper based on config."""
         from .utils.databases import JsonDataBase, MongoDataBase
-        
+
         target_folder = DumpFolderNames[scraper_name].value
         database_name = target_folder
-        
+
         # Use default config if None
         if config is None:
             config = {
                 "database_type": "json",
                 "base_path": "dumps/status",
             }
-        
+
         database_type = config.get("database_type", "json")
-        
+
         if database_type == "json":
             # JSON file database
             base_path = config.get("base_path", "dumps/status")
-            return JsonDataBase(database_name, base_path=os.path.join(base_path, target_folder))
-        
+            return JsonDataBase(
+                database_name, base_path=os.path.join(base_path, target_folder)
+            )
+
         elif database_type == "mongo":
             # MongoDB database
             db = MongoDataBase(database_name)
             db.create_connection()
             return db
-        
+
         else:
-            raise ValueError(f"Unknown database_type: {database_type}. Must be 'json' or 'mongo'")
+            raise ValueError(
+                f"Unknown database_type: {database_type}. Must be 'json' or 'mongo'"
+            )
 
     def run(
         self,
@@ -159,10 +163,13 @@ class MainScrapperRunner:
     def scrape_one_wrap(self, chainScrapperClass, kwargs):
         """scrape one wrapper, each with its own event loop"""
         import asyncio
+
         loop = asyncio.new_event_loop()
         try:
             asyncio.set_event_loop(loop)
-            return loop.run_until_complete(self.scrape_one(chainScrapperClass, **kwargs))
+            return loop.run_until_complete(
+                self.scrape_one(chainScrapperClass, **kwargs)
+            )
         finally:
             loop.close()
 
@@ -186,16 +193,15 @@ class MainScrapperRunner:
         file_output = self._create_file_output_for_scraper(
             chain_scrapper_class, file_output_config
         )
-        
+
         # Create status output for this specific scraper
         status_database = self._create_status_database_for_scraper(
             chain_scrapper_class, status_database_config
         )
-        
+
         # Create scraper with both file_output and status_database
         scraper = chain_scrapper_constractor(
-            file_output=file_output,
-            status_database=status_database
+            file_output=file_output, status_database=status_database
         )
 
         chain_name = scraper.get_chain_name()

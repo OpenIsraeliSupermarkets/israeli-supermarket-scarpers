@@ -18,7 +18,8 @@ class CityMarketGivatayim(Bina):
             chain=DumpFolderNames.CITY_MARKET_GIVATAYIM,
             chain_id="5359000000000",
             url_perfix="citymarketgivatayim",
-            file_output=file_output, status_database=status_database,
+            file_output=file_output,
+            status_database=status_database,
         )
 
 
@@ -31,7 +32,8 @@ class CityMarketKirtatOno(Bina):
             chain=DumpFolderNames.CITY_MARKET_KIRYATONO,
             chain_id="5359000000000",
             url_perfix="citymarketkiryatono",
-            file_output=file_output, status_database=status_database,
+            file_output=file_output,
+            status_database=status_database,
         )
 
 
@@ -43,7 +45,8 @@ class CityMarketKiryatGat(Bina):
             chain=DumpFolderNames.CITY_MARKET_KIRYATGAT,
             chain_id=["7290058288526", "7290058266241", "7290058288090"],
             url_perfix="citymarketkiryatgat",
-            file_output=file_output, status_database=status_database,
+            file_output=file_output,
+            status_database=status_database,
         )
 
 
@@ -55,7 +58,8 @@ class CityMarketShops(MultiPageWeb):
             chain=DumpFolderNames.CITY_MARKET_SHOPS,
             chain_id="7290000000003",
             url="http://www.citymarket-shops.co.il/",
-            file_output=file_output, status_database=status_database,
+            file_output=file_output,
+            status_database=status_database,
             total_page_xpath="(//li[contains(concat(' ', normalize-space(@class), ' '),"
             + "' pagination-item ')])[last()]/a/@href",
             total_pages_pattern=r"p=(\d+)",

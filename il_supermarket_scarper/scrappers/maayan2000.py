@@ -10,5 +10,6 @@ class Maayan2000(Bina):
             chain=DumpFolderNames.MAAYAN_2000,
             chain_id="7290058159628",
             url_perfix="maayan2000",
-            file_output=file_output, status_database=status_database,
+            file_output=file_output,
+            status_database=status_database,
         )

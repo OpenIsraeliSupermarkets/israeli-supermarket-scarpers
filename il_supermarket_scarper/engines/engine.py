@@ -24,6 +24,7 @@ from il_supermarket_scarper.utils import (
 from il_supermarket_scarper.utils.state import FilterState
 from il_supermarket_scarper.utils import AbstractDataBase
 
+
 class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
     """base engine for scraping"""
 
@@ -67,7 +68,9 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             # Create storage path from folder_name and create DiskFileOutput
             file_output = DiskFileOutput(storage_path=DumpFolderNames[chain].value)
 
-        super().__init__(chain.value, status_database=status_database, file_output=file_output)
+        super().__init__(
+            chain.value, status_database=status_database, file_output=file_output
+        )
 
         self.assigned_cookie = f"{self.chain.name}_{uuid.uuid4()}_cookies.txt"
         self.storage_path = file_output
@@ -590,7 +593,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         error = None
         restart_and_retry = False
         file_name = os.path.basename(file_save_path)
-        
+
         try:
 
             # add ext if possible

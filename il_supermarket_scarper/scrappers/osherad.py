@@ -9,6 +9,7 @@ class Osherad(Cerberus):
         super().__init__(
             chain=DumpFolderNames.OSHER_AD,
             chain_id="7290103152017",
-            file_output=file_output, status_database=status_database,
+            file_output=file_output,
+            status_database=status_database,
             ftp_username="osherad",
         )

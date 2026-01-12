@@ -10,5 +10,6 @@ class YaynotBitanAndCarrefour(PublishPrice):
             chain=DumpFolderNames.YAYNO_BITAN_AND_CARREFOUR,
             chain_id="7290055700007",
             site_infix="carrefour",
-            file_output=file_output, status_database=status_database,
+            file_output=file_output,
+            status_database=status_database,
         )

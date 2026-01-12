@@ -11,5 +11,6 @@ class Mega(PublishPrice):
             chain=DumpFolderNames.MEGA,
             chain_id="7290055700007",
             site_infix="mega",
-            file_output=file_output, status_database=status_database,
+            file_output=file_output,
+            status_database=status_database,
         )

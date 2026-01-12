@@ -10,5 +10,6 @@ class Victory(Matrix):
             chain=DumpFolderNames.VICTORY,
             chain_hebrew_name="ויקטורי",
             chain_id=["7290696200003", "7290058103393"],
-            file_output=file_output, status_database=status_database,
+            file_output=file_output,
+            status_database=status_database,
         )

@@ -9,7 +9,8 @@ class RamiLevy(Cerberus):
         super().__init__(
             chain=DumpFolderNames.RAMI_LEVY,
             chain_id="7290058140886",
-            file_output=file_output, status_database=status_database,
+            file_output=file_output,
+            status_database=status_database,
             ftp_username="RamiLevi",
             max_threads=10,
         )

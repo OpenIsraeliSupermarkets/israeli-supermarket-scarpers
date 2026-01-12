@@ -9,7 +9,8 @@ class Cofix(Cerberus):
         super().__init__(
             chain=DumpFolderNames.COFIX,
             chain_id="7291056200008",
-            file_output=file_output, status_database=status_database,
+            file_output=file_output,
+            status_database=status_database,
             ftp_username="SuperCofixApp",
         )
 

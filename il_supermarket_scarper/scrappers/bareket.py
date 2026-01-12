@@ -10,5 +10,6 @@ class Bareket(Bina):
             chain=DumpFolderNames.BAREKET,
             chain_id="7290875100001",
             url_perfix="superbareket",
-            file_output=file_output, status_database=status_database,
+            file_output=file_output,
+            status_database=status_database,
         )

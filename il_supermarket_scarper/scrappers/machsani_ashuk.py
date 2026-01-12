@@ -9,6 +9,7 @@ class MahsaniAShuk(Matrix):
         super().__init__(
             chain=DumpFolderNames.MAHSANI_ASHUK,
             chain_id=["7290661400001", "7290633800006"],
-            file_output=file_output, status_database=status_database,
+            file_output=file_output,
+            status_database=status_database,
             chain_hebrew_name="מחסני השוק",
         )

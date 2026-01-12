@@ -7,7 +7,7 @@ from il_supermarket_scarper.utils import (
     fetch_file_from_ftp_to_memory,
     FileTypesFilters,
     ScrapingResult,
-)   
+)
 from il_supermarket_scarper.utils.state import FilterState
 from .engine import Engine
 
@@ -30,7 +30,13 @@ class Cerberus(Engine):
         file_output=None,
         status_database=None,
     ):
-        super().__init__(chain, chain_id, max_threads, file_output=file_output, status_database=status_database)
+        super().__init__(
+            chain,
+            chain_id,
+            max_threads,
+            file_output=file_output,
+            status_database=status_database,
+        )
         self.ftp_host = ftp_host
         self.ftp_path = ftp_path
         self.ftp_username = ftp_username

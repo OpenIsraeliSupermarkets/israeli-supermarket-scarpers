@@ -10,5 +10,6 @@ class ZolVeBegadol(Bina):
             chain=DumpFolderNames.ZOL_VEBEGADOL,
             chain_id="7290058173198",
             url_perfix="zolvebegadol",
-            file_output=file_output, status_database=status_database,
+            file_output=file_output,
+            status_database=status_database,
         )

@@ -9,6 +9,7 @@ class HetCohen(Matrix):
         super().__init__(
             chain=DumpFolderNames.HET_COHEN,
             chain_id=["7290455000004"],
-            file_output=file_output, status_database=status_database,
+            file_output=file_output,
+            status_database=status_database,
             chain_hebrew_name="ח. כהן",
         )

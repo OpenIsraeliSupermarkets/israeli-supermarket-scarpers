@@ -31,7 +31,8 @@ class HaziHinam(MultiPageWeb):
             chain=DumpFolderNames.HAZI_HINAM,
             chain_id="7290700100008",
             url="https://shop.hazi-hinam.co.il/Prices",
-            file_output=file_output, status_database=status_database,
+            file_output=file_output,
+            status_database=status_database,
             total_page_xpath="(//li[contains(concat(' ', normalize-space(@class), ' '),"
             + "' pagination-item ')])[last()]/a/@href",
             total_pages_pattern=r"p=(\d+)",

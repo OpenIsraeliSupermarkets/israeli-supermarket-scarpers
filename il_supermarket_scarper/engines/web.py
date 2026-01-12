@@ -9,7 +9,15 @@ from .engine import Engine
 class WebBase(Engine):
     """scrape the file of websites that the only why to download them is via web"""
 
-    def __init__(self, chain, chain_id, url, max_threads=5, file_output=None, status_database=None):
+    def __init__(
+        self,
+        chain,
+        chain_id,
+        url,
+        max_threads=5,
+        file_output=None,
+        status_database=None,
+    ):
         super().__init__(
             chain,
             chain_id,

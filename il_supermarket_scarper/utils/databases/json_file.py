@@ -92,9 +92,7 @@ class JsonDataBase(AbstractDataBase):
                     if collection_name in data:
                         # Filter the documents in the collection based on the query
                         for document in data[collection_name]:
-                            if all(
-                                item in document.items() for item in query.items()
-                            ):
+                            if all(item in document.items() for item in query.items()):
                                 return True
                 except json.JSONDecodeError:
                     Logger.warning(f"File {file_path} is corrupted.")

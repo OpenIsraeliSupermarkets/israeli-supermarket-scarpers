@@ -10,5 +10,6 @@ class SuperSapir(Bina):
             chain=DumpFolderNames.SUPER_SAPIR,
             chain_id="7290058156016",
             url_perfix="supersapir",
-            file_output=file_output, status_database=status_database,
+            file_output=file_output,
+            status_database=status_database,
         )

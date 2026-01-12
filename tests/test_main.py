@@ -10,10 +10,13 @@ def test_main_with_limit():
     """test the main running with limit of 1 for each chain"""
     with tempfile.TemporaryDirectory() as tmpdirname:
         expected = ScraperFactory.all_scrapers_name() + ["status"]
-        scrapper_done = ScarpingTask(limit=1, output_configuration={
-            "output_mode": "disk",
-            "base_storage_path": tmpdirname,
-        }).start()
+        scrapper_done = ScarpingTask(
+            limit=1,
+            output_configuration={
+                "output_mode": "disk",
+                "base_storage_path": tmpdirname,
+            },
+        ).start()
 
         folders_from_scraper = list(map(lambda x: x.split("/")[-1], scrapper_done)) + [
             "status"

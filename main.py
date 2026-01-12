@@ -119,5 +119,5 @@ def load_params():
 if __name__ == "__main__":
 
     args = load_params()
-    
+
     ScarpingTask(**args).start()

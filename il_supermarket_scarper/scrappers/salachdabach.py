@@ -9,7 +9,8 @@ class SalachDabach(Cerberus):
         super().__init__(
             chain=DumpFolderNames.SALACH_DABACH,
             chain_id="7290526500006",
-            file_output=file_output, status_database=status_database,
+            file_output=file_output,
+            status_database=status_database,
             ftp_username="SalachD",
             ftp_password="12345",
         )

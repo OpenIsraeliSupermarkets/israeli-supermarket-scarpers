@@ -12,6 +12,7 @@ class StopMarket(Cerberus):
                 "72906390",
                 "7290639000004",
             ],  # in store files for some reason the store id is only 72906390
-            file_output=file_output, status_database=status_database,
+            file_output=file_output,
+            status_database=status_database,
             ftp_username="Stop_Market",
         )

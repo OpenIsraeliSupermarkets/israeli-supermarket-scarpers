@@ -9,6 +9,7 @@ class Yohananof(Cerberus):
         super().__init__(
             chain=DumpFolderNames.YOHANANOF,
             chain_id="7290803800003",
-            file_output=file_output, status_database=status_database,
+            file_output=file_output,
+            status_database=status_database,
             ftp_username="yohananof",
         )

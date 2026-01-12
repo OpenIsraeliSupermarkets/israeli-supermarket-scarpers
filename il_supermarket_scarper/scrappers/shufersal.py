@@ -16,7 +16,8 @@ class Shufersal(MultiPageWeb):
             total_pages_pattern=r"[?&]page=([0-9]+)",
             chain=DumpFolderNames.SHUFERSAL,
             chain_id="7290027600007",
-            file_output=file_output, status_database=status_database,
+            file_output=file_output,
+            status_database=status_database,
             page_argument="&page",
         )
 

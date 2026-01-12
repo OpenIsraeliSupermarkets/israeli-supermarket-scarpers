@@ -15,7 +15,8 @@ class Wolt(WebBase):
             DumpFolderNames.WOLT,
             chain_id="7290058249350",
             url="https://wm-gateway.wolt.com/isr-prices/public/v1/index.html",
-            file_output=file_output, status_database=status_database,
+            file_output=file_output,
+            status_database=status_database,
         )
 
     async def get_request_url(

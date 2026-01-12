@@ -20,7 +20,12 @@ class ScraperStatus:
     ESTIMATED_SIZE = "estimated_size"
     VERIFIED_DOWNLOADS = "verified_downloads"
 
-    def __init__(self, database_name, status_database: Optional[AbstractDataBase] = None, file_output: Optional[FileOutput] = None) -> None:
+    def __init__(
+        self,
+        database_name,
+        status_database: Optional[AbstractDataBase] = None,
+        file_output: Optional[FileOutput] = None,
+    ) -> None:
         # Use provided database or create default JsonDataBase
         if status_database is None:
             # Default: use JSON database in status subdirectory of file output path
@@ -90,7 +95,10 @@ class ScraperStatus:
             already_downloaded = self.database.already_downloaded(
                 self.VERIFIED_DOWNLOADS, {"file_name": by_function(file)}
             )
-            required_file = files_names_to_scrape is None or by_function(file) in files_names_to_scrape
+            required_file = (
+                files_names_to_scrape is None
+                or by_function(file) in files_names_to_scrape
+            )
             if not already_downloaded and required_file:
                 yield file
 
@@ -103,7 +111,9 @@ class ScraperStatus:
             )
 
     @lock_by_string()
-    def on_scrape_completed(self, folder_name: str, completed_successfully: bool = True):
+    def on_scrape_completed(
+        self, folder_name: str, completed_successfully: bool = True
+    ):
         """Report when scraping is completed."""
         self._insert_global_status(
             ScraperStatus.ESTIMATED_SIZE,

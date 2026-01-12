@@ -10,5 +10,6 @@ class ShefaBarcartAshem(Bina):
             chain=DumpFolderNames.SHEFA_BARCART_ASHEM,
             chain_id="7290058134977",
             url_perfix="shefabirkathashem",
-            file_output=file_output, status_database=status_database,
+            file_output=file_output,
+            status_database=status_database,
         )

@@ -12,5 +12,6 @@ class SuperYuda(Cerberus):
             ftp_username="yuda_ho",
             ftp_password="Yud@147",
             ftp_path="/Yuda",
-            file_output=file_output, status_database=status_database,
+            file_output=file_output,
+            status_database=status_database,
         )

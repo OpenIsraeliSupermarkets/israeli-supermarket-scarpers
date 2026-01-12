@@ -7,7 +7,6 @@ class AbstractDataBase(ABC):
     def __init__(self, database_name) -> None:
         self.database_name = database_name.replace(" ", "_").lower()
 
-
     def get_database_name(self):
         """Get the name of the database."""
         return self.database_name
@@ -20,4 +19,3 @@ class AbstractDataBase(ABC):
     def already_downloaded(self, collection_name, query):
         """Check if a document is already downloaded based on a query."""
         pass
-

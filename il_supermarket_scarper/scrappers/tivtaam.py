@@ -9,6 +9,7 @@ class TivTaam(Cerberus):
         super().__init__(
             chain=DumpFolderNames.TIV_TAAM,
             chain_id="7290873255550",
-            file_output=file_output, status_database=status_database,
+            file_output=file_output,
+            status_database=status_database,
             ftp_username="TivTaam",
         )
