@@ -111,7 +111,6 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         by_function=lambda x: x,
     ):
         """filter out bad files"""
-
         async for file in files:
             if not self.is_pass_bad_files_filter(
                 file, filter_zero, filter_null, by_function
@@ -121,7 +120,6 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
 
     async def filter_by_store_id(
         self,
-        state: FilterState,  # pylint: disable=unused-argument
         intreable: AsyncGenerator[tuple[str, str], None],
         store_id=None,
         by_function=lambda x: x,
@@ -188,7 +186,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         # filter by store id
         if store_id:
             intreable_ = self.filter_by_store_id(
-                state, intreable_, store_id, by_function=by_function
+                intreable_, store_id, by_function=by_function
             )
 
         Logger.info(f"Number of entry after filter store id is {state.after_store_id}")
@@ -248,8 +246,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         limit,
         files_types,
         by_function,
-        random_selection=False,  # pylint: disable=unused-argument
-    ):
+    ) -> AsyncGenerator[tuple[str, str], None]:
         """filter the file types requested"""
 
         async for type_ in intreable:
