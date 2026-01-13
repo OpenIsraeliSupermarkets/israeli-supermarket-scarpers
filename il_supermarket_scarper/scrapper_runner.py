@@ -18,73 +18,6 @@ from .utils import (
 from .engines.engine import Engine
 
 
-def _create_file_output_for_scraper(scraper_name, config):
-    """Create a file_output instance for a specific scraper based on config."""
-    target_folder = DumpFolderNames[scraper_name].value
-
-    # Use default config if None
-    if config is None:
-        config = {
-            "output_mode": "disk",
-            "base_storage_path": "dumps",
-        }
-
-    if config.get("output_mode") == "disk":
-        # Disk output mode
-        base_path = config.get("base_storage_path", "dumps")
-        return DiskFileOutput(storage_path=os.path.join(base_path, target_folder))
-
-    elif config.get("output_mode") == "queue":
-        # Queue output mode
-        queue_type = config.get("queue_type", "memory")
-
-        if queue_type == "memory":
-            return QueueFileOutput(InMemoryQueueHandler(queue_name=target_folder))
-
-        elif queue_type == "kafka":
-            bootstrap_servers = config.get("kafka_bootstrap_servers", "localhost:9092")
-            return QueueFileOutput(
-                KafkaQueueHandler(
-                    bootstrap_servers=bootstrap_servers, topic=target_folder
-                )
-            )
-
-
-def _create_status_database_for_scraper(scraper_name, config):
-    """Create a status database instance for a specific scraper based on config."""
-    from .utils.databases import JsonDataBase, MongoDataBase
-
-    target_folder = DumpFolderNames[scraper_name].value
-    database_name = target_folder
-
-    # Use default config if None
-    if config is None:
-        config = {
-            "database_type": "json",
-            "base_path": "dumps/status",
-        }
-
-    database_type = config.get("database_type", "json")
-
-    if database_type == "json":
-        # JSON file database
-        base_path = config.get("base_path", "dumps/status")
-        return JsonDataBase(
-            database_name, base_path=os.path.join(base_path, target_folder)
-        )
-
-    elif database_type == "mongo":
-        # MongoDB database
-        db = MongoDataBase(database_name)
-        db.create_connection()
-        return db
-
-    else:
-        raise ValueError(
-            f"Unknown database_type: {database_type}. Must be 'json' or 'mongo'"
-        )
-
-
 def _should_exit(
     state, limit, single_pass, initial_when_date, collected_now_count, chain_name
 ):
@@ -281,6 +214,86 @@ class MainScrapperRunner:
             {}
         )  # Store status_database references created in main process
 
+    def _create_status_database_for_scraper(self, scraper_name, config):
+        """Create a status database instance for a specific scraper based on config."""
+        from .utils.databases import JsonDataBase, MongoDataBase
+
+        target_folder = DumpFolderNames[scraper_name].value
+        database_name = target_folder
+
+        # Use default config if None
+        if config is None:
+            config = {
+                "database_type": "json",
+                "base_path": "dumps/status",
+            }
+
+        database_type = config.get("database_type", "json")
+
+        if database_type == "json":
+            # JSON file database
+            base_path = config.get("base_path", "dumps/status")
+            return JsonDataBase(
+                database_name, base_path=os.path.join(base_path, target_folder)
+            )
+
+        elif database_type == "mongo":
+            # MongoDB database
+            db = MongoDataBase(database_name)
+            db.create_connection()
+            return db
+
+        else:
+            raise ValueError(
+                f"Unknown database_type: {database_type}. Must be 'json' or 'mongo'"
+            )
+
+    def _create_file_output_for_scraper(self, scraper_name, config):
+        """
+        Create a file_output instance for a specific scraper based on config.
+        
+        Args:
+            scraper_name: Name of the scraper
+            config: Configuration dictionary
+            manager: Optional multiprocessing.Manager instance for creating shared lists
+        """
+        target_folder = DumpFolderNames[scraper_name].value
+
+        # Use default config if None
+        if config is None:
+            config = {
+                "output_mode": "disk",
+                "base_storage_path": "dumps",
+            }
+
+        if config.get("output_mode") == "disk":
+            # Disk output mode
+            base_path = config.get("base_storage_path", "dumps")
+            return DiskFileOutput(storage_path=os.path.join(base_path, target_folder))
+
+        elif config.get("output_mode") == "queue":
+            # Queue output mode
+            queue_type = config.get("queue_type", "memory")
+
+            if queue_type == "memory":
+                # Create shared list if manager is provided (for multiprocessing)
+                shared_list = None
+                if self._manager is not None:
+                    shared_list = self._manager.list()
+                
+                return QueueFileOutput(
+                    InMemoryQueueHandler(
+                        queue_name=target_folder, shared_messages_list=shared_list
+                    )
+                )
+
+            elif queue_type == "kafka":
+                bootstrap_servers = config.get("kafka_bootstrap_servers", "localhost:9092")
+                return QueueFileOutput(
+                    KafkaQueueHandler(
+                        bootstrap_servers=bootstrap_servers, topic=target_folder
+                    )
+                )
     def run(
         self,
         limit=None,
@@ -296,14 +309,15 @@ class MainScrapperRunner:
 
         # Create file_output and status_database objects in main process BEFORE spawning workers
         # These references can be accessed via consume_results()
+        # Pass manager to create shared lists for in-memory queues
         self._file_outputs = {}
         self._status_databases = {}
         for chain_scrapper_class in self.enabled_scrapers:
-            self._file_outputs[chain_scrapper_class] = _create_file_output_for_scraper(
+            self._file_outputs[chain_scrapper_class] = self._create_file_output_for_scraper(
                 chain_scrapper_class, self.file_output_config
             )
             self._status_databases[chain_scrapper_class] = (
-                _create_status_database_for_scraper(
+                self._create_status_database_for_scraper(
                     chain_scrapper_class, self.status_config
                 )
             )
@@ -339,6 +353,25 @@ class MainScrapperRunner:
             )
 
             Logger.info("Done scraping all supermarkets.")
+            
+            # If using in-memory queue with shared messages, copy messages to regular lists
+            # before shutting down the manager
+            if (
+                self.file_output_config.get("output_mode") == "queue"
+                and self.file_output_config.get("queue_type") == "memory"
+            ):
+                # Copy shared messages to regular lists for each queue handler
+                for scraper_name, file_output in self._file_outputs.items():
+                    if isinstance(file_output, QueueFileOutput):
+                        handler = file_output.queue_handler
+                        if hasattr(handler, "messages") and handler.messages is not None:
+                            # Check if it's a shared list from multiprocessing.Manager
+                            # Shared lists have a different type than regular lists
+                            msg_type = type(handler.messages).__name__
+                            if msg_type != "list":
+                                # Convert shared list to regular list before manager shutdown
+                                handler.messages = list(handler.messages)
+            
             return result
         finally:
             self._pool.close()

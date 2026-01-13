@@ -5,18 +5,22 @@ Logger.set_logging_level("INFO")
 
 if __name__ == "__main__":
     # Configure for in-memory queue output
+    # When using multiprocessing, the queue automatically uses shared memory
     scraper = ScarpingTask(
         output_configuration={
             "output_mode": "queue",
-            "queue_type": "memory",  # Use in-memory queue
+            "queue_type": "memory",  # Automatically shares across processes
         },
         status_configuration={"database_type": "json", "base_path": "status_logs"},
         multiprocessing=1,
-        enabled_scrapers=[ScraperFactory.BAREKET.name],
+        enabled_scrapers=[ScraperFactory.BAREKET.name, ScraperFactory.VICTORY.name],
     )
     
     # Start scraping (runs in background thread)
     scraper.start(limit=1, when_date=_now())
+    
+    # Wait for scraping to complete
+    scraper._thread.join()
     
     # Get file outputs from the runner
     file_outputs = scraper.consume()
@@ -24,11 +28,9 @@ if __name__ == "__main__":
     # Access files from the in-memory queue
     for scraper_name, file_output in file_outputs.items():
         if isinstance(file_output, QueueFileOutput):
-            # Get the queue handler
-            queue_handler = file_output.queue_handler
             
             # Get all messages from the queue
-            messages = queue_handler.get_all_messages()
+            messages = file_output.queue_handler.get_all_messages()
             
             print(f"\n=== Files from {scraper_name} ===")
             print(f"Total files in queue: {len(messages)}")
@@ -55,5 +57,6 @@ if __name__ == "__main__":
                         print(f"  Content: binary data")
                 else:
                     print(f"  Content: binary data ({len(file_content)} bytes)")
-
+    
+    # Stop and cleanup
     scraper.stop()

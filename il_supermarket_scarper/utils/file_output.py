@@ -332,17 +332,26 @@ class InMemoryQueueHandler(AbstractQueueHandler):
     """
     Simple in-memory queue for testing.
     Not suitable for production - data is lost on restart.
+    
+    Note: When using with multiprocessing, pass a shared_messages_list
+    from multiprocessing.Manager().list() to share messages across processes.
     """
 
-    def __init__(self, queue_name: str = "default"):
-        """Initialize in-memory queue."""
+    def __init__(self, queue_name: str = "default", shared_messages_list=None):
+        """
+        Initialize in-memory queue.
+        
+        Args:
+            queue_name: Name of the queue
+            shared_messages_list: Optional shared list from multiprocessing.Manager().list()
+                                  for sharing messages across processes
+        """
         self.queue_name = queue_name
-        self.queue = asyncio.Queue()
-        self.messages = []  # For debugging/testing
+        # Use shared list if provided, otherwise use regular list
+        self.messages = shared_messages_list if shared_messages_list is not None else []
 
     async def send(self, message: Dict[str, Any]) -> None:
         """Add message to in-memory queue."""
-        await self.queue.put(message)
         self.messages.append(message)
         Logger.debug(f"Added message to in-memory queue: {message['file_name']}")
 
@@ -355,4 +364,9 @@ class InMemoryQueueHandler(AbstractQueueHandler):
 
     def get_all_messages(self):
         """Get all messages (for testing)."""
-        return self.messages
+        # Handle both regular lists and shared lists from multiprocessing.Manager
+        if isinstance(self.messages, list):
+            return self.messages
+        else:
+            # For shared lists, create a copy
+            return list(self.messages)
