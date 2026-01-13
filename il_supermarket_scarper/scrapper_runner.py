@@ -15,8 +15,7 @@ from .utils import (
     FilterState,
     _now,
 )
-
-from il_supermarket_scarper.engines.engine import Engine
+from .engines.engine import Engine
 
 
 def _create_file_output_for_scraper(scraper_name, config):
@@ -149,24 +148,14 @@ async def _scrape_one(
     when_date=None,
     min_size=None,
     max_size=None,
-    file_output_config=None,
-    status_database_config=None,
+    file_output=None,
+    status_database=None,
     timeout_in_seconds=60 * 30,
     shutdown_flag=None,
 ):
     """scrape one"""
     chain_scrapper_constractor = ScraperFactory.get(chain_scrapper_class)
     Logger.info(f"Starting scrapper {chain_scrapper_constractor}")
-
-    # Create file_output for this specific scraper based on its folder name
-    file_output = _create_file_output_for_scraper(
-        chain_scrapper_class, file_output_config
-    )
-
-    # Create status output for this specific scraper
-    status_database = _create_status_database_for_scraper(
-        chain_scrapper_class, status_database_config
-    )
 
     # Create scraper with both file_output and status_database
     scraper: Engine = chain_scrapper_constractor(
@@ -287,6 +276,10 @@ class MainScrapperRunner:
         self._manager = None
         self._shutdown_flag = None
         self._pool = None
+        self._file_outputs = {}  # Store file_output references created in main process
+        self._status_databases = (
+            {}
+        )  # Store status_database references created in main process
 
     def run(
         self,
@@ -300,6 +293,21 @@ class MainScrapperRunner:
         """run the scraper"""
         self._manager = Manager()
         self._shutdown_flag = self._manager.Value("b", False)
+
+        # Create file_output and status_database objects in main process BEFORE spawning workers
+        # These references can be accessed via consume_results()
+        self._file_outputs = {}
+        self._status_databases = {}
+        for chain_scrapper_class in self.enabled_scrapers:
+            self._file_outputs[chain_scrapper_class] = _create_file_output_for_scraper(
+                chain_scrapper_class, self.file_output_config
+            )
+            self._status_databases[chain_scrapper_class] = (
+                _create_status_database_for_scraper(
+                    chain_scrapper_class, self.status_config
+                )
+            )
+
         Logger.info(f"Limit is {limit}")
         Logger.info(f"files_types is {files_types}")
         Logger.info(f"Start scraping {','.join(self.enabled_scrapers)}.")
@@ -317,8 +325,10 @@ class MainScrapperRunner:
                             "when_date": when_date,
                             "min_size": min_size,
                             "max_size": max_size,
-                            "file_output_config": self.file_output_config,
-                            "status_database_config": self.status_config,
+                            "file_output": self._file_outputs[chainScrapperClass],
+                            "status_database": self._status_databases[
+                                chainScrapperClass
+                            ],
                             "single_pass": single_pass,
                             "timeout_in_seconds": self.timeout_in_seconds,
                             "shutdown_flag": self._shutdown_flag,
@@ -338,6 +348,13 @@ class MainScrapperRunner:
                 self._manager.shutdown()
                 self._manager = None
                 self._shutdown_flag = None
+
+    def consume_results(self):
+        """consume the scraping results - returns dict mapping scraper names to file_output and status_database"""
+        return {
+            scraper_name: self._file_outputs.get(scraper_name)
+            for scraper_name in self._file_outputs.keys()
+        }
 
     def shutdown(self):
         """Stop the scraping process"""

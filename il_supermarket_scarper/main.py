@@ -51,6 +51,10 @@ class ScarpingTask:  # pylint: disable=too-many-instance-attributes
         self._thread.start()
         return self._thread
 
+    def consume(self):
+        """consume the scraping results"""
+        return self.runner.consume_results()
+
     def stop(self, timeout=5.0):
         """stop the scraping"""
         self.runner.shutdown()
