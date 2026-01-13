@@ -10,7 +10,6 @@ if __name__ == "__main__":
         multiprocessing=2,
         limit=1,
         enabled_scrapers=[ScraperFactory.BAREKET.name],
-        # size_estimation_mode=True,  # download files,log size, delete files
         when_date=_now(),
     )
     scraper.start()

@@ -1,13 +1,11 @@
 import os
 import datetime
-
+import time
 from multiprocessing import Pool
 
 from .scrappers_factory import ScraperFactory
 from .utils import (
     Logger,
-    summerize_dump_folder_contant,
-    clean_dump_folder,
     DumpFolderNames,
     DiskFileOutput,
     QueueFileOutput,
@@ -23,23 +21,13 @@ class MainScrapperRunner:
 
     def __init__(
         self,
-        size_estimation_mode=False,
         enabled_scrapers=None,
+        timeout_in_seconds=60 * 30,
         multiprocessing=5,
         output_configuration=None,
         status_configuration=None,
     ):
         assert isinstance(enabled_scrapers, list) or enabled_scrapers is None
-
-        env_size_estimation_mode = os.getenv("SE_MODE", None)
-        if env_size_estimation_mode:
-            Logger.info(
-                f"Setting size estimation mode from enviroment. value={env_size_estimation_mode}"
-            )
-            self.size_estimation_mode = bool(env_size_estimation_mode == "True")
-        else:
-            self.size_estimation_mode = size_estimation_mode
-        Logger.info(f"size_estimation_mode: {self.size_estimation_mode}")
 
         if not enabled_scrapers:
             enabled_scrapers = ScraperFactory.all_scrapers_name()
@@ -47,6 +35,7 @@ class MainScrapperRunner:
         self.enabled_scrapers = enabled_scrapers
         Logger.info(f"Enabled scrapers: {self.enabled_scrapers}")
         self.multiprocessing = multiprocessing
+        self.timeout_in_seconds = timeout_in_seconds
         self.file_output_config = output_configuration or {
             "output_mode": "disk",
             "base_storage_path": "dumps",
@@ -130,6 +119,7 @@ class MainScrapperRunner:
         when_date=False,
         min_size=None,
         max_size=None,
+        single_pass=True,
     ):
         """run the scraper"""
         Logger.info(f"Limit is {limit}")
@@ -150,6 +140,7 @@ class MainScrapperRunner:
                             "max_size": max_size,
                             "file_output_config": self.file_output_config,
                             "status_database_config": self.status_config,
+                            "single_pass": single_pass,
                         },
                     )
                     for chainScrapperClass in self.enabled_scrapers
@@ -282,17 +273,13 @@ class MainScrapperRunner:
             if should_exit:
                 Logger.info(f"[{chain_name}] Exiting loop: {exit_reason}")
                 break
+            else:
+                Logger.info(
+                    f"[{chain_name}] Sleeping for {self.timeout_in_seconds} seconds"
+                )
+                time.sleep(self.timeout_in_seconds)
 
             # If we're continuing, log that we'll run again
             Logger.info(f"[{chain_name}] Continuing to next run...")
 
         Logger.info(f"done scraping {chain_name}")
-
-        folder_with_files = scraper.get_storage_path()
-        if self.size_estimation_mode:
-            Logger.info(f"Summrize test data for {chain_name}")
-            summerize_dump_folder_contant(folder_with_files)
-
-            Logger.info(f"Cleaning dump folder for {chain_name}")
-            clean_dump_folder(folder_with_files)
-        return folder_with_files

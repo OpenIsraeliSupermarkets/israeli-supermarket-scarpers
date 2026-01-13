@@ -90,7 +90,9 @@ def load_configuration():  # pylint: disable=too-many-branches
 
     if status_database_type == "json":
         # JSON database configuration (default)
-        status_configuration["base_path"] = os.getenv("STATUS_DATABASE_PATH", "dumps/status")
+        status_configuration["base_path"] = os.getenv(
+            "STATUS_DATABASE_PATH", "dumps/status"
+        )
     # For mongo, connection details are read from environment variables in MongoDataBase itself
     # (MONGO_URL, MONGO_PORT)
 

@@ -7,7 +7,6 @@ class ScarpingTask:  # pylint: disable=too-many-instance-attributes
 
     def __init__(
         self,
-        size_estimation_mode=False,
         enabled_scrapers=None,
         files_types=FileTypesFilters.all_types(),
         multiprocessing=5,
@@ -15,11 +14,12 @@ class ScarpingTask:  # pylint: disable=too-many-instance-attributes
         max_size=None,
         output_configuration=None,
         status_configuration=None,
+        timeout_in_seconds=60 * 30,
     ):
         """define the runner"""
         self.runner = MainScrapperRunner(
-            size_estimation_mode=size_estimation_mode,
             enabled_scrapers=enabled_scrapers,
+            timeout_in_seconds=timeout_in_seconds,
             multiprocessing=multiprocessing,
             output_configuration=output_configuration,
             status_configuration=status_configuration,
@@ -28,9 +28,10 @@ class ScarpingTask:  # pylint: disable=too-many-instance-attributes
         self.min_size = min_size
         self.max_size = max_size
 
-    def start(self, limit=None, when_date=None):
+    def start(self, limit=None, when_date=None, single_pass=True):
         """run the scraping"""
         return self.runner.run(
+            single_pass=single_pass,
             limit=limit,
             files_types=self.files_types,
             when_date=when_date,

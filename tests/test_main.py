@@ -48,12 +48,11 @@ def test_main_with_one_scarper():
         )
 
 
-def test_main_with_size_estimation_mode():
+def test_main_with_one_scarper():
     """test size estmation mode"""
     with tempfile.TemporaryDirectory() as tmpdirname:
         scrapper_done = ScarpingTask(
             limit=1,
-            size_estimation_mode=True,
             enabled_scrapers=ScraperFactory.sample(n=1),
             output_configuration={
                 "output_mode": "disk",
