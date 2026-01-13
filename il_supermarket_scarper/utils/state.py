@@ -12,3 +12,4 @@ class FilterState:  # pylint: disable=too-many-instance-attributes
         self.files_was_filtered_since_already_download = False
         self.unique_seen = set()
         self.file_pass_limit = 0
+        self.should_exit = False

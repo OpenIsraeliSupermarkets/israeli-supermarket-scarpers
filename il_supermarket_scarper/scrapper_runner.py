@@ -15,6 +15,7 @@ from .utils import (
     _now,
 )
 
+from il_supermarket_scarper.engines.engine import Engine
 
 class MainScrapperRunner:
     """a main scraper to execute all scraping"""
@@ -44,6 +45,8 @@ class MainScrapperRunner:
             "database_type": "json",
             "base_path": "dumps/status",
         }
+        self._shutdown_flag = False
+        self._pool = None
 
     def _create_file_output_for_scraper(self, scraper_name, config):
         """Create a file_output instance for a specific scraper based on config."""
@@ -122,12 +125,14 @@ class MainScrapperRunner:
         single_pass=True,
     ):
         """run the scraper"""
+        self._shutdown_flag = False
         Logger.info(f"Limit is {limit}")
         Logger.info(f"files_types is {files_types}")
         Logger.info(f"Start scraping {','.join(self.enabled_scrapers)}.")
 
-        with Pool(self.multiprocessing) as pool:
-            result = pool.starmap(
+        self._pool = Pool(self.multiprocessing)
+        try:
+            result = self._pool.starmap(
                 self.scrape_one_wrap,
                 [
                     (
@@ -147,9 +152,12 @@ class MainScrapperRunner:
                 ],
             )
 
-        Logger.info("Done scraping all supermarkets.")
-
-        return result
+            Logger.info("Done scraping all supermarkets.")
+            return result
+        finally:
+            self._pool.close()
+            self._pool.join()
+            self._pool = None
 
     def scrape_one_wrap(self, chainScrapperClass, kwargs):
         """scrape one wrapper, each with its own event loop"""
@@ -193,11 +201,11 @@ class MainScrapperRunner:
         )
 
         # Create scraper with both file_output and status_database
-        scraper = chain_scrapper_constractor(
+        scraper: Engine = chain_scrapper_constractor(
             file_output=file_output, status_database=status_database
         )
 
-        chain_name = scraper.get_chain_name()
+        chain_name: str = scraper.get_chain_name()
 
         Logger.info(f"scraping {chain_name}")
 
@@ -208,6 +216,11 @@ class MainScrapperRunner:
 
         # Loop until one of the exit conditions is met
         while True:
+            # Check for shutdown flag
+            if self._shutdown_flag:
+                Logger.info(f"[{chain_name}] Shutdown requested, exiting loop")
+                break
+
             run_count += 1
             Logger.info(f"[{chain_name}] Starting run #{run_count}")
 
@@ -226,6 +239,10 @@ class MainScrapperRunner:
                 max_size=max_size,
             ):
                 collected_now_count += 1
+                # Check for shutdown during scraping
+                if self._shutdown_flag:
+                    Logger.info(f"[{chain_name}] Shutdown requested during scraping")
+                    break
 
             Logger.info(
                 f"[{chain_name}] Run #{run_count} completed. "
@@ -233,53 +250,83 @@ class MainScrapperRunner:
                 f"Total files: {state.file_pass_limit}"
             )
 
+            # Check for shutdown flag again
+            if self._shutdown_flag:
+                Logger.info(f"[{chain_name}] Shutdown requested, exiting loop")
+                break
+
             # Check exit conditions
-            should_exit = False
-            exit_reason = None
-
-            # Condition 1: Limit reached
-            if limit is not None and state.file_pass_limit >= limit:
-                should_exit = True
-                exit_reason = f"limit reached ({state.file_pass_limit}/{limit})"
-
-            # Condition 2: Single pass completed
-            elif single_pass:
-                should_exit = True
-                exit_reason = "single pass completed"
-
-            # Condition 3: when_date provided, day has passed, and no new files found
-            elif initial_when_date is not None and isinstance(
-                initial_when_date, datetime.datetime
-            ):
-                current_date = _now().date()
-                when_date_date = initial_when_date.date()
-
-                # Check if the day has passed
-                if current_date > when_date_date:
-                    # If no files were found in this run, exit
-                    if collected_now_count == 0:
-                        should_exit = True
-                        exit_reason = (
-                            f"day has passed ({when_date_date} -> {current_date}) "
-                            f"and no additional files found"
-                        )
-                    else:
-                        # Day passed but files were found, continue
-                        Logger.info(
-                            f"[{chain_name}] Day has passed but found {collected_now_count} "
-                            f"files, continuing..."
-                        )
+            should_exit, exit_reason = self._should_exit(state, limit, single_pass, initial_when_date, collected_now_count, chain_name)
 
             if should_exit:
                 Logger.info(f"[{chain_name}] Exiting loop: {exit_reason}")
                 break
             else:
-                Logger.info(
-                    f"[{chain_name}] Sleeping for {self.timeout_in_seconds} seconds"
-                )
-                time.sleep(self.timeout_in_seconds)
+                self._sleep()
 
             # If we're continuing, log that we'll run again
-            Logger.info(f"[{chain_name}] Continuing to next run...")
+            if not self._shutdown_flag:
+                Logger.info(f"[{chain_name}] Continuing to next run...")
 
         Logger.info(f"done scraping {chain_name}")
+
+    def _sleep(self):
+        """Sleep in smaller chunks to check shutdown flag more frequently"""
+        Logger.info(f"Sleeping for {self.timeout_in_seconds} seconds")
+        sleep_chunk = min(1.0, self.timeout_in_seconds)
+        slept = 0
+        while slept < self.timeout_in_seconds and not self._shutdown_flag:
+            time.sleep(sleep_chunk)
+            slept += sleep_chunk
+            if slept + sleep_chunk > self.timeout_in_seconds:
+                sleep_chunk = self.timeout_in_seconds - slept
+
+
+    def _should_exit(self, state, limit, single_pass, initial_when_date, collected_now_count, chain_name):
+        """check if the scraping should exit"""
+        should_exit = False
+        exit_reason = None
+
+        # Condition 1: Limit reached
+        if limit is not None and state.file_pass_limit >= limit:
+            should_exit = True
+            exit_reason = f"limit reached ({state.file_pass_limit}/{limit})"
+
+        # Condition 2: Single pass completed
+        elif single_pass:
+            should_exit = True
+            exit_reason = "single pass completed"
+
+        # Condition 3: when_date provided, day has passed, and no new files found
+        elif initial_when_date is not None and isinstance(
+            initial_when_date, datetime.datetime
+        ):
+            current_date = _now().date()
+            when_date_date = initial_when_date.date()
+
+            # Check if the day has passed
+            if current_date > when_date_date:
+                # If no files were found in this run, exit
+                if collected_now_count == 0:
+                    should_exit = True
+                    exit_reason = (
+                        f"day has passed ({when_date_date} -> {current_date}) "
+                        f"and no additional files found"
+                    )
+                else:
+                    # Day passed but files were found, continue
+                    Logger.info(
+                        f"[{chain_name}] Day has passed but found {collected_now_count} "
+                        f"files, continuing..."
+                        )
+        return should_exit, exit_reason
+
+    def shutdown(self):
+        """Stop the scraping process"""
+        Logger.info("Shutdown requested")
+        self._shutdown_flag = True
+        if self._pool is not None:
+            Logger.info("Terminating pool processes")
+            self._pool.terminate()
+            self._pool.join()
+            self._pool = None
