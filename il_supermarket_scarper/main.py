@@ -56,4 +56,3 @@ class ScarpingTask:  # pylint: disable=too-many-instance-attributes
         self.runner.shutdown()
         if self._thread is not None and self._thread.is_alive():
             self._thread.join(timeout=timeout)
-
