@@ -31,7 +31,7 @@ def create_status_database_for_scraper(scraper_name, config):
         # JSON file database
         base_path = config.get("base_path", "dumps/status")
         return JsonDataBase(
-            database_name, base_path=os.path.join(base_path, target_folder)
+            database_name, base_path=base_path
         )
 
     elif database_type == "mongo":
