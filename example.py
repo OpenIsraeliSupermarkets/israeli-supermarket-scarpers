@@ -1,11 +1,9 @@
 from il_supermarket_scarper import ScarpingTask, ScraperFactory
 from il_supermarket_scarper.utils import _now, Logger, QueueFileOutput
-
+import asyncio
 Logger.set_logging_level("INFO")
 
-if __name__ == "__main__":
-    # Configure for in-memory queue output
-    # When using multiprocessing, the queue automatically uses shared memory
+async def main():
     scraper = ScarpingTask(
         output_configuration={
             "output_mode": "queue",
@@ -19,8 +17,6 @@ if __name__ == "__main__":
     # Start scraping (runs in background thread)
     scraper.start(limit=1, when_date=_now())
 
-    # Wait for scraping to complete
-    scraper._thread.join()
 
     # Get file outputs from the runner
     file_outputs = scraper.consume()
@@ -30,19 +26,14 @@ if __name__ == "__main__":
         if isinstance(file_output, QueueFileOutput):
 
             # Get all messages from the queue
-            messages = file_output.queue_handler.get_all_messages()
-
-            print(f"\n=== Files from {scraper_name} ===")
-            print(f"Total files in queue: {len(messages)}")
-
+            async for msg in file_output.queue_handler.get_all_messages():
             # Read each file from the queue
-            for i, msg in enumerate(messages, 1):
+        
                 file_name = msg["file_name"]
                 file_content = msg["file_content"]  # bytes
                 file_link = msg["file_link"]
                 metadata = msg["metadata"]
 
-                print(f"\nFile {i}: {file_name}")
                 print(f"  Link: {file_link}")
                 print(f"  Size: {len(file_content)} bytes")
                 print(f"  Metadata: {metadata}")
@@ -60,3 +51,8 @@ if __name__ == "__main__":
 
     # Stop and cleanup
     scraper.stop()
+    scraper.wait()
+
+if __name__ == "__main__":
+    # Configure for in-memory queue output
+    asyncio.run(main())

@@ -226,7 +226,6 @@ class MainScrapperRunner:
         Args:
             scraper_name: Name of the scraper
             config: Configuration dictionary
-            manager: Optional multiprocessing.Manager instance for creating shared lists
         """
         target_folder = DumpFolderNames[scraper_name].value
 
@@ -247,15 +246,8 @@ class MainScrapperRunner:
             queue_type = config.get("queue_type", "memory")
 
             if queue_type == "memory":
-                # Create shared list if manager is provided (for multiprocessing)
-                shared_list = None
-                if self._manager is not None:
-                    shared_list = self._manager.list()
-
                 return QueueFileOutput(
-                    InMemoryQueueHandler(
-                        queue_name=target_folder, shared_messages_list=shared_list
-                    )
+                    InMemoryQueueHandler(queue_name=target_folder)
                 )
 
 
@@ -274,7 +266,6 @@ class MainScrapperRunner:
 
         # Create file_output and status_database objects in main process BEFORE spawning workers
         # These references can be accessed via consume_results()
-        # Pass manager to create shared lists for in-memory queues
         self._file_outputs = {}
         self._status_databases = {}
         for chain_scrapper_class in self.enabled_scrapers:
@@ -321,26 +312,7 @@ class MainScrapperRunner:
 
             Logger.info("Done scraping all supermarkets.")
 
-            # If using in-memory queue with shared messages, copy messages to regular lists
-            # before shutting down the manager
-            if (
-                self.file_output_config.get("output_mode") == "queue"
-                and self.file_output_config.get("queue_type") == "memory"
-            ):
-                # Copy shared messages to regular lists for each queue handler
-                for scraper_name, file_output in self._file_outputs.items():
-                    if isinstance(file_output, QueueFileOutput):
-                        handler = file_output.queue_handler
-                        if (
-                            hasattr(handler, "messages")
-                            and handler.messages is not None
-                        ):
-                            # Check if it's a shared list from multiprocessing.Manager
-                            # Shared lists have a different type than regular lists
-                            msg_type = type(handler.messages).__name__
-                            if msg_type != "list":
-                                # Convert shared list to regular list before manager shutdown
-                                handler.messages = list(handler.messages)
+
 
             return result
         finally:

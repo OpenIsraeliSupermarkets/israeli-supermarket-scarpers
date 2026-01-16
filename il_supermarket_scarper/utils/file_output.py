@@ -263,26 +263,23 @@ class InMemoryQueueHandler(AbstractQueueHandler):
     Simple in-memory queue for testing.
     Not suitable for production - data is lost on restart.
 
-    Note: When using with multiprocessing, pass a shared_messages_list
-    from multiprocessing.Manager().list() to share messages across processes.
+    Messages can be consumed as they arrive using the async generator
+    returned by get_all_messages().
     """
 
-    def __init__(self, queue_name: str = "default", shared_messages_list=None):
+    def __init__(self, queue_name: str = "default"):
         """
         Initialize in-memory queue.
 
         Args:
             queue_name: Name of the queue
-            shared_messages_list: Optional shared list from multiprocessing.Manager().list()
-                                  for sharing messages across processes
         """
         self.queue_name = queue_name
-        # Use shared list if provided, otherwise use regular list
-        self.messages = shared_messages_list if shared_messages_list is not None else []
+        self._queue: asyncio.Queue = asyncio.Queue()
 
     async def send(self, message: Dict[str, Any]) -> None:
-        """Add message to in-memory queue."""
-        self.messages.append(message)
+        """Add message to queue."""
+        await self._queue.put(message)
         Logger.debug(f"Added message to in-memory queue: {message['file_name']}")
 
     def get_queue_name(self) -> str:
@@ -290,13 +287,16 @@ class InMemoryQueueHandler(AbstractQueueHandler):
         return f"memory:{self.queue_name}"
 
     async def close(self) -> None:
-        """Close queue (no-op for in-memory)."""
+        """Signal that no more messages will be sent."""
+        await self._queue.put(None)
 
     async def get_all_messages(self):
-        """Get all messages (for testing)."""
-        # Handle both regular lists and shared lists from multiprocessing.Manager
-        if isinstance(self.messages, list):
-            return self.messages
-        else:
-            # For shared lists, create a copy
-            return list(self.messages)
+        """
+        Async generator that yields messages as they arrive.
+        Stops when close() is called.
+        """
+        while True:
+            message = await self._queue.get()
+            if message is None:
+                break
+            yield message
