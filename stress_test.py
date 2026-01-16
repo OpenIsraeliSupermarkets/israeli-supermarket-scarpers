@@ -5,8 +5,9 @@ import tempfile
 import pstats
 import cProfile
 import io
+import asyncio
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
-from il_supermarket_scarper.utils import _now
+from il_supermarket_scarper.utils import DiskFileOutput, JsonDataBase
 
 
 def format_stats_as_json(profile, project_name):
@@ -39,31 +40,38 @@ def format_stats_as_json(profile, project_name):
     return project_stats
 
 
-if __name__ == "__main__":
+async def main():
+    results = {}
+    for scraper_name in [ScraperFactory.BAREKET.name]:
 
-    result = {}
-    for scraper_name in ScraperFactory.all_scrapers_name():
-
-        def full_execution(scraper):
+        async def full_execution(scraper):
             """full execution of the scraper"""
-            with tempfile.TemporaryDirectory() as tmpdirname:
-                try:
-                    initer = ScraperFactory.get(scraper)(folder_name=tmpdirname)
-                    return initer.scrape(when_date=_now()), ""
-                except Exception as e:  # pylint: disable=broad-exception-caught
-                    return [], str(e)
+            files = []
+            error = None
+            try:
+                initer = ScraperFactory.get(scraper)(
+                    file_output=DiskFileOutput(storage_path=f"temp/{scraper}"),
+                    status_database=JsonDataBase(
+                        database_name=scraper, base_path=f"temp/{scraper}"
+                    ),
+                )
+                async for result in initer.scrape(limit=100):
+                    files.append(result)
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                error = str(e)
+            return files, error
 
         execution_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         start_time = time.time()
         pr = cProfile.Profile()
         pr.enable()
 
-        files, error = full_execution(scraper_name)
+        files, error = await full_execution(scraper_name)
 
         pr.disable()
 
         end_time = time.time()
-        result[scraper_name] = {
+        results[scraper_name] = {
             "status": format_stats_as_json(pr, "israeli-supermarket-scarpers"),
             "execution_time": execution_time,
             "start_time": start_time,
@@ -74,4 +82,9 @@ if __name__ == "__main__":
         }
 
         with open("stress_test_results.json", "w", encoding="utf-8") as f:
-            json.dump(result, f)
+            json.dump(results, f)
+
+
+if __name__ == "__main__":
+
+    asyncio.run(main())
