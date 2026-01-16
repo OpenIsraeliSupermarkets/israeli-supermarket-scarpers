@@ -82,6 +82,7 @@ class MultiPageWeb(WebBase):
 
     async def generate_all_files(
         self,
+        state: FilterState,
         files_types=None,
         store_id=None,
         when_date=None,
@@ -123,6 +124,7 @@ class MultiPageWeb(WebBase):
             for req in pages_to_scrape:
 
                 async for task in self.process_links_before_download(
+                    state,
                     req,
                     limit=limit,
                     files_types=files_types,
@@ -149,6 +151,7 @@ class MultiPageWeb(WebBase):
 
         # Aggregate results from all pages
         files = self.generate_all_files(
+            state,
             limit=limit,
             files_types=files_types,
             store_id=store_id,
