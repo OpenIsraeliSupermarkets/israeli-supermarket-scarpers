@@ -362,7 +362,7 @@ class InMemoryQueueHandler(AbstractQueueHandler):
     async def close(self) -> None:
         """Close queue (no-op for in-memory)."""
 
-    def get_all_messages(self):
+    async def get_all_messages(self):
         """Get all messages (for testing)."""
         # Handle both regular lists and shared lists from multiprocessing.Manager
         if isinstance(self.messages, list):
