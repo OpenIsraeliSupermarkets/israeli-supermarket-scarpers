@@ -135,7 +135,7 @@ class DiskFileOutput(FileOutput):
 
 
 class QueueFileOutput(FileOutput):
-    """Send files to an abstract queue (for Kafka, RabbitMQ, etc.)."""
+    """Send files to an abstract queue."""
 
     def __init__(
         self,
@@ -235,7 +235,7 @@ class QueueFileOutput(FileOutput):
 
 
 class AbstractQueueHandler(ABC):
-    """Abstract base class for queue handlers (Kafka, RabbitMQ, etc.)."""
+    """Abstract base class for queue handlers."""
 
     @abstractmethod
     async def send(self, message: Dict[str, Any]) -> None:
@@ -256,76 +256,6 @@ class AbstractQueueHandler(ABC):
     async def close(self) -> None:
         """Close the queue connection."""
         raise NotImplementedError
-
-
-class KafkaQueueHandler(AbstractQueueHandler):
-    """Example Kafka queue handler implementation."""
-
-    def __init__(self, bootstrap_servers: str, topic: str):
-        """
-        Initialize Kafka handler.
-
-        Args:
-            bootstrap_servers: Kafka bootstrap servers (e.g., 'localhost:9092')
-            topic: Kafka topic name
-        """
-        self.bootstrap_servers = bootstrap_servers
-        self.topic = topic
-        self.producer = None
-        Logger.info(
-            f"Initialized Kafka handler for {bootstrap_servers}, topic: {topic}"
-        )
-
-    async def send(self, message: Dict[str, Any]) -> None:
-        """Send message to Kafka topic."""
-        # Lazy initialization of producer
-        if self.producer is None:
-            try:
-                # Try to import aiokafka (optional dependency)
-                # pylint: disable=import-outside-toplevel
-                from aiokafka import AIOKafkaProducer
-                import json
-
-                self.producer = AIOKafkaProducer(
-                    bootstrap_servers=self.bootstrap_servers,
-                    value_serializer=lambda v: json.dumps(
-                        {
-                            "file_name": v["file_name"],
-                            "file_link": v["file_link"],
-                            "file_size": len(v["file_content"]),
-                            "metadata": v["metadata"],
-                        }
-                    ).encode("utf-8"),
-                )
-                await self.producer.start()
-            except ImportError:
-                raise ImportError(
-                    "aiokafka is not installed. Install it with: pip install aiokafka"
-                )
-
-        # For now, we send metadata only (not the full file content to avoid huge messages)
-        # In production, you might want to:
-        # 1. Upload file content to S3/GCS and send the URL
-        # 2. Split large files into chunks
-        # 3. Use a different serialization method
-        await self.producer.send_and_wait(
-            self.topic,
-            {
-                "file_name": message["file_name"],
-                "file_link": message["file_link"],
-                "file_content": message["file_content"],  # Warning: might be too large
-                "metadata": message["metadata"],
-            },
-        )
-
-    def get_queue_name(self) -> str:
-        """Return Kafka topic name."""
-        return f"kafka://{self.bootstrap_servers}/{self.topic}"
-
-    async def close(self) -> None:
-        """Close Kafka producer."""
-        if self.producer:
-            await self.producer.stop()
 
 
 class InMemoryQueueHandler(AbstractQueueHandler):

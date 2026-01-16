@@ -64,9 +64,9 @@ def load_configuration():  # pylint: disable=too-many-branches
         # Configure queue output
         queue_type = os.getenv("QUEUE_TYPE", "memory").lower()
 
-        if queue_type not in ["memory", "kafka"]:
+        if queue_type not in ["memory"]:
             raise ValueError(
-                f"QUEUE_TYPE must be 'memory' or 'kafka', but got {queue_type}"
+                f"QUEUE_TYPE must be 'memory', but got {queue_type}"
             )
 
         output_configuration["queue_type"] = queue_type

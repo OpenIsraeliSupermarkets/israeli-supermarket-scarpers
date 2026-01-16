@@ -50,7 +50,6 @@ from .file_output import (
     DiskFileOutput,
     QueueFileOutput,
     AbstractQueueHandler,
-    KafkaQueueHandler,
     InMemoryQueueHandler,
 )
 from .scraper_config import ScraperConfig

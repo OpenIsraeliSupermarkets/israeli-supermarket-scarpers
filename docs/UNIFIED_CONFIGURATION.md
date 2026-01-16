@@ -350,14 +350,6 @@ if environment == "production":
         max_size=10_000_000,
         metadata={"env": "prod", "version": "1.0"}
     )
-elif environment == "streaming":
-    kafka_handler = KafkaQueueHandler("localhost:9092", "files")
-    config = ScraperConfig.queue(
-        file_output=QueueFileOutput(kafka_handler),
-        filter_null=True,
-        min_size=1000,
-        metadata={"env": "streaming"}
-    )
 else:  # test
     queue = InMemoryQueueHandler("test")
     config = ScraperConfig.queue(

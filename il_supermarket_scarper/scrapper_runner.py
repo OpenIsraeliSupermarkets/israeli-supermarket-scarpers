@@ -11,7 +11,6 @@ from .utils import (
     DiskFileOutput,
     QueueFileOutput,
     InMemoryQueueHandler,
-    KafkaQueueHandler,
     FilterState,
     _now,
 )
@@ -259,15 +258,6 @@ class MainScrapperRunner:
                     )
                 )
 
-            elif queue_type == "kafka":
-                bootstrap_servers = config.get(
-                    "kafka_bootstrap_servers", "localhost:9092"
-                )
-                return QueueFileOutput(
-                    KafkaQueueHandler(
-                        bootstrap_servers=bootstrap_servers, topic=target_folder
-                    )
-                )
 
     def run(
         self,
