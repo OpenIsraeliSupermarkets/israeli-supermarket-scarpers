@@ -1,6 +1,7 @@
 import os
 import json
 from ..logger import Logger
+from ..status import _now
 from .base import AbstractDataBase
 
 
@@ -65,6 +66,7 @@ class JsonDataBase(AbstractDataBase):
 
         # Save the updated data back to the file
         self._write_database(data)
+        self._update_last_modified()
 
     def insert_document(self, collection_name, document):
         """Insert a document into a collection inside the JSON database."""
@@ -78,6 +80,7 @@ class JsonDataBase(AbstractDataBase):
 
         # Save the updated data back to the file
         self._write_database(data)
+        self._update_last_modified()
 
     def already_downloaded(self, collection_name, query):
         """Find a document in a collection based on a query."""
@@ -97,3 +100,39 @@ class JsonDataBase(AbstractDataBase):
                 except json.JSONDecodeError:
                     Logger.warning(f"File {file_path} is corrupted.")
         return False
+
+    def _update_last_modified(self):
+        """Update the last modified timestamp to current time."""
+        data = self._read_database()
+        if "_metadata" not in data:
+            data["_metadata"] = {}
+        # Store as ISO format string for reliable parsing
+        now = _now()
+        data["_metadata"]["last_modified"] = now.isoformat()
+        self._write_database(data)
+
+    def get_last_modified(self):
+        """Get the last modified timestamp when scraper last wrote to this database."""
+        data = self._read_database()
+        if "_metadata" in data and "last_modified" in data["_metadata"]:
+            # Parse the timestamp if it's a string (from JSON)
+            last_modified = data["_metadata"]["last_modified"]
+            if isinstance(last_modified, str):
+                from datetime import datetime
+                import pytz
+                # Parse ISO format string
+                try:
+                    # Handle timezone-aware ISO strings
+                    if last_modified.endswith("Z"):
+                        last_modified = last_modified.replace("Z", "+00:00")
+                    parsed = datetime.fromisoformat(last_modified)
+                    # Ensure timezone-aware
+                    if parsed.tzinfo is None:
+                        parsed = pytz.timezone("Asia/Jerusalem").localize(parsed)
+                    return parsed
+                except (ValueError, AttributeError) as e:
+                    Logger.warning(f"Failed to parse last_modified timestamp: {e}")
+                    return None
+            # If it's already a datetime object (shouldn't happen with JSON, but handle it)
+            return last_modified
+        return None

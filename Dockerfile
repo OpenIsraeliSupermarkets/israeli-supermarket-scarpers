@@ -51,6 +51,8 @@ FROM base as prod
 # RUN crontab /etc/cron.d/crontab
 # RUN touch /var/log/cron.log
 # && cron & tail -f /var/log/cron.log
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD python healthcheck.py || exit 1
 CMD python main.py 
 
 # run test

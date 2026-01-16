@@ -10,6 +10,7 @@ import asyncio
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
 from il_supermarket_scarper.utils import DiskFileOutput, JsonDataBase, Logger
 from il_supermarket_scarper.utils.databases import AbstractDataBase
+from il_supermarket_scarper.utils.status import _now
 
 
 class DateTimeEncoder(json.JSONEncoder):
@@ -45,6 +46,7 @@ class NoOpStatusDatabase(AbstractDataBase):
         if collection_name not in self._data:
             self._data[collection_name] = []
         self._data[collection_name].append(document)
+        self._update_last_modified()
     
     def insert_documents(self, collection_name, document):
         """Store multiple documents in memory collection."""
@@ -54,10 +56,23 @@ class NoOpStatusDatabase(AbstractDataBase):
             self._data[collection_name].extend(document)
         else:
             self._data[collection_name].append(document)
+        self._update_last_modified()
     
     def already_downloaded(self, collection_name, query):
         """Always return False - assume nothing is downloaded."""
         return False
+    
+    def _update_last_modified(self):
+        """Update the last modified timestamp to current time."""
+        if "_metadata" not in self._data:
+            self._data["_metadata"] = {}
+        self._data["_metadata"]["last_modified"] = _now()
+    
+    def get_last_modified(self):
+        """Get the last modified timestamp when scraper last wrote to this database."""
+        if "_metadata" in self._data and "last_modified" in self._data["_metadata"]:
+            return self._data["_metadata"]["last_modified"]
+        return None
     
     def get_all_data(self):
         """Get all collected status data as a dictionary matching JsonDataBase format."""

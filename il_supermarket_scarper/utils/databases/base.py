@@ -19,3 +19,13 @@ class AbstractDataBase(ABC):
     def already_downloaded(self, collection_name, query):
         """Check if a document is already downloaded based on a query."""
         pass
+
+    @abstractmethod
+    def get_last_modified(self):
+        """Get the last modified timestamp when scraper last wrote to this database."""
+        pass
+
+    @abstractmethod
+    def _update_last_modified(self):
+        """Update the last modified timestamp to current time."""
+        pass
