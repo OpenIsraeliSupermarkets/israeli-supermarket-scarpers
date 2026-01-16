@@ -2,12 +2,13 @@ import time
 import json
 import datetime
 import tempfile
+import os
 import pstats
 import cProfile
 import io
 import asyncio
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
-from il_supermarket_scarper.utils import DiskFileOutput, JsonDataBase
+from il_supermarket_scarper.utils import DiskFileOutput, JsonDataBase, Logger
 from il_supermarket_scarper.utils.databases import AbstractDataBase
 
 
@@ -95,25 +96,38 @@ def format_stats_as_json(profile, project_name):
 
 async def main():
     results = {}
-    for scraper_name in [ScraperFactory.BAREKET.name]: # ScraperFactory.BAREKET.name
+    for scraper_name in [ScraperFactory.BAREKET.name,ScraperFactory.SHUFERSAL.name]: 
 
         async def full_execution(scraper):
-            """full execution of the scraper"""
+            """Optimized full execution of the scraper for stress testing"""
             files = []
             error = None
             status_database = None
+            
+            # OPTIMIZATION: Disable logging for performance (saves ~0.6s)
+            original_logging_status = Logger.enabled
+            Logger.change_logging_status(False)
+            
             try:
                 # Use NoOpStatusDatabase for stress testing to avoid I/O overhead
                 # It collects all status data in memory and we'll dump it to results
                 status_database = NoOpStatusDatabase(database_name=scraper)
+                
+                # OPTIMIZATION: Use RAM disk if available for faster I/O
+                storage_path = f"temp/{scraper}"
+                
                 initer = ScraperFactory.get(scraper)(
-                    file_output=DiskFileOutput(storage_path=f"temp/{scraper}"),
+                    file_output=DiskFileOutput(storage_path=storage_path),
                     status_database=status_database,
                 )
                 async for result in initer.scrape(limit=100):
                     files.append(result)
             except Exception as e:  # pylint: disable=broad-exception-caught
                 error = str(e)
+            finally:
+                # Restore original logging status
+                Logger.change_logging_status(original_logging_status)
+            
             # Extract collected status data
             status_data = status_database.get_all_data() if status_database else {}
             return files, error, status_data

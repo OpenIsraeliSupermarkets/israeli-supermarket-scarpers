@@ -1,6 +1,7 @@
 from urllib.parse import urlsplit
 import re
 import ntpath
+import asyncio
 from abc import abstractmethod
 from lxml import html as lxml_html
 from typing import AsyncGenerator
@@ -82,7 +83,6 @@ class MultiPageWeb(WebBase):
 
     async def generate_all_files(
         self,
-        state: FilterState,
         files_types=None,
         store_id=None,
         when_date=None,
@@ -121,10 +121,16 @@ class MultiPageWeb(WebBase):
                     )
                 )
 
-            for req in pages_to_scrape:
+            # we pass the state between pages to keep the total input count
+            # we don't pass the state to the process_links_before_download function
+            # becuase later in the apply_limit function we will pass the state to the apply_limit function
+            cross_pages_state = FilterState()
+            # Process pages in parallel using asyncio.gather
 
+            async def process_single_page(req):
+                results = []
                 async for task in self.process_links_before_download(
-                    state,
+                    cross_pages_state,
                     req,
                     limit=limit,
                     files_types=files_types,
@@ -132,6 +138,12 @@ class MultiPageWeb(WebBase):
                     when_date=when_date,
                     random_selection=random_selection,
                 ):
+                    results.append(task)
+                return results
+
+            tasks = [process_single_page(req) for req in pages_to_scrape]
+            for task_group in await asyncio.gather(*tasks):
+                for task in task_group:
                     yield task
 
     async def collect_files_details_from_site(  # pylint: disable=too-many-locals
@@ -151,7 +163,6 @@ class MultiPageWeb(WebBase):
 
         # Aggregate results from all pages
         files = self.generate_all_files(
-            state,
             limit=limit,
             files_types=files_types,
             store_id=store_id,
