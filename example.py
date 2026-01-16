@@ -15,38 +15,38 @@ if __name__ == "__main__":
         multiprocessing=1,
         enabled_scrapers=[ScraperFactory.BAREKET.name, ScraperFactory.VICTORY.name],
     )
-    
+
     # Start scraping (runs in background thread)
     scraper.start(limit=1, when_date=_now())
-    
+
     # Wait for scraping to complete
     scraper._thread.join()
-    
+
     # Get file outputs from the runner
     file_outputs = scraper.consume()
-    
+
     # Access files from the in-memory queue
     for scraper_name, file_output in file_outputs.items():
         if isinstance(file_output, QueueFileOutput):
-            
+
             # Get all messages from the queue
             messages = file_output.queue_handler.get_all_messages()
-            
+
             print(f"\n=== Files from {scraper_name} ===")
             print(f"Total files in queue: {len(messages)}")
-            
+
             # Read each file from the queue
             for i, msg in enumerate(messages, 1):
                 file_name = msg["file_name"]
                 file_content = msg["file_content"]  # bytes
                 file_link = msg["file_link"]
                 metadata = msg["metadata"]
-                
+
                 print(f"\nFile {i}: {file_name}")
                 print(f"  Link: {file_link}")
                 print(f"  Size: {len(file_content)} bytes")
                 print(f"  Metadata: {metadata}")
-                
+
                 # Read file content (example: decode if XML/text)
                 if file_name.endswith(".xml"):
                     try:
@@ -57,6 +57,6 @@ if __name__ == "__main__":
                         print(f"  Content: binary data")
                 else:
                     print(f"  Content: binary data ({len(file_content)} bytes)")
-    
+
     # Stop and cleanup
     scraper.stop()

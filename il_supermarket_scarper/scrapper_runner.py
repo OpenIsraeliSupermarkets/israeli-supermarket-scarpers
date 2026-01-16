@@ -251,7 +251,7 @@ class MainScrapperRunner:
     def _create_file_output_for_scraper(self, scraper_name, config):
         """
         Create a file_output instance for a specific scraper based on config.
-        
+
         Args:
             scraper_name: Name of the scraper
             config: Configuration dictionary
@@ -280,7 +280,7 @@ class MainScrapperRunner:
                 shared_list = None
                 if self._manager is not None:
                     shared_list = self._manager.list()
-                
+
                 return QueueFileOutput(
                     InMemoryQueueHandler(
                         queue_name=target_folder, shared_messages_list=shared_list
@@ -288,12 +288,15 @@ class MainScrapperRunner:
                 )
 
             elif queue_type == "kafka":
-                bootstrap_servers = config.get("kafka_bootstrap_servers", "localhost:9092")
+                bootstrap_servers = config.get(
+                    "kafka_bootstrap_servers", "localhost:9092"
+                )
                 return QueueFileOutput(
                     KafkaQueueHandler(
                         bootstrap_servers=bootstrap_servers, topic=target_folder
                     )
                 )
+
     def run(
         self,
         limit=None,
@@ -313,8 +316,10 @@ class MainScrapperRunner:
         self._file_outputs = {}
         self._status_databases = {}
         for chain_scrapper_class in self.enabled_scrapers:
-            self._file_outputs[chain_scrapper_class] = self._create_file_output_for_scraper(
-                chain_scrapper_class, self.file_output_config
+            self._file_outputs[chain_scrapper_class] = (
+                self._create_file_output_for_scraper(
+                    chain_scrapper_class, self.file_output_config
+                )
             )
             self._status_databases[chain_scrapper_class] = (
                 self._create_status_database_for_scraper(
@@ -353,7 +358,7 @@ class MainScrapperRunner:
             )
 
             Logger.info("Done scraping all supermarkets.")
-            
+
             # If using in-memory queue with shared messages, copy messages to regular lists
             # before shutting down the manager
             if (
@@ -364,14 +369,17 @@ class MainScrapperRunner:
                 for scraper_name, file_output in self._file_outputs.items():
                     if isinstance(file_output, QueueFileOutput):
                         handler = file_output.queue_handler
-                        if hasattr(handler, "messages") and handler.messages is not None:
+                        if (
+                            hasattr(handler, "messages")
+                            and handler.messages is not None
+                        ):
                             # Check if it's a shared list from multiprocessing.Manager
                             # Shared lists have a different type than regular lists
                             msg_type = type(handler.messages).__name__
                             if msg_type != "list":
                                 # Convert shared list to regular list before manager shutdown
                                 handler.messages = list(handler.messages)
-            
+
             return result
         finally:
             self._pool.close()

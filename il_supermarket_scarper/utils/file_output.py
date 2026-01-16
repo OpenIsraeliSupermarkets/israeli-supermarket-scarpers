@@ -332,7 +332,7 @@ class InMemoryQueueHandler(AbstractQueueHandler):
     """
     Simple in-memory queue for testing.
     Not suitable for production - data is lost on restart.
-    
+
     Note: When using with multiprocessing, pass a shared_messages_list
     from multiprocessing.Manager().list() to share messages across processes.
     """
@@ -340,7 +340,7 @@ class InMemoryQueueHandler(AbstractQueueHandler):
     def __init__(self, queue_name: str = "default", shared_messages_list=None):
         """
         Initialize in-memory queue.
-        
+
         Args:
             queue_name: Name of the queue
             shared_messages_list: Optional shared list from multiprocessing.Manager().list()

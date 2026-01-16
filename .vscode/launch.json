@@ -11,8 +11,16 @@
             "program": "main.py",
             "console": "integratedTerminal",
             "env": {
-                "ENABLED_SCRAPERS": "BAREKET",
+                "ENABLED_SCRAPERS": "BAREKET,WOLT",
+                "LIMIT": "10",
             }
+        },
+        {
+            "name": "Run Example",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "example.py",
+            "console": "integratedTerminal"
         }
     ]
 }

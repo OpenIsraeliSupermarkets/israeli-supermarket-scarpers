@@ -118,6 +118,12 @@ def load_runtime_params():
             kwargs["when_date"] = datetime.datetime.strptime(today, "%Y-%m-%d %H:%M")
         except ValueError:
             raise ValueError("TODAY must be in the format 'YYYY-MM-DD HH:MM'")
+    
+    # validate single_pass
+    single_pass = os.getenv("SINGLE_PASS", "false").lower()
+    if single_pass not in ["true", "false", "1", "0"]:
+        raise ValueError(f"SINGLE_PASS must be 'true' or 'false', but got {single_pass}")
+    kwargs["single_pass"] = single_pass in ["true", "1"]
 
     return kwargs
 
