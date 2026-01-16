@@ -95,7 +95,7 @@ def format_stats_as_json(profile, project_name):
 
 async def main():
     results = {}
-    for scraper_name in [ScraperFactory.BAREKET.name,ScraperFactory.SHUFERSAL.name]:
+    for scraper_name in [ScraperFactory.BAREKET.name]: # ScraperFactory.BAREKET.name
 
         async def full_execution(scraper):
             """full execution of the scraper"""
