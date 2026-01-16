@@ -72,18 +72,32 @@ def __retry_internal(  # pylint: disable=broad-except,too-many-locals
         except exceptions as error:  # pylint: disable=broad-except
             measured_seconds = (datetime.now() - datetime_start).total_seconds()
             _tries -= 1
-            if not _tries:
-                raise
+            is_final_attempt = not _tries
 
             if logger is not None:
+                # Log summary for retries, full trace only on final failure
+                error_type = type(error).__name__
+                error_msg = str(error)
+                # Truncate long error messages
+                if len(error_msg) > 200:
+                    error_msg = error_msg[:200] + "..."
+                
                 logger.warning(
-                    "%s, configured timeout %s,measured time to timeout %s ,retrying in %s seconds",
-                    error,
+                    "%s: %s (timeout=%s, measured=%s, retries_left=%d, retrying in %s seconds)",
+                    error_type,
+                    error_msg,
                     _timeout,
                     measured_seconds,
+                    _tries,
                     _delay,
                 )
-                logger.error_execption(error)
+                
+                # Only log full stack trace on final failure
+                if is_final_attempt:
+                    logger.error_execption(error)
+            
+            if is_final_attempt:
+                raise
 
             time.sleep(_delay)
             _delay *= backoff

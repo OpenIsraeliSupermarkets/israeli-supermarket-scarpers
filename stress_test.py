@@ -96,7 +96,7 @@ def format_stats_as_json(profile, project_name):
 
 async def main():
     results = {}
-    for scraper_name in [ScraperFactory.BAREKET.name,ScraperFactory.SHUFERSAL.name]: 
+    for scraper_name in [ScraperFactory.SUPER_PHARM.name]:  # ScraperFactory.BAREKET.name,
 
         async def full_execution(scraper):
             """Optimized full execution of the scraper for stress testing"""
@@ -104,10 +104,7 @@ async def main():
             error = None
             status_database = None
             
-            # OPTIMIZATION: Disable logging for performance (saves ~0.6s)
-            original_logging_status = Logger.enabled
-            Logger.change_logging_status(False)
-            
+            Logger.set_logging_level("WARNING")
             try:
                 # Use NoOpStatusDatabase for stress testing to avoid I/O overhead
                 # It collects all status data in memory and we'll dump it to results
@@ -124,9 +121,7 @@ async def main():
                     files.append(result)
             except Exception as e:  # pylint: disable=broad-exception-caught
                 error = str(e)
-            finally:
-                # Restore original logging status
-                Logger.change_logging_status(original_logging_status)
+
             
             # Extract collected status data
             status_data = status_database.get_all_data() if status_database else {}

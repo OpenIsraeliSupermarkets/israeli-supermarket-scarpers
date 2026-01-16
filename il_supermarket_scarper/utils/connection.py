@@ -97,6 +97,7 @@ def url_connection_retry(init_timeout=15):
             logger=Logger,
             timeout=init_timeout,
             backoff_timeout=10,
+            max_timeout=120,  # Cap timeout at 2 minutes to prevent unbounded growth
         )
         def retry_decorated_func(*args, **kwargs):
             # Use the higher of retry's timeout or the originally requested timeout
@@ -129,31 +130,45 @@ def async_url_connection_retry(init_timeout=15):
             _delay = 2
             backoff = 2
             max_delay = 5 * 60
+            max_timeout = 120  # Cap timeout at 2 minutes
 
             while _tries:
                 try:
                     retry_timeout = kwargs.get("timeout", init_timeout)
                     actual_timeout = max(retry_timeout, requested_timeout_ref[0])
+                    actual_timeout = min(actual_timeout, max_timeout)  # Enforce max timeout
                     socket.setdefaulttimeout(actual_timeout)
                     kwargs["timeout"] = actual_timeout
                     return await func(*args, **kwargs)
                 except exceptions as error:
                     _tries -= 1
-                    if not _tries:
-                        raise
+                    is_final_attempt = not _tries
 
                     if Logger is not None:
+                        error_type = type(error).__name__
+                        error_msg = str(error)
+                        if len(error_msg) > 200:
+                            error_msg = error_msg[:200] + "..."
+                        
                         Logger.warning(
-                            "%s, configured timeout %s, retrying in %s seconds",
-                            error,
+                            "%s: %s (timeout=%s, retries_left=%d, retrying in %s seconds)",
+                            error_type,
+                            error_msg,
                             actual_timeout,
+                            _tries,
                             _delay,
                         )
-                        Logger.error_execption(error)
+                        
+                        # Only log full stack trace on final failure
+                        if is_final_attempt:
+                            Logger.error_execption(error)
+
+                    if is_final_attempt:
+                        raise
 
                     await asyncio.sleep(_delay)
                     _delay = min(_delay * backoff, max_delay)
-                    requested_timeout_ref[0] += 10  # backoff_timeout
+                    requested_timeout_ref[0] = min(requested_timeout_ref[0] + 10, max_timeout)  # backoff_timeout with cap
 
             raise ValueError("shouldn't be called!")
 
@@ -498,6 +513,7 @@ async def fetch_temporary_gz_file_from_ftp(
     max_delay = 5 * 60
     _timeout = timeout
     backoff_timeout = 5
+    max_timeout = 300  # Cap FTP timeout at 5 minutes
 
     while _tries:
         try:
@@ -505,21 +521,33 @@ async def fetch_temporary_gz_file_from_ftp(
             return
         except exceptions as error:
             _tries -= 1
-            if not _tries:
-                raise
+            is_final_attempt = not _tries
 
             if Logger is not None:
+                error_type = type(error).__name__
+                error_msg = str(error)
+                if len(error_msg) > 200:
+                    error_msg = error_msg[:200] + "..."
+                
                 Logger.warning(
-                    "%s, configured timeout %s, retrying in %s seconds",
-                    error,
+                    "%s: %s (timeout=%s, retries_left=%d, retrying in %s seconds)",
+                    error_type,
+                    error_msg,
                     _timeout,
+                    _tries,
                     _delay,
                 )
-                Logger.error_execption(error)
+                
+                # Only log full stack trace on final failure
+                if is_final_attempt:
+                    Logger.error_execption(error)
+
+            if is_final_attempt:
+                raise
 
             await asyncio.sleep(_delay)
             _delay = min(_delay * backoff, max_delay)
-            _timeout += backoff_timeout
+            _timeout = min(_timeout + backoff_timeout, max_timeout)
 
     raise ValueError("shouldn't be called!")
 
@@ -552,6 +580,7 @@ async def fetch_file_from_ftp_to_memory(
     max_delay = 5 * 60
     _timeout = timeout
     backoff_timeout = 5
+    max_timeout = 300  # Cap FTP timeout at 5 minutes
 
     while _tries:
         try:
@@ -561,21 +590,33 @@ async def fetch_file_from_ftp_to_memory(
             return file_content
         except exceptions as error:
             _tries -= 1
-            if not _tries:
-                raise
+            is_final_attempt = not _tries
 
             if Logger is not None:
+                error_type = type(error).__name__
+                error_msg = str(error)
+                if len(error_msg) > 200:
+                    error_msg = error_msg[:200] + "..."
+                
                 Logger.warning(
-                    "%s, configured timeout %s, retrying in %s seconds",
-                    error,
+                    "%s: %s (timeout=%s, retries_left=%d, retrying in %s seconds)",
+                    error_type,
+                    error_msg,
                     _timeout,
+                    _tries,
                     _delay,
                 )
-                Logger.error_execption(error)
+                
+                # Only log full stack trace on final failure
+                if is_final_attempt:
+                    Logger.error_execption(error)
+
+            if is_final_attempt:
+                raise
 
             await asyncio.sleep(_delay)
             _delay = min(_delay * backoff, max_delay)
-            _timeout += backoff_timeout
+            _timeout = min(_timeout + backoff_timeout, max_timeout)
 
     raise ValueError("shouldn't be called!")
 
