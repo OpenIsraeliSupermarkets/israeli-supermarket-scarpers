@@ -287,10 +287,12 @@ class MultiPageWeb(WebBase):
             for url, name, size in zip(file_links, filenames, file_sizes):
                 yield url, name, size
 
-        limited_files = self.apply_limit_zip(
+        # Apply filters but NOT the limit here to avoid race conditions when processing pages in parallel
+        # The limit will be applied once at the collect_files_details_from_site level after all pages are aggregated
+        filtered_files = self.apply_limit_zip(
             state,
             generate_from_lists(),
-            limit=limit,
+            limit=None,  # Don't apply limit per page - let it be applied once after aggregation
             files_types=files_types,
             by_function=lambda x: x[1],
             store_id=store_id,
@@ -299,9 +301,9 @@ class MultiPageWeb(WebBase):
         )
 
         Logger.info(
-            f"After applying limit: Page {request}: "
+            f"After applying filters: Page {request}: "
             f"Found {len(file_links)} files initially"
         )
 
-        async for url, name, size in limited_files:
+        async for url, name, size in filtered_files:
             yield url, name, size

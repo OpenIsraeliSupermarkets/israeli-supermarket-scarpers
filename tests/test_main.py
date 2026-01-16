@@ -11,12 +11,13 @@ def test_main_with_limit():
     with tempfile.TemporaryDirectory() as tmpdirname:
         expected = ScraperFactory.all_scrapers_name() + ["status"]
         scrapper_done = ScarpingTask(
-            limit=1,
             output_configuration={
                 "output_mode": "disk",
                 "base_storage_path": tmpdirname,
             },
-        ).start()
+        )
+        scrapper_done.start(limit=1, when_date=None, single_pass=True)
+        scrapper_done.wait()
 
         folders_from_scraper = list(map(lambda x: x.split("/")[-1], scrapper_done)) + [
             "status"
@@ -34,13 +35,14 @@ def test_main_with_one_scarper():
     """the limit only for enabled scarpers"""
     with tempfile.TemporaryDirectory() as tmpdirname:
         scrapper_done = ScarpingTask(
-            limit=1,
             enabled_scrapers=ScraperFactory.sample(n=1),
             output_configuration={
                 "output_mode": "disk",
                 "base_storage_path": tmpdirname,
             },
-        ).start()
+        )
+        scrapper_done.start(limit=1, when_date=None, single_pass=True)
+        scrapper_done.wait()
         assert (
             len(scrapper_done) == 1
             and len(os.listdir(tmpdirname)) == 2
@@ -51,14 +53,15 @@ def test_main_with_one_scarper():
 def test_main_with_one_scarper():
     """test size estmation mode"""
     with tempfile.TemporaryDirectory() as tmpdirname:
-        scrapper_done = ScarpingTask(
-            limit=1,
+        scrapper_done = ScarpingTask( 
             enabled_scrapers=ScraperFactory.sample(n=1),
             output_configuration={
                 "output_mode": "disk",
                 "base_storage_path": tmpdirname,
             },
-        ).start()
+        )
+        scrapper_done.start(limit=1, when_date=None, single_pass=True)
+        scrapper_done.wait()
         assert (
             len(scrapper_done) == 1
             and len(os.listdir(tmpdirname)) == 2

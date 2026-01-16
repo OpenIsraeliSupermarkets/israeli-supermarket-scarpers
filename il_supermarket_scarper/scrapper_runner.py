@@ -301,7 +301,7 @@ class MainScrapperRunner:
 
         Logger.info(f"Limit is {limit}")
         Logger.info(f"files_types is {files_types}")
-        Logger.info(f"Start scraping {','.join(self.enabled_scrapers)}.")
+        Logger.info(f"Start scraping {self.enabled_scrapers}.")
 
         self._pool = Pool(self.multiprocessing)
         try:

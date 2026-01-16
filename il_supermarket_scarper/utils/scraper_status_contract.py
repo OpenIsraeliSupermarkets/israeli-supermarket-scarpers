@@ -190,14 +190,44 @@ class ScraperStatusOutput(BaseModel):
         """
         Validate that the status file is valid.
 
-        Ensures that for every file name appearing in any event (collect, download,
-        fail, verified), there is a reasonable 'story' for that file: collected ->
+        Ensures that for every file name that was actually attempted (downloaded,
+        failed, or verified), there is a reasonable 'story' for that file: collected ->
         (downloaded or failed) -> (verified or failed)
+        
+        Also validates that if a limit was set, only that many files were downloaded.
+        
+        Note: Files that were only collected but never attempted (e.g., due to limit
+        constraints) are not validated, as they were never intended to be downloaded.
         """
         per_file, per_file_status_counter = self._build_per_file_status_data()
 
-        # Validate each file's lifecycle and check for duplicates
+        # Get the limit from StartedStatus if available
+        limit = None
+        for status_event in self.global_status:
+            if isinstance(status_event, StartedStatus):
+                limit = status_event.limit
+                break
+
+        # Count successfully downloaded files (downloaded and verified)
+        downloaded_count = 0
         for fn, status in per_file.items():
+            # Count files that were successfully downloaded
+            if status["downloaded"]:
+                downloaded_count += 1
+
+        # Validate limit if it was set
+        if limit is not None and limit > 0:
+            if downloaded_count != limit:
+                return False, f"Downloaded {downloaded_count} files, but limit was {limit}"
+
+        # Only validate files that were actually attempted (downloaded, failed, or verified)
+        # Files that were only collected but never attempted shouldn't be validated
+        for fn, status in per_file.items():
+            # Skip validation for files that were only collected but never attempted
+            if status["collected"] and not (status["downloaded"] or status["failed"] or status["verified"]):
+                continue
+            
+            # Validate files that were actually attempted
             if not self._validate_file_lifecycle(fn, status):
                 return False
             if self._has_duplicate_statuses(per_file_status_counter[fn]):
