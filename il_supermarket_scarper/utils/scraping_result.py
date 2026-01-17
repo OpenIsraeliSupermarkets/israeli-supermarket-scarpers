@@ -5,7 +5,9 @@ class ScrapingResult:
     """
     Represents the result of a scraping operation.
     Holds metadata, status, error information, and supports len().
-    Example:
+
+    Example::
+
         ScrapingResult(
             file_name='Price7290875100001-009-202601121522',
             downloaded=True,
