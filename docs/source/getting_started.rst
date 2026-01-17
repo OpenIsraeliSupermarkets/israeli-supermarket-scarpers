@@ -143,4 +143,4 @@ Next Steps
 
 * Check out :ref:`examples` for more advanced usage patterns
 * Read :ref:`configuration` for detailed configuration options
-* Browse the :ref:`api/modules` for complete API reference
+* Browse the :ref:`api_modules` for complete API reference
