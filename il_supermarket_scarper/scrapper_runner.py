@@ -208,10 +208,18 @@ class MainScrapperRunner:
         self._manager = None
         self._shutdown_flag = None
         self._pool = None
-        self._file_outputs = {}  # Store file_output references created in main process
-        self._status_databases = (
-            {}
-        )  # Store status_database references created in main process
+
+        # Create file_output and status_database objects during init
+        # so they can be consumed before/during scraping
+        self._file_outputs = {}
+        self._status_databases = {}
+        for scraper_name in self.enabled_scrapers:
+            self._file_outputs[scraper_name] = self._create_file_output_for_scraper(
+                scraper_name, self.file_output_config
+            )
+            self._status_databases[scraper_name] = self._create_status_database_for_scraper(
+                scraper_name, self.status_config
+            )
 
     def _create_status_database_for_scraper(self, scraper_name, config):
         """Create a status database instance for a specific scraper based on config."""
@@ -263,22 +271,6 @@ class MainScrapperRunner:
         """run the scraper"""
         self._manager = Manager()
         self._shutdown_flag = self._manager.Value("b", False)
-
-        # Create file_output and status_database objects in main process BEFORE spawning workers
-        # These references can be accessed via consume_results()
-        self._file_outputs = {}
-        self._status_databases = {}
-        for chain_scrapper_class in self.enabled_scrapers:
-            self._file_outputs[chain_scrapper_class] = (
-                self._create_file_output_for_scraper(
-                    chain_scrapper_class, self.file_output_config
-                )
-            )
-            self._status_databases[chain_scrapper_class] = (
-                self._create_status_database_for_scraper(
-                    chain_scrapper_class, self.status_config
-                )
-            )
 
         Logger.info(f"Limit is {limit}")
         Logger.info(f"files_types is {files_types}")
