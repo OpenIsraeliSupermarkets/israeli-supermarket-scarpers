@@ -61,6 +61,7 @@ FROM base as test
 # playwrite
 RUN npx -y playwright@1.53.0 install --with-deps
 RUN python -m  playwright install  
+RUN pip install -r requirements-dev.txt
 
 RUN python -m pip install . ".[test]"
 CMD python -m pytest -vv -n 2

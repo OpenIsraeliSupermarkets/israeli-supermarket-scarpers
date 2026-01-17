@@ -193,9 +193,9 @@ class ScraperStatusOutput(BaseModel):
         Ensures that for every file name that was actually attempted (downloaded,
         failed, or verified), there is a reasonable 'story' for that file: collected ->
         (downloaded or failed) -> (verified or failed)
-        
+
         Also validates that if a limit was set, only that many files were downloaded.
-        
+
         Note: Files that were only collected but never attempted (e.g., due to limit
         constraints) are not validated, as they were never intended to be downloaded.
         """
@@ -218,15 +218,20 @@ class ScraperStatusOutput(BaseModel):
         # Validate limit if it was set
         if limit is not None and limit > 0:
             if downloaded_count != limit:
-                return False, f"Downloaded {downloaded_count} files, but limit was {limit}"
+                return (
+                    False,
+                    f"Downloaded {downloaded_count} files, but limit was {limit}",
+                )
 
         # Only validate files that were actually attempted (downloaded, failed, or verified)
         # Files that were only collected but never attempted shouldn't be validated
         for fn, status in per_file.items():
             # Skip validation for files that were only collected but never attempted
-            if status["collected"] and not (status["downloaded"] or status["failed"] or status["verified"]):
+            if status["collected"] and not (
+                status["downloaded"] or status["failed"] or status["verified"]
+            ):
                 continue
-            
+
             # Validate files that were actually attempted
             if not self._validate_file_lifecycle(fn, status):
                 return False

@@ -54,7 +54,7 @@ class ScarpingTask:  # pylint: disable=too-many-instance-attributes
     def consume(self):
         """consume the scraping results"""
         return self.runner.consume_results()
-    
+
     def join(self):
         """join the scraping thread"""
         if self._thread is not None and self._thread.is_alive():

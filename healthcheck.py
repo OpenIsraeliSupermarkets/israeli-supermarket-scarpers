@@ -24,7 +24,9 @@ def load_configuration():
             )
         )
         if not_valid:
-            print(f"ERROR: ENABLED_SCRAPERS contains invalid {not_valid}", file=sys.stderr)
+            print(
+                f"ERROR: ENABLED_SCRAPERS contains invalid {not_valid}", file=sys.stderr
+            )
             sys.exit(1)
     else:
         # Use all scrapers if not specified
@@ -97,6 +99,7 @@ def check_health():
             # Ensure timezone-aware
             if last_modified.tzinfo is None:
                 import pytz
+
                 last_modified = pytz.timezone("Asia/Jerusalem").localize(last_modified)
 
             time_diff = (current_time - last_modified).total_seconds()
@@ -109,7 +112,9 @@ def check_health():
                 )
                 unhealthy_scrapers.append(scraper_name)
             else:
-                print(f"INFO: {scraper_name} is healthy (last activity: {time_diff:.0f}s ago)")
+                print(
+                    f"INFO: {scraper_name} is healthy (last activity: {time_diff:.0f}s ago)"
+                )
 
         except Exception as e:
             print(

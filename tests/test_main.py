@@ -7,11 +7,12 @@ from il_supermarket_scarper.main import ScarpingTask
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
 from il_supermarket_scarper.utils.file_output import QueueFileOutput
 
+
 def test_main_to_disk():
     """test the main running with limit of 1 for each chain"""
     with tempfile.TemporaryDirectory() as tmpdirname:
         scrapers = [ScraperFactory.BAREKET.name]
-        expected = scrapers 
+        expected = scrapers
         scrapper_done = ScarpingTask(
             enabled_scrapers=scrapers,
             output_configuration={
@@ -28,7 +29,9 @@ def test_main_to_disk():
 
         list_of_status_files = os.listdir(os.path.join(tmpdirname, "status"))
         assert len(list_of_status_files) == len(expected)
-        assert sorted(map(lambda x: x.lower(), list_of_status_files)) == sorted(map(lambda x: x.lower() + ".json", expected))
+        assert sorted(map(lambda x: x.lower(), list_of_status_files)) == sorted(
+            map(lambda x: x.lower() + ".json", expected)
+        )
 
         time.sleep(5)
         for scraper_name, file_output in scrapper_done.consume().items():
@@ -39,10 +42,11 @@ def test_main_to_disk():
 
 def test_main_to_memory_queue():
     """test the main running with limit of 1 for each chain using in-memory queue"""
+
     async def run_test():
         with tempfile.TemporaryDirectory() as tmpdirname:
             scrapers = [ScraperFactory.BAREKET.name]
-            expected = scrapers 
+            expected = scrapers
             scrapper_done = ScarpingTask(
                 enabled_scrapers=scrapers,
                 output_configuration={
@@ -55,10 +59,12 @@ def test_main_to_memory_queue():
                 },
             )
             scrapper_done.start(limit=1, when_date=None, single_pass=True)
-            
+
             list_of_status_files = os.listdir(os.path.join(tmpdirname, "status"))
             assert len(list_of_status_files) == len(expected)
-            assert sorted(map(lambda x: x.lower(), list_of_status_files)) == sorted(map(lambda x: x.lower() + ".json", expected))
+            assert sorted(map(lambda x: x.lower(), list_of_status_files)) == sorted(
+                map(lambda x: x.lower() + ".json", expected)
+            )
 
             for scraper_name, file_output in scrapper_done.consume().items():
                 # For queue output, check messages in the queue handler
@@ -74,7 +80,10 @@ def test_main_to_memory_queue():
 
                     break
 
-                assert scraper_name.lower() in file_output.queue_handler.get_queue_name().lower()
+                assert (
+                    scraper_name.lower()
+                    in file_output.queue_handler.get_queue_name().lower()
+                )
 
             scrapper_done.stop()
             scrapper_done.join()

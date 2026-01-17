@@ -1,7 +1,9 @@
 from il_supermarket_scarper import ScarpingTask, ScraperFactory
 from il_supermarket_scarper.utils import _now, Logger, QueueFileOutput
 import asyncio
+
 Logger.set_logging_level("INFO")
+
 
 async def main():
     scraper = ScarpingTask(
@@ -49,11 +51,11 @@ async def main():
 
     await consume_queue(consumed_count=1)
 
-
     scraper.stop()
     scraper.join()
 
     print("\nDone!")
+
 
 if __name__ == "__main__":
     asyncio.run(main())

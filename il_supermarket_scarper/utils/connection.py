@@ -136,7 +136,9 @@ def async_url_connection_retry(init_timeout=15):
                 try:
                     retry_timeout = kwargs.get("timeout", init_timeout)
                     actual_timeout = max(retry_timeout, requested_timeout_ref[0])
-                    actual_timeout = min(actual_timeout, max_timeout)  # Enforce max timeout
+                    actual_timeout = min(
+                        actual_timeout, max_timeout
+                    )  # Enforce max timeout
                     socket.setdefaulttimeout(actual_timeout)
                     kwargs["timeout"] = actual_timeout
                     return await func(*args, **kwargs)
@@ -149,7 +151,7 @@ def async_url_connection_retry(init_timeout=15):
                         error_msg = str(error)
                         if len(error_msg) > 200:
                             error_msg = error_msg[:200] + "..."
-                        
+
                         Logger.warning(
                             "%s: %s (timeout=%s, retries_left=%d, retrying in %s seconds)",
                             error_type,
@@ -158,7 +160,7 @@ def async_url_connection_retry(init_timeout=15):
                             _tries,
                             _delay,
                         )
-                        
+
                         # Only log full stack trace on final failure
                         if is_final_attempt:
                             Logger.error_execption(error)
@@ -168,7 +170,9 @@ def async_url_connection_retry(init_timeout=15):
 
                     await asyncio.sleep(_delay)
                     _delay = min(_delay * backoff, max_delay)
-                    requested_timeout_ref[0] = min(requested_timeout_ref[0] + 10, max_timeout)  # backoff_timeout with cap
+                    requested_timeout_ref[0] = min(
+                        requested_timeout_ref[0] + 10, max_timeout
+                    )  # backoff_timeout with cap
 
             raise ValueError("shouldn't be called!")
 
@@ -528,7 +532,7 @@ async def fetch_temporary_gz_file_from_ftp(
                 error_msg = str(error)
                 if len(error_msg) > 200:
                     error_msg = error_msg[:200] + "..."
-                
+
                 Logger.warning(
                     "%s: %s (timeout=%s, retries_left=%d, retrying in %s seconds)",
                     error_type,
@@ -537,7 +541,7 @@ async def fetch_temporary_gz_file_from_ftp(
                     _tries,
                     _delay,
                 )
-                
+
                 # Only log full stack trace on final failure
                 if is_final_attempt:
                     Logger.error_execption(error)
@@ -597,7 +601,7 @@ async def fetch_file_from_ftp_to_memory(
                 error_msg = str(error)
                 if len(error_msg) > 200:
                     error_msg = error_msg[:200] + "..."
-                
+
                 Logger.warning(
                     "%s: %s (timeout=%s, retries_left=%d, retrying in %s seconds)",
                     error_type,
@@ -606,7 +610,7 @@ async def fetch_file_from_ftp_to_memory(
                     _tries,
                     _delay,
                 )
-                
+
                 # Only log full stack trace on final failure
                 if is_final_attempt:
                     Logger.error_execption(error)

@@ -15,7 +15,7 @@ from il_supermarket_scarper.utils.status import _now
 
 class DateTimeEncoder(json.JSONEncoder):
     """Custom JSON encoder that properly formats datetime objects."""
-    
+
     def default(self, obj):
         if isinstance(obj, datetime.datetime):
             # Format datetime as ISO string with timezone info
@@ -36,18 +36,18 @@ class DateTimeEncoder(json.JSONEncoder):
 class NoOpStatusDatabase(AbstractDataBase):
     """In-memory database for stress testing performance.
     Collects all status data in memory without file I/O, then dumps to results."""
-    
+
     def __init__(self, database_name):
         super().__init__(database_name)
         self._data = {}  # Store collections: {collection_name: [documents...]}
-    
+
     def insert_document(self, collection_name, document):
         """Store document in memory collection."""
         if collection_name not in self._data:
             self._data[collection_name] = []
         self._data[collection_name].append(document)
         self._update_last_modified()
-    
+
     def insert_documents(self, collection_name, document):
         """Store multiple documents in memory collection."""
         if collection_name not in self._data:
@@ -57,23 +57,23 @@ class NoOpStatusDatabase(AbstractDataBase):
         else:
             self._data[collection_name].append(document)
         self._update_last_modified()
-    
+
     def already_downloaded(self, collection_name, query):
         """Always return False - assume nothing is downloaded."""
         return False
-    
+
     def _update_last_modified(self):
         """Update the last modified timestamp to current time."""
         if "_metadata" not in self._data:
             self._data["_metadata"] = {}
         self._data["_metadata"]["last_modified"] = _now()
-    
+
     def get_last_modified(self):
         """Get the last modified timestamp when scraper last wrote to this database."""
         if "_metadata" in self._data and "last_modified" in self._data["_metadata"]:
             return self._data["_metadata"]["last_modified"]
         return None
-    
+
     def get_all_data(self):
         """Get all collected status data as a dictionary matching JsonDataBase format."""
         return dict(sorted(self._data.items()))
@@ -111,23 +111,25 @@ def format_stats_as_json(profile, project_name):
 
 async def main():
     results = {}
-    for scraper_name in [ScraperFactory.SUPER_PHARM.name]:  # ScraperFactory.BAREKET.name,
+    for scraper_name in [
+        ScraperFactory.SUPER_PHARM.name
+    ]:  # ScraperFactory.BAREKET.name,
 
         async def full_execution(scraper):
             """Optimized full execution of the scraper for stress testing"""
             files = []
             error = None
             status_database = None
-            
+
             Logger.set_logging_level("WARNING")
             try:
                 # Use NoOpStatusDatabase for stress testing to avoid I/O overhead
                 # It collects all status data in memory and we'll dump it to results
                 status_database = NoOpStatusDatabase(database_name=scraper)
-                
+
                 # OPTIMIZATION: Use RAM disk if available for faster I/O
                 storage_path = f"temp/{scraper}"
-                
+
                 initer = ScraperFactory.get(scraper)(
                     file_output=DiskFileOutput(storage_path=storage_path),
                     status_database=status_database,
@@ -137,7 +139,6 @@ async def main():
             except Exception as e:  # pylint: disable=broad-exception-caught
                 error = str(e)
 
-            
             # Extract collected status data
             status_data = status_database.get_all_data() if status_database else {}
             return files, error, status_data

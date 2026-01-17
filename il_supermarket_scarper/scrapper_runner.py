@@ -217,8 +217,10 @@ class MainScrapperRunner:
             self._file_outputs[scraper_name] = self._create_file_output_for_scraper(
                 scraper_name, self.file_output_config
             )
-            self._status_databases[scraper_name] = self._create_status_database_for_scraper(
-                scraper_name, self.status_config
+            self._status_databases[scraper_name] = (
+                self._create_status_database_for_scraper(
+                    scraper_name, self.status_config
+                )
             )
 
     def _create_status_database_for_scraper(self, scraper_name, config):
@@ -254,10 +256,7 @@ class MainScrapperRunner:
             queue_type = config.get("queue_type", "memory")
 
             if queue_type == "memory":
-                return QueueFileOutput(
-                    InMemoryQueueHandler(queue_name=target_folder)
-                )
-
+                return QueueFileOutput(InMemoryQueueHandler(queue_name=target_folder))
 
     def run(
         self,
@@ -303,8 +302,6 @@ class MainScrapperRunner:
             )
 
             Logger.info("Done scraping all supermarkets.")
-
-
 
             return result
         finally:

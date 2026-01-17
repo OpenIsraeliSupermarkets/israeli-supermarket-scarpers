@@ -81,7 +81,7 @@ def __retry_internal(  # pylint: disable=broad-except,too-many-locals
                 # Truncate long error messages
                 if len(error_msg) > 200:
                     error_msg = error_msg[:200] + "..."
-                
+
                 logger.warning(
                     "%s: %s (timeout=%s, measured=%s, retries_left=%d, retrying in %s seconds)",
                     error_type,
@@ -91,11 +91,11 @@ def __retry_internal(  # pylint: disable=broad-except,too-many-locals
                     _tries,
                     _delay,
                 )
-                
+
                 # Only log full stack trace on final failure
                 if is_final_attempt:
                     logger.error_execption(error)
-            
+
             if is_final_attempt:
                 raise
 

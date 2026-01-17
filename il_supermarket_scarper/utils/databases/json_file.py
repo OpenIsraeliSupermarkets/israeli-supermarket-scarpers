@@ -120,6 +120,7 @@ class JsonDataBase(AbstractDataBase):
             if isinstance(last_modified, str):
                 from datetime import datetime
                 import pytz
+
                 # Parse ISO format string
                 try:
                     # Handle timezone-aware ISO strings

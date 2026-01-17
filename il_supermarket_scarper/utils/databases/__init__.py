@@ -7,11 +7,11 @@ from ..folders_name import DumpFolderNames
 
 def create_status_database_for_scraper(scraper_name, config):
     """Create a status database instance for a specific scraper based on config.
-    
+
     Args:
         scraper_name: Name of the scraper (e.g., "BAREKET")
         config: Configuration dictionary with database_type and other settings
-        
+
     Returns:
         JsonDataBase or MongoDataBase instance
     """
@@ -30,9 +30,7 @@ def create_status_database_for_scraper(scraper_name, config):
     if database_type == "json":
         # JSON file database
         base_path = config.get("base_path", "dumps/status")
-        return JsonDataBase(
-            database_name, base_path=base_path
-        )
+        return JsonDataBase(database_name, base_path=base_path)
 
     elif database_type == "mongo":
         # MongoDB database
