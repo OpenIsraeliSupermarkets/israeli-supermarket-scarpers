@@ -63,11 +63,9 @@ def test_main_to_memory_queue():
 
             for scraper_name, file_output in scrapper_done.consume().items():
                 # For queue output, check messages in the queue handler
-                
-                assert isinstance(file_output, QueueFileOutput)
-                messages = await file_output.queue_handler.get_all_messages()
                 count = 0
-                for message in messages:
+                assert isinstance(file_output, QueueFileOutput)
+                async for message in file_output.queue_handler.get_all_messages():
                     count += 1
                     # Verify message structure
                     assert "file_name" in message

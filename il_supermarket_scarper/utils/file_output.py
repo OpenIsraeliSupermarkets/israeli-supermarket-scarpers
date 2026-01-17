@@ -1,6 +1,7 @@
 """Abstract file output interface for saving scraped files."""
 
 import asyncio
+import multiprocessing
 from abc import ABC, abstractmethod
 from typing import Any, Dict
 import os
@@ -260,12 +261,21 @@ class AbstractQueueHandler(ABC):
 
 class InMemoryQueueHandler(AbstractQueueHandler):
     """
-    Simple in-memory queue for testing.
+    Process-safe in-memory queue for testing.
     Not suitable for production - data is lost on restart.
 
     Messages can be consumed as they arrive using the async generator
-    returned by get_all_messages().
+    returned by get_all_messages(). Works across threads and processes.
     """
+
+    # Shared manager for creating proxy queues
+    _manager = None
+
+    @classmethod
+    def _get_manager(cls):
+        if cls._manager is None:
+            cls._manager = multiprocessing.Manager()
+        return cls._manager
 
     def __init__(self, queue_name: str = "default"):
         """
@@ -275,11 +285,12 @@ class InMemoryQueueHandler(AbstractQueueHandler):
             queue_name: Name of the queue
         """
         self.queue_name = queue_name
-        self._queue: asyncio.Queue = asyncio.Queue()
+        # Use Manager queue which can be pickled and shared across processes
+        self._queue = self._get_manager().Queue()
 
     async def send(self, message: Dict[str, Any]) -> None:
-        """Add message to queue."""
-        await self._queue.put(message)
+        """Add message to queue (process-safe)."""
+        self._queue.put(message)
         Logger.debug(f"Added message to in-memory queue: {message['file_name']}")
 
     def get_queue_name(self) -> str:
@@ -288,15 +299,17 @@ class InMemoryQueueHandler(AbstractQueueHandler):
 
     async def close(self) -> None:
         """Signal that no more messages will be sent."""
-        await self._queue.put(None)
+        self._queue.put(None)
 
     async def get_all_messages(self):
         """
         Async generator that yields messages as they arrive.
-        Stops when close() is called.
+        Stops when close() is called. Process-safe.
         """
+        loop = asyncio.get_event_loop()
         while True:
-            message = await self._queue.get()
+            # Run blocking get() in thread pool to not block event loop
+            message = await loop.run_in_executor(None, self._queue.get)
             if message is None:
                 break
             yield message
