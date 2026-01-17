@@ -15,3 +15,4 @@ status/
 .cache/
 stress_test_results.json
 status_logs/*
+docs/source/api/
