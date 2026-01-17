@@ -284,7 +284,7 @@ Kafka Queue
 * ``KAFKA_BOOTSTRAP_SERVERS``: Kafka bootstrap servers (default: "localhost:9092")
 
 Migration Guide
---------------
+---------------
 
 From Old Code
 ~~~~~~~~~~~~~
