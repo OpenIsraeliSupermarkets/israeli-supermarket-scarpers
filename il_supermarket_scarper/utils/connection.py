@@ -490,6 +490,20 @@ async def collect_from_ftp(
         yield (filename, "", size)
 
 
+def _sync_ftp_download(
+    ftp_timeout, ftp_host, ftp_username, ftp_password, ftp_path, temporary_gz_file_path
+):
+    """Synchronous FTP download using FTP_TLS"""
+    socket.setdefaulttimeout(ftp_timeout)
+    with open(temporary_gz_file_path, "wb") as file_ftp:
+        file_name = ntpath.basename(temporary_gz_file_path)
+        ftp = FTP_TLS(ftp_host, ftp_username, ftp_password, timeout=ftp_timeout)
+        ftp.trust_server_pasv_ipv4_address = True
+        ftp.cwd(ftp_path)
+        ftp.retrbinary("RETR " + file_name, file_ftp.write)
+        ftp.quit()
+
+
 async def fetch_temporary_gz_file_from_ftp(
     ftp_host, ftp_username, ftp_password, ftp_path, temporary_gz_file_path, timeout=15
 ):
@@ -498,18 +512,6 @@ async def fetch_temporary_gz_file_from_ftp(
         f"Downloading file from FTP server with {ftp_host} "
         f", username: {ftp_username} , password: {ftp_password}"
     )
-
-    def _sync_ftp_download(ftp_timeout):
-        """Synchronous FTP download using FTP_TLS"""
-        socket.setdefaulttimeout(ftp_timeout)
-        with open(temporary_gz_file_path, "wb") as file_ftp:
-            file_name = ntpath.basename(temporary_gz_file_path)
-            ftp = FTP_TLS(ftp_host, ftp_username, ftp_password, timeout=ftp_timeout)
-            ftp.trust_server_pasv_ipv4_address = True
-            ftp.cwd(ftp_path)
-            ftp.retrbinary("RETR " + file_name, file_ftp.write)
-            ftp.quit()
-
     # Manual retry logic for async functions (matching download_connection_retry parameters)
     _tries = 8
     _delay = 2
@@ -521,7 +523,15 @@ async def fetch_temporary_gz_file_from_ftp(
 
     while _tries:
         try:
-            await asyncio.to_thread(_sync_ftp_download, _timeout)
+            await asyncio.to_thread(
+                _sync_ftp_download,
+                _timeout,
+                ftp_host,
+                ftp_username,
+                ftp_password,
+                ftp_path,
+                temporary_gz_file_path,
+            )
             return
         except exceptions as error:
             _tries -= 1
@@ -556,6 +566,21 @@ async def fetch_temporary_gz_file_from_ftp(
     raise ValueError("shouldn't be called!")
 
 
+def _sync_ftp_download_to_memory(
+    ftp_host, ftp_username, ftp_password, ftp_path, file_name, ftp_timeout
+):
+    """Synchronous FTP download using FTP_TLS to BytesIO"""
+    socket.setdefaulttimeout(ftp_timeout)
+    file_buffer = io.BytesIO()
+    ftp = FTP_TLS(ftp_host, ftp_username, ftp_password, timeout=ftp_timeout)
+    ftp.trust_server_pasv_ipv4_address = True
+    ftp.cwd(ftp_path)
+    ftp.retrbinary("RETR " + file_name, file_buffer.write)
+    ftp.quit()
+    file_buffer.seek(0)  # Reset to beginning for reading
+    return file_buffer.getvalue()  # Return bytes
+
+
 async def fetch_file_from_ftp_to_memory(
     ftp_host, ftp_username, ftp_password, ftp_path, file_name, timeout=15
 ):
@@ -564,18 +589,6 @@ async def fetch_file_from_ftp_to_memory(
         f"Downloading file from FTP server to memory: {ftp_host} "
         f", username: {ftp_username} , password: {ftp_password}, file: {file_name}"
     )
-
-    def _sync_ftp_download_to_memory(ftp_timeout):
-        """Synchronous FTP download using FTP_TLS to BytesIO"""
-        socket.setdefaulttimeout(ftp_timeout)
-        file_buffer = io.BytesIO()
-        ftp = FTP_TLS(ftp_host, ftp_username, ftp_password, timeout=ftp_timeout)
-        ftp.trust_server_pasv_ipv4_address = True
-        ftp.cwd(ftp_path)
-        ftp.retrbinary("RETR " + file_name, file_buffer.write)
-        ftp.quit()
-        file_buffer.seek(0)  # Reset to beginning for reading
-        return file_buffer.getvalue()  # Return bytes
 
     # Manual retry logic for async functions (matching download_connection_retry parameters)
     _tries = 8
@@ -589,7 +602,13 @@ async def fetch_file_from_ftp_to_memory(
     while _tries:
         try:
             file_content = await asyncio.to_thread(
-                _sync_ftp_download_to_memory, _timeout
+                _sync_ftp_download_to_memory,
+                ftp_host,
+                ftp_username,
+                ftp_password,
+                ftp_path,
+                file_name,
+                _timeout,
             )
             return file_content
         except exceptions as error:
