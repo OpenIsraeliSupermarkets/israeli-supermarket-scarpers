@@ -187,9 +187,7 @@ class QueueFileOutput(FileOutput):
                         file_name = os.path.splitext(file_name)[0] + ".xml"
                         extract_successfully = True
                         Logger.debug(f"Extracted zipped file to {file_name}")
-                    except (
-                        Exception
-                    ) as extract_error:  # pylint: disable=broad-exception-caught
+                    except Exception as extract_error:  # pylint: disable=broad-except
                         Logger.error(f"Failed to extract {file_name}: {extract_error}")
                         error = str(extract_error)
                         extract_successfully = False

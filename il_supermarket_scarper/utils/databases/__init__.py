@@ -1,8 +1,9 @@
 import os
+from .base import AbstractDataBase
 from .json_file import JsonDataBase
 from .mongo import MongoDataBase
-from .base import AbstractDataBase
 from ..folders_name import DumpFolderNames
+from ..file_output import DiskFileOutput, QueueFileOutput, InMemoryQueueHandler
 
 
 def create_status_database_for_scraper(scraper_name, config):
@@ -41,3 +42,34 @@ def create_status_database_for_scraper(scraper_name, config):
     raise ValueError(
         f"Unknown database_type: {database_type}. Must be 'json' or 'mongo'"
     )
+
+
+def create_file_output_for_scraper(scraper_name, config):
+    """
+    Create a file_output instance for a specific scraper based on config.
+
+    Args:
+        scraper_name: Name of the scraper
+        config: Configuration dictionary
+    """
+    target_folder = DumpFolderNames[scraper_name].value
+
+    # Use default config if None
+    if config is None:
+        config = {
+            "output_mode": "disk",
+            "base_storage_path": "dumps",
+        }
+
+    if config.get("output_mode") == "disk":
+        # Disk output mode
+        base_path = config.get("base_storage_path", "dumps")
+        return DiskFileOutput(storage_path=os.path.join(base_path, target_folder))
+
+    if config.get("output_mode") == "queue":
+        # Queue output mode
+        queue_type = config.get("queue_type", "memory")
+
+        if queue_type == "memory":
+            return QueueFileOutput(InMemoryQueueHandler(queue_name=target_folder))
+    return None

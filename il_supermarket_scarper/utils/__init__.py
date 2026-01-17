@@ -53,5 +53,5 @@ from .file_output import (
     InMemoryQueueHandler,
 )
 from .scraper_config import ScraperConfig
-from .databases import AbstractDataBase, JsonDataBase, MongoDataBase
+from .databases import JsonDataBase, MongoDataBase
 from .scraping_result import ScrapingResult

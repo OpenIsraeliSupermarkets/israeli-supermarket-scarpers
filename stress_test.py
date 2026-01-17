@@ -8,8 +8,8 @@ import asyncio
 
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
 from il_supermarket_scarper.utils import DiskFileOutput, Logger
-from il_supermarket_scarper.utils.databases import AbstractDataBase
 from il_supermarket_scarper.utils.status import _now
+from il_supermarket_scarper.utils.databases import AbstractDataBase
 
 
 class DateTimeEncoder(json.JSONEncoder):
@@ -57,7 +57,9 @@ class NoOpStatusDatabase(AbstractDataBase):
             self._data[collection_name].append(document)
         self._update_last_modified()
 
-    def already_downloaded(self, collection_name, query):
+    def already_downloaded(
+        self, collection_name, query
+    ):  # pylint: disable=unused-argument
         """Always return False - assume nothing is downloaded."""
         return False
 

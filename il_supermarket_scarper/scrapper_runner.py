@@ -1,4 +1,3 @@
-import os
 import datetime
 import time
 import asyncio
@@ -7,15 +6,14 @@ from multiprocessing import Pool, Manager
 from .scrappers_factory import ScraperFactory
 from .utils import (
     Logger,
-    DumpFolderNames,
-    DiskFileOutput,
-    QueueFileOutput,
-    InMemoryQueueHandler,
     FilterState,
     _now,
 )
 from .engines.engine import Engine
-from .utils.databases import create_status_database_for_scraper
+from .utils.databases import (
+    create_status_database_for_scraper,
+    create_file_output_for_scraper,
+)
 
 
 def _should_exit(
@@ -213,42 +211,12 @@ class MainScrapperRunner:
         self._file_outputs = {}
         self._status_databases = {}
         for scraper_name in self.enabled_scrapers:
-            self._file_outputs[scraper_name] = self._create_file_output_for_scraper(
+            self._file_outputs[scraper_name] = create_file_output_for_scraper(
                 scraper_name, self.file_output_config
             )
             self._status_databases[scraper_name] = create_status_database_for_scraper(
                 scraper_name, self.status_config
             )
-
-    def _create_file_output_for_scraper(self, scraper_name, config):
-        """
-        Create a file_output instance for a specific scraper based on config.
-
-        Args:
-            scraper_name: Name of the scraper
-            config: Configuration dictionary
-        """
-        target_folder = DumpFolderNames[scraper_name].value
-
-        # Use default config if None
-        if config is None:
-            config = {
-                "output_mode": "disk",
-                "base_storage_path": "dumps",
-            }
-
-        if config.get("output_mode") == "disk":
-            # Disk output mode
-            base_path = config.get("base_storage_path", "dumps")
-            return DiskFileOutput(storage_path=os.path.join(base_path, target_folder))
-
-        if config.get("output_mode") == "queue":
-            # Queue output mode
-            queue_type = config.get("queue_type", "memory")
-
-            if queue_type == "memory":
-                return QueueFileOutput(InMemoryQueueHandler(queue_name=target_folder))
-        return None
 
     def run(
         self,

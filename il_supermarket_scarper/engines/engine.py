@@ -22,7 +22,7 @@ from il_supermarket_scarper.utils import (
     ScrapingResult,
 )
 from il_supermarket_scarper.utils.state import FilterState
-from il_supermarket_scarper.utils import AbstractDataBase
+from il_supermarket_scarper.utils.databases import AbstractDataBase
 
 
 class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
