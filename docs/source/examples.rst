@@ -289,4 +289,4 @@ Handle errors gracefully:
     finally:
         scraper.stop()
 
-For more configuration options.
+For more configuration options, see :ref:`configuration`.
