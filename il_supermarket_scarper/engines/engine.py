@@ -40,18 +40,6 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         utilize_date_param (bool): Whether this engine uses date parameters
             for filtering files. Defaults to True.
 
-    Args:
-        chain (DumpFolderNames): Chain identifier enum value.
-        chain_id (str): Unique identifier for the supermarket chain.
-        max_threads (int, optional): Maximum number of concurrent download
-            threads. Defaults to 10.
-        file_output (FileOutput, optional): Custom file output handler.
-            If None, a DiskFileOutput is created using the chain's default
-            storage path. Defaults to None.
-        status_database (AbstractDataBase, optional): Custom status database
-            handler for tracking download status. If None, defaults to a
-            status subdirectory in the file output path. Defaults to None.
-
     Note:
         Output configuration priority:
         1. If ``file_output`` is provided, it is used directly.
@@ -101,11 +89,16 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         Initialize scraper engine.
 
         Args:
-            chain: Chain identifier (DumpFolderNames enum)
-            chain_id: Chain ID
-            max_threads: Maximum concurrent threads
-            file_output: Optional custom file output handler
-            status_database: Optional custom status database handler
+            chain (DumpFolderNames): Chain identifier enum value.
+            chain_id (str): Unique identifier for the supermarket chain.
+            max_threads (int, optional): Maximum number of concurrent download
+                threads. Defaults to 10.
+            file_output (FileOutput, optional): Custom file output handler.
+                If None, a DiskFileOutput is created using the chain's default
+                storage path. Defaults to None.
+            status_database (AbstractDataBase, optional): Custom status database
+                handler for tracking download status. If None, defaults to a
+                status subdirectory in the file output path. Defaults to None.
 
         Note:
             If file_output is provided, it takes precedence.
