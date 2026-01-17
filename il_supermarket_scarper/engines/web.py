@@ -108,7 +108,7 @@ class WebBase(Engine):
             async for file_entry in self.extract_task_from_entry(current_trs):
                 yield file_entry
 
-    async def collect_files_details_from_site( # pylint: disable=too-many-locals
+    async def collect_files_details_from_site(  # pylint: disable=too-many-locals
         self,
         state: FilterState,
         limit=None,

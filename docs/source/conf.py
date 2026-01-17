@@ -17,12 +17,13 @@ sys.path.insert(0, os.path.abspath("../.."))
 # Workaround for Pydantic v2 compatibility with sphinx-autodoc-typehints
 try:
     import pydantic._internal._utils
-    if not hasattr(pydantic._internal._utils, 'AbstractSetIntStr'):
+
+    if not hasattr(pydantic._internal._utils, "AbstractSetIntStr"):
         from typing import AbstractSet
+
         pydantic._internal._utils.AbstractSetIntStr = AbstractSet
 except (ImportError, AttributeError):
     pass
-
 
 
 # -- Project information -----------------------------------------------------

@@ -41,10 +41,9 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             for filtering files. Defaults to True.
 
     Note:
-        Output configuration priority:
-        1. If ``file_output`` is provided, it is used directly.
-        2. Otherwise, a ``DiskFileOutput`` is created using the chain's
-           default storage path from ``DumpFolderNames``.
+        Output configuration priority: If ``file_output`` is provided, it is
+        used directly. Otherwise, a ``DiskFileOutput`` is created using the
+        chain's default storage path from ``DumpFolderNames``.
 
     Example:
         Basic usage with default disk output::
