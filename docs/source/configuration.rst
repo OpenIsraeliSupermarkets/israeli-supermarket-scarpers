@@ -267,12 +267,12 @@ Output Configuration
   - ``queue``: Send to message queue
 
 Disk Output Mode
-~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~
 
 * ``STORAGE_PATH``: Custom storage path for files
 
 Queue Output Mode
-~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
 
 * ``QUEUE_TYPE``: Type of queue to use
   - ``memory``: In-memory queue (for testing)
