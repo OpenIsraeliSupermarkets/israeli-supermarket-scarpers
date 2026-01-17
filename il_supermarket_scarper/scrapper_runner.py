@@ -70,7 +70,7 @@ def _sleep(timeout_in_seconds, shutdown_flag):
             sleep_chunk = timeout_in_seconds - slept
 
 
-async def _scrape_one(
+async def _scrape_one(  # pylint: disable=too-many-locals
     chain_scrapper_class,
     limit=None,
     single_pass=False,
@@ -175,7 +175,7 @@ def scrape_one_wrap(chain_scrapper_class, kwargs):
         loop.close()
 
 
-class MainScrapperRunner:
+class MainScrapperRunner:  # pylint: disable=too-many-instance-attributes
     """a main scraper to execute all scraping"""
 
     def __init__(

@@ -146,7 +146,7 @@ class MultiPageWeb(WebBase):
                 for task in task_group:
                     yield task
 
-    async def collect_files_details_from_site(
+    async def collect_files_details_from_site(  # pylint: disable=too-many-locals
         self,
         state: FilterState,
         limit=None,

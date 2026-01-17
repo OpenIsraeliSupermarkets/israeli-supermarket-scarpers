@@ -3,14 +3,13 @@
 import asyncio
 import multiprocessing
 from abc import ABC, abstractmethod
-from typing import Any, Dict
+from typing import Any, Dict, AsyncGenerator
 import os
 import gzip
 import io
 import zipfile
 from .logger import Logger
 from .gzip_utils import extract_xml_file_from_gz_file
-from typing import AsyncGenerator
 
 
 class FileOutput(ABC):
@@ -139,9 +138,8 @@ class DiskFileOutput(FileOutput):
         """Return the storage path for status files and metadata."""
         return self.storage_path
 
-    def close(self):
+    async def close(self):
         """Close the file output."""
-        pass
 
 
 class QueueFileOutput(FileOutput):

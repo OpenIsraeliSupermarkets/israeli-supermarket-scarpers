@@ -504,8 +504,13 @@ def _sync_ftp_download(
         ftp.quit()
 
 
-async def fetch_temporary_gz_file_from_ftp(
-    ftp_host, ftp_username, ftp_password, ftp_path, temporary_gz_file_path, timeout=15
+async def fetch_temporary_gz_file_from_ftp(  # pylint: disable=too-many-locals
+    ftp_host: str,
+    ftp_username: str,
+    ftp_password: str,
+    ftp_path: str,
+    temporary_gz_file_path: str,
+    timeout: int = 15,
 ):
     """download a file from a cerberus base site."""
     Logger.info(
@@ -581,7 +586,7 @@ def _sync_ftp_download_to_memory(
     return file_buffer.getvalue()  # Return bytes
 
 
-async def fetch_file_from_ftp_to_memory(
+async def fetch_file_from_ftp_to_memory(  # pylint: disable=too-many-locals
     ftp_host, ftp_username, ftp_password, ftp_path, file_name, timeout=15
 ):
     """Download a file from FTP server directly to memory (BytesIO)."""

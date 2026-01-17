@@ -115,7 +115,7 @@ class Cerberus(Engine):
                 continue
             yield file
 
-    async def collect_files_details_from_site(
+    async def collect_files_details_from_site(  # pylint: disable=too-many-locals
         self,
         state: FilterState,
         limit=None,
