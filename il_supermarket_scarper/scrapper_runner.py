@@ -208,7 +208,6 @@ class MainScrapperRunner:
         self._manager = None
         self._shutdown_flag = None
         self._pool = None
-
         # Create file_output and status_database objects during init
         # so they can be consumed before/during scraping
         self._file_outputs = {}
@@ -217,15 +216,9 @@ class MainScrapperRunner:
             self._file_outputs[scraper_name] = self._create_file_output_for_scraper(
                 scraper_name, self.file_output_config
             )
-            self._status_databases[scraper_name] = (
-                self._create_status_database_for_scraper(
-                    scraper_name, self.status_config
-                )
+            self._status_databases[scraper_name] = create_status_database_for_scraper(
+                scraper_name, self.status_config
             )
-
-    def _create_status_database_for_scraper(self, scraper_name, config):
-        """Create a status database instance for a specific scraper based on config."""
-        return create_status_database_for_scraper(scraper_name, config)
 
     def _create_file_output_for_scraper(self, scraper_name, config):
         """
@@ -274,8 +267,8 @@ class MainScrapperRunner:
         Logger.info(f"files_types is {files_types}")
         Logger.info(f"Start scraping {self.enabled_scrapers}.")
 
-        with Pool(self.multiprocessing) as pool:
-            result = pool.starmap(
+        with Pool(self.multiprocessing) as self._pool:
+            result = self._pool.starmap(
                 scrape_one_wrap,
                 [
                     (

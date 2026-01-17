@@ -92,11 +92,9 @@ class MultiPageWeb(WebBase):
     ) -> AsyncGenerator[tuple[str, str], None]:
         """generate all files from the site"""
 
-        main_page_requests = self.get_request_url(
+        async for main_page_request in self.get_request_url(
             files_types=files_types, store_id=store_id, when_date=when_date
-        )
-
-        async for main_page_request in main_page_requests:
+        ):
 
             main_page_response = await self.session_with_cookies_by_chain(
                 **main_page_request
@@ -148,20 +146,20 @@ class MultiPageWeb(WebBase):
                 for task in task_group:
                     yield task
 
-    async def collect_files_details_from_site(  # pylint: disable=too-many-locals
+    async def collect_files_details_from_site(
         self,
         state: FilterState,
         limit=None,
         files_types=None,
         store_id=None,
         when_date=None,
+        files_names_to_scrape=None,
         filter_null=False,
         filter_zero=False,
-        files_names_to_scrape=None,
         min_size=None,
         max_size=None,
         random_selection=False,
-    ):
+    ) -> AsyncGenerator[tuple[str, str], None]:
 
         # Aggregate results from all pages
         files = self.generate_all_files(

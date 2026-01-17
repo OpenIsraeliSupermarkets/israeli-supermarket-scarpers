@@ -115,20 +115,20 @@ class Cerberus(Engine):
                 continue
             yield file
 
-    async def collect_files_details_from_site(  # pylint: disable=too-many-locals
+    async def collect_files_details_from_site(
         self,
         state: FilterState,
         limit=None,
         files_types=None,
-        filter_null=False,
-        filter_zero=False,
         store_id=None,
         when_date=None,
         files_names_to_scrape=None,
+        filter_null=False,
+        filter_zero=False,
         min_size=None,
         max_size=None,
         random_selection=False,
-    ):
+    ) -> AsyncGenerator[tuple[str, str], None]:
         """collect all files to download from the site"""
 
         async for filter_arg in self.build_filter_arg(store_id, when_date, files_types):
@@ -141,14 +141,8 @@ class Cerberus(Engine):
                 filter_arg,
             )
 
-            # Convert (filename, size) -> (filename, url_placeholder, size)
-            async def convert_to_async_gen(files_gen):
-                async for filename, size in files_gen:
-                    # For FTP files, we don't have a URL yet, so use empty string as placeholder
-                    yield (filename, "", size)
-
             files: AsyncGenerator[List[str, str], None] = self.filter_by_file_size(
-                convert_to_async_gen(files_generator),
+                files_generator,
                 min_size=min_size,
                 max_size=max_size,
             )
@@ -165,7 +159,7 @@ class Cerberus(Engine):
             )
 
             # apply noraml filter
-            files_gen = self.apply_limit(
+            async for file in self.apply_limit(
                 state,
                 files,
                 limit=limit,
@@ -174,14 +168,8 @@ class Cerberus(Engine):
                 when_date=when_date,
                 files_names_to_scrape=files_names_to_scrape,
                 by_function=lambda x: x[0],
-                random_selection=random_selection,
-            )
-
-            # Stream files and count them
-            file_count = 0
-            async for filename, _, _ in files_gen:
-                file_count += 1
-                yield filename
+            ):
+                yield file
 
     async def persist_from_ftp(self, file_name):
         """download file to memory and extract it."""

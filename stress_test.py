@@ -15,21 +15,21 @@ from il_supermarket_scarper.utils.status import _now
 class DateTimeEncoder(json.JSONEncoder):
     """Custom JSON encoder that properly formats datetime objects."""
 
-    def default(self, obj): 
-        if isinstance(obj, datetime.datetime):
+    def default(self, o):
+        if isinstance(o, datetime.datetime):
             # Format datetime as ISO string with timezone info
-            return obj.isoformat()
-        if isinstance(obj, datetime.date):
+            return o.isoformat()
+        if isinstance(o, datetime.date):
             # Format date as ISO string
-            return obj.isoformat()
-        if isinstance(obj, datetime.time):
+            return o.isoformat()
+        if isinstance(o, datetime.time):
             # Format time as ISO string
-            return obj.isoformat()
+            return o.isoformat()
         # Fallback to string representation for other non-serializable types
         try:
-            return super().default(obj)
+            return super().default(o)
         except TypeError:
-            return str(obj)
+            return str(o)
 
 
 class NoOpStatusDatabase(AbstractDataBase):

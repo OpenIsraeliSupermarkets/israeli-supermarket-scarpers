@@ -123,16 +123,16 @@ class WebBase(Engine):
             async for file_entry in self.extract_task_from_entry(current_trs):
                 yield file_entry
 
-    async def collect_files_details_from_site(  # pylint: disable=too-many-locals
+    async def collect_files_details_from_site(
         self,
         state: FilterState,
         limit=None,
         files_types=None,
         store_id=None,
         when_date=None,
+        files_names_to_scrape=None,
         filter_null=False,
         filter_zero=False,
-        files_names_to_scrape=None,
         min_size=None,
         max_size=None,
         random_selection=False,
@@ -160,7 +160,7 @@ class WebBase(Engine):
             by_function=lambda x: x[1],
         )
 
-        limited_files = self.apply_limit_zip(
+        async for download_url, file_name, _ in self.apply_limit_zip(
             state,
             bad_files_filtered,
             limit=limit,
@@ -170,9 +170,7 @@ class WebBase(Engine):
             when_date=when_date,
             files_names_to_scrape=files_names_to_scrape,
             random_selection=random_selection,
-        )
-
-        async for download_url, file_name, _ in limited_files:
+        ):
             yield download_url, file_name
 
     async def process_file(self, file_details):

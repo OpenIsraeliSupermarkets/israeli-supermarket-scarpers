@@ -487,7 +487,7 @@ async def collect_from_ftp(
 
     # Yield each file as an async generator
     for filename, size in files_list:
-        yield (filename, size)
+        yield (filename, "", size)
 
 
 async def fetch_temporary_gz_file_from_ftp(
