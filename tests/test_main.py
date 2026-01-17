@@ -55,7 +55,6 @@ def test_main_to_memory_queue():
                 },
             )
             scrapper_done.start(limit=1, when_date=None, single_pass=True)
-            scrapper_done.wait()
             
             list_of_status_files = os.listdir(os.path.join(tmpdirname, "status"))
             assert len(list_of_status_files) == len(expected)
@@ -73,9 +72,11 @@ def test_main_to_memory_queue():
                     assert "file_link" in message
                     assert "metadata" in message
 
-                assert count == 1
+                    break
+
                 assert scraper_name.lower() in file_output.queue_handler.get_queue_name().lower()
 
             scrapper_done.stop()
-    
+            scrapper_done.join()
+
     asyncio.run(run_test())

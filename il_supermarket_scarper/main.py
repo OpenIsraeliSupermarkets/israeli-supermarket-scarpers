@@ -55,15 +55,13 @@ class ScarpingTask:  # pylint: disable=too-many-instance-attributes
         """consume the scraping results"""
         return self.runner.consume_results()
     
-    def wait(self):
-        """wait for the scraping to complete"""
+    def join(self):
+        """join the scraping thread"""
         if self._thread is not None and self._thread.is_alive():
             self._thread.join()
             return True
         raise RuntimeError("Scraping is not running")
 
-    def stop(self, timeout=5.0):
+    def stop(self):
         """stop the scraping"""
         self.runner.shutdown()
-        if self._thread is not None and self._thread.is_alive():
-            self._thread.join(timeout=timeout)
