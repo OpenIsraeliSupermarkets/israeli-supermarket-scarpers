@@ -98,21 +98,6 @@ class WebBase(Engine):
         ):
             yield item
 
-    async def filter_bad_files_zip(
-        self,
-        files,
-        filter_null=False,
-        filter_zero=False,
-        by_function=lambda x: x[0],
-    ):
-        """apply bad files filtering to zip"""
-
-        async for file in files:
-            if self.is_pass_bad_files_filter(
-                file, filter_zero, filter_null, by_function
-            ):
-                yield file
-
     async def generate_all_files(self, files_types=None, store_id=None, when_date=None):
         """Generate all files from the web site."""
         async for url in self.get_request_url(
@@ -153,14 +138,14 @@ class WebBase(Engine):
         else:
             filtered_files = extracted_files
 
-        bad_files_filtered = self.filter_bad_files_zip(
+        bad_files_filtered = self.filter_bad_files(
             filtered_files,
             filter_null=filter_null,
             filter_zero=filter_zero,
             by_function=lambda x: x[1],
         )
 
-        async for download_url, file_name, _ in self.apply_limit_zip(
+        async for download_url, file_name, _ in self.apply_limit(
             state,
             bad_files_filtered,
             limit=limit,

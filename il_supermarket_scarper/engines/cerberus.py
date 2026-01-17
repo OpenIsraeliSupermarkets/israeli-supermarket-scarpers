@@ -48,17 +48,17 @@ class Cerberus(Engine):
 
         # Register that we've collected this file's details
         self.register_collected_file(
-            file_name_collected_from_site=file_name,
+            file_name_collected_from_site=file_name[0],
             links_collected_from_site="",
         )
 
         # Process file from FTP - persist_from_ftp yields a ScrapingResult
-        async for result in self.persist_from_ftp(file_name):
+        async for result in self.persist_from_ftp(file_name[0]):
             return result
 
         # Should not reach here, but return error result if we do
         return ScrapingResult(
-            file_name=file_name,
+            file_name=file_name[0],
             downloaded=False,
             extract_succefully=False,
             error="No result from persist_from_ftp",

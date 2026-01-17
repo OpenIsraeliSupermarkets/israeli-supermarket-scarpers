@@ -10,6 +10,7 @@ import io
 import zipfile
 from .logger import Logger
 from .gzip_utils import extract_xml_file_from_gz_file
+from typing import AsyncGenerator
 
 
 class FileOutput(ABC):
@@ -47,6 +48,10 @@ class FileOutput(ABC):
     @abstractmethod
     def get_storage_path(self) -> str:
         """Get the file system path for storing status files and metadata."""
+
+    @abstractmethod
+    async def close(self):
+        """Close the file output."""
 
 
 class DiskFileOutput(FileOutput):
@@ -134,6 +139,10 @@ class DiskFileOutput(FileOutput):
         """Return the storage path for status files and metadata."""
         return self.storage_path
 
+    def close(self):
+        """Close the file output."""
+        pass
+
 
 class QueueFileOutput(FileOutput):
     """Send files to an abstract queue."""
@@ -150,7 +159,7 @@ class QueueFileOutput(FileOutput):
             queue_handler: An implementation of AbstractQueueHandler
             storage_path: Path for storing status files (default: /tmp/il_supermarket_status)
         """
-        self.queue_handler = queue_handler
+        self.queue_handler: AbstractQueueHandler = queue_handler
         self.storage_path = storage_path
         os.makedirs(storage_path, exist_ok=True)
 
@@ -232,6 +241,11 @@ class QueueFileOutput(FileOutput):
         if not os.path.exists(self.storage_path):
             os.makedirs(self.storage_path)
 
+    async def close(self):
+        """Close the file output."""
+        await self.queue_handler.close()
+        Logger.debug("Queue handler closed")
+
 
 class AbstractQueueHandler(ABC):
     """Abstract base class for queue handlers."""
@@ -299,7 +313,7 @@ class InMemoryQueueHandler(AbstractQueueHandler):
         """Signal that no more messages will be sent."""
         self._queue.put(None)
 
-    async def get_all_messages(self):
+    async def get_all_messages(self) -> AsyncGenerator[Dict[str, Any], None]:
         """
         Async generator that yields messages as they arrive.
         Stops when close() is called. Process-safe.

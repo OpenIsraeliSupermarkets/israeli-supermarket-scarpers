@@ -180,7 +180,7 @@ class MultiPageWeb(WebBase):
         else:
             filtered_gen = files
 
-        bad_files_filtered = self.filter_bad_files_zip(
+        bad_files_filtered = self.filter_bad_files(
             filtered_gen,
             filter_null=filter_null,
             filter_zero=filter_zero,

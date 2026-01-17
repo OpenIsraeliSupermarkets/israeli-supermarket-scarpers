@@ -18,7 +18,7 @@ class FullyStable:
     @classmethod
     def pass_expiration_date(cls):
         """return the expiration date"""
-        return datetime(2026, 1, 1)
+        return datetime(2027, 1, 1)
 
     @classmethod
     def executes_between_midnight_and_morning_and_requested_today(
@@ -55,7 +55,7 @@ class SuperFlaky(FullyStable):
 
     @classmethod
     def pass_expiration_date(cls):
-        return datetime(2025, 1, 1)
+        return datetime(2027, 1, 1)
 
     @classmethod
     def failire_valid(cls, **_):
@@ -67,7 +67,7 @@ class NetivHased(FullyStable):
 
     @classmethod
     def pass_expiration_date(cls):
-        return datetime(2025, 1, 1)
+        return datetime(2027, 1, 1)
 
     @classmethod
     def executed_in_saturday(cls, when_date=None, **_):
@@ -87,7 +87,7 @@ class CityMarketGivataim(FullyStable):
 
     @classmethod
     def pass_expiration_date(cls):
-        return datetime(2025, 1, 1)
+        return datetime(2027, 1, 1)
 
     @classmethod
     def searching_for_update_promo(cls, files_types=None, **_):
@@ -117,7 +117,7 @@ class CityMarketKiratOno(FullyStable):
 
     @classmethod
     def pass_expiration_date(cls):
-        return datetime(2025, 1, 1)
+        return datetime(2027, 1, 1)
 
     @classmethod
     def searching_for_update_promo(cls, files_types=None, **_):
@@ -140,7 +140,7 @@ class CityMarketKiratGat(FullyStable):
     @classmethod
     def pass_expiration_date(cls):
         """return the expiration date"""
-        return datetime(2026, 3, 1)
+        return datetime(2027, 3, 1)
 
     @classmethod
     def searching_for_update_promo_full(cls, files_types=None, **_):

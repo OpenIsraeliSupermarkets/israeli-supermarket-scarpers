@@ -73,7 +73,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         )
 
         self.assigned_cookie = f"{self.chain.name}_{uuid.uuid4()}_cookies.txt"
-        self.storage_path = file_output
+        self.storage_path: FileOutput = file_output
         Logger.info(
             f"Initialized {self.chain.value} scraper with"
             f"output: {self.storage_path.get_output_location()}"
@@ -112,11 +112,10 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
     ):
         """filter out bad files"""
         async for file in files:
-            if not self.is_pass_bad_files_filter(
+            if self.is_pass_bad_files_filter(
                 file, filter_zero, filter_null, by_function
             ):
-                continue
-            yield file
+                yield file
 
     async def filter_by_store_id(
         self,
@@ -354,10 +353,11 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             headers=headers,
         )
 
-    def _post_scraping(self):
+    async def _post_scraping(self):
         """job to do post scraping"""
         if os.path.exists(self.assigned_cookie):
             os.remove(self.assigned_cookie)
+        await self.storage_path.close()
 
     def _validate_scraper_params(self, limit=None, files_types=None, store_id=None):
         if limit and limit <= 0:
@@ -425,7 +425,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             self.on_scrape_completed(
                 self.get_storage_path(), completed_successfully=completed_successfully
             )
-            self._post_scraping()
+            await self._post_scraping()
 
     @abstractmethod
     async def collect_files_details_from_site(
