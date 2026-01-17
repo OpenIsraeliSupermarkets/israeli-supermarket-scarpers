@@ -202,7 +202,7 @@ Save files to local filesystem:
     scraper = scraper_class(file_output=custom_output)
 
 Queue Output
-~~~~~~~~~~~
+~~~~~~~~~~~~
 
 Send files to message queues:
 
