@@ -2,7 +2,7 @@ pytest==7.1
 zipp==3.19.1 # patch pytest vulnerability
 black==24.3.0
 pylint==3.0.1
-urllib3==2.6.3
+urllib3>=2.6.3 # patch urllib3 vulnerabilities (CVE-2025-66471, CVE-2025-66418, CVE-2026-21441, CVE-2024-37891, CVE-2025-50181)
 sphinx==7.3.7
 sphinx-rtd-theme
 sphinx-autodoc-typehints>=1.25.0
