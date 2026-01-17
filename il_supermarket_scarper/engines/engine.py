@@ -26,7 +26,66 @@ from il_supermarket_scarper.utils.databases import AbstractDataBase
 
 
 class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
-    """base engine for scraping"""
+    """
+    Base engine class for scraping Israeli supermarket data.
+
+    This abstract base class provides the core functionality for downloading
+    and processing files from supermarket chains. Subclasses implement
+    chain-specific logic for discovering and downloading files.
+
+    The engine supports flexible output handling (disk or queue-based) and
+    provides filtering capabilities for file types, sizes, and dates.
+
+    Attributes:
+        utilize_date_param (bool): Whether this engine uses date parameters
+            for filtering files. Defaults to True.
+
+    Args:
+        chain (DumpFolderNames): Chain identifier enum value.
+        chain_id (str): Unique identifier for the supermarket chain.
+        max_threads (int, optional): Maximum number of concurrent download
+            threads. Defaults to 10.
+        file_output (FileOutput, optional): Custom file output handler.
+            If None, a DiskFileOutput is created using the chain's default
+            storage path. Defaults to None.
+        status_database (AbstractDataBase, optional): Custom status database
+            handler for tracking download status. If None, defaults to a
+            status subdirectory in the file output path. Defaults to None.
+
+    Note:
+        Output configuration priority:
+        1. If ``file_output`` is provided, it is used directly.
+        2. Otherwise, a ``DiskFileOutput`` is created using the chain's
+           default storage path from ``DumpFolderNames``.
+
+    Example:
+        Basic usage with default disk output::
+
+            from il_supermarket_scarper.scrappers_factory import ScraperFactory
+            import asyncio
+
+            scraper_class = ScraperFactory.get(ScraperFactory.WOLT)
+            scraper = scraper_class()
+
+            async def run():
+                await scraper.scrape(limit=10)
+
+            asyncio.run(run())
+
+        With custom output directory::
+
+            scraper = scraper_class(folder_name="custom_output")
+            asyncio.run(scraper.scrape(limit=10))
+
+        With queue output::
+
+            from il_supermarket_scarper.utils import QueueFileOutput, InMemoryQueueHandler
+
+            queue = InMemoryQueueHandler("test_queue")
+            output = QueueFileOutput(queue)
+            scraper = scraper_class(file_output=output)
+            asyncio.run(scraper.scrape(limit=10))
+    """
 
     utilize_date_param = True
 
@@ -44,14 +103,13 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         Args:
             chain: Chain identifier (DumpFolderNames enum)
             chain_id: Chain ID
-            folder_name: Output folder name (used if file_output not provided)
             max_threads: Maximum concurrent threads
             file_output: Optional custom file output handler
             status_database: Optional custom status database handler
 
         Note:
-            If file_output is provided, it takes precedence over folder_name.
-            Otherwise, a DiskFileOutput is created from folder_name.
+            If file_output is provided, it takes precedence.
+            Otherwise, a DiskFileOutput is created from the chain's default path.
             If status_database is not provided, defaults to a status subdirectory
             in the parent of file_output path.
         """
@@ -82,11 +140,25 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         )
 
     def get_storage_path(self):
-        """the the storage page of the files downloaded"""
+        """
+        Get the storage path where downloaded files are saved.
+
+        Returns:
+            str: The storage path string from the file output handler.
+        """
         return self.storage_path.get_storage_path()
 
     def is_valid_file_empty(self, file_name):
-        """it is valid the file is empty"""
+        """
+        Check if a file name represents an empty/valid file.
+
+        Args:
+            file_name (str): The file name to check.
+
+        Returns:
+            bool: True if the file name is None (considered valid/empty),
+                False otherwise.
+        """
         return file_name is None
 
     def is_pass_bad_files_filter(
@@ -96,7 +168,24 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         filter_null=False,
         by_function=lambda x: x,
     ):
-        """check if the file is pass the bad files filter"""
+        """
+        Check if a file passes the bad files filter.
+
+        Filters out files containing "0000000000000" (zero files) or "NULL"
+        (null files) based on the provided flags.
+
+        Args:
+            file (tuple[str, str]): File tuple containing (link, name).
+            filter_zero (bool, optional): If True, filter out zero files.
+                Defaults to False.
+            filter_null (bool, optional): If True, filter out NULL files.
+                Defaults to False.
+            by_function (callable, optional): Function to extract the string
+                to check from the file tuple. Defaults to identity function.
+
+        Returns:
+            bool: True if file passes the filter, False if it should be filtered out.
+        """
         if filter_zero and "0000000000000" in by_function(file):
             return False
         if filter_null and "NULL" in by_function(file):
@@ -110,7 +199,21 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         filter_null=False,
         by_function=lambda x: x,
     ):
-        """filter out bad files"""
+        """
+        Filter out bad files from an async generator.
+
+        Yields only files that pass the bad files filter.
+
+        Args:
+            files: Async generator yielding file tuples (link, name).
+            filter_zero (bool, optional): Filter out zero files. Defaults to False.
+            filter_null (bool, optional): Filter out NULL files. Defaults to False.
+            by_function (callable, optional): Function to extract string from file tuple.
+                Defaults to identity function.
+
+        Yields:
+            tuple[str, str]: File tuples that pass the filter.
+        """
         async for file in files:
             if self.is_pass_bad_files_filter(
                 file, filter_zero, filter_null, by_function
@@ -123,7 +226,21 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         store_id=None,
         by_function=lambda x: x,
     ):
-        """filter the files by the store id"""
+        """
+        Filter files by store ID.
+
+        Only yields files whose name contains the specified store ID.
+
+        Args:
+            intreable: Async generator yielding file tuples (link, name).
+            store_id (str, optional): Store ID to filter by. If None, all files pass.
+                Defaults to None.
+            by_function (callable, optional): Function to extract string from file tuple.
+                Defaults to identity function.
+
+        Yields:
+            tuple[str, str]: File tuples matching the store ID.
+        """
         pattern = re.compile(rf"-0*{store_id}-")
         async for file in intreable:
             if pattern.search(by_function(file)):
@@ -141,8 +258,37 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         files_names_to_scrape=None,
         random_selection=False,
     ):
-        """filter the list according to condition - streaming version that
-        processes each file at a time"""
+        """
+        Apply filtering and limiting to a stream of files.
+
+        This is a streaming version that processes files one at a time,
+        applying various filters (already downloaded, unique, store ID,
+        file types, date) and enforcing the limit.
+
+        Args:
+            state (FilterState): State object tracking filter statistics.
+            intreable: Async generator yielding file tuples (link, name).
+            limit (int, optional): Maximum number of files to yield.
+                If None, no limit is applied. Defaults to None.
+            files_types (list, optional): File types to include.
+                If None, all types are included. Defaults to None.
+            by_function (callable, optional): Function to extract string from file tuple.
+                Defaults to identity function.
+            store_id (str, optional): Store ID to filter by. Defaults to None.
+            when_date (datetime, optional): Date to filter files by.
+                Defaults to None.
+            files_names_to_scrape (list, optional): Specific file names to scrape.
+                Defaults to None.
+            random_selection (bool, optional): If True, randomly select files
+                from the last 48 hours. Defaults to False.
+
+        Yields:
+            tuple[str, str]: Filtered file tuples.
+
+        Note:
+            If random_selection is enabled, only files from the last 48 hours
+            are considered for selection.
+        """
 
         # Collect all input files first (needed for unique, latest,
         # random_selection)

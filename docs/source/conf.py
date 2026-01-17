@@ -23,15 +23,6 @@ try:
 except (ImportError, AttributeError):
     pass
 
-# Workaround for Pydantic v2 compatibility with sphinx-autodoc-typehints
-try:
-    import pydantic._internal._utils
-    if not hasattr(pydantic._internal._utils, 'AbstractSetIntStr'):
-        from typing import AbstractSet
-        pydantic._internal._utils.AbstractSetIntStr = AbstractSet
-except (ImportError, AttributeError):
-    pass
-
 
 
 # -- Project information -----------------------------------------------------
@@ -41,6 +32,7 @@ project = "il-supermarket-scraper"
 copyright = "2024, Sefi Erlich"
 author = "Sefi Erlich"
 release = "1.0.0"
+language = "en"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -50,6 +42,8 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
     "sphinx.ext.intersphinx",
+    "sphinx.ext.todo",
+    "sphinx.ext.githubpages",
     "sphinx_autodoc_typehints",
 ]
 
@@ -97,3 +91,22 @@ typehints_document_rtype = True
 # Handle Pydantic v2 compatibility issues gracefully
 typehints_guard_imports = True
 typehints_defaults = "comma"
+
+# Intersphinx mappings for cross-referencing
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+    "typing": ("https://typing.readthedocs.io/en/latest/", None),
+    "pydantic": ("https://docs.pydantic.dev/latest/", None),
+}
+
+# Todo extension configuration
+todo_include_todos = False
+
+# HTML theme options
+html_theme_options = {
+    "collapse_navigation": False,
+    "sticky_navigation": True,
+    "navigation_depth": 4,
+    "includehidden": True,
+    "titles_only": False,
+}
