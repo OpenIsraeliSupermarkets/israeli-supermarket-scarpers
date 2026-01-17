@@ -36,10 +36,6 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
     The engine supports flexible output handling (disk or queue-based) and
     provides filtering capabilities for file types, sizes, and dates.
 
-    Attributes:
-        utilize_date_param (bool): Whether this engine uses date parameters
-            for filtering files. Defaults to True.
-
     Note:
         Output configuration priority: If ``file_output`` is provided, it is
         used directly. Otherwise, a ``DiskFileOutput`` is created using the
