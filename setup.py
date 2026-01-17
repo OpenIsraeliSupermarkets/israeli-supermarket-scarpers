@@ -31,7 +31,7 @@ setup(
     # *strongly* suggested for sharing
     version="1.0.0",
     # The license can be anything you like
-    license="MIT",
+    license="CUSTOM",
     description="python package that implement a scraping for israeli supermarket data",
     # We will also need a readme eventually (there will be a warning)
     long_description=long_description,
