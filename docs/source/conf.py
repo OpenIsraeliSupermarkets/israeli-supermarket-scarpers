@@ -14,6 +14,26 @@ import sys
 
 sys.path.insert(0, os.path.abspath("../.."))
 
+# Workaround for Pydantic v2 compatibility with sphinx-autodoc-typehints
+try:
+    import pydantic._internal._utils
+    if not hasattr(pydantic._internal._utils, 'AbstractSetIntStr'):
+        from typing import AbstractSet
+        pydantic._internal._utils.AbstractSetIntStr = AbstractSet
+except (ImportError, AttributeError):
+    pass
+
+# Workaround for Pydantic v2 compatibility with sphinx-autodoc-typehints
+try:
+    import pydantic._internal._utils
+    if not hasattr(pydantic._internal._utils, 'AbstractSetIntStr'):
+        from typing import AbstractSet
+        pydantic._internal._utils.AbstractSetIntStr = AbstractSet
+except (ImportError, AttributeError):
+    pass
+
+
+
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
@@ -73,3 +93,7 @@ autodoc_default_options = {
 typehints_fully_qualified = False
 always_document_param_types = True
 typehints_document_rtype = True
+
+# Handle Pydantic v2 compatibility issues gracefully
+typehints_guard_imports = True
+typehints_defaults = "comma"
