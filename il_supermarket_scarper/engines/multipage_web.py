@@ -3,8 +3,9 @@ import re
 import ntpath
 import asyncio
 from abc import abstractmethod
-from lxml import html as lxml_html
 from typing import AsyncGenerator
+
+from lxml import html as lxml_html
 from il_supermarket_scarper.utils import (
     Logger,
     convert_nl_size_to_bytes,
@@ -123,14 +124,15 @@ class MultiPageWeb(WebBase):
 
             # we pass the state between pages to keep the total input count
             # we don't pass the state to the process_links_before_download function
-            # becuase later in the apply_limit function we will pass the state to the apply_limit function
+            # becuase later in the apply_limit function we will pass the state
+            # to the apply_limit function
             cross_pages_state = FilterState()
             # Process pages in parallel using asyncio.gather
 
-            async def process_single_page(req):
+            async def process_single_page(req, state=cross_pages_state):
                 results = []
                 async for task in self.process_links_before_download(
-                    cross_pages_state,
+                    state,
                     req,
                     limit=limit,
                     files_types=files_types,
@@ -267,7 +269,7 @@ class MultiPageWeb(WebBase):
         self,
         state: FilterState,
         request,
-        limit=None,
+        limit=None,  # pylint: disable=unused-argument
         files_types=None,
         store_id=None,
         when_date=None,
@@ -287,8 +289,9 @@ class MultiPageWeb(WebBase):
             for url, name, size in zip(file_links, filenames, file_sizes):
                 yield url, name, size
 
-        # Apply filters but NOT the limit here to avoid race conditions when processing pages in parallel
-        # The limit will be applied once at the collect_files_details_from_site level after all pages are aggregated
+        # Apply filters but NOT the limit here to avoid race conditions
+        # when processing pages in parallel. The limit will be applied once
+        # at the collect_files_details_from_site level after all pages are aggregated
         filtered_files = self.apply_limit_zip(
             state,
             generate_from_lists(),

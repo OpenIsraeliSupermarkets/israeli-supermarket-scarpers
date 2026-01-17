@@ -1,12 +1,11 @@
 import os
 import traceback
+from typing import Optional
 
-from .status import log_folder_details
+from .status import log_folder_details, _now
 from .databases import JsonDataBase, AbstractDataBase
-from .status import _now
 from .lock_utils import lock_by_string
 from .file_output import FileOutput
-from typing import Optional
 from .scraping_result import ScrapingResult
 
 

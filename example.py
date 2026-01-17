@@ -1,11 +1,13 @@
-from il_supermarket_scarper import ScarpingTask, ScraperFactory
-from il_supermarket_scarper.utils import _now, Logger, QueueFileOutput
 import asyncio
+
+from il_supermarket_scarper import ScarpingTask, ScraperFactory
+from il_supermarket_scarper.utils import _now, Logger
 
 Logger.set_logging_level("INFO")
 
 
 async def main():
+    """Main function to run the scraping task and consume results."""
     scraper = ScarpingTask(
         output_configuration={
             "output_mode": "queue",
@@ -42,9 +44,9 @@ async def main():
                         content_str = file_content.decode("utf-8")
                         print(f"  Content preview: {content_str[:200]}...")
                     except UnicodeDecodeError:
-                        print(f"  Content: binary data")
+                        print("  Content: binary data")
                 else:
-                    print(f"  Content: binary data")
+                    print("  Content: binary data")
 
                 if consumed_count == count:
                     break

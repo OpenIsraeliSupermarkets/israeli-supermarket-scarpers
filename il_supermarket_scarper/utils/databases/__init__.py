@@ -32,13 +32,12 @@ def create_status_database_for_scraper(scraper_name, config):
         base_path = config.get("base_path", "dumps/status")
         return JsonDataBase(database_name, base_path=base_path)
 
-    elif database_type == "mongo":
+    if database_type == "mongo":
         # MongoDB database
         db = MongoDataBase(database_name)
         db.create_connection()
         return db
 
-    else:
-        raise ValueError(
-            f"Unknown database_type: {database_type}. Must be 'json' or 'mongo'"
-        )
+    raise ValueError(
+        f"Unknown database_type: {database_type}. Must be 'json' or 'mongo'"
+    )

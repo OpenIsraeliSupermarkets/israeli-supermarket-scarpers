@@ -42,19 +42,16 @@ class Aspx(WebBase, ABC):
     @abstractmethod
     def get_file_name_no_ext_from_entry(self, entry):
         """get the file name without extensions from entey (tr)"""
-        pass
 
     @abstractmethod
     async def _get_all_possible_query_string_params(
         self, files_types=None, store_id=None, when_date=None
     ):
         """list all param to add to the url"""
-        pass
 
     @abstractmethod
     def get_href_from_entry(self, entry):
         """get download link for entry (tr)"""
-        pass
 
     @abstractmethod
     async def _build_query_url(self, query_params, base_urls):

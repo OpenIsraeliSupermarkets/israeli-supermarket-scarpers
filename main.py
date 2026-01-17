@@ -100,6 +100,7 @@ def load_configuration():  # pylint: disable=too-many-branches
 
 
 def load_runtime_params():
+    """Load runtime parameters from environment variables."""
     # validate limit
     kwargs = {}
     limit = os.getenv("LIMIT", None)

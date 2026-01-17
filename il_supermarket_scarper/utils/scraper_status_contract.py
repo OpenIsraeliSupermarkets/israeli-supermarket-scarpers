@@ -1,9 +1,10 @@
 """Data classes defining the output format contract for scraper status."""
 
+from collections import defaultdict
 from datetime import datetime
 from typing import List, Optional, Union
+
 from pydantic import BaseModel, Field
-from collections import defaultdict
 
 # -- Global Status --
 
@@ -116,8 +117,10 @@ class ScraperStatusOutput(BaseModel):
 
         Returns:
             A tuple of (per_file_dict, per_file_status_counter_dict)
-            - per_file_dict: Maps file name to status flags (collected, downloaded, failed, verified)
-            - per_file_status_counter_dict: Maps file name to list of status types for duplicate detection
+            - per_file_dict: Maps file name to status flags
+                (collected, downloaded, failed, verified)
+            - per_file_status_counter_dict: Maps file name to list of status types
+                for duplicate detection
         """
 
         per_file = defaultdict(
@@ -155,7 +158,7 @@ class ScraperStatusOutput(BaseModel):
         return per_file, per_file_status_counter
 
     @staticmethod
-    def _validate_file_lifecycle(file_name: str, status: dict) -> bool:
+    def _validate_file_lifecycle(status: dict) -> bool:
         """
         Validate a single file's lifecycle.
 
@@ -233,7 +236,7 @@ class ScraperStatusOutput(BaseModel):
                 continue
 
             # Validate files that were actually attempted
-            if not self._validate_file_lifecycle(fn, status):
+            if not self._validate_file_lifecycle(status):
                 return False
             if self._has_duplicate_statuses(per_file_status_counter[fn]):
                 return False

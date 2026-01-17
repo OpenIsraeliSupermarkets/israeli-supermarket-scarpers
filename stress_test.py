@@ -1,14 +1,13 @@
 import time
 import json
 import datetime
-import tempfile
-import os
 import pstats
 import cProfile
 import io
 import asyncio
+
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
-from il_supermarket_scarper.utils import DiskFileOutput, JsonDataBase, Logger
+from il_supermarket_scarper.utils import DiskFileOutput, Logger
 from il_supermarket_scarper.utils.databases import AbstractDataBase
 from il_supermarket_scarper.utils.status import _now
 
@@ -16,14 +15,14 @@ from il_supermarket_scarper.utils.status import _now
 class DateTimeEncoder(json.JSONEncoder):
     """Custom JSON encoder that properly formats datetime objects."""
 
-    def default(self, obj):
+    def default(self, obj): 
         if isinstance(obj, datetime.datetime):
             # Format datetime as ISO string with timezone info
             return obj.isoformat()
-        elif isinstance(obj, datetime.date):
+        if isinstance(obj, datetime.date):
             # Format date as ISO string
             return obj.isoformat()
-        elif isinstance(obj, datetime.time):
+        if isinstance(obj, datetime.time):
             # Format time as ISO string
             return obj.isoformat()
         # Fallback to string representation for other non-serializable types
@@ -110,6 +109,7 @@ def format_stats_as_json(profile, project_name):
 
 
 async def main():
+    """Main function to run stress tests on scrapers."""
     results = {}
     for scraper_name in [
         ScraperFactory.SUPER_PHARM.name

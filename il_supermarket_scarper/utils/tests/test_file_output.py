@@ -62,11 +62,14 @@ class TestFileOutput:
             assert result["error"] is None
 
             # Verify message was sent
-            messages = handler.get_all_messages()
-            assert len(messages) == 1
-            assert messages[0]["file_name"] == "test.xml"
-            assert messages[0]["file_content"] == b"<xml>test</xml>"
-            assert messages[0]["metadata"]["chain"] == "test"
+            message_count = 0
+            async for message in handler.get_all_messages():
+                message_count += 1
+                assert message["file_name"] == "test.xml"
+                assert message["file_content"] == b"<xml>test</xml>"
+                assert message["metadata"]["chain"] == "test"
+                break  # Only check first message
+            assert message_count == 1
 
         asyncio.run(run_test())
 

@@ -15,6 +15,7 @@ from .utils import (
     _now,
 )
 from .engines.engine import Engine
+from .utils.databases import create_status_database_for_scraper
 
 
 def _should_exit(
@@ -157,8 +158,7 @@ async def _scrape_one(
         if should_exit:
             Logger.info(f"[{chain_name}] Exiting loop: {exit_reason}")
             break
-        else:
-            _sleep(timeout_in_seconds, shutdown_flag)
+        _sleep(timeout_in_seconds, shutdown_flag)
 
         # If we're continuing, log that we'll run again
         if not (shutdown_flag and shutdown_flag.value):
@@ -167,12 +167,12 @@ async def _scrape_one(
     Logger.info(f"done scraping {chain_name}")
 
 
-def scrape_one_wrap(chainScrapperClass, kwargs):
+def scrape_one_wrap(chain_scrapper_class, kwargs):
     """scrape one wrapper, each with its own event loop"""
     loop = asyncio.new_event_loop()
     try:
         asyncio.set_event_loop(loop)
-        return loop.run_until_complete(_scrape_one(chainScrapperClass, **kwargs))
+        return loop.run_until_complete(_scrape_one(chain_scrapper_class, **kwargs))
     finally:
         loop.close()
 
@@ -225,8 +225,6 @@ class MainScrapperRunner:
 
     def _create_status_database_for_scraper(self, scraper_name, config):
         """Create a status database instance for a specific scraper based on config."""
-        from .utils.databases import create_status_database_for_scraper
-
         return create_status_database_for_scraper(scraper_name, config)
 
     def _create_file_output_for_scraper(self, scraper_name, config):
@@ -251,12 +249,13 @@ class MainScrapperRunner:
             base_path = config.get("base_storage_path", "dumps")
             return DiskFileOutput(storage_path=os.path.join(base_path, target_folder))
 
-        elif config.get("output_mode") == "queue":
+        if config.get("output_mode") == "queue":
             # Queue output mode
             queue_type = config.get("queue_type", "memory")
 
             if queue_type == "memory":
                 return QueueFileOutput(InMemoryQueueHandler(queue_name=target_folder))
+        return None
 
     def run(
         self,
@@ -275,49 +274,41 @@ class MainScrapperRunner:
         Logger.info(f"files_types is {files_types}")
         Logger.info(f"Start scraping {self.enabled_scrapers}.")
 
-        self._pool = Pool(self.multiprocessing)
-        try:
-            result = self._pool.starmap(
+        with Pool(self.multiprocessing) as pool:
+            result = pool.starmap(
                 scrape_one_wrap,
                 [
                     (
-                        chainScrapperClass,
+                        chain_scrapper_class,
                         {
                             "limit": limit,
                             "files_types": files_types,
                             "when_date": when_date,
                             "min_size": min_size,
                             "max_size": max_size,
-                            "file_output": self._file_outputs[chainScrapperClass],
+                            "file_output": self._file_outputs[chain_scrapper_class],
                             "status_database": self._status_databases[
-                                chainScrapperClass
+                                chain_scrapper_class
                             ],
                             "single_pass": single_pass,
                             "timeout_in_seconds": self.timeout_in_seconds,
                             "shutdown_flag": self._shutdown_flag,
                         },
                     )
-                    for chainScrapperClass in self.enabled_scrapers
+                    for chain_scrapper_class in self.enabled_scrapers
                 ],
             )
 
-            Logger.info("Done scraping all supermarkets.")
+        Logger.info("Done scraping all supermarkets.")
 
-            return result
-        finally:
-            self._pool.close()
-            self._pool.join()
-            self._pool = None
-            if self._manager:
-                self._manager.shutdown()
-                self._manager = None
-                self._shutdown_flag = None
+        return result
 
     def consume_results(self):
-        """consume the scraping results - returns dict mapping scraper names to file_output and status_database"""
+        """consume the scraping results - returns dict mapping scraper names
+        to file_output and status_database"""
         return {
             scraper_name: self._file_outputs.get(scraper_name)
-            for scraper_name in self._file_outputs.keys()
+            for scraper_name in self._file_outputs
         }
 
     def shutdown(self):

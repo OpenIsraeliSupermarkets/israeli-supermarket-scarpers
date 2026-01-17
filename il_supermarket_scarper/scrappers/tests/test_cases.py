@@ -217,8 +217,7 @@ def make_test_case(scraper_enum, store_id):
 
                     # Write queued files to disk for validation
                     os.makedirs(storage_path, exist_ok=True)
-                    messages = queue_handler.get_all_messages()
-                    for message in messages:
+                    async for message in queue_handler.get_all_messages():
                         file_name = message["file_name"]
                         file_content = message["file_content"]
 

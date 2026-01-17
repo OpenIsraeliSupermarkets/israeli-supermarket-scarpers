@@ -1,5 +1,8 @@
 import os
 import json
+from datetime import datetime
+import pytz
+
 from ..logger import Logger
 from ..status import _now
 from .base import AbstractDataBase
@@ -118,8 +121,6 @@ class JsonDataBase(AbstractDataBase):
             # Parse the timestamp if it's a string (from JSON)
             last_modified = data["_metadata"]["last_modified"]
             if isinstance(last_modified, str):
-                from datetime import datetime
-                import pytz
 
                 # Parse ISO format string
                 try:

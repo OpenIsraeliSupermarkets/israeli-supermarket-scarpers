@@ -235,7 +235,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         limit,
         files_types,
         by_function,
-        random_selection=False,
+        random_selection=False,  # pylint: disable=unused-argument
     ) -> AsyncGenerator[tuple[str, str], None]:
         """filter the file types requested"""
 
@@ -442,7 +442,8 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         max_size=None,
         random_selection=False,
     ) -> AsyncGenerator:
-        """Collect file details from the site. Should yield file details (format depends on subclass)."""
+        """Collect file details from the site.
+        Should yield file details (format depends on subclass)."""
 
     @abstractmethod
     async def process_file(self, file_details) -> ScrapingResult:
@@ -450,7 +451,8 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         Process a single file and return ScrapingResult.
 
         Args:
-            file_details: File details from collect_files_details_from_site (format depends on subclass)
+            file_details: File details from collect_files_details_from_site
+                (format depends on subclass)
 
         Returns:
             ScrapingResult: Result of processing the file
@@ -525,7 +527,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 # Add new tasks from generator up to max_threads limit
                 while not generator_exhausted and len(pending_tasks) < self.max_threads:
                     try:
-                        file_details = await files_generator.__anext__()
+                        file_details = await anext(files_generator)
                         task = asyncio.create_task(
                             process_file_with_semaphore(file_details)
                         )
@@ -540,7 +542,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
 
                 # Wait for at least one task to complete
                 if pending_tasks:
-                    done, pending = await asyncio.wait(
+                    done, _pending = await asyncio.wait(
                         pending_tasks.keys(), return_when=asyncio.FIRST_COMPLETED
                     )
 

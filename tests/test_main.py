@@ -25,7 +25,7 @@ def test_main_to_disk():
             },
         )
         scrapper_done.start(limit=1, when_date=None, single_pass=True)
-        scrapper_done.wait()
+        scrapper_done.join()
 
         list_of_status_files = os.listdir(os.path.join(tmpdirname, "status"))
         assert len(list_of_status_files) == len(expected)

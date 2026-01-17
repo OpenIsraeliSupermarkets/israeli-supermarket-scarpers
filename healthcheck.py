@@ -5,6 +5,8 @@ Checks if scrapers have recent activity based on last_modified timestamps in sta
 import os
 import sys
 import datetime
+import pytz
+
 from il_supermarket_scarper import ScraperFactory
 from il_supermarket_scarper.utils.databases import create_status_database_for_scraper
 from il_supermarket_scarper.utils.status import _now
@@ -36,7 +38,8 @@ def load_configuration():
     status_database_type = os.getenv("STATUS_DATABASE_TYPE", "json").lower()
     if status_database_type not in ["json", "mongo"]:
         print(
-            f"ERROR: STATUS_DATABASE_TYPE must be 'json' or 'mongo', but got {status_database_type}",
+            f"ERROR: STATUS_DATABASE_TYPE must be 'json' or 'mongo', "
+            f"but got {status_database_type}",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -98,8 +101,6 @@ def check_health():
 
             # Ensure timezone-aware
             if last_modified.tzinfo is None:
-                import pytz
-
                 last_modified = pytz.timezone("Asia/Jerusalem").localize(last_modified)
 
             time_diff = (current_time - last_modified).total_seconds()
@@ -116,7 +117,7 @@ def check_health():
                     f"INFO: {scraper_name} is healthy (last activity: {time_diff:.0f}s ago)"
                 )
 
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             print(
                 f"ERROR: Failed to check {scraper_name}: {e}",
                 file=sys.stderr,
@@ -125,7 +126,8 @@ def check_health():
 
     if unhealthy_scrapers:
         print(
-            f"ERROR: {len(unhealthy_scrapers)} scraper(s) unhealthy: {', '.join(unhealthy_scrapers)}",
+            f"ERROR: {len(unhealthy_scrapers)} scraper(s) unhealthy: "
+            f"{', '.join(unhealthy_scrapers)}",
             file=sys.stderr,
         )
         return 1
