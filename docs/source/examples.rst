@@ -136,7 +136,7 @@ Use queue-based output instead of disk:
     asyncio.run(run())
 
 Unified Configuration
---------------------
+---------------------
 
 Use ScraperConfig for comprehensive settings:
 
@@ -198,7 +198,7 @@ Process results as they become available:
     scraper.join()
 
 Docker Examples
---------------
+---------------
 
 Basic Docker usage:
 
