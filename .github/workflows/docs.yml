@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   docs:
     runs-on: ubuntu-latest
@@ -29,3 +33,34 @@ jobs:
         run: |
           cd docs
           make html SPHINXOPTS="-W"
+
+      - name: Upload documentation artifact
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation-preview
+          path: docs/build/html
+          retention-days: 7
+
+      - name: Comment PR with documentation preview
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const artifactUrl = `https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 📚 Documentation Preview
+            
+            Documentation has been built successfully! You can download and preview it:
+            
+            1. Go to the [Actions tab](${artifactUrl})
+            2. Scroll down to the "Artifacts" section
+            3. Download the \`documentation-preview\` artifact
+            4. Extract the ZIP file
+            5. Open \`index.html\` in your browser to view the documentation
+            
+            **Note:** The artifact will be available for 7 days.`
+            });

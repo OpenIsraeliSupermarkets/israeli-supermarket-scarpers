@@ -111,7 +111,7 @@ class ScraperStatusOutput(BaseModel):
                     file_names.append(fn)
         return file_names
 
-    def _build_per_file_status_data(self) -> tuple[dict, dict]:
+    def _build_per_file_status_data(self):
         """
         Build per-file status records and status counters.
 
