@@ -4,6 +4,7 @@ import tempfile
 import re
 import os
 import uuid
+import json
 import xml.etree.ElementTree as ET
 from lxml import etree
 from il_supermarket_scarper.utils import (
@@ -12,15 +13,21 @@ from il_supermarket_scarper.utils import (
     DumpFolderNames,
     _testing_now,
     change_xml_encoding,
+    get_output_folder,
+    ScraperStatusOutput,
 )
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
 from il_supermarket_scarper.scraper_stability import ScraperStability
+from il_supermarket_scarper.utils import (
+    QueueFileOutput,
+    InMemoryQueueHandler,
+)
 
 
 def make_test_case(scraper_enum, store_id):
     """create test suite for scraper"""
 
-    class TestScapers(unittest.TestCase):
+    class TestScapers(unittest.IsolatedAsyncioTestCase):
         """class with all the tests for scraper"""
 
         def __init__(self, name) -> None:
@@ -115,7 +122,36 @@ def make_test_case(scraper_enum, store_id):
                     change_xml_encoding(full_file_path)
                     ET.parse(full_file_path)
 
-        def _clean_scarpe_delete(
+        def _make_sure_status_file_is_valid(self, dump_path):
+            """
+            Validate that the status JSON file matches the expected format contract.
+            Will fail if format has drifted from t.json specification.
+            """
+            # Find the status folder (should be sibling to download_path)
+            parent_path = os.path.dirname(dump_path)
+            status_folder = os.path.join(parent_path, "status")
+
+            # Status folder might not exist if collection is disabled
+            assert os.path.exists(
+                status_folder
+            ), f"Status folder {status_folder} not found"
+
+            # Find JSON files in status folder
+            status_files = [f for f in os.listdir(status_folder) if f.endswith(".json")]
+
+            assert len(status_files) == 1, "should be only one status file"
+
+            # Validate each status file - will raise ValidationError if format shifted
+            for status_file in status_files:
+                status_file_path = os.path.join(status_folder, status_file)
+                with open(status_file_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                assert ScraperStatusOutput(
+                    **data
+                ).validate_file_status(), f"Status file {status_file} is not valid"
+                Logger.info(f"Status file {status_file} validated successfully")
+
+        async def _clean_scarpe_delete(
             self,
             scraper_enum,
             store_id=None,
@@ -124,7 +160,7 @@ def make_test_case(scraper_enum, store_id):
             when_date=None,
         ):
             with tempfile.TemporaryDirectory() as tmpdirname:
-                self.__clean_scarpe_delete(
+                await self.__clean_scarpe_delete(
                     scraper_enum=scraper_enum,
                     dump_path=tmpdirname,
                     store_id=store_id,
@@ -133,7 +169,7 @@ def make_test_case(scraper_enum, store_id):
                     when_date=when_date,
                 )
 
-        def __clean_scarpe_delete(
+        async def __clean_scarpe_delete(  # pylint: disable=too-many-locals
             self,
             scraper_enum,
             dump_path="temp",
@@ -150,7 +186,20 @@ def make_test_case(scraper_enum, store_id):
                 Logger.warning(f"{scraper_enum} is disabled.")
             else:
                 try:
-                    scraper = init_scraper_function(folder_name=dump_path)
+                    # Create storage path with chain subdirectory
+                    storage_path = get_output_folder(
+                        DumpFolderNames[scraper_enum.name].value, dump_path
+                    )
+
+                    # Create in-memory queue handler for testing
+                    queue_handler = InMemoryQueueHandler(
+                        queue_name=f"test_{scraper_enum.name}"
+                    )
+
+                    # Use QueueFileOutput instead of DiskFileOutput
+                    scraper = init_scraper_function(
+                        file_output=QueueFileOutput(queue_handler, storage_path)
+                    )
 
                     kwarg = {
                         "limit": limit,
@@ -159,12 +208,25 @@ def make_test_case(scraper_enum, store_id):
                         "when_date": when_date,
                         "filter_null": True,
                         "filter_zero": True,
-                        "suppress_exception": True,
-                        "min_size": 100,
+                        "min_size": 1,
                         "max_size": 10000000,
                     }
 
-                    scraper.scrape(**kwarg)
+                    async for _ in scraper.scrape(**kwarg):
+                        pass
+
+                    # Write queued files to disk for validation
+                    os.makedirs(storage_path, exist_ok=True)
+                    async for message in queue_handler.get_all_messages():
+                        file_name = message["file_name"]
+                        file_content = message["file_content"]
+
+                        # Determine file path
+                        file_save_path = os.path.join(storage_path, file_name)
+
+                        # Write file to disk
+                        with open(file_save_path, "wb") as f:
+                            f.write(file_content)
 
                     files_found = os.listdir(dump_path)
                     assert (
@@ -177,6 +239,7 @@ def make_test_case(scraper_enum, store_id):
                     )
                     files_found = os.listdir(download_path)
 
+                    self._make_sure_status_file_is_valid(download_path)
                     if not ScraperStability.is_validate_scraper_found_no_files(
                         scraper_enum.name,
                         limit=limit,
@@ -209,40 +272,42 @@ def make_test_case(scraper_enum, store_id):
             """get a temp folder to download the files into"""
             return self.folder_name + str(uuid.uuid4().hex)
 
-        def test_scrape_one(self):
+        async def test_scrape_one(self):
             """scrape one file and make sure it exists"""
-            self._clean_scarpe_delete(scraper_enum, limit=1)
+            await self._clean_scarpe_delete(scraper_enum, limit=1)
 
-        def test_scrape_three(self):
+        async def test_scrape_three(self):
             """scrape three file and make sure they exists"""
-            self._clean_scarpe_delete(scraper_enum, limit=3)
+            await self._clean_scarpe_delete(scraper_enum, limit=3)
 
-        def test_scrape_promo(self):
+        async def test_scrape_promo(self):
             """scrape one promo file and make sure it exists"""
-            self._clean_scarpe_delete(
+            await self._clean_scarpe_delete(
                 scraper_enum,
                 limit=1,
                 file_type=FileTypesFilters.only_promo(),
             )
 
-        def test_scrape_store(self):
+        async def test_scrape_store(self):
             """scrape one store file and make sure it exists"""
-            self._clean_scarpe_delete(
+            await self._clean_scarpe_delete(
                 scraper_enum, limit=1, file_type=FileTypesFilters.only_store()
             )
 
-        def test_scrape_price(self):
+        async def test_scrape_price(self):
             """scrape one price file and make sure it exists"""
-            self._clean_scarpe_delete(
+            await self._clean_scarpe_delete(
                 scraper_enum, limit=1, file_type=FileTypesFilters.only_price()
             )
 
-        def test_scrape_file_from_single_store(self):
+        async def test_scrape_file_from_single_store(self):
             """test fetching only files from a ceriten store"""
-            self._clean_scarpe_delete(scraper_enum, store_id=store_id, limit=1)
+            await self._clean_scarpe_delete(scraper_enum, store_id=store_id, limit=1)
 
-        def test_scrape_file_today(self):
+        async def test_scrape_file_today(self):
             """test fetching file from today"""
-            self._clean_scarpe_delete(scraper_enum, when_date=_testing_now(), limit=1)
+            await self._clean_scarpe_delete(
+                scraper_enum, when_date=_testing_now(), limit=1
+            )
 
     return TestScapers

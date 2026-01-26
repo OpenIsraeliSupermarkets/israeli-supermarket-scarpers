@@ -1,40 +1,91 @@
 import os
 import time
 import tempfile
+import asyncio
 
 from il_supermarket_scarper.main import ScarpingTask
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
+from il_supermarket_scarper.utils.file_output import QueueFileOutput
 
 
-def test_main_with_limit():
+def test_main_to_disk():
     """test the main running with limit of 1 for each chain"""
     with tempfile.TemporaryDirectory() as tmpdirname:
-        expected = ScraperFactory.all_scrapers_name() + ["status"]
-        scrapper_done = ScarpingTask(limit=1, dump_folder_name=tmpdirname).start()
+        scrapers = [ScraperFactory.BAREKET.name]
+        expected = scrapers
+        scrapper_done = ScarpingTask(
+            enabled_scrapers=scrapers,
+            output_configuration={
+                "output_mode": "disk",
+                "base_storage_path": tmpdirname,
+            },
+            status_configuration={
+                "database_type": "json",
+                "base_path": os.path.join(tmpdirname, "status"),
+            },
+        )
+        scrapper_done.start(limit=1, when_date=None, single_pass=True)
+        scrapper_done.join()
 
-        folders_from_scraper = list(map(lambda x: x.split("/")[-1], scrapper_done)) + [
-            "status"
-        ]
+        list_of_status_files = os.listdir(os.path.join(tmpdirname, "status"))
+        assert len(list_of_status_files) == len(expected)
+        assert sorted(map(lambda x: x.lower(), list_of_status_files)) == sorted(
+            map(lambda x: x.lower() + ".json", expected)
+        )
+
         time.sleep(5)
-        folders_in_dump_folder = os.listdir(tmpdirname)
-        folders_in_dump_folder = [
-            name for name in folders_in_dump_folder if not name.startswith(".")
-        ]
-        assert len(folders_in_dump_folder) == len(expected)
-        assert sorted(folders_from_scraper) == sorted(folders_in_dump_folder)
+        for scraper_name, file_output in scrapper_done.consume().items():
+            folders_in_dump_folder = os.listdir(file_output.get_storage_path())
+            assert len(folders_in_dump_folder) == 1
+            assert scraper_name.lower() in file_output.get_storage_path().lower()
 
 
-def test_main_with_one_scarper():
-    """the limit only for enabled scarpers"""
-    scrapper_done = ScarpingTask(
-        limit=1, enabled_scrapers=ScraperFactory.sample(n=1)
-    ).start()
-    assert len(scrapper_done) == 1
+def test_main_to_memory_queue():
+    """test the main running with limit of 1 for each chain using in-memory queue"""
 
+    async def run_test():
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            scrapers = [ScraperFactory.BAREKET.name]
+            expected = scrapers
+            scrapper_done = ScarpingTask(
+                enabled_scrapers=scrapers,
+                output_configuration={
+                    "output_mode": "queue",
+                    "queue_type": "memory",
+                },
+                status_configuration={
+                    "database_type": "json",
+                    "base_path": os.path.join(tmpdirname, "status"),
+                },
+            )
+            scrapper_done.start(limit=1, when_date=None, single_pass=True)
 
-def test_main_with_size_estimation_mode():
-    """test size estmation mode"""
-    scrapper_done = ScarpingTask(
-        limit=1, size_estimation_mode=True, enabled_scrapers=ScraperFactory.sample(n=1)
-    ).start()
-    assert len(scrapper_done) == 1
+            list_of_status_files = os.listdir(os.path.join(tmpdirname, "status"))
+            assert len(list_of_status_files) == len(expected)
+            assert sorted(map(lambda x: x.lower(), list_of_status_files)) == sorted(
+                map(lambda x: x.lower() + ".json", expected)
+            )
+
+            for scraper_name, file_output in scrapper_done.consume().items():
+                # For queue output, check messages in the queue handler
+                count = 0
+                assert isinstance(file_output, QueueFileOutput)
+                async for message in file_output.queue_handler.get_all_messages():
+                    count += 1
+                    # Verify message structure
+                    assert "file_name" in message
+                    assert "file_content" in message
+                    assert "file_link" in message
+                    assert "metadata" in message
+
+                    break
+
+                assert (
+                    scraper_name.lower()
+                    in file_output.queue_handler.get_queue_name().lower()
+                )
+
+            scrapper_done.stop()
+            scrapper_done.join()
+
+    asyncio.run(run_test())

@@ -3,10 +3,9 @@ import os
 from il_supermarket_scarper import ScarpingTask, ScraperFactory, FileTypesFilters
 
 
-def load_params():
+def load_configuration():  # pylint: disable=too-many-branches
     """load params from env variables with validation"""
-    kwargs = {"suppress_exception": True, "lookup_in_db": True}
-
+    kwargs = {}
     # validate scrapers
     enabled_scrapers = os.getenv("ENABLED_SCRAPERS", None)
     if enabled_scrapers:
@@ -48,7 +47,62 @@ def load_params():
         except ValueError:
             raise ValueError("NUMBER_OF_PROCESSES must be an integer")
 
+    # validate output mode (disk or queue)
+    output_mode = os.getenv("OUTPUT_MODE", "disk").lower()
+    if output_mode not in ["disk", "queue"]:
+        raise ValueError(
+            f"OUTPUT_MODE must be 'disk' or 'queue', but got {output_mode}"
+        )
+
+    # Pass output configuration instead of file_output instances
+    # Each scraper will create its own file_output based on its folder name
+    output_configuration = {
+        "output_mode": output_mode,
+    }
+
+    if output_mode == "queue":
+        # Configure queue output
+        queue_type = os.getenv("QUEUE_TYPE", "memory").lower()
+
+        if queue_type not in ["memory"]:
+            raise ValueError(f"QUEUE_TYPE must be 'memory', but got {queue_type}")
+
+        output_configuration["queue_type"] = queue_type
+
+    else:
+        # Disk output configuration (default)
+        output_configuration["base_storage_path"] = os.getenv("STORAGE_PATH", "dumps")
+
+    kwargs["output_configuration"] = output_configuration
+
+    # Configure status database (json or mongo)
+    status_database_type = os.getenv("STATUS_DATABASE_TYPE", "json").lower()
+    if status_database_type not in ["json", "mongo"]:
+        raise ValueError(
+            f"STATUS_DATABASE_TYPE must be 'json' or 'mongo', but got {status_database_type}"
+        )
+
+    status_configuration = {
+        "database_type": status_database_type,
+    }
+
+    if status_database_type == "json":
+        # JSON database configuration (default)
+        status_configuration["base_path"] = os.getenv(
+            "STATUS_DATABASE_PATH", "dumps/status"
+        )
+    # For mongo, connection details are read from environment variables in MongoDataBase itself
+    # (MONGO_URL, MONGO_PORT)
+
+    kwargs["status_configuration"] = status_configuration
+
+    return kwargs
+
+
+def load_runtime_params():
+    """Load runtime parameters from environment variables."""
     # validate limit
+    kwargs = {}
     limit = os.getenv("LIMIT", None)
     if limit:
         try:
@@ -64,11 +118,23 @@ def load_params():
         except ValueError:
             raise ValueError("TODAY must be in the format 'YYYY-MM-DD HH:MM'")
 
+    # validate single_pass
+    single_pass = os.getenv("SINGLE_PASS", "false").lower()
+    if single_pass not in ["true", "false", "1", "0"]:
+        raise ValueError(
+            f"SINGLE_PASS must be 'true' or 'false', but got {single_pass}"
+        )
+    kwargs["single_pass"] = single_pass in ["true", "1"]
+
     return kwargs
 
 
 if __name__ == "__main__":
 
-    args = load_params()
+    args = load_configuration()
+    limit_and_when_date = load_runtime_params()
 
-    ScarpingTask(**args).start()
+    task = ScarpingTask(**args)
+
+    task.start(**limit_and_when_date)
+    task.wait()  # Wait for scraping to complete

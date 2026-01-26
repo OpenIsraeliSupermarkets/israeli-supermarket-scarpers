@@ -13,11 +13,12 @@ from il_supermarket_scarper.utils import (
 # class HaziHinam(Cerberus):
 #     """scrper fro hazi hinam"""
 
-#     def __init__(self, folder_name=None):
+#     def __init__(self,  file_output=None, status_database=None):
 #         super().__init__(
 #             chain=DumpFolderNames.HAZI_HINAM,
 #             chain_id="7290700100008",
-#             folder_name=folder_name,
+#
+#             file_output=file_output, status_database=status_database,
 #             ftp_username="HaziHinam",
 #         )
 
@@ -25,12 +26,13 @@ from il_supermarket_scarper.utils import (
 class HaziHinam(MultiPageWeb):
     """scrper fro hazi hinam"""
 
-    def __init__(self, folder_name=None):
+    def __init__(self, file_output=None, status_database=None):
         super().__init__(
             chain=DumpFolderNames.HAZI_HINAM,
             chain_id="7290700100008",
             url="https://shop.hazi-hinam.co.il/Prices",
-            folder_name=folder_name,
+            file_output=file_output,
+            status_database=status_database,
             total_page_xpath="(//li[contains(concat(' ', normalize-space(@class), ' '),"
             + "' pagination-item ')])[last()]/a/@href",
             total_pages_pattern=r"p=(\d+)",

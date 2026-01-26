@@ -1,110 +1,121 @@
-import os
-
-from multiprocessing import Pool
+import datetime
+import time
+import asyncio
+from multiprocessing import Pool, Manager
 
 from .scrappers_factory import ScraperFactory
-from .utils import Logger, summerize_dump_folder_contant, clean_dump_folder
+from .utils import (
+    Logger,
+    FilterState,
+    _now,
+)
+from .engines.engine import Engine
+from .utils.databases import (
+    create_status_database_for_scraper,
+    create_file_output_for_scraper,
+)
 
 
-class MainScrapperRunner:
-    """a main scraper to execute all scraping"""
+def _should_exit(
+    state, limit, single_pass, initial_when_date, collected_now_count, chain_name
+):
+    """check if the scraping should exit"""
+    should_exit = False
+    exit_reason = None
 
-    def __init__(
-        self,
-        size_estimation_mode=False,
-        enabled_scrapers=None,
-        dump_folder_name=None,
-        multiprocessing=5,
-        lookup_in_db=True,
+    # Condition 1: Limit reached
+    if limit is not None and state.file_pass_limit >= limit:
+        should_exit = True
+        exit_reason = f"limit reached ({state.file_pass_limit}/{limit})"
+
+    # Condition 2: Single pass completed
+    elif single_pass:
+        should_exit = True
+        exit_reason = "single pass completed"
+
+    # Condition 3: when_date provided, day has passed, and no new files found
+    elif initial_when_date is not None and isinstance(
+        initial_when_date, datetime.datetime
     ):
-        assert isinstance(enabled_scrapers, list) or enabled_scrapers is None
+        current_date = _now().date()
+        when_date_date = initial_when_date.date()
 
-        env_size_estimation_mode = os.getenv("SE_MODE", None)
-        if env_size_estimation_mode:
-            Logger.info(
-                f"Setting size estimation mode from enviroment. value={env_size_estimation_mode}"
-            )
-            self.size_estimation_mode = bool(env_size_estimation_mode == "True")
-        else:
-            self.size_estimation_mode = size_estimation_mode
-        Logger.info(f"size_estimation_mode: {self.size_estimation_mode}")
+        # Check if the day has passed
+        if current_date > when_date_date:
+            # If no files were found in this run, exit
+            if collected_now_count == 0:
+                should_exit = True
+                exit_reason = (
+                    f"day has passed ({when_date_date} -> {current_date}) "
+                    f"and no additional files found"
+                )
+            else:
+                # Day passed but files were found, continue
+                Logger.info(
+                    f"[{chain_name}] Day has passed but found {collected_now_count} "
+                    f"files, continuing..."
+                )
+    return should_exit, exit_reason
 
-        if not enabled_scrapers:
-            enabled_scrapers = ScraperFactory.all_scrapers_name()
 
-        self.enabled_scrapers = enabled_scrapers
-        Logger.info(f"Enabled scrapers: {self.enabled_scrapers}")
-        self.dump_folder_name = dump_folder_name
-        self.multiprocessing = multiprocessing
-        self.lookup_in_db = lookup_in_db
+def _sleep(timeout_in_seconds, shutdown_flag):
+    """Sleep in smaller chunks to check shutdown flag more frequently"""
+    Logger.info(f"Sleeping for {timeout_in_seconds} seconds")
+    sleep_chunk = min(1.0, timeout_in_seconds)
+    slept = 0
+    while slept < timeout_in_seconds and not (shutdown_flag and shutdown_flag.value):
+        time.sleep(sleep_chunk)
+        slept += sleep_chunk
+        if slept + sleep_chunk > timeout_in_seconds:
+            sleep_chunk = timeout_in_seconds - slept
 
-    def run(
-        self,
-        limit=None,
-        files_types=None,
-        when_date=False,
-        suppress_exception=False,
-        min_size=None,
-        max_size=None,
-    ):
-        """run the scraper"""
-        Logger.info(f"Limit is {limit}")
-        Logger.info(f"files_types is {files_types}")
-        Logger.info(f"Start scraping {','.join(self.enabled_scrapers)}.")
 
-        with Pool(self.multiprocessing) as pool:
-            result = pool.map(
-                self.scrape_one_wrap,
-                list(
-                    map(
-                        lambda chainScrapperClass: (
-                            chainScrapperClass,
-                            {
-                                "limit": limit,
-                                "files_types": files_types,
-                                "when_date": when_date,
-                                "suppress_exception": suppress_exception,
-                                "min_size": min_size,
-                                "max_size": max_size,
-                            },
-                        ),
-                        self.enabled_scrapers,
-                    )
-                ),
-            )
+async def _scrape_one(  # pylint: disable=too-many-locals
+    chain_scrapper_class,
+    limit=None,
+    single_pass=False,
+    files_types=None,
+    store_id=None,
+    when_date=None,
+    min_size=None,
+    max_size=None,
+    file_output=None,
+    status_database=None,
+    timeout_in_seconds=60 * 30,
+    shutdown_flag=None,
+):
+    """scrape one"""
+    chain_scrapper_constractor = ScraperFactory.get(chain_scrapper_class)
+    Logger.info(f"Starting scrapper {chain_scrapper_constractor}")
 
-        Logger.info("Done scraping all supermarkets.")
+    # Create scraper with both file_output and status_database
+    scraper: Engine = chain_scrapper_constractor(
+        file_output=file_output, status_database=status_database
+    )
 
-        return result
+    chain_name: str = scraper.get_chain_name()
 
-    def scrape_one_wrap(self, arg):
-        """scrape one warper"""
-        args, kwargs = arg
-        return self.scrape_one(args, **kwargs)
+    Logger.info(f"scraping {chain_name}")
 
-    def scrape_one(
-        self,
-        chain_scrapper_class,
-        limit=None,
-        files_types=None,
-        store_id=None,
-        when_date=None,
-        suppress_exception=False,
-        min_size=None,
-        max_size=None,
-    ):
-        """scrape one"""
-        chain_scrapper_constractor = ScraperFactory.get(chain_scrapper_class)
-        Logger.info(f"Starting scrapper {chain_scrapper_constractor}")
-        scraper = chain_scrapper_constractor(folder_name=self.dump_folder_name)
-        chain_name = scraper.get_chain_name()
+    # Track state across multiple runs
+    state = FilterState()
+    run_count = 0
+    initial_when_date = when_date
 
-        Logger.info(f"scraping {chain_name}")
-        if self.lookup_in_db:
-            scraper.enable_collection_status()
-            scraper.enable_aggregation_between_runs()
+    # Loop until one of the exit conditions is met
+    while True:
+        # Check for shutdown flag
+        if shutdown_flag and shutdown_flag.value:
+            Logger.info(f"[{chain_name}] Shutdown requested, exiting loop")
+            break
 
-        scraper.scrape(
+        run_count += 1
+        Logger.info(f"[{chain_name}] Starting run #{run_count}")
+
+        # Run the scraper
+        collected_now_count = 0
+        async for _ in scraper.scrape(
+            state=state,
             limit=limit,
             files_types=files_types,
             store_id=store_id,
@@ -112,17 +123,162 @@ class MainScrapperRunner:
             files_names_to_scrape=None,
             filter_null=False,
             filter_zero=False,
-            suppress_exception=suppress_exception,
             min_size=min_size,
             max_size=max_size,
+        ):
+            collected_now_count += 1
+            # Check for shutdown during scraping
+            if shutdown_flag and shutdown_flag.value:
+                Logger.info(f"[{chain_name}] Shutdown requested during scraping")
+                break
+
+        Logger.info(
+            f"[{chain_name}] Run #{run_count} completed. "
+            f"Files found: {collected_now_count}, "
+            f"Total files: {state.file_pass_limit}"
         )
-        Logger.info(f"done scraping {chain_name}")
 
-        folder_with_files = scraper.get_storage_path()
-        if self.size_estimation_mode:
-            Logger.info(f"Summrize test data for {chain_name}")
-            summerize_dump_folder_contant(folder_with_files)
+        # Check for shutdown flag again
+        if shutdown_flag and shutdown_flag.value:
+            Logger.info(f"[{chain_name}] Shutdown requested, exiting loop")
+            break
 
-            Logger.info(f"Cleaning dump folder for {chain_name}")
-            clean_dump_folder(folder_with_files)
-        return folder_with_files
+        # Check exit conditions
+        should_exit, exit_reason = _should_exit(
+            state,
+            limit,
+            single_pass,
+            initial_when_date,
+            collected_now_count,
+            chain_name,
+        )
+
+        if should_exit:
+            Logger.info(f"[{chain_name}] Exiting loop: {exit_reason}")
+            break
+        _sleep(timeout_in_seconds, shutdown_flag)
+
+        # If we're continuing, log that we'll run again
+        if not (shutdown_flag and shutdown_flag.value):
+            Logger.info(f"[{chain_name}] Continuing to next run...")
+
+    Logger.info(f"done scraping {chain_name}")
+
+
+def scrape_one_wrap(chain_scrapper_class, kwargs):
+    """scrape one wrapper, each with its own event loop"""
+    loop = asyncio.new_event_loop()
+    try:
+        asyncio.set_event_loop(loop)
+        return loop.run_until_complete(_scrape_one(chain_scrapper_class, **kwargs))
+    finally:
+        loop.close()
+
+
+class MainScrapperRunner:  # pylint: disable=too-many-instance-attributes
+    """a main scraper to execute all scraping"""
+
+    def __init__(
+        self,
+        enabled_scrapers=None,
+        timeout_in_seconds=60 * 30,
+        multiprocessing=5,
+        output_configuration=None,
+        status_configuration=None,
+    ):
+        assert isinstance(enabled_scrapers, list) or enabled_scrapers is None
+
+        if not enabled_scrapers:
+            enabled_scrapers = ScraperFactory.all_scrapers_name()
+
+        self.enabled_scrapers = enabled_scrapers
+        Logger.info(f"Enabled scrapers: {self.enabled_scrapers}")
+        self.multiprocessing = multiprocessing
+        self.timeout_in_seconds = timeout_in_seconds
+        self.file_output_config = output_configuration or {
+            "output_mode": "disk",
+            "base_storage_path": "dumps",
+        }
+        self.status_config = status_configuration or {
+            "database_type": "json",
+            "base_path": "dumps/status",
+        }
+        self._manager = None
+        self._shutdown_flag = None
+        self._pool = None
+        # Create file_output and status_database objects during init
+        # so they can be consumed before/during scraping
+        self._file_outputs = {}
+        self._status_databases = {}
+        for scraper_name in self.enabled_scrapers:
+            self._file_outputs[scraper_name] = create_file_output_for_scraper(
+                scraper_name, self.file_output_config
+            )
+            self._status_databases[scraper_name] = create_status_database_for_scraper(
+                scraper_name, self.status_config
+            )
+
+    def run(
+        self,
+        limit=None,
+        files_types=None,
+        when_date=False,
+        min_size=None,
+        max_size=None,
+        single_pass=True,
+    ):
+        """run the scraper"""
+        self._manager = Manager()
+        self._shutdown_flag = self._manager.Value("b", False)
+
+        Logger.info(f"Limit is {limit}")
+        Logger.info(f"files_types is {files_types}")
+        Logger.info(f"Start scraping {self.enabled_scrapers}.")
+
+        with Pool(self.multiprocessing) as self._pool:
+            result = self._pool.starmap(
+                scrape_one_wrap,
+                [
+                    (
+                        chain_scrapper_class,
+                        {
+                            "limit": limit,
+                            "files_types": files_types,
+                            "when_date": when_date,
+                            "min_size": min_size,
+                            "max_size": max_size,
+                            "file_output": self._file_outputs[chain_scrapper_class],
+                            "status_database": self._status_databases[
+                                chain_scrapper_class
+                            ],
+                            "single_pass": single_pass,
+                            "timeout_in_seconds": self.timeout_in_seconds,
+                            "shutdown_flag": self._shutdown_flag,
+                        },
+                    )
+                    for chain_scrapper_class in self.enabled_scrapers
+                ],
+            )
+
+        Logger.info("Done scraping all supermarkets.")
+
+        return result
+
+    def consume_results(self):
+        """consume the scraping results - returns dict mapping scraper names
+        to file_output and status_database"""
+        return {
+            scraper_name: self._file_outputs.get(scraper_name)
+            for scraper_name in self._file_outputs
+        }
+
+    def shutdown(self):
+        """Stop the scraping process"""
+        Logger.info("Shutdown requested")
+        if self._shutdown_flag is not None:
+            self._shutdown_flag.value = True
+        if self._pool is not None:
+            Logger.info("Terminating pool processes")
+            self._pool.terminate()
+            self._pool.join()
+            self._pool = None

@@ -13,6 +13,16 @@ from .status import (
     hour_files_expected_to_be_accassible,
 )
 from .scraper_status import ScraperStatus
+from .scraper_status_contract import (
+    FolderSizeInfo,
+    StartedStatus,
+    CollectedStatus,
+    DownloadedStatus,
+    FailedStatus,
+    EstimatedSizeStatus,
+    VerifiedDownload,
+    ScraperStatusOutput,
+)
 from .file_types import FileTypesFilters
 from .connection import (
     download_connection_retry,
@@ -20,9 +30,12 @@ from .connection import (
     disable_when_outside_israel,
     session_with_cookies,
     url_retrieve,
+    url_retrieve_to_memory,
     collect_from_ftp,
     fetch_temporary_gz_file_from_ftp,
+    fetch_file_from_ftp_to_memory,
     wget_file,
+    wget_file_to_memory,
 )
 from .loop import execute_in_parallel, multiple_page_aggregtion
 from .exceptions import RestartSessionError
@@ -31,3 +44,14 @@ from .validation import is_valid_chain_name, change_xml_encoding
 from .folders_name import DumpFolderNames
 from .lock_utils import LockManager, lock_by_string
 from .status import convert_unit, UnitSize, convert_nl_size_to_bytes, string_to_float
+from .state import FilterState
+from .file_output import (
+    FileOutput,
+    DiskFileOutput,
+    QueueFileOutput,
+    AbstractQueueHandler,
+    InMemoryQueueHandler,
+)
+from .scraper_config import ScraperConfig
+from .databases import JsonDataBase, MongoDataBase
+from .scraping_result import ScrapingResult

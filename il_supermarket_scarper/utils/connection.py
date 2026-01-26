@@ -1,10 +1,13 @@
 import contextlib
+import io
 import ntpath
 import os
 import time
 import socket
 import pickle
 import random
+import asyncio
+import fnmatch
 from ftplib import FTP_TLS, error_perm
 import subprocess
 
@@ -94,6 +97,7 @@ def url_connection_retry(init_timeout=15):
             logger=Logger,
             timeout=init_timeout,
             backoff_timeout=10,
+            max_timeout=120,  # Cap timeout at 2 minutes to prevent unbounded growth
         )
         def retry_decorated_func(*args, **kwargs):
             # Use the higher of retry's timeout or the originally requested timeout
@@ -102,6 +106,75 @@ def url_connection_retry(init_timeout=15):
             socket.setdefaulttimeout(actual_timeout)
             kwargs["timeout"] = actual_timeout
             return func(*args, **kwargs)
+
+        return outer_wrapper
+
+    return wrapper
+
+
+def async_url_connection_retry(init_timeout=15):
+    """Async decorator for retry logic of connections trying to send requests"""
+
+    def wrapper(func):
+        # Store the original requested timeout in a closure variable
+        requested_timeout_ref = [init_timeout]
+
+        async def outer_wrapper(*args, **kwargs):
+            # Capture the timeout from the original call
+            original_timeout = kwargs.get("timeout", init_timeout)
+            if original_timeout > requested_timeout_ref[0]:
+                requested_timeout_ref[0] = original_timeout
+
+            # Manual retry logic for async functions
+            _tries = 4
+            _delay = 2
+            backoff = 2
+            max_delay = 5 * 60
+            max_timeout = 120  # Cap timeout at 2 minutes
+
+            while _tries:
+                try:
+                    retry_timeout = kwargs.get("timeout", init_timeout)
+                    actual_timeout = max(retry_timeout, requested_timeout_ref[0])
+                    actual_timeout = min(
+                        actual_timeout, max_timeout
+                    )  # Enforce max timeout
+                    socket.setdefaulttimeout(actual_timeout)
+                    kwargs["timeout"] = actual_timeout
+                    return await func(*args, **kwargs)
+                except exceptions as error:
+                    _tries -= 1
+                    is_final_attempt = not _tries
+
+                    if Logger is not None:
+                        error_type = type(error).__name__
+                        error_msg = str(error)
+                        if len(error_msg) > 200:
+                            error_msg = error_msg[:200] + "..."
+
+                        Logger.warning(
+                            "%s: %s (timeout=%s, retries_left=%d, retrying in %s seconds)",
+                            error_type,
+                            error_msg,
+                            actual_timeout,
+                            _tries,
+                            _delay,
+                        )
+
+                        # Only log full stack trace on final failure
+                        if is_final_attempt:
+                            Logger.error_execption(error)
+
+                    if is_final_attempt:
+                        raise
+
+                    await asyncio.sleep(_delay)
+                    _delay = min(_delay * backoff, max_delay)
+                    requested_timeout_ref[0] = min(
+                        requested_timeout_ref[0] + 10, max_timeout
+                    )  # backoff_timeout with cap
+
+            raise ValueError("shouldn't be called!")
 
         return outer_wrapper
 
@@ -322,50 +395,258 @@ def url_retrieve(url, filename, timeout=30):
         raise ValueError(msg, (filename, _request.headers))
 
 
-@url_connection_retry(60 * 5)
-def collect_from_ftp(
+def url_retrieve_to_memory(url, timeout=30):
+    """Download URL content directly to memory (BytesIO)."""
+    with contextlib.closing(
+        requests.get(
+            url, stream=True, timeout=timeout, headers={"Accept-Encoding": None}
+        )
+    ) as _request:
+        _request.raise_for_status()
+        size = int(_request.headers.get("Content-Length", "-1"))
+        read = 0
+        file_buffer = io.BytesIO()
+        for chunk in _request.iter_content(chunk_size=None):
+            time.sleep(0.5)
+            read += len(chunk)
+            file_buffer.write(chunk)
+
+    if size >= 0 and read < size:
+        msg = f"retrieval incomplete: got only {read:d} out of {size:d} bytes"
+        raise ValueError(msg, (url, _request.headers))
+
+    file_buffer.seek(0)  # Reset to beginning for reading
+    return file_buffer.getvalue()  # Return bytes
+
+
+async def collect_from_ftp(
     ftp_host, ftp_username, ftp_password, ftp_path, arg=None, timeout=60 * 5
 ):
-    """collect all files to download from the site, returns list of (filename, size) tuples"""
+    """Async generator: yields (filename, size) tuples from the FTP server"""
     Logger.info(
-        f"Open connection to FTP server with {ftp_host} "
+        f"Open async connection to FTP server with {ftp_host} "
         f", username: {ftp_username} , password: {ftp_password}"
     )
-    ftp_session = FTP_TLS(ftp_host, ftp_username, ftp_password, timeout=timeout)
-    ftp_session.trust_server_pasv_ipv4_address = True
-    ftp_session.set_pasv(True)
-    ftp_session.cwd(ftp_path)
-    if arg:
-        files = ftp_session.nlst(arg)
-    else:
-        files = ftp_session.nlst()
 
-    # Get file sizes for each file
-    files_with_sizes = []
-    for filename in files:
+    def _sync_ftp_list():  # pylint: disable=too-many-branches
+        """Synchronous FTP listing using FTP_TLS - returns a list"""
+        ftp = FTP_TLS(ftp_host, ftp_username, ftp_password, timeout=timeout)
+        ftp.trust_server_pasv_ipv4_address = True
         try:
-            size = ftp_session.size(filename)
-            files_with_sizes.append((filename, size))
-        except (error_perm, AttributeError):
-            # If size() fails (e.g., for directories or permission issues), use None
-            files_with_sizes.append((filename, None))
+            ftp.cwd(ftp_path)
 
-    ftp_session.quit()
-    return files_with_sizes
+            # Use MLSD for detailed file info if available, fall back to NLST + SIZE
+            files_with_sizes = []
+            try:
+                # MLSD provides detailed info including size
+                all_entries = list(ftp.mlsd())
+
+                for name, facts in all_entries:
+                    if facts.get("type") == "file":
+                        size_str = facts.get("size")
+                        try:
+                            size = int(size_str) if size_str else None
+                        except (ValueError, TypeError):
+                            size = None
+
+                        # Apply glob filter if arg is provided (case-insensitive)
+                        if arg is None or fnmatch.fnmatch(name.lower(), arg.lower()):
+                            files_with_sizes.append((name, size))
+                    elif facts.get("type") in ["dir", "cdir", "pdir"]:
+                        # Skip directories
+                        pass
+                    else:
+                        # Unknown type - include if matches filter (case-insensitive)
+                        if arg is None or fnmatch.fnmatch(name.lower(), arg.lower()):
+                            files_with_sizes.append((name, None))
+            except error_perm:
+                # MLSD not supported, fall back to NLST
+                if arg:
+                    file_list = ftp.nlst(arg)
+                else:
+                    file_list = ftp.nlst()
+
+                # Get size for each file
+                for filename in file_list:
+                    try:
+                        ftp.voidcmd("TYPE I")  # Set binary mode
+                        size = ftp.size(filename)
+                    except error_perm:
+                        size = None
+                    files_with_sizes.append((filename, size))
+
+            return files_with_sizes
+        finally:
+            try:
+                ftp.quit()
+            except Exception:  # pylint: disable=broad-exception-caught
+                ftp.close()
+
+    # Run synchronous FTP operations in a thread pool and get the list
+    files_list = await asyncio.to_thread(_sync_ftp_list)
+
+    # Yield each file as an async generator
+    for filename, size in files_list:
+        yield (filename, "", size)
 
 
-@download_connection_retry()
-def fetch_temporary_gz_file_from_ftp(
-    ftp_host, ftp_username, ftp_password, ftp_path, temporary_gz_file_path, timeout=15
+def _sync_ftp_download(
+    ftp_timeout, ftp_host, ftp_username, ftp_password, ftp_path, temporary_gz_file_path
 ):
-    """download a file from a cerberus base site."""
+    """Synchronous FTP download using FTP_TLS"""
+    socket.setdefaulttimeout(ftp_timeout)
     with open(temporary_gz_file_path, "wb") as file_ftp:
         file_name = ntpath.basename(temporary_gz_file_path)
-        ftp = FTP_TLS(ftp_host, ftp_username, ftp_password, timeout=timeout)
+        ftp = FTP_TLS(ftp_host, ftp_username, ftp_password, timeout=ftp_timeout)
         ftp.trust_server_pasv_ipv4_address = True
         ftp.cwd(ftp_path)
         ftp.retrbinary("RETR " + file_name, file_ftp.write)
         ftp.quit()
+
+
+async def fetch_temporary_gz_file_from_ftp(  # pylint: disable=too-many-locals
+    ftp_host: str,
+    ftp_username: str,
+    ftp_password: str,
+    ftp_path: str,
+    temporary_gz_file_path: str,
+    timeout: int = 15,
+):
+    """download a file from a cerberus base site."""
+    Logger.info(
+        f"Downloading file from FTP server with {ftp_host} "
+        f", username: {ftp_username} , password: {ftp_password}"
+    )
+    # Manual retry logic for async functions (matching download_connection_retry parameters)
+    _tries = 8
+    _delay = 2
+    backoff = 2
+    max_delay = 5 * 60
+    _timeout = timeout
+    backoff_timeout = 5
+    max_timeout = 300  # Cap FTP timeout at 5 minutes
+
+    while _tries:
+        try:
+            await asyncio.to_thread(
+                _sync_ftp_download,
+                _timeout,
+                ftp_host,
+                ftp_username,
+                ftp_password,
+                ftp_path,
+                temporary_gz_file_path,
+            )
+            return
+        except exceptions as error:
+            _tries -= 1
+            is_final_attempt = not _tries
+
+            if Logger is not None:
+                error_type = type(error).__name__
+                error_msg = str(error)
+                if len(error_msg) > 200:
+                    error_msg = error_msg[:200] + "..."
+
+                Logger.warning(
+                    "%s: %s (timeout=%s, retries_left=%d, retrying in %s seconds)",
+                    error_type,
+                    error_msg,
+                    _timeout,
+                    _tries,
+                    _delay,
+                )
+
+                # Only log full stack trace on final failure
+                if is_final_attempt:
+                    Logger.error_execption(error)
+
+            if is_final_attempt:
+                raise
+
+            await asyncio.sleep(_delay)
+            _delay = min(_delay * backoff, max_delay)
+            _timeout = min(_timeout + backoff_timeout, max_timeout)
+
+    raise ValueError("shouldn't be called!")
+
+
+def _sync_ftp_download_to_memory(
+    ftp_host, ftp_username, ftp_password, ftp_path, file_name, ftp_timeout
+):
+    """Synchronous FTP download using FTP_TLS to BytesIO"""
+    socket.setdefaulttimeout(ftp_timeout)
+    file_buffer = io.BytesIO()
+    ftp = FTP_TLS(ftp_host, ftp_username, ftp_password, timeout=ftp_timeout)
+    ftp.trust_server_pasv_ipv4_address = True
+    ftp.cwd(ftp_path)
+    ftp.retrbinary("RETR " + file_name, file_buffer.write)
+    ftp.quit()
+    file_buffer.seek(0)  # Reset to beginning for reading
+    return file_buffer.getvalue()  # Return bytes
+
+
+async def fetch_file_from_ftp_to_memory(  # pylint: disable=too-many-locals
+    ftp_host, ftp_username, ftp_password, ftp_path, file_name, timeout=15
+):
+    """Download a file from FTP server directly to memory (BytesIO)."""
+    Logger.info(
+        f"Downloading file from FTP server to memory: {ftp_host} "
+        f", username: {ftp_username} , password: {ftp_password}, file: {file_name}"
+    )
+
+    # Manual retry logic for async functions (matching download_connection_retry parameters)
+    _tries = 8
+    _delay = 2
+    backoff = 2
+    max_delay = 5 * 60
+    _timeout = timeout
+    backoff_timeout = 5
+    max_timeout = 300  # Cap FTP timeout at 5 minutes
+
+    while _tries:
+        try:
+            file_content = await asyncio.to_thread(
+                _sync_ftp_download_to_memory,
+                ftp_host,
+                ftp_username,
+                ftp_password,
+                ftp_path,
+                file_name,
+                _timeout,
+            )
+            return file_content
+        except exceptions as error:
+            _tries -= 1
+            is_final_attempt = not _tries
+
+            if Logger is not None:
+                error_type = type(error).__name__
+                error_msg = str(error)
+                if len(error_msg) > 200:
+                    error_msg = error_msg[:200] + "..."
+
+                Logger.warning(
+                    "%s: %s (timeout=%s, retries_left=%d, retrying in %s seconds)",
+                    error_type,
+                    error_msg,
+                    _timeout,
+                    _tries,
+                    _delay,
+                )
+
+                # Only log full stack trace on final failure
+                if is_final_attempt:
+                    Logger.error_execption(error)
+
+            if is_final_attempt:
+                raise
+
+            await asyncio.sleep(_delay)
+            _delay = min(_delay * backoff, max_delay)
+            _timeout = min(_timeout + backoff_timeout, max_timeout)
+
+    raise ValueError("shouldn't be called!")
 
 
 def wget_file(file_link, file_save_path):
@@ -401,3 +682,14 @@ def wget_file(file_link, file_save_path):
             f"collection and download, std_err is {std_err}"
         )
     return file_save_path
+
+
+def wget_file_to_memory(file_link, timeout=30):
+    """Download file to memory using requests (fallback when wget fails)."""
+    Logger.debug(f"trying to download file {file_link} to memory (requests fallback).")
+    try:
+        # Use requests as a fallback when wget fails
+        return url_retrieve_to_memory(file_link, timeout=timeout)
+    except Exception as e:
+        Logger.error(f"Failed to download {file_link} to memory: {e}")
+        raise FileNotFoundError(f"File wasn't downloaded to memory, error: {str(e)}")

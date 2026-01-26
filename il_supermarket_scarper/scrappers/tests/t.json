@@ -1,0 +1,58 @@
+{
+    "20260105123840": [
+        {
+            "status": "started",
+            "when": "2026-01-05 12:38:40.610760+02:00",
+            "limit": 1,
+            "files_requested": null,
+            "store_id": null,
+            "files_names_to_scrape": null,
+            "when_date": null,
+            "filter_nul": true,
+            "filter_zero": true,
+            "suppress_exception": true
+        },
+        {
+            "status": "collected",
+            "when": "2026-01-05 12:38:43.613704+02:00",
+            "file_name_collected_from_site": [
+                "Promo7290875100001-066-202601051222"
+            ],
+            "links_collected_from_site": [
+                "http://superbareket.binaprojects.com//Download.aspx?FileNm=Promo7290875100001-066-202601051222.gz"
+            ]
+        },
+        {
+            "status": "downloaded",
+            "when": "2026-01-05 12:38:49.688394+02:00",
+            "results": [
+                {
+                    "file_name": "Promo7290875100001-066-202601051222",
+                    "downloaded": true,
+                    "extract_succefully": true,
+                    "error": null,
+                    "restart_and_retry": false
+                }
+            ]
+        },
+        {
+            "status": "estimated_size",
+            "when": "2026-01-05 12:38:49.704610+02:00",
+            "folder_size": {
+                "size": 0.006127357482910156,
+                "unit": "MB",
+                "folder": "/tmp/tmpa505ehzd/Bareket",
+                "folder_content": [
+                    "/tmp/tmpa505ehzd/Bareket/Promo7290875100001-066-202601051222.aspx.xml"
+                ]
+            },
+            "completed_successfully": true
+        }
+    ],
+    "verified_downloads": [
+        {
+            "file_name": "Promo7290875100001-066-202601051222",
+            "when": "2026-01-05 12:38:49.699026+02:00"
+        }
+    ]
+}
