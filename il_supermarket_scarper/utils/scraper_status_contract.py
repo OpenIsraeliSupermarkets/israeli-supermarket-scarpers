@@ -74,6 +74,16 @@ class FailedStatus(BaseModel):
     file_name: str
 
 
+class SawStatus(BaseModel):
+    """Status event when file is seen on site."""
+
+    status: str = "saw"
+    when: Optional[datetime] = None
+    file_name: str
+    link: str
+    size: Optional[int] = None
+
+
 class VerifiedDownload(BaseModel):
     """Record of a verified downloaded file."""
 
@@ -95,8 +105,8 @@ class ScraperStatusOutput(BaseModel):
     global_status: List[Union[StartedStatus, EstimatedSizeStatus]] = Field(
         default_factory=list
     )
-    events: List[Union[CollectedStatus, DownloadedStatus, FailedStatus]] = Field(
-        default_factory=list
+    events: List[Union[CollectedStatus, DownloadedStatus, FailedStatus, SawStatus]] = (
+        Field(default_factory=list)
     )
     verified_downloads: List[VerifiedDownload] = Field(default_factory=list)
 
@@ -125,6 +135,7 @@ class ScraperStatusOutput(BaseModel):
 
         per_file = defaultdict(
             lambda: {
+                "saw": False,
                 "collected": False,
                 "downloaded": False,
                 "failed": False,
@@ -134,7 +145,11 @@ class ScraperStatusOutput(BaseModel):
         per_file_status_counter = defaultdict(list)
 
         for event in self.events:
-            if isinstance(event, CollectedStatus):
+            if isinstance(event, SawStatus):
+                fn = event.file_name
+                per_file[fn]["saw"] = True
+                per_file_status_counter[fn].append("saw")
+            elif isinstance(event, CollectedStatus):
                 file_names = self._extract_file_names_from_collected_status(
                     event.file_names_collected
                 )
@@ -168,6 +183,8 @@ class ScraperStatusOutput(BaseModel):
         - If downloaded, must also be verified
         """
         # Must be collected
+        if not status["saw"]:
+            return False
         if not status["collected"]:
             return False
         # Must be either downloaded OR failed
@@ -194,12 +211,12 @@ class ScraperStatusOutput(BaseModel):
         Validate that the status file is valid.
 
         Ensures that for every file name that was actually attempted (downloaded,
-        failed, or verified), there is a reasonable 'story' for that file: collected ->
-        (downloaded or failed) -> (verified or failed)
+        failed, or verified), there is a reasonable 'story' for that file: saw ->
+        collected -> (downloaded or failed) -> (verified if downloaded)
 
         Also validates that if a limit was set, only that many files were downloaded.
 
-        Note: Files that were only collected but never attempted (e.g., due to limit
+        Note: Files that were only saw/collected but never attempted (e.g., due to limit
         constraints) are not validated, as they were never intended to be downloaded.
         """
         per_file, per_file_status_counter = self._build_per_file_status_data()
@@ -221,16 +238,13 @@ class ScraperStatusOutput(BaseModel):
         # Validate limit if it was set
         if limit is not None and limit > 0:
             if downloaded_count != limit:
-                return (
-                    False,
-                    f"Downloaded {downloaded_count} files, but limit was {limit}",
-                )
+                return False
 
         # Only validate files that were actually attempted (downloaded, failed, or verified)
-        # Files that were only collected but never attempted shouldn't be validated
+        # Files that were only saw/collected but never attempted shouldn't be validated
         for fn, status in per_file.items():
-            # Skip validation for files that were only collected but never attempted
-            if status["collected"] and not (
+            # Skip validation for files that were only saw/collected but never attempted
+            if (status["saw"] or status["collected"]) and not (
                 status["downloaded"] or status["failed"] or status["verified"]
             ):
                 continue
