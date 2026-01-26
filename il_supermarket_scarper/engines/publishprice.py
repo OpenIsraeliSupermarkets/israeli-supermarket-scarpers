@@ -1,7 +1,7 @@
-from bs4 import BeautifulSoup
 import json
+from bs4 import BeautifulSoup
+
 from il_supermarket_scarper.utils.logger import Logger
-from il_supermarket_scarper.utils.status import convert_unit, UnitSize
 from .web import WebBase
 
 
@@ -65,21 +65,6 @@ class PublishPrice(WebBase):
 
     def extract_task_from_entry(self, all_trs):
         """from the trs extract the download urls, file names, and file sizes"""
-
-        def get_herf_element(x):
-            herfs = x.find_all("a")
-            if len(herfs) > 0:
-                return herfs[-1]
-            return None
-
-        def get_herf(x):
-            return get_herf_element(x).attrs["href"]
-
-        def get_path_from_herf(x):
-            return get_herf(x).replace("\\", "").replace('"', "").replace("./", "")
-
-        def get_name_from_herf(x):
-            return get_path_from_herf(x).split(".")[0].split("/")[-1]
 
         download_urls = []
         file_names = []
