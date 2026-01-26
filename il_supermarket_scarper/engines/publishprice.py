@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
-
+import json
 from il_supermarket_scarper.utils.logger import Logger
+from il_supermarket_scarper.utils.status import convert_unit, UnitSize
 from .web import WebBase
 
 
@@ -46,14 +47,23 @@ class PublishPrice(WebBase):
         soup = BeautifulSoup(req_res.text, features="lxml")
 
         # the developer hard-coded the files names in the html
-        all_trs = (
-            soup.find_all("script")[-1]
-            .text.replace("const files_html = [", "")
-            .replace("];", "")
-            .split("\n")[5]
-            .split(",")
-        )
-        return list(map(lambda x: BeautifulSoup(x, features="lxml"), all_trs))
+        script_text = soup.find_all("script")[-2].text
+
+        # Extract path (date folder)
+        path_data = script_text.split("const path = ")[1]
+        path = path_data.split(";")[0].strip().strip("'\"")
+
+        # Extract files array
+        all_data = script_text.split("const files = ")[1]
+        all_files = json.loads(all_data.split("\n")[0].replace(";", ""))
+
+        # Add path to each file entry and format size
+        for file_entry in all_files:
+            file_entry["path"] = path
+            file_entry["size_formatted"] = file_entry.get("size", 0)
+
+        # all_chains = json.loads(all_data.split("\n")[1])
+        return all_files
 
     async def extract_task_from_entry(self, all_trs):
         """from the trs extract the download urls, file names, and file sizes"""
@@ -73,18 +83,21 @@ class PublishPrice(WebBase):
         def get_name_from_herf(x):
             return get_path_from_herf(x).split(".")[0].split("/")[-1]
 
-        all_trs = list(
-            filter(
-                lambda x: get_herf_element(x) is not None,
-                all_trs,
-            )
-        )
-
+        download_urls = []
+        file_names = []
+        file_sizes = []
         for x in all_trs:
             try:
-                download_url = self.url + get_path_from_herf(x)
-                file_name = get_name_from_herf(x)
-                file_size = self.get_file_size_from_entry(x)
-                yield download_url, file_name, file_size
+                # Format href with path: url/path/filename
+                path = x.get("path", "")
+                base_url = self.url.rstrip("/")
+                if path:
+                    href = f"{base_url}/{path}/{x['name']}"
+                else:
+                    href = f"{base_url}/{x['name']}"
+                download_urls.append(href)
+                file_names.append(x["name"])
+                # Use formatted size if available, otherwise format it
+                file_sizes.append(x.get("size_formatted", x.get("size", 0)))
             except (AttributeError, KeyError, IndexError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")

@@ -13,6 +13,10 @@ temp*/
 test_dump
 status/
 .cache/
+<<<<<<< HEAD
 stress_test_results.json
 status_logs/*
 docs/source/api/
+=======
+docs/*
+>>>>>>> changes
