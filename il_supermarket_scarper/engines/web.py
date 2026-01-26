@@ -128,6 +128,8 @@ class WebBase(Engine):
             files_types=files_types, store_id=store_id, when_date=when_date
         )
 
+        extracted_files = self.register_all_saw_files_on_site(extracted_files)
+
         # Filter by file size if specified
         if min_size is not None or max_size is not None:
             filtered_files = self.filter_by_file_size(

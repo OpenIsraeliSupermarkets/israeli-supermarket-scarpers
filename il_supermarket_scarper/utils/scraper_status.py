@@ -13,6 +13,7 @@ class ScraperStatus:
     """A class that abstracts the database interface for scraper status."""
 
     STARTED = "started"
+    SAW = "saw"
     COLLECTED = "collected"
     DOWNLOADED = "downloaded"
     FAILED = "failed"
@@ -43,6 +44,24 @@ class ScraperStatus:
             ScraperStatus.STARTED,
             limit=limit,
             files_requested=files_types,
+            **additional_info,
+        )
+
+    @lock_by_string()
+    def register_saw_file(
+        self,
+        file_name,
+        link,
+        size,
+        **additional_info,
+    ):
+        """Report that file details have been collected."""
+        # Convert to comma-separated strings to match contract
+        self._insert_event(
+            ScraperStatus.SAW,
+            file_name=file_name,
+            link=link,
+            size=size,
             **additional_info,
         )
 

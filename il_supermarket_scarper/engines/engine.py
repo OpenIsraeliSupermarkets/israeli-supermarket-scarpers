@@ -180,6 +180,21 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             return False
         return True
 
+    async def register_all_saw_files_on_site(
+        self,
+        files: AsyncGenerator[tuple[str, str, Optional[int]], None],
+    ):
+        """register the file as saw on site"""
+        async for file in files:
+            # Handle both 2-element and 3-element tuples for backward compatibility
+            file_name, link, size = file[1], file[0], file[2]
+            self.register_saw_file(
+                file_name=file_name,
+                link=link,
+                size=size,
+            )
+            yield file
+
     async def filter_bad_files(
         self,
         files: AsyncGenerator[tuple[str, str], None],
