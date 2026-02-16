@@ -1,6 +1,7 @@
 from pathlib import Path
 import urllib.parse
 import datetime
+from io import BytesIO
 
 import json
 from il_supermarket_scarper.engines import MultiPageWeb
@@ -37,7 +38,7 @@ class SuperPharm(MultiPageWeb):
         return links, filenames, file_sizes
 
     @url_connection_retry()
-    def retrieve_file(self, file_link, file_save_path, timeout=15):
+    def retrieve_file_to_stream(self, file_link, timeout=15):
         Logger.debug(f"On a new Session: calling {file_link}")
 
         response_content = self.session_with_cookies_by_chain(
@@ -49,10 +50,10 @@ class SuperPharm(MultiPageWeb):
         file_to_save = self.session_with_cookies_by_chain(
             self.url + spath["href"], timeout=timeout
         )
-        file_to_save_with_ext = file_save_path + ".gz"
-        Path(file_to_save_with_ext).write_bytes(file_to_save.content)
+        buffer = BytesIO(file_to_save.content)
+        buffer.seek(0)
 
-        return file_to_save_with_ext
+        return buffer
 
     def get_file_types_id(self, files_types=None):
         """get the file type id"""

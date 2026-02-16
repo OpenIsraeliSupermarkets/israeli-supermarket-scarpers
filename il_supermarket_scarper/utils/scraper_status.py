@@ -104,7 +104,7 @@ class ScraperStatus:
 
             documents = []
             for res in results:
-                if res["extract_succefully"]:
+                if res["extract_successfully"]:
                     documents.append(
                         {"file_name": res["file_name"], "when": when},
                     )

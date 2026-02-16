@@ -13,6 +13,7 @@ from http.cookiejar import LoadError
 from typing import Union, List
 from urllib.error import URLError
 from urllib3.exceptions import MaxRetryError, ReadTimeoutError
+from io import BytesIO
 
 
 import requests
@@ -355,12 +356,14 @@ def get_from_webpage(cached_page, extraction_type):
     return content
 
 
-def url_retrieve(url, filename, timeout=30):
+def url_retrieve(url, timeout=30, chunk_size=8192):
     # from urllib.request import urlretrieve
     # urlretrieve(url, filename)
     # >>> add here timeout if needed
     """alternative to urllib.request.urlretrieve"""
     # https://gist.github.com/xflr6/f29ed682f23fd27b6a0b1241f244e6c9
+    buffer = BytesIO()
+    
     with contextlib.closing(
         requests.get(
             url, stream=True, timeout=timeout, headers={"Accept-Encoding": None}
@@ -369,16 +372,18 @@ def url_retrieve(url, filename, timeout=30):
         _request.raise_for_status()
         size = int(_request.headers.get("Content-Length", "-1"))
         read = 0
-        with open(filename, "wb") as file:
-            for chunk in _request.iter_content(chunk_size=None):
-                time.sleep(0.5)
-                read += len(chunk)
-                file.write(chunk)
-                file.flush()
+                
+        for chunk in _request.iter_content(chunk_size=chunk_size):
+            # time.sleep(0.5) why is it here???
+            read += len(chunk)
+            buffer.write(chunk)
 
     if size >= 0 and read < size:
         msg = f"retrieval incomplete: got only {read:d} out of {size:d} bytes"
-        raise ValueError(msg, (filename, _request.headers))
+        raise ValueError(msg)
+    
+    buffer.seek(0)
+    return buffer
 
 
 @url_connection_retry(60 * 5)
@@ -414,49 +419,42 @@ def collect_from_ftp(
 
 
 @download_connection_retry()
-def fetch_temporary_gz_file_from_ftp(
-    ftp_host, ftp_username, ftp_password, ftp_path, temporary_gz_file_path, timeout=15
+def fetch_ftp_to_buffer(
+    ftp_host, ftp_username, ftp_password, ftp_path, file_name, timeout=15, chunk_size=8192
 ):
-    """download a file from a cerberus base site."""
-    with open(temporary_gz_file_path, "wb") as file_ftp:
-        file_name = ntpath.basename(temporary_gz_file_path)
-        ftp = FTP_TLS(ftp_host, ftp_username, ftp_password, timeout=timeout)
-        ftp.trust_server_pasv_ipv4_address = True
-        ftp.cwd(ftp_path)
-        ftp.retrbinary("RETR " + file_name, file_ftp.write)
-        ftp.quit()
+    """download a file to stream from a cerberus base site."""
+    buffer = BytesIO()
+
+    ftp = FTP_TLS(ftp_host, ftp_username, ftp_password, timeout=timeout)
+    ftp.trust_server_pasv_ipv4_address = True
+    ftp.cwd(ftp_path)
+    ftp.retrbinary("RETR " + file_name, buffer.write, blocksize=chunk_size)
+    ftp.quit()
+    
+    buffer.seek(0)
+    return buffer
 
 
-def wget_file(file_link, file_save_path):
-    """use wget to download file"""
-    Logger.debug(f"trying wget file {file_link} to {file_save_path}.")
+def wget_file(file_link):
+    """use wget to download file into buffer"""
+    Logger.debug(f"trying wget file {file_link}.")
 
     with subprocess.Popen(
-        f"wget --output-document={file_save_path} '{file_link}'",
+        f"wget --output-document=- '{file_link}'",
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        text=True,
         shell=True,
     ) as process:
         std_out, std_err = process.communicate()
-    Logger.debug(f"Wget stdout {std_out}")
-    Logger.debug(f"Wget stderr {std_err}")
+    
+    std_err_text = std_err.decode('utf-8', errors='ignore')
+    Logger.debug(f"Wget stderr {std_err_text}")
 
-    if not os.path.exists(file_save_path):
-        Logger.error(f"fils is not exists after wget {file_save_path}")
-        raise FileNotFoundError(
-            f"File wasn't downloaded with wget,std_err is {std_err}"
-        )
-
-    # wget will create file always, so we need to check if there was an error
-    # example for validate case is collecting start and
-    # the file is removed before downloading (change of hour)
-    if "ERROR 403" in std_err or "ERROR 404" in std_err:
-        if os.path.exists(file_save_path):
-            os.remove(file_save_path)
-        Logger.error(f"Got error {std_err} while downloading {file_link}")
-        raise FileNotFoundError(
-            f"File wan't found in the remote, possibly removed between "
-            f"collection and download, std_err is {std_err}"
-        )
-    return file_save_path
+    if process.returncode != 0:
+            Logger.error(f"wget failed with return code {process.returncode}")
+            raise FileNotFoundError(
+                f"File download failed, stderr: {std_err_text}"
+            )
+    buffer = BytesIO(std_out)
+    buffer.seek(0)
+    return buffer

@@ -2,11 +2,11 @@ import os
 import datetime
 
 from il_supermarket_scarper.utils import (
-    extract_xml_file_from_gz_file,
+    extract_xml_file_from_gz,
     Logger,
     execute_in_parallel,
     collect_from_ftp,
-    fetch_temporary_gz_file_from_ftp,
+    fetch_ftp_to_buffer,
     FileTypesFilters,
 )
 from .engine import Engine
@@ -192,7 +192,7 @@ class Cerberus(Engine):
     def persist_from_ftp(self, file_name):
         """download file to hard drive and extract it."""
         downloaded = False
-        extract_succefully = False
+        extract_successfully = False
         restart_and_retry = False
         error = None
         try:
@@ -201,42 +201,37 @@ class Cerberus(Engine):
                 raise ValueError(f"File {file_name} extension is not .gz or .xml")
 
             Logger.debug(f"Start persisting file {file_name}")
-            temporary_gz_file_path = os.path.join(self.storage_path, file_name)
-
-            fetch_temporary_gz_file_from_ftp(
+            
+            buffer = fetch_ftp_to_buffer(
                 self.ftp_host,
                 self.ftp_username,
                 self.ftp_password,
                 self.ftp_path,
-                temporary_gz_file_path,
+                file_name,
                 timeout=30,
             )
             downloaded = True
-
+            Logger.debug(f"File size is {buffer.getbuffer().nbytes} bytes.")
+            
             if ext == ".gz":
-                Logger.debug(
-                    f"File size is {os.path.getsize(temporary_gz_file_path)} bytes."
-                )
-                extract_xml_file_from_gz_file(temporary_gz_file_path)
-
+                buffer = extract_xml_file_from_gz(buffer, file_name)
+            
+            file_save_path = os.path.join(self.storage_path, file_name)
+            with open(file_save_path, 'wb') as f:
+                f.write(buffer.getvalue())
+        
             Logger.debug(f"Done persisting file {file_name}")
-            extract_succefully = True
+            extract_successfully = True
         except Exception as exception:  # pylint: disable=broad-except
-            Logger.error(
-                f"Error downloading {file_name},extract_succefully={extract_succefully}"
-                f",downloaded={downloaded}"
-            )
+            self._log_download_error(file_name, extract_successfully, downloaded)
             Logger.error_execption(exception)
             error = str(exception)
             restart_and_retry = True
-        finally:
-            if ext == ".gz" and os.path.exists(temporary_gz_file_path):
-                os.remove(temporary_gz_file_path)
 
         return {
             "file_name": file_name,
             "downloaded": downloaded,
-            "extract_succefully": extract_succefully,
+            "extract_successfully": extract_successfully,
             "restart_and_retry": restart_and_retry,
             "error": error,
         }

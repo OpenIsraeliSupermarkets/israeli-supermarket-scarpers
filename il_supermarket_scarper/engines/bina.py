@@ -125,7 +125,18 @@ class Bina(Aspx):
         return None
 
     @url_connection_retry()
-    def retrieve_file(self, file_link, file_save_path, timeout=30):
+    def retrieve_file_to_stream(self, file_link, timeout=30):
+        response_content = self.session_with_cookies_by_chain(
+            file_link,
+            timeout=timeout
+        )
+        spath = json.loads(response_content.content)
+        Logger.debug(f"Found spath: {spath}")
+
+        url = spath[0]["SPath"]
+        return url_retrieve(url, timeout=timeout)
+
+    def _wget_file(self, file_link):
         response_content = self.session_with_cookies_by_chain(
             file_link,
         )
@@ -133,18 +144,4 @@ class Bina(Aspx):
         Logger.debug(f"Found spath: {spath}")
 
         url = spath[0]["SPath"]
-        ext = file_link.split(".")[-1]
-
-        url_retrieve(url, file_save_path + "." + ext, timeout=timeout)
-        return file_save_path + "." + ext
-
-    def _wget_file(self, file_link, file_save_path):
-        response_content = self.session_with_cookies_by_chain(
-            file_link,
-        )
-        spath = json.loads(response_content.content)
-        Logger.debug(f"Found spath: {spath}")
-
-        url = spath[0]["SPath"]
-        ext = file_link.split(".")[-1]
-        return super()._wget_file(url, file_save_path.split(".")[0] + "." + ext)
+        return super()._wget_file(url)

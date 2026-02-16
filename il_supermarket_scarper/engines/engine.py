@@ -4,13 +4,14 @@ import re
 import random
 import uuid
 import datetime
+from pathlib import Path
 
 from il_supermarket_scarper.utils import (
     get_output_folder,
     FileTypesFilters,
     Logger,
     ScraperStatus,
-    extract_xml_file_from_gz_file,
+    extract_xml_file_from_gz,
     url_connection_retry,
     session_with_cookies,
     url_retrieve,
@@ -38,7 +39,7 @@ class Engine(ScraperStatus, ABC):
         self.assigned_cookie = f"{self.chain.name}_{uuid.uuid4()}_cookies.txt"
 
     def get_storage_path(self):
-        """the the storage page of the files downloaded"""
+        """the storage page of the files downloaded"""
         return self.storage_path
 
     def is_valid_file_empty(self, file_name):
@@ -447,10 +448,10 @@ class Engine(ScraperStatus, ABC):
         return filtered_names, filtered_urls, filtered_sizes
 
     @url_connection_retry()
-    def retrieve_file(self, file_link, file_save_path, timeout=30):
-        """download file"""
-        url_retrieve(file_link, file_save_path, timeout=timeout)
-        return file_save_path
+    def retrieve_file_to_stream(self, file_link, timeout=30):
+        """download file to stream"""
+        return url_retrieve(file_link, timeout=timeout)
+
 
     def save_and_extract(self, arg):
         """download file and extract it"""
@@ -460,7 +461,7 @@ class Engine(ScraperStatus, ABC):
         Logger.debug(f"Downloading {file_link} to {file_save_path}")
         (
             downloaded,
-            extract_succefully,
+            extract_successfully,
             error,
             restart_and_retry,
         ) = self._save_and_extract(file_link, file_save_path)
@@ -468,61 +469,65 @@ class Engine(ScraperStatus, ABC):
         return {
             "file_name": file_name,
             "downloaded": downloaded,
-            "extract_succefully": extract_succefully,
+            "extract_successfully": extract_successfully,
             "error": error,
             "restart_and_retry": restart_and_retry,
         }
 
-    def _wget_file(self, file_link, file_save_path):
-        return wget_file(file_link, file_save_path)
+    def _wget_file(self, file_link):
+        return wget_file(file_link)
+    
+    def _fix_extension(self, file_link, file_save_path):
+        """add appropriate extension if missing from file"""
+        extenstions = (".gz", ".xml")
+        if file_link.endswith(extenstions) and not file_save_path.endswith(extenstions):
+            file_save_path += Path(file_link.split("?")[0]).suffix
+        return file_save_path
 
     def _save_and_extract(self, file_link, file_save_path):
         downloaded = False
-        extract_succefully = False
+        extract_successfully = False
         error = None
         restart_and_retry = False
         try:
-
-            # add ext if possible
-            if not (
-                file_save_path.endswith(".gz") or file_save_path.endswith(".xml")
-            ) and (file_link.endswith(".gz") or file_link.endswith(".xml")):
-                file_save_path = (
-                    file_save_path + "." + file_link.split("?")[0].split(".")[-1]
-                )
-
-            # try to download the file
+            file_save_path = self._fix_extension(file_link, file_save_path)
+            
+            # Try stream download first
             try:
-                file_save_path_with_ext = self.retrieve_file(file_link, file_save_path)
+                buffer = self.retrieve_file_to_stream(file_link)
             except Exception as e:  # pylint: disable=broad-except
                 Logger.warning(f"Error downloading {file_link}: {e}")
-                file_save_path_with_ext = self._wget_file(file_link, file_save_path)
+                buffer = self._wget_file(file_link)
+            
+            Logger.debug(f"File size is {buffer.getbuffer().nbytes} bytes.")
             downloaded = True
 
-            if file_save_path_with_ext.endswith("gz"):
-                Logger.debug(
-                    f"File size is {os.path.getsize(file_save_path_with_ext)} bytes."
-                )
-                extract_xml_file_from_gz_file(file_save_path_with_ext)
+            if file_link.endswith(".gz"):
+                buffer = extract_xml_file_from_gz(buffer, file_save_path)
+                file_save_path = Path(file_save_path).with_suffix('.xml')
 
-                os.remove(file_save_path_with_ext)
-            extract_succefully = True
+            
+            with open(file_save_path, 'wb') as f:
+                f.write(buffer.getvalue())
 
+            extract_successfully = True
             Logger.debug(f"Done downloading {file_link}")
+            
         except RestartSessionError as exception:
-            Logger.error(
-                f"Error downloading {file_link},extract_succefully={extract_succefully}"
-                f",downloaded={downloaded}"
-            )
-            Logger.error_execption(exception)
+            self._log_download_error(file_link, extract_successfully, downloaded)
+            Logger.error_exception(exception)
             error = str(exception)
             restart_and_retry = True
+            
         except Exception as exception:  # pylint: disable=broad-except
-            Logger.error(
-                f"Error downloading {file_link},extract_succefully={extract_succefully}"
-                f",downloaded={downloaded}"
-            )
-            Logger.error_execption(exception)
+            self._log_download_error(file_link, extract_successfully, downloaded)
+            Logger.error_exception(exception)
             error = str(exception)
 
-        return downloaded, extract_succefully, error, restart_and_retry
+        return downloaded, extract_successfully, error, restart_and_retry
+        
+    def _log_download_error(file_link, extract_successfully, downloaded):
+        Logger.error(
+                f"Error downloading {file_link},extract_successfully={extract_successfully}, "
+                f"downloaded={downloaded}"
+            )

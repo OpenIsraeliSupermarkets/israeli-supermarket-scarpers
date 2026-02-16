@@ -1,4 +1,4 @@
-from .gzip_utils import extract_xml_file_from_gz_file
+from .gzip_utils import extract_xml_file_from_gz
 from .logger import Logger
 from .status import (
     get_output_folder,
@@ -21,7 +21,7 @@ from .connection import (
     session_with_cookies,
     url_retrieve,
     collect_from_ftp,
-    fetch_temporary_gz_file_from_ftp,
+    fetch_ftp_to_buffer,
     wget_file,
 )
 from .loop import execute_in_parallel, multiple_page_aggregtion
