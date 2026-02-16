@@ -70,7 +70,7 @@ class Logger:
             cls.logger.error(msg, *args, **kwargs)
 
     @classmethod
-    def error_execption(cls, _):
+    def error_exception(cls, _):
         """log execption"""
         if cls.enabled:
             cls.logger.error(

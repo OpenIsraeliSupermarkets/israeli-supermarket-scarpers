@@ -201,7 +201,7 @@ class Cerberus(Engine):
                 raise ValueError(f"File {file_name} extension is not .gz or .xml")
 
             Logger.debug(f"Start persisting file {file_name}")
-            
+
             buffer = fetch_ftp_to_buffer(
                 self.ftp_host,
                 self.ftp_username,
@@ -212,19 +212,19 @@ class Cerberus(Engine):
             )
             downloaded = True
             Logger.debug(f"File size is {buffer.getbuffer().nbytes} bytes.")
-            
+
             if ext == ".gz":
                 buffer = extract_xml_file_from_gz(buffer, file_name)
-            
+
             file_save_path = os.path.join(self.storage_path, file_name)
             with open(file_save_path, 'wb') as f:
                 f.write(buffer.getvalue())
-        
+
             Logger.debug(f"Done persisting file {file_name}")
             extract_successfully = True
         except Exception as exception:  # pylint: disable=broad-except
             self._log_download_error(file_name, extract_successfully, downloaded)
-            Logger.error_execption(exception)
+            Logger.error_exception(exception)
             error = str(exception)
             restart_and_retry = True
 

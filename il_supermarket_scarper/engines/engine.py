@@ -476,7 +476,7 @@ class Engine(ScraperStatus, ABC):
 
     def _wget_file(self, file_link):
         return wget_file(file_link)
-    
+
     def _fix_extension(self, file_link, file_save_path):
         """add appropriate extension if missing from file"""
         extenstions = (".gz", ".xml")
@@ -491,14 +491,14 @@ class Engine(ScraperStatus, ABC):
         restart_and_retry = False
         try:
             file_save_path = self._fix_extension(file_link, file_save_path)
-            
+
             # Try stream download first
             try:
                 buffer = self.retrieve_file_to_stream(file_link)
             except Exception as e:  # pylint: disable=broad-except
                 Logger.warning(f"Error downloading {file_link}: {e}")
                 buffer = self._wget_file(file_link)
-            
+
             Logger.debug(f"File size is {buffer.getbuffer().nbytes} bytes.")
             downloaded = True
 
@@ -506,27 +506,27 @@ class Engine(ScraperStatus, ABC):
                 buffer = extract_xml_file_from_gz(buffer, file_save_path)
                 file_save_path = Path(file_save_path).with_suffix('.xml')
 
-            
+
             with open(file_save_path, 'wb') as f:
                 f.write(buffer.getvalue())
 
             extract_successfully = True
             Logger.debug(f"Done downloading {file_link}")
-            
+
         except RestartSessionError as exception:
             self._log_download_error(file_link, extract_successfully, downloaded)
             Logger.error_exception(exception)
             error = str(exception)
             restart_and_retry = True
-            
+
         except Exception as exception:  # pylint: disable=broad-except
             self._log_download_error(file_link, extract_successfully, downloaded)
             Logger.error_exception(exception)
             error = str(exception)
 
         return downloaded, extract_successfully, error, restart_and_retry
-        
-    def _log_download_error(file_link, extract_successfully, downloaded):
+
+    def _log_download_error(self, file_link, extract_successfully, downloaded):
         Logger.error(
                 f"Error downloading {file_link},extract_successfully={extract_successfully}, "
                 f"downloaded={downloaded}"

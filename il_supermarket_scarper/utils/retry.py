@@ -83,7 +83,7 @@ def __retry_internal(  # pylint: disable=broad-except,too-many-locals
                     measured_seconds,
                     _delay,
                 )
-                logger.error_execption(error)
+                logger.error_exception(error)
 
             time.sleep(_delay)
             _delay *= backoff

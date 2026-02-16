@@ -9360,7 +9360,7 @@
                 "cumtime_per_call": "0.001"
             },
             {
-                "function": "/workspaces/israeli-supermarket-scarpers/il_supermarket_scarper/utils/logger.py:58(error_execption)",
+                "function": "/workspaces/israeli-supermarket-scarpers/il_supermarket_scarper/utils/logger.py:58(error_exception)",
                 "ncalls": "1",
                 "tottime": "0.000",
                 "tottime_per_call": "0.000",
