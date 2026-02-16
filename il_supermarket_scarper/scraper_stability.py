@@ -210,6 +210,60 @@ class SuperYuda(FullyStable):
         ) or cls.searching_for_store_full(files_types=files_types)
 
 
+class QuikSiteIsDown(FullyStable):
+    """Quik site is down"""
+
+    @classmethod
+    def pass_expiration_date(cls):
+        return datetime(2027, 5, 1)
+
+    @classmethod
+    def failire_valid(cls, **_):
+        return True
+
+
+class PublishOnlyStores(FullyStable):
+    """Publish only stores"""
+
+    @classmethod
+    def pass_expiration_date(cls):
+        return datetime(2027, 5, 1)
+
+    @classmethod
+    def searching_for_not_store_full(cls, files_types=None, **_):
+        """if the execution is in saturday"""
+        return (
+            files_types is not None
+            and FileTypesFilters.STORE_FILE.name not in files_types
+        )
+
+    @classmethod
+    def search_for_a_specific_store(cls, store_id=None, **_):
+        """if the store id is match"""
+        return store_id is not None
+
+    @classmethod
+    def failire_valid(
+        cls,
+        when_date=None,
+        files_types=None,
+        utilize_date_param=True,
+        store_id=None,
+        **_,
+    ):
+        return (
+            super(cls, PublishOnlyStores).failire_valid(
+                when_date=when_date,
+                files_types=files_types,
+                utilize_date_param=utilize_date_param,
+            )
+            or cls.searching_for_not_store_full(
+                files_types=files_types, store_id=store_id
+            )
+            or cls.search_for_a_specific_store(store_id=store_id)
+        )
+
+
 class DoNotPublishPromo(FullyStable):
     """stablity for chains that doesn't pubish stores"""
 
@@ -242,13 +296,15 @@ class ScraperStability(Enum):
 
     # COFIX = DoNotPublishStores
     NETIV_HASED = NetivHased
-    QUIK = DoNotPublishStores
+    QUIK = QuikSiteIsDown
     SUPER_YUDA = SuperYuda
+    COFIX = PublishOnlyStores
     # SALACH_DABACH = DoNotPublishStores
     # # CITY_MARKET_GIVATAYIM = CityMarketGivataim
     # CITY_MARKET_KIRYATONO = CityMarketKiratOno
     CITY_MARKET_KIRYATGAT = CityMarketKiratGat
     MESHMAT_YOSEF_1 = DoNotPublishPromo
+
     # YOHANANOF = DoNotPublishStores
 
     @classmethod

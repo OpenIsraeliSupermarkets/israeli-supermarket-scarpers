@@ -99,7 +99,7 @@ class Cerberus(Engine):
                 output_pattern.append(date_pattern)
 
             if len(output_pattern) == 0:
-                yield None
+                yield "*"
             yield "*" + "*".join(output_pattern) + "*"
 
     def is_file_extension_valid(self, file_name):

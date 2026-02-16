@@ -19,4 +19,8 @@ status_logs/*
 docs/source/api/
 =======
 docs/*
+<<<<<<< HEAD
 >>>>>>> changes
+=======
+*.har
+>>>>>>> v0.6.7

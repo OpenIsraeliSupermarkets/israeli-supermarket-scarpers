@@ -47,6 +47,7 @@ class ScraperFactory(Enum):
     QUIK = all_scrappers.Quik  # קוויק
     TIV_TAAM = all_scrappers.TivTaam  # טיב טעם רשתות בע"מ
     VICTORY = all_scrappers.Victory  # ויקטורי רשת סופרמרקטים בע"מ
+    VICTORY_NEW_SOURCE = all_scrappers.VictoryNewSource  # ויקטורי רשת סופרמרקטים בע"מ
     YELLOW = all_scrappers.Yellow  # יילו
     YOHANANOF = all_scrappers.Yohananof  # מ. יוחננוף ובניו (1988) בע"מ
     ZOL_VEBEGADOL = all_scrappers.ZolVeBegadol  # זול ובגדול בע"מ
