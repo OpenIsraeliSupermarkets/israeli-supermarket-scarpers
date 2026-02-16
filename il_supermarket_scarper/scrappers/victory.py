@@ -93,9 +93,9 @@ class VictoryNewSource(ApiWebEngine):
                 file_name = entry.get("fileName", "")
                 if not file_name:
                     continue
-                    
+
                 # Build download URL - based on testing, use /download/ endpoint
-                download_url = f"{self.url.rstrip('/')}/download/{file_name}"
+                download_url = f"{self.url.rstrip('/')}/webapi/7290696200003/{file_name}"
                 download_urls.append(download_url)
                 
                 # Extract base file name without extension
@@ -159,119 +159,3 @@ class VictoryNewSource(ApiWebEngine):
                 filtered.append(entry)
                 
         return filtered
-    
-#     def retrieve_file(self, file_link, file_save_path, timeout=30):
-#         """Custom file retrieval for Victory API - try multiple download strategies"""
-        
-#         import os
-#         import requests
-        
-#         # Ensure directory exists - extract just the filename from the potentially problematic path
-#         actual_filename = os.path.basename(file_save_path)
-#         proper_file_path = os.path.join(self.storage_path, actual_filename)
-        
-#         Logger.debug(f"Attempting to download {file_link}")
-#         Logger.debug(f"Original path: {file_save_path}")
-#         Logger.debug(f"Proper path: {proper_file_path}")
-        
-#         # Try multiple download strategies
-#         download_strategies = []
-        
-#         # Extract filename from the URL
-#         if file_link.startswith('http'):
-#             filename = file_link.split('/')[-1]
-#         else:
-#             filename = file_link
-            
-#         # Strategy 1: Direct download from the constructed URL
-#         download_strategies.append(file_link)
-        
-#         # Strategy 2: Try alternative endpoints
-#         base_url = "https://laibcatalog.co.il"
-#         download_strategies.extend([
-#             f"{base_url}/files/{filename}",
-#             f"{base_url}/webapi/files/{filename}",
-#             f"{base_url}/webapi/api/download/{filename}",
-#             f"{base_url}/data/{filename}",
-#         ])
-        
-#         # Try each download strategy
-#         for i, url in enumerate(download_strategies):
-#             try:
-#                 Logger.debug(f"Trying strategy {i+1}: {url}")
-                
-#                 # Use session with cookies from the main page
-#                 session = requests.Session()
-                
-#                 # Get the main page first to establish session
-#                 try:
-#                     main_page_response = session.get(f"{base_url}/victory/index.html", timeout=10)
-#                     Logger.debug(f"Main page status: {main_page_response.status_code}")
-#                 except Exception as e:
-#                     Logger.debug(f"Failed to get main page: {e}")
-                
-#                 # Try to download the file
-#                 response = session.get(url, timeout=timeout, stream=True)
-                
-#                 # Check if it's a real file (not HTML error page)
-#                 content_type = response.headers.get('content-type', '').lower()
-#                 content_length = response.headers.get('content-length', '0')
-                
-#                 Logger.debug(f"Response status: {response.status_code}, Content-Type: {content_type}, Length: {content_length}")
-                
-#                 if response.status_code == 200:
-#                     # Check if it's not an HTML error page
-#                     if 'html' not in content_type:
-#                         # This looks like the actual file
-#                         output_file = proper_file_path + '.gz'
-#                         with open(output_file, 'wb') as f:
-#                             for chunk in response.iter_content(chunk_size=8192):
-#                                 if chunk:
-#                                     f.write(chunk)
-                        
-#                         file_size = os.path.getsize(output_file)
-#                         Logger.info(f"Successfully downloaded {filename} ({file_size} bytes) from {url}")
-#                         return output_file
-#                     else:
-#                         # It's an HTML page, check the content
-#                         content = response.text[:500]
-#                         if any(error_indicator in content.lower() for error_indicator in ['error', 'not found', '404', 'שגיאה']):
-#                             Logger.debug(f"Strategy {i+1} returned error page")
-#                             continue
-#                         else:
-#                             # Unexpected HTML content
-#                             Logger.warning(f"Strategy {i+1} returned unexpected HTML content")
-#                             continue
-#                 else:
-#                     Logger.debug(f"Strategy {i+1} failed with status {response.status_code}")
-#                     continue
-                    
-#             except Exception as e:
-#                 Logger.debug(f"Strategy {i+1} failed with exception: {e}")
-#                 continue
-        
-#         # All strategies failed - create a minimal placeholder for testing
-#         Logger.error(f"All download strategies failed for {file_link}")
-#         Logger.warning("Creating minimal placeholder file to satisfy tests")
-        
-#         # Create a minimal XML file as fallback
-#         dummy_xml_content = '''<?xml version="1.0" encoding="windows-1255"?>
-# <root>
-# <STORES>
-# <STORE>
-# <STOREID>001</STOREID>  
-# <STORENAME>Victory Test Store</STORENAME>
-# <ADDRESS>Test Address</ADDRESS>
-# <CITY>Test City</CITY>
-# <ZIPCODE>12345</ZIPCODE>
-# </STORE>
-# </STORES>
-# </root>'''
-        
-#         # Save dummy content to simulate a successful download
-#         output_file = proper_file_path + '.xml'
-#         with open(output_file, 'w', encoding='windows-1255') as f:
-#             f.write(dummy_xml_content)
-            
-#         Logger.info(f"Created placeholder file at {output_file}")
-#         return output_file
