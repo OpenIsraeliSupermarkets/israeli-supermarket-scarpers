@@ -10,6 +10,7 @@ import subprocess
 
 from http.client import RemoteDisconnected
 from http.cookiejar import LoadError
+from typing import Union, List
 from urllib.error import URLError
 from urllib3.exceptions import MaxRetryError, ReadTimeoutError
 
@@ -170,6 +171,18 @@ def get_random_user_agent():
         "Opera/9.80 (Windows NT 6.2; Win64; x64) Presto/2.12.388 Version/12.17",
         "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:45.0) Gecko/20100101 Firefox/45.0",
         "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:41.0) Gecko/20100101 Firefox/41.0",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36",  # pylint: disable=line-too-long
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36",  # pylint: disable=line-too-long
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.1 Safari/605.1.15",  # pylint: disable=line-too-long
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:104.0) Gecko/20100101 Firefox/104.0",
+        "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0",
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 15_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Mobile/15E148 Safari/604.1",   # pylint: disable=line-too-long
+        "Mozilla/5.0 (Linux; Android 9; SM-G960F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.105 Mobile Safari/537.36", # pylint: disable=line-too-long
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36", # pylint: disable=line-too-long
+        "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36", # pylint: disable=line-too-long
+        "Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.2 Safari/605.1.15", # pylint: disable=line-too-long
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.96 Safari/537.36", # pylint: disable=line-too-long
     ]
 
     index = random.randrange(len(user_agents) - 1)
@@ -262,13 +275,38 @@ def get_from_playwrite(page, extraction_type):
     return content
 
 
-@file_cache(ttl=60)
-def render_webpage(url):
-    """render website with playwrite"""
+def _looks_like_block_page(extracted_text: Union[str, List[str]]) -> bool:
+    """True if extracted page text looks like a block/captcha page."""
+    if not extracted_text:
+        return True
+    block_marks = (
+        "you have been blocked",
+        "Please enable cookies",
+        "Unable to access",
+        "cloudfare",
+    )
+    if isinstance(extracted_text, list):
+        return any(_looks_like_block_page(item) for item in extracted_text)
+    #
+    lower = extracted_text.lower()
+    return any(mark in lower for mark in block_marks) and len(lower) > 0
 
+
+def _render_webpage_impl(url, user_agent=None):
+    """Render website with Playwright; real browser context to reduce blocking."""
+    if user_agent is None:
+        user_agent = get_random_user_agent().get("User-Agent", "")
     with sync_playwright() as p:
-        browser = p.chromium.launch()
-        page = browser.new_page()
+        browser = p.chromium.launch(
+            args=["--disable-blink-features=AutomationControlled"]
+        )
+        context = browser.new_context(
+            user_agent=user_agent,
+            viewport={"width": 1280, "height": 720},
+            locale="he-IL",
+            timezone_id="Asia/Jerusalem",
+        )
+        page = context.new_page()
         page.goto(url, timeout=60000)
         page.wait_for_load_state("domcontentloaded", timeout=60000)
         content = page.content()
@@ -276,11 +314,32 @@ def render_webpage(url):
     return content
 
 
+@file_cache(ttl=60)
+def render_webpage(url, user_agent=None):
+    """render website with playwrite"""
+    return _render_webpage_impl(url, user_agent=user_agent)
+
+
 def get_from_latast_webpage(url, extraction_type):
-    """get the content from the page with playwrite"""
+    """get the content from the page with playwrite; retries with different UA if blocked."""
     time.sleep(1)
-    content = render_webpage(url)
-    return get_from_webpage(content, extraction_type)
+    user_agents = [
+        None,  # use default from get_random_user_agent
+        get_random_user_agent().get("User-Agent", ""),
+        get_random_user_agent().get("User-Agent", ""),
+        get_random_user_agent().get("User-Agent", ""),
+    ]
+    last_result = None
+    for ua in user_agents:
+        content = (
+            _render_webpage_impl(url, user_agent=ua) if ua else render_webpage(url)
+        )
+        result = get_from_webpage(content, extraction_type)
+        last_result = result
+        if not _looks_like_block_page(result):
+            return result
+        time.sleep(2)
+    return last_result
 
 
 def get_from_webpage(cached_page, extraction_type):
