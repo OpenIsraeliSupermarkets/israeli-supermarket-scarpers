@@ -1,18 +1,27 @@
 import json
 import requests
-from il_supermarket_scarper.utils import (
-    Logger,
-    FileEntry,
-)
-from typing import AsyncGenerator
+from il_supermarket_scarper.utils import Logger
+from il_supermarket_scarper.utils import FileEntry
+from il_supermarket_scarper.utils.state import FilterState
 from .web import WebBase
 
 
 class ApiWebEngine(WebBase):
     """Engine for API-based scrapers that work with JSON endpoints"""
 
-    def __init__(self, chain, chain_id, url, folder_name=None, max_threads=5):
-        super().__init__(chain, chain_id, url, folder_name, max_threads)
+    def __init__(
+        self,
+        chain,
+        chain_id,
+        url,
+        file_output=None,
+        status_database=None,
+        max_threads=5,
+    ):
+        super().__init__(
+            chain, chain_id, url, max_threads=max_threads,
+            file_output=file_output, status_database=status_database
+        )
         self.session = requests.Session()
 
     def get_api_data(self, endpoint, params=None):
@@ -44,44 +53,37 @@ class ApiWebEngine(WebBase):
             return []
 
     async def extract_task_from_entry(self, all_trs):
-        """Extract download tasks from API data - to be overridden by subclasses"""
-        download_urls = []
-        file_names = []
-        file_sizes = []
-
+        """Extract download tasks from API data - async generator yielding FileEntry. Override in subclasses."""
         for entry in all_trs:
             try:
-                # Basic implementation - subclasses should override
                 if isinstance(entry, dict):
                     file_name = entry.get(
                         "fileName", entry.get("filename", entry.get("name", ""))
                     )
                     if file_name:
-                        download_urls.append(
-                            f"{self.url.rstrip('/')}/download/{file_name}"
-                        )
-                        file_names.append(file_name.split(".")[0])
-                        file_sizes.append(entry.get("fileSize", entry.get("size", 0)))
+                        url = f"{self.url.rstrip('/')}/download/{file_name}"
+                        name = file_name.split(".")[0]
+                        size = entry.get("fileSize", entry.get("size", 0))
+                        yield FileEntry(name=name, url=url, size=size)
             except (AttributeError, KeyError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")
 
-        return download_urls, file_names, file_sizes
-
-    def collect_files_details_from_site(  # pylint: disable=too-many-locals
+    async def collect_files_details_from_site(  # pylint: disable=too-many-locals
         self,
+        state: FilterState,
         limit=None,
         files_types=None,
         store_id=None,
         when_date=None,
+        files_names_to_scrape=None,
         filter_null=False,
         filter_zero=False,
-        files_names_to_scrape=None,
         suppress_exception=False,
         min_size=None,
         max_size=None,
         random_selection=False,
     ):
-        """Override WebBase to collect file details from API endpoints instead of HTML pages"""
+        """Override WebBase to collect file details from API endpoints. Uses shared async pipeline."""
         all_entries = []
 
         # Get API endpoints to query
@@ -108,23 +110,33 @@ class ApiWebEngine(WebBase):
         if hasattr(self, "apply_filter_by_type"):
             all_entries = self.apply_filter_by_type(all_entries, files_types)
 
-        # Extract download tasks
-        download_urls, file_names, file_sizes = self.extract_task_from_entry(
-            all_entries
+        # Async generator pipeline (same as WebBase / multipage_web)
+        extracted_files = self.extract_task_from_entry(all_entries)
+        files = self.register_all_saw_files_on_site(extracted_files)
+
+        if min_size is not None or max_size is not None:
+            filtered_files = self.filter_by_file_size(
+                files, min_size=min_size, max_size=max_size
+            )
+        else:
+            filtered_files = files
+
+        bad_files_filtered = self.filter_bad_files(
+            filtered_files,
+            filter_null=filter_null,
+            filter_zero=filter_zero,
+            by_function=lambda x: x.name,
         )
 
-        # Apply other filters similar to WebBase
-        file_names, download_urls, file_sizes = self.apply_limit_zip(
-            file_names,
-            download_urls,
-            file_sizes,
+        async for entry in self.apply_limit(
+            state,
+            bad_files_filtered,
             limit=limit,
             files_types=files_types,
+            by_function=lambda x: x.name,
             store_id=store_id,
             when_date=when_date,
             files_names_to_scrape=files_names_to_scrape,
-            suppress_exception=suppress_exception,
             random_selection=random_selection,
-        )
-
-        return download_urls, file_names
+        ):
+            yield entry.url, entry.name
