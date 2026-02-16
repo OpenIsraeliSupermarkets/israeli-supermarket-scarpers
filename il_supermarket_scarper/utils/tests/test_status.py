@@ -35,6 +35,8 @@ def test_page_complete_diff():
         if current_main is not None and cached_main is not None:
             break
         time.sleep(2)
-    assert current_main is not None, "gov.il page did not contain main content (possible block page)"
+    assert (
+        current_main is not None
+    ), "gov.il page did not contain main content (possible block page)"
     assert cached_main is not None, "cached page did not contain main content"
     assert current_main == cached_main, show_text_diff(cached_main, current_main)

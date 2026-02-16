@@ -10,6 +10,7 @@ import subprocess
 
 from http.client import RemoteDisconnected
 from http.cookiejar import LoadError
+from typing import Union, List
 from urllib.error import URLError
 from urllib3.exceptions import MaxRetryError, ReadTimeoutError
 
@@ -262,7 +263,7 @@ def get_from_playwrite(page, extraction_type):
     return content
 
 
-def _looks_like_block_page(extracted_text):
+def _looks_like_block_page(extracted_text: Union[str, List[str]]) -> bool:
     """True if extracted page text looks like a block/captcha page."""
     if not extracted_text:
         return True
@@ -270,10 +271,13 @@ def _looks_like_block_page(extracted_text):
         "you have been blocked",
         "Please enable cookies",
         "Unable to access",
-        "www.gov.il",
+        "cloudfare",
     )
-    lower = extracted_text.lower()
-    return any(mark in lower for mark in block_marks) and "חוקים ותקנות" not in extracted_text
+    if isinstance(extracted_text, list):
+        return any(_looks_like_block_page(item) for item in extracted_text)
+    else:
+        lower = extracted_text.lower()
+        return any(mark in lower for mark in block_marks) and len(lower) > 0
 
 
 def _render_webpage_impl(url, user_agent=None):
@@ -314,7 +318,9 @@ def get_from_latast_webpage(url, extraction_type):
     ]
     last_result = None
     for ua in user_agents:
-        content = _render_webpage_impl(url, user_agent=ua) if ua else render_webpage(url)
+        content = (
+            _render_webpage_impl(url, user_agent=ua) if ua else render_webpage(url)
+        )
         result = get_from_webpage(content, extraction_type)
         last_result = result
         if not _looks_like_block_page(result):
