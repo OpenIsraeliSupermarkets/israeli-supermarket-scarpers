@@ -32,7 +32,7 @@ from .super_sapir import SuperSapir
 from .superdosh import FreshMarketAndSuperDosh
 from .quik import Quik
 from .tivtaam import TivTaam
-from .victory import Victory
+from .victory import Victory, VictoryNewSource
 from .yellow import Yellow
 from .yohananof import Yohananof
 from .zolvebegadol import ZolVeBegadol

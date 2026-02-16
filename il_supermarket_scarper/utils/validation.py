@@ -16,22 +16,41 @@ def find_index_with_substring(array, substring):
     return [i for i, s in enumerate(array) if substring in s][0]
 
 
+def _find_index_safe(array, substring):
+    """Return first index containing substring, or None if not found."""
+    for i, s in enumerate(array):
+        if substring in s:
+            return i
+    return None
+
+
+def extract_main_content(text, start_marker="חוקים ותקנות", end_marker="נוסח החוק המעודכן ביותר"):
+    """Extract the section between start_marker and end_marker (as string). Return None if not found."""
+    lines = text.splitlines()
+    start_i = _find_index_safe(lines, start_marker)
+    end_i = _find_index_safe(lines, end_marker)
+    if start_i is None or end_i is None:
+        return None
+    return "\n".join(lines[start_i:end_i])
+
+
 def show_text_diff(text1, text2):
     """show the difference between two text strings in a git-like format"""
     # Split the texts into lines for comparison
     text1_lines = text1.splitlines()
     text2_lines = text2.splitlines()
 
-    text1_lines = text1_lines[
-        find_index_with_substring(
-            text1_lines, "חוקים ותקנות"
-        ) : find_index_with_substring(text1_lines, "נוסח החוק המעודכן ביותר")
-    ]
-    text2_lines = text2_lines[
-        find_index_with_substring(
-            text2_lines, "חוקים ותקנות"
-        ) : find_index_with_substring(text2_lines, "נוסח החוק המעודכן ביותר")
-    ]
+    start_marker = "חוקים ותקנות"
+    end_marker = "נוסח החוק המעודכן ביותר"
+    start1 = _find_index_safe(text1_lines, start_marker)
+    end1 = _find_index_safe(text1_lines, end_marker)
+    start2 = _find_index_safe(text2_lines, start_marker)
+    end2 = _find_index_safe(text2_lines, end_marker)
+
+    if start1 is not None and end1 is not None:
+        text1_lines = text1_lines[start1:end1]
+    if start2 is not None and end2 is not None:
+        text2_lines = text2_lines[start2:end2]
 
     # Use difflib to compare the texts with more context
     diff = difflib.unified_diff(

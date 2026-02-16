@@ -148,11 +148,14 @@ class VictoryTestCase(make_test_case(ScraperFactory.VICTORY, 1)):
     """Test case for ScraperFactory.VICTORY."""
 
 
+class VictoryNewSourceTestCase(make_test_case(ScraperFactory.VICTORY_NEW_SOURCE, 1)):
+    """Test case for ScraperFactory.VICTORY_NEW_SOURCE."""
+
 class YellowTestCase(make_test_case(ScraperFactory.YELLOW, 1272)):
     """Test case for ScraperFactory.YELLOW."""
 
 
-class YohananofTestCase(make_test_case(ScraperFactory.YOHANANOF, 1)):
+class YohananofTestCase(make_test_case(ScraperFactory.YOHANANOF, 25)):
     """Test case for ScraperFactory.YOHANANOF."""
 
 
