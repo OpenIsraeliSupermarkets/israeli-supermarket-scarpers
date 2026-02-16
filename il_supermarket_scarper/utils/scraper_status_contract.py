@@ -3,8 +3,35 @@
 from collections import defaultdict
 from datetime import datetime
 from typing import List, Optional, Union
+from pydantic.networks import AnyUrl
+from pydantic import BaseModel, Field,field_validator
 
-from pydantic import BaseModel, Field
+import re
+
+FILENAME_REGEX = re.compile(r"^[a-zA-Z0-9._-]+$")
+
+class FileName(str):
+    @classmethod
+    def __get_pydantic_core_schema__(cls, source, handler):
+        from pydantic_core import core_schema
+
+        return core_schema.no_info_after_validator_function(
+            cls.validate,
+            core_schema.str_schema()
+        )
+
+    @classmethod
+    def validate(cls, value: str) -> str:
+        if not value:
+            raise ValueError("Filename cannot be empty")
+
+        if "/" in value or "\\" in value:
+            raise ValueError("Filename must not contain path separators")
+
+        if not FILENAME_REGEX.match(value):
+            raise ValueError("Filename contains invalid characters")
+
+        return value
 
 # -- Global Status --
 
@@ -29,7 +56,7 @@ class FolderSizeInfo(BaseModel):
     size: float
     unit: str
     folder: str
-    folder_content: List[str] = Field(default_factory=list)
+    folder_content: List[FileName] = Field(default_factory=list)
 
 
 class EstimatedSizeStatus(BaseModel):
@@ -47,8 +74,8 @@ class CollectedStatus(BaseModel):
 
     status: str = "collected"
     when: Optional[datetime] = None
-    file_names_collected: str
-    links_collected: str
+    file_names_collected: List[FileName]
+    links_collected: List[AnyUrl]
 
 
 class DownloadedStatus(BaseModel):
@@ -56,7 +83,7 @@ class DownloadedStatus(BaseModel):
 
     status: str = "downloaded"
     when: Optional[datetime] = None
-    file_name_downloaded: str
+    file_name_downloaded: FileName
     downloaded_successfully: bool
     extracted_successfully: bool
     error_message: Optional[str] = None
@@ -70,8 +97,8 @@ class FailedStatus(BaseModel):
     when: Optional[datetime] = None
     execption: str = ""
     traceback: str = ""
-    download_url: str
-    file_name: str
+    download_url: AnyUrl
+    file_name: FileName
 
 
 class SawStatus(BaseModel):
@@ -79,15 +106,15 @@ class SawStatus(BaseModel):
 
     status: str = "saw"
     when: Optional[datetime] = None
-    file_name: str
-    link: str
+    file_name: FileName
+    link: AnyUrl
     size: Optional[Union[int, float]] = None
 
 
 class VerifiedDownload(BaseModel):
     """Record of a verified downloaded file."""
 
-    file_name: str
+    file_name: FileName
     when: datetime
 
 
