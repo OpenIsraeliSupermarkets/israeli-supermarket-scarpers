@@ -4,7 +4,7 @@ from collections import defaultdict
 from datetime import datetime
 from typing import List, Optional, Union
 from pydantic.networks import AnyUrl
-from pydantic import BaseModel, Field,field_validator
+from pydantic import BaseModel, Field 
 
 import re
 
@@ -32,6 +32,9 @@ class FileName(str):
             raise ValueError("Filename contains invalid characters")
 
         return value
+
+
+
 
 # -- Global Status --
 
@@ -75,7 +78,7 @@ class CollectedStatus(BaseModel):
     status: str = "collected"
     when: Optional[datetime] = None
     file_names_collected: List[FileName]
-    links_collected: List[AnyUrl]
+    links_collected: List[Optional[AnyUrl]]
 
 
 class DownloadedStatus(BaseModel):
@@ -97,7 +100,7 @@ class FailedStatus(BaseModel):
     when: Optional[datetime] = None
     execption: str = ""
     traceback: str = ""
-    download_url: AnyUrl
+    download_url: Optional[AnyUrl]
     file_name: FileName
 
 
@@ -107,7 +110,7 @@ class SawStatus(BaseModel):
     status: str = "saw"
     when: Optional[datetime] = None
     file_name: FileName
-    link: AnyUrl
+    link: Optional[Optional[AnyUrl]]
     size: Optional[Union[int, float]] = None
 
 
