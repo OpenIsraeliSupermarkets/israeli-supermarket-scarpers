@@ -144,7 +144,7 @@ class TivTaamTestCase(make_test_case(ScraperFactory.TIV_TAAM, 3)):
     """Test case for ScraperFactory.TIV_TAAM."""
 
 
-class VictoryTestCase(make_test_case(ScraperFactory.VICTORY, 1)):
+class VictoryTestCase(make_test_case(ScraperFactory.VICTORY, 71)):
     """Test case for ScraperFactory.VICTORY."""
 
 
