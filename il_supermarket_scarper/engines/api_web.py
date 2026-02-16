@@ -1,6 +1,11 @@
 import json
 import requests
-from il_supermarket_scarper.utils import Logger, execute_in_parallel, session_with_cookies, url_connection_retry
+from il_supermarket_scarper.utils import (
+    Logger,
+    execute_in_parallel,
+    session_with_cookies,
+    url_connection_retry,
+)
 from .web import WebBase
 
 
@@ -10,7 +15,7 @@ class ApiWebEngine(WebBase):
     def __init__(self, chain, chain_id, url, folder_name=None, max_threads=5):
         super().__init__(chain, chain_id, url, folder_name, max_threads)
         self.session = requests.Session()
-        
+
     def get_api_data(self, endpoint, params=None):
         """Make API call and return JSON response"""
         url = f"{self.url.rstrip('/')}{endpoint}"
@@ -24,39 +29,45 @@ class ApiWebEngine(WebBase):
         except json.JSONDecodeError as e:
             Logger.error(f"Failed to parse JSON response: {e}")
             return []
-            
+
     def get_request_url(self, files_types=None, store_id=None, when_date=None):
         """Get API endpoints to query - to be overridden by subclasses"""
         return []
-        
+
     def get_data_from_page(self, req_res, request_info=None):
         """Parse API response - to be overridden by subclasses"""
         try:
-            return req_res.json() if hasattr(req_res, 'json') else json.loads(req_res.text)
+            return (
+                req_res.json() if hasattr(req_res, "json") else json.loads(req_res.text)
+            )
         except (json.JSONDecodeError, AttributeError) as e:
             Logger.error(f"Failed to parse API response: {e}")
             return []
-            
+
     def extract_task_from_entry(self, all_entries):
         """Extract download tasks from API data - to be overridden by subclasses"""
         download_urls = []
         file_names = []
         file_sizes = []
-        
+
         for entry in all_entries:
             try:
                 # Basic implementation - subclasses should override
                 if isinstance(entry, dict):
-                    file_name = entry.get('fileName', entry.get('filename', entry.get('name', '')))
+                    file_name = entry.get(
+                        "fileName", entry.get("filename", entry.get("name", ""))
+                    )
                     if file_name:
-                        download_urls.append(f"{self.url.rstrip('/')}/download/{file_name}")
-                        file_names.append(file_name.split('.')[0])
-                        file_sizes.append(entry.get('fileSize', entry.get('size', 0)))
+                        download_urls.append(
+                            f"{self.url.rstrip('/')}/download/{file_name}"
+                        )
+                        file_names.append(file_name.split(".")[0])
+                        file_sizes.append(entry.get("fileSize", entry.get("size", 0)))
             except (AttributeError, KeyError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")
-                
+
         return download_urls, file_names, file_sizes
-        
+
     def collect_files_details_from_site(
         self,
         limit=None,
@@ -73,14 +84,12 @@ class ApiWebEngine(WebBase):
     ):
         """Override WebBase to collect file details from API endpoints instead of HTML pages"""
         all_entries = []
-        
+
         # Get API endpoints to query
         requests_to_make = self.get_request_url(
-            files_types=files_types,
-            store_id=store_id, 
-            when_date=when_date
+            files_types=files_types, store_id=store_id, when_date=when_date
         )
-        
+
         # Fetch data from each endpoint
         for request_info in requests_to_make:
             try:
@@ -95,18 +104,20 @@ class ApiWebEngine(WebBase):
                 Logger.error(f"Failed to get data from {request_info['url']}: {e}")
                 if not suppress_exception:
                     raise
-                    
+
         # Apply filtering if needed
-        if hasattr(self, 'apply_filter_by_type'):
+        if hasattr(self, "apply_filter_by_type"):
             all_entries = self.apply_filter_by_type(all_entries, files_types)
-            
+
         # Extract download tasks
-        download_urls, file_names, file_sizes = self.extract_task_from_entry(all_entries)
-        
+        download_urls, file_names, file_sizes = self.extract_task_from_entry(
+            all_entries
+        )
+
         # Apply other filters similar to WebBase (don't pass file_sizes to avoid tuple unpacking issues)
         file_names, download_urls, file_sizes = self.apply_limit_zip(
             file_names,
-            download_urls, 
+            download_urls,
             file_sizes,
             limit=limit,
             files_types=files_types,
