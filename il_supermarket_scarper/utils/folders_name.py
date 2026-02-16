@@ -39,6 +39,7 @@ class DumpFolderNames(Enum):
     QUIK = "Quik"
     TIV_TAAM = "TivTaam"
     VICTORY = "Victory"
+    VICTORY_NEW_SOURCE = "Victory"
     YELLOW = "Yellow"
     YOHANANOF = "Yohananof"
     ZOL_VEBEGADOL = "ZolVeBegadol"
