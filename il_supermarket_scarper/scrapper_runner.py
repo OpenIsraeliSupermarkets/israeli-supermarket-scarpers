@@ -28,12 +28,10 @@ class MainScrapperRunner:
         else:
             self.size_estimation_mode = size_estimation_mode
         Logger.info(f"size_estimation_mode: {self.size_estimation_mode}")
-
-        if not enabled_scrapers:
-            enabled_scrapers = ScraperFactory.all_scrapers_name()
-
-        self.enabled_scrapers = enabled_scrapers
+        
+        self.enabled_scrapers = enabled_scrapers or ScraperFactory.all_scrapers_name()
         Logger.info(f"Enabled scrapers: {self.enabled_scrapers}")
+        
         self.dump_folder_name = dump_folder_name
         self.multiprocessing = multiprocessing
         self.lookup_in_db = lookup_in_db

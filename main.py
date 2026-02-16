@@ -11,32 +11,24 @@ def load_params():
     enabled_scrapers = os.getenv("ENABLED_SCRAPERS", None)
     if enabled_scrapers:
         enabled_scrapers = enabled_scrapers.split(",")
-
-        not_valid = list(
-            filter(
-                lambda scraper: scraper not in ScraperFactory.all_scrapers_name(),
-                enabled_scrapers,
-            )
-        )
+        valid_scrapers = ScraperFactory.all_scrapers_name()
+        not_valid = set(enabled_scrapers) - set(valid_scrapers)
+        
         if not_valid:
-            raise ValueError(f"ENABLED_SCRAPERS contains invalid {not_valid}")
+            raise ValueError(f"ENABLED_SCRAPERS contains invalid {list(not_valid)}")
 
         kwargs["enabled_scrapers"] = enabled_scrapers
 
     # validate file types
     enabled_file_types = os.getenv("ENABLED_FILE_TYPES", None)
     if enabled_file_types:
-
+        
         enabled_file_types = enabled_file_types.split(",")
-
-        not_valid = list(
-            filter(
-                lambda f_types: f_types not in FileTypesFilters.all_types(),
-                enabled_file_types,
-            )
-        )
+        valid_types = FileTypesFilters.all_types()
+        not_valid = set(enabled_file_types) - set(valid_types)
+        
         if not_valid:
-            raise ValueError(f"ENABLED_FILE_TYPES contains invalid {not_valid}")
+            raise ValueError(f"ENABLED_FILE_TYPES contains invalid {list(not_valid)}")
 
         kwargs["files_types"] = enabled_file_types
 
