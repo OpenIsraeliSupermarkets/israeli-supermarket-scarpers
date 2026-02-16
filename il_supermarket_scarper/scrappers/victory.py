@@ -21,7 +21,7 @@ class VictoryNewSource(ApiWebEngine):
 
     def __init__(self, file_output=None, status_database=None):
         super().__init__(
-            chain=DumpFolderNames.VICTORY,
+            chain=DumpFolderNames.VICTORY_NEW_SOURCE,
             chain_id=["7290696200003", "7290058103393"],
             url="https://laibcatalog.co.il",
             file_output=file_output,
