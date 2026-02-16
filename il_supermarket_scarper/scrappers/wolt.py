@@ -1,11 +1,10 @@
 from datetime import timedelta
 from bs4 import BeautifulSoup
 
-from il_supermarket_scarper.utils import _now, Logger
+from il_supermarket_scarper.utils import _now, Logger, FileEntry
 from il_supermarket_scarper.engines.web import WebBase
-
+from typing import AsyncGenerator
 from il_supermarket_scarper.utils import DumpFolderNames
-
 
 class Wolt(WebBase):
     """scraper for wolt"""
@@ -51,10 +50,10 @@ class Wolt(WebBase):
             )
         )
 
-    async def extract_task_from_entry(self, all_trs):
+    async def extract_task_from_entry(self, all_trs)-> AsyncGenerator[FileEntry, None]:
         """extract download links, file names, and file sizes from page list"""
         for x in all_trs:
             try:
-                yield x[1], x[0], None
+                yield FileEntry(name=x[0], url=x[1], size=None)
             except (AttributeError, KeyError, IndexError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")

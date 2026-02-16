@@ -55,3 +55,4 @@ from .file_output import (
 from .scraper_config import ScraperConfig
 from .databases import JsonDataBase, MongoDataBase
 from .scraping_result import ScrapingResult
+from .file_entry import FileEntry

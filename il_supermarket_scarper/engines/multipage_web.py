@@ -5,6 +5,8 @@ import asyncio
 from abc import abstractmethod
 from typing import AsyncGenerator
 
+from il_supermarket_scarper.utils import FileEntry
+
 from lxml import html as lxml_html
 from il_supermarket_scarper.utils import (
     Logger,
@@ -89,7 +91,7 @@ class MultiPageWeb(WebBase):
         when_date=None,
         limit=None,
         random_selection=False,
-    ) -> AsyncGenerator[tuple[str, str], None]:
+    ) -> AsyncGenerator[FileEntry, None]:
         """generate all files from the site"""
 
         async for main_page_request in self.get_request_url(
@@ -186,7 +188,7 @@ class MultiPageWeb(WebBase):
             filtered_gen,
             filter_null=filter_null,
             filter_zero=filter_zero,
-            by_function=lambda x: x[1],
+            by_function=lambda x: x.name,
         )
 
         limited_files = self.apply_limit_zip(
@@ -194,15 +196,15 @@ class MultiPageWeb(WebBase):
             bad_files_filtered,
             limit=limit,
             files_types=files_types,
-            by_function=lambda x: x[1],
+            by_function=lambda x: x.name,
             store_id=store_id,
             when_date=when_date,
             files_names_to_scrape=files_names_to_scrape,
             random_selection=random_selection,
         )
 
-        async for download_url, file_name, _ in limited_files:
-            yield download_url, file_name
+        async for entry in limited_files:
+            yield entry.url, entry.name
 
     def get_file_size_from_entry(
         self, html, link_element
@@ -287,7 +289,7 @@ class MultiPageWeb(WebBase):
         # Create an async generator from the three lists
         async def generate_from_lists():
             for url, name, size in zip(file_links, filenames, file_sizes):
-                yield url, name, size
+                yield FileEntry(name=name, url=url, size=size)
 
         # Apply filters but NOT the limit here to avoid race conditions
         # when processing pages in parallel. The limit will be applied once
@@ -297,7 +299,7 @@ class MultiPageWeb(WebBase):
             generate_from_lists(),
             limit=None,  # Don't apply limit per page - let it be applied once after aggregation
             files_types=files_types,
-            by_function=lambda x: x[1],
+            by_function=lambda x: x.name,
             store_id=store_id,
             when_date=when_date,
             random_selection=random_selection,
@@ -308,5 +310,5 @@ class MultiPageWeb(WebBase):
             f"Found {len(file_links)} files initially"
         )
 
-        async for url, name, size in filtered_files:
-            yield url, name, size
+        async for entry in filtered_files:
+            yield entry

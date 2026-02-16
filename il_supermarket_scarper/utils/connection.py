@@ -545,8 +545,10 @@ async def collect_from_ftp(
     files_list = await asyncio.to_thread(_sync_ftp_list)
 
     # Yield each file as an async generator
+    from .file_entry import FileEntry
+
     for filename, size in files_list:
-        yield (filename, "", size)
+        yield FileEntry(name=filename, url="", size=size)
 
 
 def _sync_ftp_download(

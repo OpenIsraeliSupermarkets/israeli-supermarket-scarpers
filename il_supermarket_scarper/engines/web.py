@@ -1,6 +1,6 @@
 import re
 from bs4 import BeautifulSoup
-from il_supermarket_scarper.utils import Logger
+from il_supermarket_scarper.utils import FileEntry, Logger
 from il_supermarket_scarper.utils import convert_nl_size_to_bytes, UnitSize
 from il_supermarket_scarper.utils.state import FilterState
 from .engine import Engine
@@ -65,9 +65,10 @@ class WebBase(Engine):
 
         for x in all_trs:
             try:
-                yield x.a.attrs["href"].split(".")[
-                    0
-                ].split("/")[-1], self.url + x.a.attrs["href"], self.get_file_size_from_entry(x)
+                name = x.a.attrs["href"].split(".")[0].split("/")[-1]
+                url = self.url + x.a.attrs["href"]
+                size = self.get_file_size_from_entry(x)
+                yield FileEntry(name=name, url=url, size=size)
             except (AttributeError, KeyError, IndexError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")
 
@@ -77,7 +78,7 @@ class WebBase(Engine):
         files,
         limit=None,
         files_types=None,
-        by_function=lambda x: x[0],
+        by_function=lambda x: x.name,
         store_id=None,
         when_date=None,
         files_names_to_scrape=None,
@@ -144,21 +145,21 @@ class WebBase(Engine):
             filtered_files,
             filter_null=filter_null,
             filter_zero=filter_zero,
-            by_function=lambda x: x[1],
+            by_function=lambda x: x.name,
         )
 
-        async for download_url, file_name, _ in self.apply_limit(
+        async for entry in self.apply_limit(
             state,
             bad_files_filtered,
             limit=limit,
             files_types=files_types,
-            by_function=lambda x: x[1],
+            by_function=lambda x: x.name,
             store_id=store_id,
             when_date=when_date,
             files_names_to_scrape=files_names_to_scrape,
             random_selection=random_selection,
         ):
-            yield download_url, file_name
+            yield entry.url, entry.name
 
     async def process_file(self, file_details):
         """Process a single file from WebBase. file_details is (download_url, file_name) tuple."""

@@ -6,6 +6,7 @@ import datetime
 import asyncio
 from typing import AsyncGenerator, Optional
 from il_supermarket_scarper.utils import (
+    FileEntry,
     FileTypesFilters,
     Logger,
     ScraperStatus,
@@ -151,10 +152,10 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
 
     def is_pass_bad_files_filter(
         self,
-        file: tuple[str, str],
+        file: FileEntry,
         filter_zero=False,
         filter_null=False,
-        by_function=lambda x: x,
+        by_function=lambda x: x.name,
     ):
         """
         Check if a file passes the bad files filter.
@@ -182,26 +183,24 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
 
     async def register_all_saw_files_on_site(
         self,
-        files: AsyncGenerator[tuple[str, str, Optional[int]], None],
-    ):
+        files: AsyncGenerator[FileEntry, None],
+    ) -> AsyncGenerator[FileEntry, None]:
         """register the file as saw on site"""
         async for file in files:
-            # Handle both 2-element and 3-element tuples for backward compatibility
-            file_name, link, size = file[0], file[1], file[2]
             self.register_saw_file(
-                file_name=file_name,
-                link=link,
-                size=size,
+                file_name=file.name,
+                link=file.url,
+                size=file.size,
             )
             yield file
 
     async def filter_bad_files(
         self,
-        files: AsyncGenerator[tuple[str, str], None],
+        files: AsyncGenerator[FileEntry, None],
         filter_zero=False,
         filter_null=False,
-        by_function=lambda x: x,
-    ):
+        by_function=lambda x: x.name,
+    ) -> AsyncGenerator[FileEntry, None]:
         """
         Filter out bad files from an async generator.
 
@@ -225,10 +224,10 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
 
     async def filter_by_store_id(
         self,
-        intreable: AsyncGenerator[tuple[str, str], None],
+        intreable: AsyncGenerator[FileEntry, None],
         store_id=None,
-        by_function=lambda x: x,
-    ):
+        by_function=lambda x: x.name,
+    ) -> AsyncGenerator[FileEntry, None]:
         """
         Filter files by store ID.
 
@@ -252,10 +251,10 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
     async def apply_limit(
         self,
         state: FilterState,
-        intreable: AsyncGenerator[tuple[str, str], None],
+        intreable: AsyncGenerator[FileEntry, None],
         limit=None,
         files_types=None,
-        by_function=lambda x: x,
+        by_function=lambda x: x.name,
         store_id=None,
         when_date=None,
         files_names_to_scrape=None,
@@ -296,8 +295,8 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         # Collect all input files first (needed for unique, latest,
         # random_selection)
         async def stream_to_list(
-            state: FilterState, intreable: AsyncGenerator[tuple[str, str], None]
-        ):
+            state: FilterState, intreable: AsyncGenerator[FileEntry, None]
+        ) -> AsyncGenerator[FileEntry, None]:
 
             async for file in intreable:
                 state.total_input += 1
@@ -313,7 +312,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         files_list = stream_to_list(state, intreable)
 
         # filter files already downloaded
-        intreable_: AsyncGenerator[tuple[str, str], None] = (
+        intreable_: AsyncGenerator[FileEntry, None] = (
             self.filter_already_downloaded(
                 files_names_to_scrape,
                 files_list,
@@ -379,12 +378,12 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
     async def filter_file_types(
         self,
         state: FilterState,
-        intreable,
+        intreable: AsyncGenerator[FileEntry, None],
         limit,
         files_types,
         by_function,
         random_selection=False,  # pylint: disable=unused-argument
-    ) -> AsyncGenerator[tuple[str, str], None]:
+    ) -> AsyncGenerator[FileEntry, None]:
         """filter the file types requested"""
 
         async for type_ in intreable:
@@ -766,25 +765,22 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
 
     async def filter_by_file_size(
         self,
-        files: AsyncGenerator[tuple[str, str, int], None],
+        files: AsyncGenerator[FileEntry, None],
         min_size=None,
         max_size=None,
-    ):
+    ) -> AsyncGenerator[FileEntry, None]:
         """
         Filter files by size (in bytes).
-        Yields filtered (file_name, download_url, file_size) tuples.
+        Yields filtered FileEntry instances.
         Entries with None file_size are kept by default.
         """
         if min_size is None and max_size is None:
-            # No filtering needed, yield all items
-            async for name, url, size in files:
-                yield name, url, size
+            async for entry in files:
+                yield entry
         else:
-
-            async for name, url, size in files:
-                # Keep entries with None size (can't filter them)
-                if self.is_pass_file_size_filter(size, min_size, max_size):
-                    yield name, url, size
+            async for entry in files:
+                if self.is_pass_file_size_filter(entry.size, min_size, max_size):
+                    yield entry
 
     async def retrieve_file(self, file_link, file_save_path, timeout=30):
         """download file"""

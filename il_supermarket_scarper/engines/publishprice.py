@@ -1,6 +1,7 @@
 import json
 from bs4 import BeautifulSoup
 
+from il_supermarket_scarper.utils import FileEntry
 from il_supermarket_scarper.utils.logger import Logger
 from .web import WebBase
 
@@ -78,6 +79,6 @@ class PublishPrice(WebBase):
                 else:
                     href = f"{base_url}/{x['name']}"
                 file_size = x.get("size_formatted", x.get("size", 0))
-                yield href, x["name"], file_size
+                yield FileEntry(name=x["name"], url=href, size=file_size)
             except (AttributeError, KeyError, IndexError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")

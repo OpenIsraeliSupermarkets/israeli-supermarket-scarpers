@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from il_supermarket_scarper.utils import Logger
+from il_supermarket_scarper.utils import FileEntry, Logger
 
 from .web import WebBase
 
@@ -35,7 +35,7 @@ class Aspx(WebBase, ABC):
                 download_url = self.url + self.get_href_from_entry(x)
                 file_name = self.get_file_name_no_ext_from_entry(download_url)
                 file_size = self.get_file_size_from_entry(x)
-                yield download_url, file_name, file_size
+                yield FileEntry(name=file_name, url=download_url, size=file_size)
             except (AttributeError, KeyError, IndexError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")
 

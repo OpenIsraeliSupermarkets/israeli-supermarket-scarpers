@@ -2,7 +2,9 @@ import json
 import requests
 from il_supermarket_scarper.utils import (
     Logger,
+    FileEntry,
 )
+from typing import AsyncGenerator
 from .web import WebBase
 
 
@@ -41,7 +43,7 @@ class ApiWebEngine(WebBase):
             Logger.error(f"Failed to parse API response: {e}")
             return []
 
-    def extract_task_from_entry(self, all_trs):
+    async def extract_task_from_entry(self, all_trs):
         """Extract download tasks from API data - to be overridden by subclasses"""
         download_urls = []
         file_names = []

@@ -1,5 +1,7 @@
 import datetime
-from typing import AsyncGenerator, List
+from typing import AsyncGenerator
+
+from il_supermarket_scarper.utils import FileEntry
 from il_supermarket_scarper.utils import (
     Logger,
     collect_from_ftp,
@@ -108,11 +110,11 @@ class Cerberus(Engine):
         return file_name.split(".")[-1] in self.target_file_extensions
 
     async def filter_by_file_extension(
-        self, files: AsyncGenerator[tuple[str, str, int], None]
-    ):
+        self, files: AsyncGenerator[FileEntry, None]
+    ) -> AsyncGenerator[FileEntry, None]:
         """filter the files by the file extension"""
         async for file in files:
-            if not self.is_file_extension_valid(file[0]):
+            if not self.is_file_extension_valid(file.name):
                 continue
             yield file
 
@@ -129,7 +131,7 @@ class Cerberus(Engine):
         min_size=None,
         max_size=None,
         random_selection=False,
-    ) -> AsyncGenerator[tuple[str, str], None]:
+    ):
         """collect all files to download from the site"""
 
         async for filter_arg in self.build_filter_arg(store_id, when_date, files_types):
@@ -142,11 +144,9 @@ class Cerberus(Engine):
                 filter_arg,
             )
 
-            files_generator: AsyncGenerator[List[str, str], None] = (
-                self.register_all_saw_files_on_site(files_generator)
-            )
+            files_generator = self.register_all_saw_files_on_site(files_generator)
 
-            files: AsyncGenerator[List[str, str], None] = self.filter_by_file_size(
+            files = self.filter_by_file_size(
                 files_generator,
                 min_size=min_size,
                 max_size=max_size,
@@ -156,15 +156,13 @@ class Cerberus(Engine):
                 files,
                 filter_null=filter_null,
                 filter_zero=filter_zero,
-                by_function=lambda x: x[0],
+                by_function=lambda x: x.name,
             )
 
-            files: AsyncGenerator[tuple[str, str, int], None] = (
-                self.filter_by_file_extension(files)
-            )
+            files = self.filter_by_file_extension(files)
 
-            # apply noraml filter
-            async for file in self.apply_limit(
+            # apply normal filter
+            async for entry in self.apply_limit(
                 state,
                 files,
                 limit=limit,
@@ -172,9 +170,9 @@ class Cerberus(Engine):
                 store_id=store_id,
                 when_date=when_date,
                 files_names_to_scrape=files_names_to_scrape,
-                by_function=lambda x: x[0],
+                by_function=lambda x: x.name,
             ):
-                yield file
+                yield entry.name, entry.url
 
     async def persist_from_ftp(self, file_name):
         """download file to memory and extract it."""
