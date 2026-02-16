@@ -110,7 +110,7 @@ class Cerberus(Engine):
                 output_pattern.append(date_pattern)
 
             if len(output_pattern) == 0:
-                yield None
+                yield "*"
             yield "*" + "*".join(output_pattern) + "*"
 
     def collect_files_details_from_site(  # pylint: disable=too-many-locals
