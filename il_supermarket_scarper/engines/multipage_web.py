@@ -170,6 +170,8 @@ class MultiPageWeb(WebBase):
             random_selection=random_selection,
         )
 
+        files = self.register_all_saw_files_on_site(files)
+
         # Filter by file size if specified
         if min_size is not None or max_size is not None:
             filtered_gen = self.filter_by_file_size(

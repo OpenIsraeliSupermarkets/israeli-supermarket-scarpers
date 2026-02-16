@@ -68,9 +68,6 @@ class PublishPrice(WebBase):
     async def extract_task_from_entry(self, all_trs):
         """from the trs extract the download urls, file names, and file sizes"""
 
-        download_urls = []
-        file_names = []
-        file_sizes = []
         for x in all_trs:
             try:
                 # Format href with path: url/path/filename
@@ -80,9 +77,7 @@ class PublishPrice(WebBase):
                     href = f"{base_url}/{path}/{x['name']}"
                 else:
                     href = f"{base_url}/{x['name']}"
-                download_urls.append(href)
-                file_names.append(x["name"])
-                # Use formatted size if available, otherwise format it
-                file_sizes.append(x.get("size_formatted", x.get("size", 0)))
+                file_size = x.get("size_formatted", x.get("size", 0))
+                yield href, x["name"], file_size
             except (AttributeError, KeyError, IndexError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")

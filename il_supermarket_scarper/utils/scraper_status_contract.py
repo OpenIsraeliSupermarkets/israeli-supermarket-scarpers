@@ -81,7 +81,7 @@ class SawStatus(BaseModel):
     when: Optional[datetime] = None
     file_name: str
     link: str
-    size: Optional[int] = None
+    size: Optional[Union[int, float]] = None
 
 
 class VerifiedDownload(BaseModel):
@@ -105,7 +105,7 @@ class ScraperStatusOutput(BaseModel):
     global_status: List[Union[StartedStatus, EstimatedSizeStatus]] = Field(
         default_factory=list
     )
-    events: List[Union[CollectedStatus, DownloadedStatus, FailedStatus, SawStatus]] = (
+    events: List[Union[SawStatus, CollectedStatus, DownloadedStatus, FailedStatus]] = (
         Field(default_factory=list)
     )
     verified_downloads: List[VerifiedDownload] = Field(default_factory=list)
