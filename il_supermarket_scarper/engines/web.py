@@ -65,9 +65,9 @@ class WebBase(Engine):
 
         for x in all_trs:
             try:
-                yield self.url + x.a.attrs["href"], x.a.attrs["href"].split(".")[
+                yield x.a.attrs["href"].split(".")[
                     0
-                ].split("/")[-1], self.get_file_size_from_entry(x)
+                ].split("/")[-1], self.url + x.a.attrs["href"], self.get_file_size_from_entry(x)
             except (AttributeError, KeyError, IndexError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")
 

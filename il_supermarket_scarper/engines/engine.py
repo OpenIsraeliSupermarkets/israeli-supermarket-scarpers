@@ -187,7 +187,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         """register the file as saw on site"""
         async for file in files:
             # Handle both 2-element and 3-element tuples for backward compatibility
-            file_name, link, size = file[1], file[0], file[2]
+            file_name, link, size = file[0], file[1], file[2]
             self.register_saw_file(
                 file_name=file_name,
                 link=link,

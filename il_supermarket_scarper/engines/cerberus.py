@@ -100,7 +100,8 @@ class Cerberus(Engine):
 
             if len(output_pattern) == 0:
                 yield "*"
-            yield "*" + "*".join(output_pattern) + "*"
+            else:
+                yield "*" + "*".join(output_pattern) + "*"
 
     def is_file_extension_valid(self, file_name):
         """check if the file extension is valid"""
@@ -139,6 +140,10 @@ class Cerberus(Engine):
                 self.ftp_password,
                 self.ftp_path,
                 filter_arg,
+            )
+
+            files_generator: AsyncGenerator[List[str, str], None] = (
+                self.register_all_saw_files_on_site(files_generator)
             )
 
             files: AsyncGenerator[List[str, str], None] = self.filter_by_file_size(

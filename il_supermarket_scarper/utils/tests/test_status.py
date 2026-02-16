@@ -3,7 +3,7 @@ import time
 from il_supermarket_scarper.utils.status import (
     get_status,
     get_status_date,
-    get_statue_page
+    get_statue_page,
 )
 from il_supermarket_scarper.utils.connection import disable_when_outside_israel
 from il_supermarket_scarper.utils.validation import show_text_diff, extract_main_content
