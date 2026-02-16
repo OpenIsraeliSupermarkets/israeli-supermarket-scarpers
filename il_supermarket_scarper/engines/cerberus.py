@@ -51,7 +51,7 @@ class Cerberus(Engine):
         # Register that we've collected this file's details
         self.register_collected_file(
             file_name_collected_from_site=file_name[0],
-            links_collected_from_site="",
+            links_collected_from_site=None,
         )
 
         # Process file from FTP - persist_from_ftp yields a ScrapingResult

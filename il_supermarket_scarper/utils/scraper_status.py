@@ -73,21 +73,11 @@ class ScraperStatus:
         **additional_info,
     ):
         """Report that file details have been collected."""
-        # Convert to comma-separated strings to match contract
-        if isinstance(file_name_collected_from_site, list):
-            file_names_str = ", ".join(file_name_collected_from_site)
-        else:
-            file_names_str = file_name_collected_from_site
-
-        if isinstance(links_collected_from_site, list):
-            links_str = ", ".join(links_collected_from_site)
-        else:
-            links_str = links_collected_from_site
 
         self._insert_event(
             ScraperStatus.COLLECTED,
-            file_names_collected=file_names_str,
-            links_collected=links_str,
+            file_names_collected=file_name_collected_from_site,
+            links_collected=links_collected_from_site,
             **additional_info,
         )
 

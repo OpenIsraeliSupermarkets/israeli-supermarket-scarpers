@@ -4,7 +4,7 @@ from collections import defaultdict
 from datetime import datetime
 from typing import List, Optional, Union
 from pydantic.networks import AnyUrl
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from il_supermarket_scarper.utils.file_types import FileTypesFilters 
 
@@ -77,8 +77,8 @@ class CollectedStatus(BaseModel):
 
     status: str = "collected"
     when: Optional[datetime] = None
-    file_names_collected: List[FileName]
-    links_collected: List[Optional[AnyUrl]]
+    file_names_collected: FileName
+    links_collected: Optional[AnyUrl]
 
 
 class DownloadedStatus(BaseModel):
@@ -140,16 +140,6 @@ class ScraperStatusOutput(BaseModel):
     )
     verified_downloads: List[VerifiedDownload] = Field(default_factory=list)
 
-    @staticmethod
-    def _extract_file_names_from_collected_status(collected_names: str) -> List[str]:
-        """Extract and clean file names from a comma-separated string."""
-        file_names = []
-        if isinstance(collected_names, str):
-            for fn in collected_names.split(","):
-                fn = fn.strip()
-                if fn:
-                    file_names.append(fn)
-        return file_names
 
     def _build_per_file_status_data(self):
         """
@@ -180,9 +170,7 @@ class ScraperStatusOutput(BaseModel):
                 per_file[fn]["saw"] = True
                 per_file_status_counter[fn].append("saw")
             elif isinstance(event, CollectedStatus):
-                file_names = self._extract_file_names_from_collected_status(
-                    event.file_names_collected
-                )
+                file_names = event.file_names_collected
                 for fn in file_names:
                     per_file[fn]["collected"] = True
                     per_file_status_counter[fn].append("collected")
