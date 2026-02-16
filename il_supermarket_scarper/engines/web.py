@@ -13,8 +13,8 @@ class WebBase(Engine):
         self.url = url
         self.max_retry = 2
 
-    def get_data_from_page(self, req_res, request_info=None):
-        """get the file list from a page. request_info is the dict from get_request_url (e.g. url, method)."""
+    def get_data_from_page(self, req_res):
+        """get the file list from a page"""
         soup = BeautifulSoup(req_res.text, features="lxml")
         return soup.find_all("tr")[1:]
 

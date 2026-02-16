@@ -2,9 +2,6 @@ import json
 import requests
 from il_supermarket_scarper.utils import (
     Logger,
-    execute_in_parallel,
-    session_with_cookies,
-    url_connection_retry,
 )
 from .web import WebBase
 
@@ -34,7 +31,7 @@ class ApiWebEngine(WebBase):
         """Get API endpoints to query - to be overridden by subclasses"""
         return []
 
-    def get_data_from_page(self, req_res, request_info=None):
+    def get_data_from_page(self, req_res):
         """Parse API response - to be overridden by subclasses"""
         try:
             return (
@@ -44,13 +41,13 @@ class ApiWebEngine(WebBase):
             Logger.error(f"Failed to parse API response: {e}")
             return []
 
-    def extract_task_from_entry(self, all_entries):
+    def extract_task_from_entry(self, all_trs):
         """Extract download tasks from API data - to be overridden by subclasses"""
         download_urls = []
         file_names = []
         file_sizes = []
 
-        for entry in all_entries:
+        for entry in all_trs:
             try:
                 # Basic implementation - subclasses should override
                 if isinstance(entry, dict):
@@ -68,7 +65,7 @@ class ApiWebEngine(WebBase):
 
         return download_urls, file_names, file_sizes
 
-    def collect_files_details_from_site(
+    def collect_files_details_from_site(  # pylint: disable=too-many-locals
         self,
         limit=None,
         files_types=None,
@@ -95,12 +92,12 @@ class ApiWebEngine(WebBase):
             try:
                 response = self.session.get(request_info["url"])
                 response.raise_for_status()
-                page_data = self.get_data_from_page(response, request_info)
+                page_data = self.get_data_from_page(response)
                 if isinstance(page_data, list):
                     all_entries.extend(page_data)
                 else:
                     all_entries.append(page_data)
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 Logger.error(f"Failed to get data from {request_info['url']}: {e}")
                 if not suppress_exception:
                     raise
@@ -114,7 +111,7 @@ class ApiWebEngine(WebBase):
             all_entries
         )
 
-        # Apply other filters similar to WebBase (don't pass file_sizes to avoid tuple unpacking issues)
+        # Apply other filters similar to WebBase
         file_names, download_urls, file_sizes = self.apply_limit_zip(
             file_names,
             download_urls,

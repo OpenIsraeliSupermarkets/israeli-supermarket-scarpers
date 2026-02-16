@@ -27,7 +27,7 @@ def _find_index_safe(array, substring):
 def extract_main_content(
     text, start_marker="חוקים ותקנות", end_marker="נוסח החוק המעודכן ביותר"
 ):
-    """Extract the section between start_marker and end_marker (as string). Return None if not found."""
+    """Extract the section between start_marker and end_marker (as string)"""
     lines = text.splitlines()
     start_i = _find_index_safe(lines, start_marker)
     end_i = _find_index_safe(lines, end_marker)

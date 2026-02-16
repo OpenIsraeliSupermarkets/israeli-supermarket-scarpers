@@ -1,6 +1,6 @@
+import re
 from il_supermarket_scarper.engines import Matrix, ApiWebEngine
 from il_supermarket_scarper.utils import DumpFolderNames, Logger, FileTypesFilters
-import re
 
 
 class Victory(Matrix):
@@ -29,14 +29,14 @@ class VictoryNewSource(ApiWebEngine):
 
     def get_branches(self, chain_id):
         """Get available branches for a chain ID"""
-        return self.get_api_data(f"/webapi/api/getbranches", {"edi": chain_id})
+        return self.get_api_data("/webapi/api/getbranches", {"edi": chain_id})
 
     def get_files(self, chain_id, branch_number=None):
         """Get available files for a chain ID and optional branch"""
         params = {"edi": chain_id}
         if branch_number is not None:
             params["branchNumber"] = branch_number
-        return self.get_api_data(f"/webapi/api/getfiles", params)
+        return self.get_api_data("/webapi/api/getfiles", params)
 
     def get_request_url(self, files_types=None, store_id=None, when_date=None):
         """Generate API requests for getting file lists"""
@@ -80,7 +80,7 @@ class VictoryNewSource(ApiWebEngine):
 
         return requests
 
-    def get_data_from_page(self, req_res, request_info=None):
+    def get_data_from_page(self, req_res):
         """Parse the getfiles API response"""
         try:
             data = req_res.json() if hasattr(req_res, "json") else req_res
@@ -90,13 +90,13 @@ class VictoryNewSource(ApiWebEngine):
             Logger.error(f"Failed to parse API response: {e}")
             return []
 
-    def extract_task_from_entry(self, all_entries):
+    def extract_task_from_entry(self, all_trs):
         """Extract download URLs and metadata from API file entries"""
         download_urls = []
         file_names = []
         file_sizes = []
 
-        for entry in all_entries:
+        for entry in all_trs:
             try:
                 file_name = entry.get("fileName", "")
                 if not file_name:

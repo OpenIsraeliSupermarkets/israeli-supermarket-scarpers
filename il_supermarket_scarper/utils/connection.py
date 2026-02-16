@@ -275,9 +275,9 @@ def _looks_like_block_page(extracted_text: Union[str, List[str]]) -> bool:
     )
     if isinstance(extracted_text, list):
         return any(_looks_like_block_page(item) for item in extracted_text)
-    else:
-        lower = extracted_text.lower()
-        return any(mark in lower for mark in block_marks) and len(lower) > 0
+    #
+    lower = extracted_text.lower()
+    return any(mark in lower for mark in block_marks) and len(lower) > 0
 
 
 def _render_webpage_impl(url, user_agent=None):
