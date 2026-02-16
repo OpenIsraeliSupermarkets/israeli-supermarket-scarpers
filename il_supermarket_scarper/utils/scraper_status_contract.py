@@ -4,7 +4,10 @@ from collections import defaultdict
 from datetime import datetime
 from typing import List, Optional, Union
 from pydantic.networks import AnyUrl
-from pydantic import BaseModel, Field 
+from pydantic import BaseModel, Field
+
+from il_supermarket_scarper.utils.file_types import FileTypesFilters 
+
 
 import re
 
@@ -25,11 +28,8 @@ class FileName(str):
         if not value:
             raise ValueError("Filename cannot be empty")
 
-        if "/" in value or "\\" in value:
-            raise ValueError("Filename must not contain path separators")
-
-        if not FILENAME_REGEX.match(value):
-            raise ValueError("Filename contains invalid characters")
+        if FileTypesFilters.get_type_from_file(value) is None:
+            raise ValueError(f"File {value} is not a valid filename")
 
         return value
 
