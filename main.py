@@ -137,4 +137,4 @@ if __name__ == "__main__":
     task = ScarpingTask(**args)
 
     task.start(**limit_and_when_date)
-    task.wait()  # Wait for scraping to complete
+    task.join()  # Wait for scraping to complete
