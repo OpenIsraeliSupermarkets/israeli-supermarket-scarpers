@@ -1,11 +1,11 @@
 import json
+from typing import AsyncGenerator
 
 from il_supermarket_scarper.engines.web import WebBase
 from il_supermarket_scarper.engines import Bina
 
 from il_supermarket_scarper.utils import DumpFolderNames, Logger
 from il_supermarket_scarper.utils import FileEntry
-from typing import AsyncGenerator
 
 
 class MeshnatYosef1(WebBase):

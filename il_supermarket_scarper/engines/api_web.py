@@ -42,9 +42,9 @@ class ApiWebEngine(WebBase):
             Logger.error(f"Failed to parse JSON response: {e}")
             return []
 
-    def get_request_url(self, files_types=None, store_id=None, when_date=None):
-        """Get API endpoints to query - to be overridden by subclasses"""
-        return []
+    async def get_request_url(self, files_types=None, store_id=None, when_date=None):
+        """get API endpoints to query"""
+        yield
 
     def get_data_from_page(self, req_res):
         """Parse API response - to be overridden by subclasses"""
@@ -57,7 +57,7 @@ class ApiWebEngine(WebBase):
             return []
 
     async def extract_task_from_entry(self, all_trs):
-        """Extract download tasks from API data - async generator yielding FileEntry. Override in subclasses."""
+        """Extract download tasks from API data"""
         for entry in all_trs:
             try:
                 if isinstance(entry, dict):
@@ -82,12 +82,11 @@ class ApiWebEngine(WebBase):
         files_names_to_scrape=None,
         filter_null=False,
         filter_zero=False,
-        suppress_exception=False,
         min_size=None,
         max_size=None,
         random_selection=False,
     ):
-        """Override WebBase to collect file details from API endpoints. Uses shared async pipeline."""
+        """collect file details from API endpoints"""
         all_entries = []
 
         # Get API endpoints to query
@@ -107,8 +106,6 @@ class ApiWebEngine(WebBase):
                     all_entries.append(page_data)
             except Exception as e:  # pylint: disable=broad-exception-caught
                 Logger.error(f"Failed to get data from {request_info['url']}: {e}")
-                if not suppress_exception:
-                    raise
 
         # Apply filtering if needed
         if hasattr(self, "apply_filter_by_type"):

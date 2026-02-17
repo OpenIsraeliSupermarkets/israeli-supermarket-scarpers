@@ -45,9 +45,8 @@ class VictoryNewSource(ApiWebEngine):
             params["branchNumber"] = branch_number
         return self.get_api_data("/webapi/api/getfiles", params)
 
-    def get_request_url(self, files_types=None, store_id=None, when_date=None):
+    async def get_request_url(self, files_types=None, store_id=None, when_date=None):
         """Generate API requests for getting file lists"""
-        requests = []
 
         for chain_id in self.get_chain_id():
             # Get branches first
@@ -66,26 +65,21 @@ class VictoryNewSource(ApiWebEngine):
             # Get files for each branch (or all if no branch filter)
             if branches:
                 for branch in branches:
-                    requests.append(
-                        {
-                            "url": f"{self.url.rstrip('/')}/webapi/api/getfiles?edi={chain_id}",
-                            "method": "GET",
-                            "chain_id": chain_id,
-                            "branch_number": branch.get("number"),
-                        }
-                    )
-            else:
-                # No specific branch, get all files
-                requests.append(
-                    {
+                    yield {
                         "url": f"{self.url.rstrip('/')}/webapi/api/getfiles?edi={chain_id}",
                         "method": "GET",
                         "chain_id": chain_id,
-                        "branch_number": None,
+                        "branch_number": branch.get("number"),
                     }
-                )
 
-        return requests
+            else:
+                # No specific branch, get all files
+                yield {
+                    "url": f"{self.url.rstrip('/')}/webapi/api/getfiles?edi={chain_id}",
+                    "method": "GET",
+                    "chain_id": chain_id,
+                    "branch_number": None,
+                }
 
     def get_data_from_page(self, req_res):
         """Parse the getfiles API response"""

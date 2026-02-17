@@ -1,9 +1,9 @@
 from datetime import timedelta
+from typing import AsyncGenerator
 from bs4 import BeautifulSoup
 
 from il_supermarket_scarper.utils import _now, Logger, FileEntry
 from il_supermarket_scarper.engines.web import WebBase
-from typing import AsyncGenerator
 from il_supermarket_scarper.utils import DumpFolderNames
 
 

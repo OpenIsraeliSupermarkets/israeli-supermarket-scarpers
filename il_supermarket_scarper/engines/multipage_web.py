@@ -4,10 +4,11 @@ import ntpath
 import asyncio
 from abc import abstractmethod
 from typing import AsyncGenerator
+from lxml import html as lxml_html
 
 from il_supermarket_scarper.utils import FileEntry
 
-from lxml import html as lxml_html
+
 from il_supermarket_scarper.utils import (
     Logger,
     convert_nl_size_to_bytes,

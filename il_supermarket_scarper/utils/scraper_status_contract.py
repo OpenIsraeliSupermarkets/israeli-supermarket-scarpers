@@ -1,30 +1,35 @@
 """Data classes defining the output format contract for scraper status."""
 
+import re
+
 from collections import defaultdict
 from datetime import datetime
 from typing import List, Optional, Union
 from pydantic.networks import AnyUrl
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
+from pydantic_core import core_schema
 
 from il_supermarket_scarper.utils.file_types import FileTypesFilters
 
-
-import re
 
 FILENAME_REGEX = re.compile(r"^[a-zA-Z0-9._-]+$")
 
 
 class FileName(str):
-    @classmethod
-    def __get_pydantic_core_schema__(cls, source, handler):
-        from pydantic_core import core_schema
+    """filename class"""
 
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, source, handler
+    ):  # pylint: disable=unused-argument
+        """get the pydantic core schema"""
         return core_schema.no_info_after_validator_function(
             cls.validate, core_schema.str_schema()
         )
 
     @classmethod
     def validate(cls, value: str) -> str:
+        """validate the filename"""
         if not value:
             raise ValueError("Filename cannot be empty")
 
@@ -215,7 +220,6 @@ class ScraperStatusOutput(BaseModel):
                 return False
         return True
 
-
     @staticmethod
     def _has_duplicate_statuses(status_counter_list: list) -> bool:
         """Check if a file has duplicate status types."""
@@ -242,20 +246,12 @@ class ScraperStatusOutput(BaseModel):
         """
         per_file, per_file_status_counter = self._build_per_file_status_data()
 
-        # Get the limit from StartedStatus if available
-        limit = None
-        for status_event in self.global_status:
-            if isinstance(status_event, StartedStatus):
-                limit = status_event.limit
-                break
-
         # Count successfully downloaded files (downloaded and verified)
         downloaded_count = 0
         for fn, status in per_file.items():
             # Count files that were successfully downloaded
             if status["downloaded"]:
                 downloaded_count += 1
-
 
         # Only validate files that were actually attempted (downloaded, failed, or verified)
         # Files that were only saw/collected but never attempted shouldn't be validated
