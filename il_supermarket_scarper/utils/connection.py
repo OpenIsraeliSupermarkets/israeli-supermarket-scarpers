@@ -1,6 +1,5 @@
 import contextlib
 import io
-import ntpath
 import os
 import time
 import socket
@@ -9,7 +8,6 @@ import random
 import asyncio
 import fnmatch
 from ftplib import FTP_TLS, error_perm
-import subprocess
 
 from http.client import RemoteDisconnected
 from http.cookiejar import LoadError
@@ -429,33 +427,7 @@ def get_from_webpage(cached_page, extraction_type):
     return content
 
 
-def url_retrieve(url, filename, timeout=30):
-    # from urllib.request import urlretrieve
-    # urlretrieve(url, filename)
-    # >>> add here timeout if needed
-    """alternative to urllib.request.urlretrieve"""
-    # https://gist.github.com/xflr6/f29ed682f23fd27b6a0b1241f244e6c9
-    with contextlib.closing(
-        requests.get(
-            url, stream=True, timeout=timeout, headers={"Accept-Encoding": None}
-        )
-    ) as _request:
-        _request.raise_for_status()
-        size = int(_request.headers.get("Content-Length", "-1"))
-        read = 0
-        with open(filename, "wb") as file:
-            for chunk in _request.iter_content(chunk_size=None):
-                time.sleep(0.5)
-                read += len(chunk)
-                file.write(chunk)
-                file.flush()
-
-    if size >= 0 and read < size:
-        msg = f"retrieval incomplete: got only {read:d} out of {size:d} bytes"
-        raise ValueError(msg, (filename, _request.headers))
-
-
-def url_retrieve_to_memory(url, timeout=30):
+def url_retrieve_to_memory(url, timeout=30, chunk_size=8192):
     """Download URL content directly to memory (BytesIO)."""
     with contextlib.closing(
         requests.get(
@@ -466,8 +438,7 @@ def url_retrieve_to_memory(url, timeout=30):
         size = int(_request.headers.get("Content-Length", "-1"))
         read = 0
         file_buffer = io.BytesIO()
-        for chunk in _request.iter_content(chunk_size=None):
-            time.sleep(0.5)
+        for chunk in _request.iter_content(chunk_size=chunk_size):
             read += len(chunk)
             file_buffer.write(chunk)
 
@@ -550,88 +521,6 @@ async def collect_from_ftp(
     for filename, size in files_list:
         yield FileEntry(name=filename, url=None, size=size)
 
-
-def _sync_ftp_download(
-    ftp_timeout, ftp_host, ftp_username, ftp_password, ftp_path, temporary_gz_file_path
-):
-    """Synchronous FTP download using FTP_TLS"""
-    socket.setdefaulttimeout(ftp_timeout)
-    with open(temporary_gz_file_path, "wb") as file_ftp:
-        file_name = ntpath.basename(temporary_gz_file_path)
-        ftp = FTP_TLS(ftp_host, ftp_username, ftp_password, timeout=ftp_timeout)
-        ftp.trust_server_pasv_ipv4_address = True
-        ftp.cwd(ftp_path)
-        ftp.retrbinary("RETR " + file_name, file_ftp.write)
-        ftp.quit()
-
-
-async def fetch_temporary_gz_file_from_ftp(  # pylint: disable=too-many-locals
-    ftp_host: str,
-    ftp_username: str,
-    ftp_password: str,
-    ftp_path: str,
-    temporary_gz_file_path: str,
-    timeout: int = 15,
-):
-    """download a file from a cerberus base site."""
-    Logger.info(
-        f"Downloading file from FTP server with {ftp_host} "
-        f", username: {ftp_username} , password: {ftp_password}"
-    )
-    # Manual retry logic for async functions (matching download_connection_retry parameters)
-    _tries = 8
-    _delay = 2
-    backoff = 2
-    max_delay = 5 * 60
-    _timeout = timeout
-    backoff_timeout = 5
-    max_timeout = 300  # Cap FTP timeout at 5 minutes
-
-    while _tries:
-        try:
-            await asyncio.to_thread(
-                _sync_ftp_download,
-                _timeout,
-                ftp_host,
-                ftp_username,
-                ftp_password,
-                ftp_path,
-                temporary_gz_file_path,
-            )
-            return
-        except exceptions as error:
-            _tries -= 1
-            is_final_attempt = not _tries
-
-            if Logger is not None:
-                error_type = type(error).__name__
-                error_msg = str(error)
-                if len(error_msg) > 200:
-                    error_msg = error_msg[:200] + "..."
-
-                Logger.warning(
-                    "%s: %s (timeout=%s, retries_left=%d, retrying in %s seconds)",
-                    error_type,
-                    error_msg,
-                    _timeout,
-                    _tries,
-                    _delay,
-                )
-
-                # Only log full stack trace on final failure
-                if is_final_attempt:
-                    Logger.error_execption(error)
-
-            if is_final_attempt:
-                raise
-
-            await asyncio.sleep(_delay)
-            _delay = min(_delay * backoff, max_delay)
-            _timeout = min(_timeout + backoff_timeout, max_timeout)
-
-    raise ValueError("shouldn't be called!")
-
-
 def _sync_ftp_download_to_memory(
     ftp_host, ftp_username, ftp_password, ftp_path, file_name, ftp_timeout
 ):
@@ -710,47 +599,26 @@ async def fetch_file_from_ftp_to_memory(  # pylint: disable=too-many-locals
     raise ValueError("shouldn't be called!")
 
 
-def wget_file(file_link, file_save_path):
-    """use wget to download file"""
-    Logger.debug(f"trying wget file {file_link} to {file_save_path}.")
+async def wget_file_to_memory(file_link, timeout=30):
+    """Download file to memory using wget (fallback when requests fails)."""
+    Logger.debug(f"trying to download file {file_link} to memory (wget fallback).")
 
-    with subprocess.Popen(
-        f"wget --output-document={file_save_path} '{file_link}'",
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        shell=True,
-    ) as process:
-        std_out, std_err = process.communicate()
-    Logger.debug(f"Wget stdout {std_out}")
-    Logger.debug(f"Wget stderr {std_err}")
+    process = await asyncio.create_subprocess_shell(
+        f"wget --timeout={timeout} --output-document=- '{file_link}'",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    std_out, std_err = await process.communicate()
 
-    if not os.path.exists(file_save_path):
-        Logger.error(f"fils is not exists after wget {file_save_path}")
+    std_err_text = std_err.decode('utf-8', errors='ignore')
+    Logger.debug(f"Wget stderr {std_err_text}")
+
+    if process.returncode != 0:
+        Logger.error(f"wget failed with return code {process.returncode}")
         raise FileNotFoundError(
-            f"File wasn't downloaded with wget,std_err is {std_err}"
+            f"File download failed, stderr: {std_err_text}"
         )
 
-    # wget will create file always, so we need to check if there was an error
-    # example for validate case is collecting start and
-    # the file is removed before downloading (change of hour)
-    if "ERROR 403" in std_err or "ERROR 404" in std_err:
-        if os.path.exists(file_save_path):
-            os.remove(file_save_path)
-        Logger.error(f"Got error {std_err} while downloading {file_link}")
-        raise FileNotFoundError(
-            f"File wan't found in the remote, possibly removed between "
-            f"collection and download, std_err is {std_err}"
-        )
-    return file_save_path
-
-
-def wget_file_to_memory(file_link, timeout=30):
-    """Download file to memory using requests (fallback when wget fails)."""
-    Logger.debug(f"trying to download file {file_link} to memory (requests fallback).")
-    try:
-        # Use requests as a fallback when wget fails
-        return url_retrieve_to_memory(file_link, timeout=timeout)
-    except Exception as e:
-        Logger.error(f"Failed to download {file_link} to memory: {e}")
-        raise FileNotFoundError(f"File wasn't downloaded to memory, error: {str(e)}")
+    buffer = io.BytesIO(std_out)
+    buffer.seek(0)
+    return buffer.getvalue()

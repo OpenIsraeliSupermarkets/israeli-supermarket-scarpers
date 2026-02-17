@@ -10,17 +10,15 @@ from il_supermarket_scarper.utils import (
     FileTypesFilters,
     Logger,
     ScraperStatus,
-    extract_xml_file_from_gz_file,
     session_with_cookies,
-    url_retrieve,
     url_retrieve_to_memory,
-    wget_file,
     wget_file_to_memory,
     RestartSessionError,
     DumpFolderNames,
     FileOutput,
     DiskFileOutput,
     ScrapingResult,
+    async_url_connection_retry,
 )
 from il_supermarket_scarper.utils.state import FilterState
 from il_supermarket_scarper.utils.databases import AbstractDataBase
@@ -673,11 +671,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 # Add new tasks from generator up to max_threads limit
                 while not generator_exhausted and len(pending_tasks) < self.max_threads:
                     try:
-                        file_details = (
-                            await anext(  # pylint: disable=undefined-variable
-                                files_generator
-                            )
-                        )
+                        file_details = await anext(files_generator)
                         task = asyncio.create_task(
                             process_file_with_semaphore(file_details)
                         )
@@ -784,18 +778,15 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 if self.is_pass_file_size_filter(entry.size, min_size, max_size):
                     yield entry
 
-    async def retrieve_file(self, file_link, file_save_path, timeout=30):
-        """download file"""
-        await asyncio.to_thread(
-            url_retrieve, file_link, file_save_path, timeout=timeout
-        )
-        return file_save_path
-
+    @async_url_connection_retry()
     async def retrieve_file_to_memory(self, file_link, timeout=30):
         """download file directly to memory"""
         return await asyncio.to_thread(
             url_retrieve_to_memory, file_link, timeout=timeout
         )
+
+    async def _wget_file_to_memory(self, file_link, timeout):
+        return await wget_file_to_memory(file_link, timeout)
 
     async def save_and_extract(self, arg):
         """download file and extract it (in-memory)"""
@@ -811,19 +802,18 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         try:
             # Determine file name with extension
             file_name_with_ext = file_name
-            if not (file_name.endswith(".gz") or file_name.endswith(".xml")) and (
-                file_link.endswith(".gz") or file_link.endswith(".xml")
-            ):
+            if (file_link.endswith((".gz", ".xml")) and
+                not file_name.endswith((".gz", ".xml"))):
+
                 file_name_with_ext = file_name + "." + file_link.split(".")[-1]
 
             # Download file content directly to memory
             try:
                 file_content = await self.retrieve_file_to_memory(file_link, timeout=30)
+
             except Exception as e:  # pylint: disable=broad-except
                 Logger.warning(f"Error downloading {file_link}: {e}")
-                file_content = await asyncio.to_thread(
-                    wget_file_to_memory, file_link, timeout=30
-                )
+                file_content = await self._wget_file_to_memory(file_link, timeout=30)
             downloaded = True
 
             # Log file size if it's a gzip file
@@ -868,76 +858,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             restart_and_retry=restart_and_retry,
         )
 
-    def _read_file_content(self, file_path: str) -> bytes:
-        """Read file content as bytes (sync operation for thread)."""
-        with open(file_path, "rb") as f:
-            return f.read()
-
-    async def _wget_file(self, file_link, file_save_path):
-        return await asyncio.to_thread(wget_file, file_link, file_save_path)
-
-    async def _save_and_extract(self, file_link, file_save_path):
-        downloaded = False
-        extract_succefully = False
-        error = None
-        restart_and_retry = False
-        file_name = os.path.basename(file_save_path)
-
-        try:
-
-            # add ext if possible
-            if not (
-                file_save_path.endswith(".gz") or file_save_path.endswith(".xml")
-            ) and (file_link.endswith(".gz") or file_link.endswith(".xml")):
-                file_save_path = (
-                    file_save_path + "." + file_link.split("?")[0].split(".")[-1]
-                )
-                file_name = os.path.basename(file_save_path)
-
-            # try to download the file
-            try:
-                file_save_path_with_ext = await self.retrieve_file(
-                    file_link, file_save_path
-                )
-            except Exception as e:  # pylint: disable=broad-except
-                Logger.warning(f"Error downloading {file_link}: {e}")
-                file_save_path_with_ext = await self._wget_file(
-                    file_link, file_save_path
-                )
-            downloaded = True
-
-            if file_save_path_with_ext.endswith("gz"):
-                Logger.debug(
-                    f"File size is {os.path.getsize(file_save_path_with_ext)} bytes."
-                )
-                await asyncio.to_thread(
-                    extract_xml_file_from_gz_file, file_save_path_with_ext
-                )
-
-                await asyncio.to_thread(os.remove, file_save_path_with_ext)
-            extract_succefully = True
-
-            Logger.debug(f"Done downloading {file_link}")
-        except RestartSessionError as exception:
-            Logger.error(
-                f"Error downloading {file_link},extract_succefully={extract_succefully}"
-                f",downloaded={downloaded}"
-            )
-            Logger.error_execption(exception)
-            error = str(exception)
-            restart_and_retry = True
-        except Exception as exception:  # pylint: disable=broad-except
-            Logger.error(
-                f"Error downloading {file_link},extract_succefully={extract_succefully}"
-                f",downloaded={downloaded}"
-            )
-            Logger.error_execption(exception)
-            error = str(exception)
-
-        return ScrapingResult(
-            file_name=file_name,
-            downloaded=downloaded,
-            extract_succefully=extract_succefully,
-            error=error,
-            restart_and_retry=restart_and_retry,
-        )
+    # def _read_file_content(self, file_path: str) -> bytes:
+    #     """Read file content as bytes (sync operation for thread)."""
+    #     with open(file_path, "rb") as f:
+    #         return f.read()
