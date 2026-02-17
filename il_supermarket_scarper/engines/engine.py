@@ -68,6 +68,8 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             scraper = scraper_class(file_output=output)
             asyncio.run(scraper.scrape(limit=10))
     """
+    _DATE_PATTERN_1 = re.compile(r"-(\d{8})(\d{4})?(?=-|\.|$)")
+    _DATE_PATTERN_2 = re.compile(r"-(\d{8})-(\d{6})")
 
     utilize_date_param = True
 
@@ -353,9 +355,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         if limit and not files_types:
             assert limit > 0, "Limit must be greater than 0"
             async for file in intreable_:
-                if limit is None:
-                    yield file
-                elif state.file_pass_limit < limit:
+                if state.file_pass_limit < limit:
                     state.file_pass_limit += 1
                     yield file
                 else:
@@ -418,9 +418,8 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
 
     async def get_by_date(self, requested_date, by_function, intreable_):
         """get by date"""
-        #
         date_format = requested_date.strftime("%Y%m%d")
-        #
+
         async for file in intreable_:
             # StoresFull7290875100001-000-202502250510'
             # Promo7290700100008-000-207-20250224-103225
@@ -440,37 +439,26 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             # Promo7290700100008-000-207-20250224-103225 (YYYYMMDD-HHMMSS)
             # Look for date pattern YYYYMMDD followed by optional time
             # Pattern: -YYYYMMDD followed by optional HHMM, then - or end of string or .
-            date_match = re.search(r"-(\d{8})(\d{4})?(?=-|\.|$)", file_name)
+            date_match = (
+                self._DATE_PATTERN_1.search(file_name)
+                or self._DATE_PATTERN_2.search(file_name)
+            )
+
             if not date_match:
-                # Try pattern with date and time separated by dash: -YYYYMMDD-HHMMSS
-                date_match = re.search(r"-(\d{8})-(\d{6})", file_name)
-                if date_match:
-                    date_str = date_match.group(1)  # YYYYMMDD
-                    time_str = date_match.group(2)[
-                        :4
-                    ]  # Take first 4 digits (HHMM) from HHMMSS
-                    try:
-                        file_datetime = datetime.datetime.strptime(
-                            f"{date_str}{time_str}", "%Y%m%d%H%M"
-                        )
-                        if file_datetime >= cutoff_time:
-                            groups_value.append(file)
-                    except ValueError:
-                        continue
-            else:
-                date_str = date_match.group(1)  # YYYYMMDD
-                time_str = (
-                    date_match.group(2) if date_match.group(2) else "0000"
-                )  # HHMM or default to 0000
-                try:
-                    file_datetime = datetime.datetime.strptime(
-                        f"{date_str}{time_str}", "%Y%m%d%H%M"
-                    )
-                    if file_datetime >= cutoff_time:
-                        groups_value.append(file)
-                except ValueError:
-                    # If parsing fails, skip this file
-                    continue
+                continue
+
+            date_str = date_match.group(1)  # YYYYMMDD
+            time_str = (date_match.group(2) or "0000")[:4] # HHMM, default to 0000
+
+            try:
+                file_datetime = datetime.datetime.strptime(
+                    f"{date_str}{time_str}", "%Y%m%d%H%M"
+                )
+                if file_datetime >= cutoff_time:
+                    groups_value.append(file)
+
+            except ValueError:
+                continue
 
         return groups_value
 
@@ -602,6 +590,14 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             ScrapingResult: Result of processing the file
         """
 
+    def _extract_file_name(self, file_details):
+        """Extract file name from file details for error reporting."""
+        if isinstance(file_details, str):
+            return file_details
+        if isinstance(file_details, tuple) and len(file_details) > 1:
+            return file_details[1]
+        return "unknown"
+
     async def _scrape(  # pylint: disable=too-many-locals
         self,
         state: FilterState,
@@ -628,16 +624,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                     return await self.process_file(file_details)
                 except Exception as e:  # pylint: disable=broad-except
                     Logger.error(f"Error in process_file: {e}")
-                    # Try to extract file_name from file_details for error reporting
-                    file_name = (
-                        file_details
-                        if isinstance(file_details, str)
-                        else (
-                            file_details[1]
-                            if isinstance(file_details, tuple) and len(file_details) > 1
-                            else "unknown"
-                        )
-                    )
+                    file_name = self._extract_file_name(file_details)
                     self.register_download_fail(e, file_name)
                     return ScrapingResult(
                         file_name=file_name,
@@ -647,7 +634,6 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                         restart_and_retry=False,
                     )
 
-        # Get the file generator
         files_generator = self.collect_files_details_from_site(
             state,
             limit=limit,
@@ -698,17 +684,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                             yield result
                         except Exception as e:  # pylint: disable=broad-except
                             Logger.error(f"Error processing task: {e}")
-                            # Try to extract file_name from file_details for error reporting
-                            file_name = (
-                                file_details
-                                if isinstance(file_details, str)
-                                else (
-                                    file_details[1]
-                                    if isinstance(file_details, tuple)
-                                    and len(file_details) > 1
-                                    else "unknown"
-                                )
-                            )
+                            file_name = self._extract_file_name(file_details)
                             yield ScrapingResult(
                                 file_name=file_name,
                                 downloaded=False,
@@ -722,6 +698,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                     break
         finally:
             # Clean up any remaining tasks
+            await files_generator.aclose()
             if pending_tasks:
                 for task in pending_tasks:
                     task.cancel()
@@ -770,13 +747,9 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         Yields filtered FileEntry instances.
         Entries with None file_size are kept by default.
         """
-        if min_size is None and max_size is None:
-            async for entry in files:
+        async for entry in files:
+            if self.is_pass_file_size_filter(entry.size, min_size, max_size):
                 yield entry
-        else:
-            async for entry in files:
-                if self.is_pass_file_size_filter(entry.size, min_size, max_size):
-                    yield entry
 
     @async_url_connection_retry()
     async def retrieve_file_to_memory(self, file_link, timeout=30):
@@ -857,8 +830,3 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             error=error,
             restart_and_retry=restart_and_retry,
         )
-
-    # def _read_file_content(self, file_path: str) -> bytes:
-    #     """Read file content as bytes (sync operation for thread)."""
-    #     with open(file_path, "rb") as f:
-    #         return f.read()

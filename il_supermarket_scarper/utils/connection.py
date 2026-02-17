@@ -257,8 +257,7 @@ def get_random_user_agent():
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.96 Safari/537.36",  # pylint: disable=line-too-long
     ]
 
-    index = random.randrange(len(user_agents) - 1)
-    return {"User-Agent": str(user_agents[index])}
+    return {"User-Agent": random.choice(user_agents)}
 
 
 @url_connection_retry(
