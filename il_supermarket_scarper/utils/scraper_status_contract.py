@@ -28,6 +28,7 @@ class FileName(str):
         if not value:
             raise ValueError("Filename cannot be empty")
 
+        value = value.replace("NULL", "")
         if FileTypesFilters.get_type_from_file(value) is None:
             raise ValueError(f"File {value} is not a valid filename")
 
@@ -192,22 +193,28 @@ class ScraperStatusOutput(BaseModel):
 
         Rules:
         - Must be saw
-        - Must be collected
-        - Must be either downloaded OR failed
-        - If downloaded, must also be verified
+        - If 'collected' exists, must also have 'saw'
+        - If 'downloaded' or 'failed' exists, must also have 'collected'
+        - If 'verified' exists, must also have 'downloaded'
         """
-        # Must be collected
+        # Must be saw
         if not status["saw"]:
             return False
-        if not status["collected"]:
-            return False
-        # Must be either downloaded OR failed
-        if not (status["downloaded"] or status["failed"]):
-            return False
-        # If downloaded, must be also verified
-        if status["downloaded"] and not status["verified"]:
-            return False
+
+        if status["collected"]:
+            if not status["saw"]:
+                return False
+        # If collected is True, must also be saw (already checked above)
+        # If downloaded or failed exists, must also be collected
+        if status["downloaded"] or status["failed"]:
+            if not status["collected"]:
+                return False
+        # If verified exists, must also have downloaded
+        if status["verified"]:
+            if not status["downloaded"]:
+                return False
         return True
+
 
     @staticmethod
     def _has_duplicate_statuses(status_counter_list: list) -> bool:
