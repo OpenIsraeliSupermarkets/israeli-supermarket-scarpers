@@ -51,7 +51,7 @@ class Cerberus(Engine):
         # Register that we've collected this file's details
         self.register_collected_file(
             file_name_collected_from_site=file_name[0],
-            links_collected_from_site=None,
+            link_collected_from_site=None,
         )
 
         # Process file from FTP - persist_from_ftp yields a ScrapingResult
@@ -143,20 +143,20 @@ class Cerberus(Engine):
                 self.ftp_path,
                 filter_arg,
             )
+            files = self.register_all_saw_files_on_site(files_generator)
 
-            files_generator = self.register_all_saw_files_on_site(files_generator)
-
-            files = self.filter_by_file_size(
-                files_generator,
-                min_size=min_size,
-                max_size=max_size,
-            )
-
+            
             files = self.filter_bad_files(
-                files,
+                files_generator,
                 filter_null=filter_null,
                 filter_zero=filter_zero,
                 by_function=lambda x: x.name,
+            )
+
+            files = self.filter_by_file_size(
+                files,
+                min_size=min_size,
+                max_size=max_size,
             )
 
             files = self.filter_by_file_extension(files)

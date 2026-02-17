@@ -27,6 +27,7 @@ from requests.exceptions import (
     ConnectTimeout,
 )
 from .logger import Logger
+from .file_entry import FileEntry
 from .retry import retry
 from .file_cache import file_cache
 
@@ -545,10 +546,9 @@ async def collect_from_ftp(
     files_list = await asyncio.to_thread(_sync_ftp_list)
 
     # Yield each file as an async generator
-    from .file_entry import FileEntry
 
     for filename, size in files_list:
-        yield FileEntry(name=filename, url="", size=size)
+        yield FileEntry(name=filename, url=None, size=size)
 
 
 def _sync_ftp_download(

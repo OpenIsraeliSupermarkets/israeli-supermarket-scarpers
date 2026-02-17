@@ -6,6 +6,7 @@ from il_supermarket_scarper.engines.web import WebBase
 from typing import AsyncGenerator
 from il_supermarket_scarper.utils import DumpFolderNames
 
+
 class Wolt(WebBase):
     """scraper for wolt"""
 
@@ -50,7 +51,7 @@ class Wolt(WebBase):
             )
         )
 
-    async def extract_task_from_entry(self, all_trs)-> AsyncGenerator[FileEntry, None]:
+    async def extract_task_from_entry(self, all_trs) -> AsyncGenerator[FileEntry, None]:
         """extract download links, file names, and file sizes from page list"""
         for x in all_trs:
             try:

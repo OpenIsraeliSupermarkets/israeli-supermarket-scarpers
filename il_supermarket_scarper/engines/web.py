@@ -168,7 +168,7 @@ class WebBase(Engine):
         # Register that we've collected this file's details
         self.register_collected_file(
             file_name_collected_from_site=file_name,
-            links_collected_from_site=download_url,
+            link_collected_from_site=download_url,
         )
 
         # Download and extract the file

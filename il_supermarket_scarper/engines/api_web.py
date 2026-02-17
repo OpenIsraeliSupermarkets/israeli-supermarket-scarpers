@@ -19,8 +19,12 @@ class ApiWebEngine(WebBase):
         max_threads=5,
     ):
         super().__init__(
-            chain, chain_id, url, max_threads=max_threads,
-            file_output=file_output, status_database=status_database
+            chain,
+            chain_id,
+            url,
+            max_threads=max_threads,
+            file_output=file_output,
+            status_database=status_database,
         )
         self.session = requests.Session()
 

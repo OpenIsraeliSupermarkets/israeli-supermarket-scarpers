@@ -4,7 +4,6 @@ from typing import Optional
 
 from .status import log_folder_details, _now
 from .databases import JsonDataBase, AbstractDataBase
-from .lock_utils import lock_by_string
 from .file_output import FileOutput
 from .scraping_result import ScrapingResult
 
@@ -37,7 +36,6 @@ class ScraperStatus:
             self.database = status_database
         self.task_id = _now().strftime("%Y%m%d%H%M%S")
 
-    @lock_by_string()
     def on_scraping_start(self, limit, files_types, **additional_info):
         """Report that scraping has started."""
         self._insert_global_status(
@@ -47,7 +45,6 @@ class ScraperStatus:
             **additional_info,
         )
 
-    @lock_by_string()
     def register_saw_file(
         self,
         file_name,
@@ -65,23 +62,21 @@ class ScraperStatus:
             **additional_info,
         )
 
-    @lock_by_string()
     def register_collected_file(
         self,
         file_name_collected_from_site,
-        links_collected_from_site="",
+        link_collected_from_site=None,
         **additional_info,
     ):
         """Report that file details have been collected."""
 
         self._insert_event(
             ScraperStatus.COLLECTED,
-            file_names_collected=file_name_collected_from_site,
-            links_collected=links_collected_from_site,
+            file_name=file_name_collected_from_site,
+            link_collected=link_collected_from_site,
             **additional_info,
         )
 
-    @lock_by_string()
     def register_downloaded_file(self, results: ScrapingResult):
         """Report that the file has been downloaded."""
         # Map results to contract field names
@@ -118,7 +113,6 @@ class ScraperStatus:
                 {"file_name": results.file_name, "when": _now()},
             )
 
-    @lock_by_string()
     def on_scrape_completed(
         self, folder_name: str, completed_successfully: bool = True
     ):
@@ -129,7 +123,6 @@ class ScraperStatus:
             completed_successfully=completed_successfully,
         )
 
-    @lock_by_string()
     def register_download_fail(self, error, file_name: str):
         """report when the scraping in failed"""
         # Map to contract field names

@@ -1,6 +1,11 @@
 import re
 from il_supermarket_scarper.engines import Matrix, ApiWebEngine
-from il_supermarket_scarper.utils import DumpFolderNames, FileEntry, Logger, FileTypesFilters
+from il_supermarket_scarper.utils import (
+    DumpFolderNames,
+    FileEntry,
+    Logger,
+    FileTypesFilters,
+)
 
 
 class Victory(Matrix):

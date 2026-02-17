@@ -312,12 +312,10 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         files_list = stream_to_list(state, intreable)
 
         # filter files already downloaded
-        intreable_: AsyncGenerator[FileEntry, None] = (
-            self.filter_already_downloaded(
-                files_names_to_scrape,
-                files_list,
-                by_function=by_function,
-            )
+        intreable_: AsyncGenerator[FileEntry, None] = self.filter_already_downloaded(
+            files_names_to_scrape,
+            files_list,
+            by_function=by_function,
         )
 
         # filter unique links

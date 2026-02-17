@@ -2,7 +2,7 @@ import os
 import json
 from datetime import datetime
 import pytz
-
+from ..lock_utils import lock_by_string
 from ..logger import Logger
 from ..status import _now
 from .base import AbstractDataBase
@@ -56,6 +56,7 @@ class JsonDataBase(AbstractDataBase):
         with open(file_path, "w", encoding="utf-8") as file:
             json.dump(dict(sorted(data.items())), file, default=str, indent=4)
 
+    @lock_by_string()
     def insert_documents(self, collection_name, document):
         """Insert a document into a collection inside the JSON database."""
 
@@ -71,6 +72,7 @@ class JsonDataBase(AbstractDataBase):
         self._write_database(data)
         self._update_last_modified()
 
+    @lock_by_string()
     def insert_document(self, collection_name, document):
         """Insert a document into a collection inside the JSON database."""
         data = self._read_database()

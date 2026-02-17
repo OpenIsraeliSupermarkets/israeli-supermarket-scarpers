@@ -42,7 +42,6 @@ from .exceptions import RestartSessionError
 from .retry import retry_files
 from .validation import is_valid_chain_name, change_xml_encoding
 from .folders_name import DumpFolderNames
-from .lock_utils import LockManager, lock_by_string
 from .status import convert_unit, UnitSize, convert_nl_size_to_bytes, string_to_float
 from .state import FilterState
 from .file_output import (

@@ -6,12 +6,13 @@ from typing import List, Optional, Union
 from pydantic.networks import AnyUrl
 from pydantic import BaseModel, Field, field_validator
 
-from il_supermarket_scarper.utils.file_types import FileTypesFilters 
+from il_supermarket_scarper.utils.file_types import FileTypesFilters
 
 
 import re
 
 FILENAME_REGEX = re.compile(r"^[a-zA-Z0-9._-]+$")
+
 
 class FileName(str):
     @classmethod
@@ -19,8 +20,7 @@ class FileName(str):
         from pydantic_core import core_schema
 
         return core_schema.no_info_after_validator_function(
-            cls.validate,
-            core_schema.str_schema()
+            cls.validate, core_schema.str_schema()
         )
 
     @classmethod
@@ -32,8 +32,6 @@ class FileName(str):
             raise ValueError(f"File {value} is not a valid filename")
 
         return value
-
-
 
 
 # -- Global Status --
@@ -77,8 +75,8 @@ class CollectedStatus(BaseModel):
 
     status: str = "collected"
     when: Optional[datetime] = None
-    file_names_collected: FileName
-    links_collected: Optional[AnyUrl]
+    file_name: FileName
+    link_collected: Optional[AnyUrl]
 
 
 class DownloadedStatus(BaseModel):
@@ -140,7 +138,6 @@ class ScraperStatusOutput(BaseModel):
     )
     verified_downloads: List[VerifiedDownload] = Field(default_factory=list)
 
-
     def _build_per_file_status_data(self):
         """
         Build per-file status records and status counters.
@@ -170,10 +167,8 @@ class ScraperStatusOutput(BaseModel):
                 per_file[fn]["saw"] = True
                 per_file_status_counter[fn].append("saw")
             elif isinstance(event, CollectedStatus):
-                file_names = event.file_names_collected
-                for fn in file_names:
-                    per_file[fn]["collected"] = True
-                    per_file_status_counter[fn].append("collected")
+                per_file[event.file_name]["collected"] = True
+                per_file_status_counter[event.file_name].append("collected")
             elif isinstance(event, DownloadedStatus):
                 fn = event.file_name_downloaded
                 per_file[fn]["downloaded"] = True
@@ -196,6 +191,7 @@ class ScraperStatusOutput(BaseModel):
         Validate a single file's lifecycle.
 
         Rules:
+        - Must be saw
         - Must be collected
         - Must be either downloaded OR failed
         - If downloaded, must also be verified

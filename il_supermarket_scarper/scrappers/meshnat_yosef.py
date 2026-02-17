@@ -33,11 +33,13 @@ class MeshnatYosef1(WebBase):
         # Meshnat Yosef don't support file size in the entry
         return None
 
-    async def extract_task_from_entry(self, all_trs)-> AsyncGenerator[FileEntry, None]:
+    async def extract_task_from_entry(self, all_trs) -> AsyncGenerator[FileEntry, None]:
         """extract download links, file names, and file sizes from page list"""
         for x in all_trs:
             try:
-                yield FileEntry(name=x["name"], url=x["url"], size=self.get_file_size_from_entry(x))
+                yield FileEntry(
+                    name=x["name"], url=x["url"], size=self.get_file_size_from_entry(x)
+                )
             except (AttributeError, KeyError, IndexError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")
 
