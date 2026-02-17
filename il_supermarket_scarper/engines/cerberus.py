@@ -143,9 +143,8 @@ class Cerberus(Engine):
                 self.ftp_path,
                 filter_arg,
             )
-            files = self.register_all_saw_files_on_site(files_generator)
+            files_generator = self.register_all_saw_files_on_site(files_generator)
 
-            
             files = self.filter_bad_files(
                 files_generator,
                 filter_null=filter_null,
