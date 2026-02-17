@@ -536,7 +536,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             store_id=store_id,
             files_names_to_scrape=files_names_to_scrape,
             when_date=when_date,
-            filter_nul=filter_null,
+            filter_null=filter_null,
             filter_zero=filter_zero,
         )
         self._validate_scraper_params(

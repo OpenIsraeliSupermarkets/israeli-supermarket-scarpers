@@ -48,7 +48,7 @@ class StartedStatus(BaseModel):
     store_id: Optional[int] = None
     files_names_to_scrape: Optional[List[str]] = None
     when_date: Optional[datetime] = None
-    filter_nul: bool = False
+    filter_null: bool = False
     filter_zero: bool = False
 
 
@@ -256,10 +256,6 @@ class ScraperStatusOutput(BaseModel):
             if status["downloaded"]:
                 downloaded_count += 1
 
-        # Validate limit if it was set
-        if limit is not None and limit > 0:
-            if downloaded_count != limit:
-                return False
 
         # Only validate files that were actually attempted (downloaded, failed, or verified)
         # Files that were only saw/collected but never attempted shouldn't be validated
