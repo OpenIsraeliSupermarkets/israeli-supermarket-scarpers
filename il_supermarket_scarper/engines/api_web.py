@@ -89,13 +89,13 @@ class ApiWebEngine(WebBase):
         """collect file details from API endpoints"""
         all_entries = []
 
-        # Get API endpoints to query
+        # Get API endpoints to query (async generator)
         requests_to_make = self.get_request_url(
             files_types=files_types, store_id=store_id, when_date=when_date
         )
 
         # Fetch data from each endpoint
-        for request_info in requests_to_make:
+        async for request_info in requests_to_make:
             try:
                 response = self.session.get(request_info["url"])
                 response.raise_for_status()

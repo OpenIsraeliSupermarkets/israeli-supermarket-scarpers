@@ -65,11 +65,15 @@ class VictoryNewSource(ApiWebEngine):
             # Get files for each branch (or all if no branch filter)
             if branches:
                 for branch in branches:
+                    branch_num = branch.get("number")
+                    url = f"{self.url.rstrip('/')}/webapi/api/getfiles?edi={chain_id}"
+                    if branch_num is not None:
+                        url += f"&branchNumber={branch_num}"
                     yield {
-                        "url": f"{self.url.rstrip('/')}/webapi/api/getfiles?edi={chain_id}",
+                        "url": url,
                         "method": "GET",
                         "chain_id": chain_id,
-                        "branch_number": branch.get("number"),
+                        "branch_number": branch_num,
                     }
 
             else:
