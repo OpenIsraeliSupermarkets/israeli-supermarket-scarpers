@@ -60,11 +60,7 @@ def test_main_to_memory_queue():
             )
             scrapper_done.start(limit=1, when_date=None, single_pass=True)
 
-            list_of_status_files = os.listdir(os.path.join(tmpdirname, "status"))
-            assert len(list_of_status_files) == len(expected)
-            assert sorted(map(lambda x: x.lower(), list_of_status_files)) == sorted(
-                map(lambda x: x.lower() + ".json", expected)
-            )
+
 
             for scraper_name, file_output in scrapper_done.consume().items():
                 # For queue output, check messages in the queue handler
@@ -87,5 +83,9 @@ def test_main_to_memory_queue():
 
             scrapper_done.stop()
             scrapper_done.join()
-
+        list_of_status_files = os.listdir(os.path.join(tmpdirname, "status"))
+        assert len(list_of_status_files) == len(expected)
+        assert sorted(map(lambda x: x.lower(), list_of_status_files)) == sorted(
+            map(lambda x: x.lower() + ".json", expected)
+        )
     asyncio.run(run_test())

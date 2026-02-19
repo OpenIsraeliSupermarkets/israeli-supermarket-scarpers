@@ -210,14 +210,22 @@ class MainScrapperRunner:  # pylint: disable=too-many-instance-attributes
         # so they can be consumed before/during scraping
         self._file_outputs = {}
         self._status_databases = {}
-        for scraper_name in self.enabled_scrapers:
-            self._file_outputs[scraper_name] = create_file_output_for_scraper(
-                scraper_name, self.file_output_config
-            )
-            self._status_databases[scraper_name] = create_status_database_for_scraper(
+
+    def _create_target_objects(self, manager):
+        """create the target objects"""
+        self._file_outputs = {
+                scraper_name: create_file_output_for_scraper(
+                    scraper_name, self.file_output_config
+                )
+                for scraper_name in self.enabled_scrapers
+            }
+        self._status_databases = {
+            scraper_name: create_status_database_for_scraper(
                 scraper_name, self.status_config
             )
-
+            for scraper_name in self.enabled_scrapers
+        }
+        self._shutdown_flag = manager.Value("b", False)
     def run(
         self,
         limit=None,
@@ -235,34 +243,34 @@ class MainScrapperRunner:  # pylint: disable=too-many-instance-attributes
         Logger.info(f"files_types is {files_types}")
         Logger.info(f"Start scraping {self.enabled_scrapers}.")
 
-        with Pool(self.multiprocessing) as self._pool:
-            result = self._pool.starmap(
-                scrape_one_wrap,
-                [
-                    (
-                        chain_scrapper_class,
-                        {
-                            "limit": limit,
-                            "files_types": files_types,
-                            "when_date": when_date,
-                            "min_size": min_size,
-                            "max_size": max_size,
-                            "file_output": self._file_outputs[chain_scrapper_class],
-                            "status_database": self._status_databases[
-                                chain_scrapper_class
-                            ],
-                            "single_pass": single_pass,
-                            "timeout_in_seconds": self.timeout_in_seconds,
-                            "shutdown_flag": self._shutdown_flag,
-                        },
-                    )
-                    for chain_scrapper_class in self.enabled_scrapers
-                ],
-            )
-
-        Logger.info("Done scraping all supermarkets.")
-
-        return result
+        with Manager() as manager:
+            self._create_target_objects(manager)
+            
+            with Pool(self.multiprocessing) as self._pool:
+                result = self._pool.starmap(
+                    scrape_one_wrap,
+                    [
+                        (
+                            chain_scrapper_class,
+                            {
+                                "limit": limit,
+                                "files_types": files_types,
+                                "when_date": when_date,
+                                "min_size": min_size,
+                                "max_size": max_size,
+                                "file_output": self._file_outputs[chain_scrapper_class],
+                                "status_database": self._status_databases[
+                                    chain_scrapper_class
+                                ],
+                                "single_pass": single_pass,
+                                "timeout_in_seconds": self.timeout_in_seconds,
+                                "shutdown_flag": self._shutdown_flag,
+                            },
+                        )   
+                        for chain_scrapper_class in self.enabled_scrapers
+                    ],
+                )
+            return result
 
     def consume_results(self):
         """consume the scraping results - returns dict mapping scraper names
