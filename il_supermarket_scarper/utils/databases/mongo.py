@@ -24,16 +24,22 @@ class MongoDataBase(AbstractDataBase):
         if PYMONGO_INSTALLED:
             url = os.environ.get("MONGO_URL", "localhost")
             port = os.environ.get("MONGO_PORT", "27017")
-            self.myclient = pymongo.MongoClient(f"mongodb://{url}:{port}/")
+            self.myclient = pymongo.MongoClient(
+                f"mongodb://{url}:{port}/scraper_status"
+            )
             self.store_db = self.myclient[self.database_name]
 
     def insert_document(self, collection_name, document):
         """Insert a document into a MongoDB collection."""
+        if self.store_db is None:
+            self.create_connection()
         self.store_db[collection_name].insert_one(document)
         self._update_last_modified()
 
     def already_downloaded(self, collection_name, query):
         """Find a document in a MongoDB collection."""
+        if self.store_db is None:
+            self.create_connection()
         return self.store_db[collection_name].find_one(query)
 
     def _update_last_modified(self):

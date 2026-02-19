@@ -36,7 +36,6 @@ def create_status_database_for_scraper(scraper_name, config):
     if database_type == "mongo":
         # MongoDB database
         db = MongoDataBase(database_name)
-        db.create_connection()
         return db
 
     raise ValueError(
