@@ -87,4 +87,5 @@ def test_main_to_memory_queue():
             assert sorted(map(lambda x: x.lower(), list_of_status_files)) == sorted(
                 map(lambda x: x.lower() + ".json", expected)
             )
+
     asyncio.run(run_test())

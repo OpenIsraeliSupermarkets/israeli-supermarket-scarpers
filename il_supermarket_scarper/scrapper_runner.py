@@ -214,11 +214,11 @@ class MainScrapperRunner:  # pylint: disable=too-many-instance-attributes
     def _create_target_objects(self, manager):
         """create the target objects"""
         self._file_outputs = {
-                scraper_name: create_file_output_for_scraper(
-                    scraper_name, self.file_output_config
-                )
-                for scraper_name in self.enabled_scrapers
-            }
+            scraper_name: create_file_output_for_scraper(
+                scraper_name, self.file_output_config
+            )
+            for scraper_name in self.enabled_scrapers
+        }
         self._status_databases = {
             scraper_name: create_status_database_for_scraper(
                 scraper_name, self.status_config
@@ -226,6 +226,7 @@ class MainScrapperRunner:  # pylint: disable=too-many-instance-attributes
             for scraper_name in self.enabled_scrapers
         }
         self._shutdown_flag = manager.Value("b", False)
+
     def run(
         self,
         limit=None,
@@ -245,7 +246,7 @@ class MainScrapperRunner:  # pylint: disable=too-many-instance-attributes
 
         with Manager() as manager:
             self._create_target_objects(manager)
-            
+
             with Pool(self.multiprocessing) as self._pool:
                 result = self._pool.starmap(
                     scrape_one_wrap,
@@ -266,7 +267,7 @@ class MainScrapperRunner:  # pylint: disable=too-many-instance-attributes
                                 "timeout_in_seconds": self.timeout_in_seconds,
                                 "shutdown_flag": self._shutdown_flag,
                             },
-                        )   
+                        )
                         for chain_scrapper_class in self.enabled_scrapers
                     ],
                 )
