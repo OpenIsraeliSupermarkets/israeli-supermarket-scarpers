@@ -3,6 +3,7 @@ zipp==3.19.1 # patch pytest vulnerability
 black==24.3.0
 pylint==3.0.1
 urllib3>=2.6.3
+requests>=2.32.4  # override sphinx transitive dep for CVE-2024-35195, CVE-2024-47081
 sphinx==7.3.7
 sphinx-rtd-theme
 sphinx-autodoc-typehints>=1.25.0
