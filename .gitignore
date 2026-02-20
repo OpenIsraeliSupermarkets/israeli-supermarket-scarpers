@@ -13,5 +13,9 @@ temp*/
 test_dump
 status/
 .cache/
+stress_test_results.json
+status_logs/*
+docs/source/api/
 docs/*
 *.har
+test_data/*

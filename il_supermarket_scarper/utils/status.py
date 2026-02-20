@@ -179,7 +179,7 @@ def log_folder_details(folder, unit=UnitSize.MB):
     )
 
     return {
-        "size": convert_unit(size, unit),
+        "size": convert_unit(size, from_unit=UnitSize.BYTES, to_unit=unit),
         "unit": unit.name,
         "folder": folder,
         "folder_content": files_scaned,

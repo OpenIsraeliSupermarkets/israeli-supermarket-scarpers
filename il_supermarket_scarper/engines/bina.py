@@ -1,11 +1,12 @@
 import json
 import urllib.parse
 import datetime
+import asyncio
 
 from il_supermarket_scarper.utils import (
     Logger,
-    url_connection_retry,
     url_retrieve,
+    url_retrieve_to_memory,
     FileTypesFilters,
 )
 
@@ -25,14 +26,16 @@ class Bina(Aspx):
         url_perfix,
         download_postfix="/Download.aspx?FileNm=",
         domain="binaprojects.com/",
-        folder_name=None,
+        file_output=None,
+        status_database=None,
     ):
         super().__init__(
             chain,
             chain_id,
             url=f"http://{url_perfix}.{domain}",
             aspx_page="MainIO_Hok.aspx",
-            folder_name=folder_name,
+            file_output=file_output,
+            status_database=status_database,
         )
         self.download_postfix = download_postfix
 
@@ -53,18 +56,14 @@ class Bina(Aspx):
                     raise ValueError(f"File type {file_type} not supported")
                 yield file_type_mapping[file_type]
 
-    def _build_query_url(self, query_params, base_urls):
-        res = []
+    async def _build_query_url(self, query_params, base_urls):
         for base in base_urls:
-            res.append(
-                {
-                    "url": base + self.aspx_page + "?" + query_params,
-                    "method": "GET",
-                }
-            )
-        return res
+            yield {
+                "url": base + self.aspx_page + "?" + query_params,
+                "method": "GET",
+            }
 
-    def _get_all_possible_query_string_params(
+    async def _get_all_possible_query_string_params(
         self, files_types=None, store_id=None, when_date=None
     ):
         """get the arguments need to add to the url"""
@@ -102,7 +101,8 @@ class Bina(Aspx):
             for chains_url in chains_urls:
                 chains_url["WDate"] = when_date.strftime("%d/%m/%Y")
 
-        return [urllib.parse.urlencode(params) for params in chains_urls]
+        for params in chains_urls:
+            yield urllib.parse.urlencode(params)
 
     def get_data_from_page(self, req_res):
         return json.loads(req_res.text)
@@ -124,9 +124,9 @@ class Bina(Aspx):
         # Bina don't support file size in the entry
         return None
 
-    @url_connection_retry()
-    def retrieve_file(self, file_link, file_save_path, timeout=30):
-        response_content = self.session_with_cookies_by_chain(
+    async def retrieve_file(self, file_link, file_save_path, timeout=30):
+        """Retrieve file from Bina website"""
+        response_content = await self.session_with_cookies_by_chain(
             file_link,
         )
         spath = json.loads(response_content.content)
@@ -135,11 +135,24 @@ class Bina(Aspx):
         url = spath[0]["SPath"]
         ext = file_link.split(".")[-1]
 
-        url_retrieve(url, file_save_path + "." + ext, timeout=timeout)
+        await asyncio.to_thread(
+            url_retrieve, url, file_save_path + "." + ext, timeout=timeout
+        )
         return file_save_path + "." + ext
 
-    def _wget_file(self, file_link, file_save_path):
-        response_content = self.session_with_cookies_by_chain(
+    async def retrieve_file_to_memory(self, file_link, timeout=30):
+        """Retrieve file from Bina website directly to memory"""
+        response_content = await self.session_with_cookies_by_chain(
+            file_link,
+        )
+        spath = json.loads(response_content.content)
+        Logger.debug(f"Found spath: {spath}")
+
+        url = spath[0]["SPath"]
+        return await asyncio.to_thread(url_retrieve_to_memory, url, timeout=timeout)
+
+    async def _wget_file(self, file_link, file_save_path):
+        response_content = await self.session_with_cookies_by_chain(
             file_link,
         )
         spath = json.loads(response_content.content)
@@ -147,4 +160,4 @@ class Bina(Aspx):
 
         url = spath[0]["SPath"]
         ext = file_link.split(".")[-1]
-        return super()._wget_file(url, file_save_path.split(".")[0] + "." + ext)
+        return await super()._wget_file(url, file_save_path.split(".")[0] + "." + ext)

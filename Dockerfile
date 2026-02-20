@@ -51,6 +51,8 @@ FROM base as prod
 # RUN crontab /etc/cron.d/crontab
 # RUN touch /var/log/cron.log
 # && cron & tail -f /var/log/cron.log
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD python healthcheck.py || exit 1
 CMD python main.py 
 
 # run test
@@ -59,6 +61,7 @@ FROM base as test
 # playwrite
 RUN npx -y playwright@1.53.0 install --with-deps
 RUN python -m  playwright install  
+RUN pip install -r requirements-dev.txt
 
 RUN python -m pip install . ".[test]"
 CMD python -m pytest -vv -n 2

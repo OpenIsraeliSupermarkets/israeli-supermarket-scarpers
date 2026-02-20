@@ -15,12 +15,13 @@ from il_supermarket_scarper.utils import (
 class SuperPharm(MultiPageWeb):
     """scraper for super pharm"""
 
-    def __init__(self, folder_name=None):
+    def __init__(self, file_output=None, status_database=None):
         super().__init__(
             chain=DumpFolderNames.SUPER_PHARM,
             chain_id="7290172900007",
             url="http://prices.super-pharm.co.il/",
-            folder_name=folder_name,
+            file_output=file_output,
+            status_database=status_database,
             total_page_xpath='//*[@class="mvc-grid-pager"]/button[last()]/@data-page',
             total_pages_pattern=r"(\d+)$",
             page_argument="&page",
@@ -37,16 +38,17 @@ class SuperPharm(MultiPageWeb):
         return links, filenames, file_sizes
 
     @url_connection_retry()
-    def retrieve_file(self, file_link, file_save_path, timeout=15):
+    async def retrieve_file(self, file_link, file_save_path, timeout=15):
+        """Retrieve file from Super Pharm website"""
         Logger.debug(f"On a new Session: calling {file_link}")
 
-        response_content = self.session_with_cookies_by_chain(
+        response_content = await self.session_with_cookies_by_chain(
             file_link, timeout=timeout
         )
         spath = json.loads(response_content.content)
         Logger.debug(f"Found spath: {spath}")
 
-        file_to_save = self.session_with_cookies_by_chain(
+        file_to_save = await self.session_with_cookies_by_chain(
             self.url + spath["href"], timeout=timeout
         )
         file_to_save_with_ext = file_save_path + ".gz"

@@ -1,29 +1,36 @@
 import re
 from il_supermarket_scarper.engines import Matrix, ApiWebEngine
-from il_supermarket_scarper.utils import DumpFolderNames, Logger, FileTypesFilters
+from il_supermarket_scarper.utils import (
+    DumpFolderNames,
+    FileEntry,
+    Logger,
+    FileTypesFilters,
+)
 
 
 class Victory(Matrix):
     """scraper for victory"""
 
-    def __init__(self, folder_name=None):
+    def __init__(self, file_output=None, status_database=None):
         super().__init__(
             chain=DumpFolderNames.VICTORY,
             chain_hebrew_name="ויקטורי",
             chain_id=["7290696200003", "7290058103393"],
-            folder_name=folder_name,
+            file_output=file_output,
+            status_database=status_database,
         )
 
 
 class VictoryNewSource(ApiWebEngine):
     """scraper for victory new source using laibcatalog.co.il API"""
 
-    def __init__(self, folder_name=None):
+    def __init__(self, file_output=None, status_database=None):
         super().__init__(
             chain=DumpFolderNames.VICTORY_NEW_SOURCE,
             chain_id=["7290696200003", "7290058103393"],
             url="https://laibcatalog.co.il",
-            folder_name=folder_name,
+            file_output=file_output,
+            status_database=status_database,
         )
         self.chain_hebrew_name = "ויקטורי"
 
@@ -38,9 +45,8 @@ class VictoryNewSource(ApiWebEngine):
             params["branchNumber"] = branch_number
         return self.get_api_data("/webapi/api/getfiles", params)
 
-    def get_request_url(self, files_types=None, store_id=None, when_date=None):
+    async def get_request_url(self, files_types=None, store_id=None, when_date=None):
         """Generate API requests for getting file lists"""
-        requests = []
 
         for chain_id in self.get_chain_id():
             # Get branches first
@@ -59,26 +65,25 @@ class VictoryNewSource(ApiWebEngine):
             # Get files for each branch (or all if no branch filter)
             if branches:
                 for branch in branches:
-                    requests.append(
-                        {
-                            "url": f"{self.url.rstrip('/')}/webapi/api/getfiles?edi={chain_id}",
-                            "method": "GET",
-                            "chain_id": chain_id,
-                            "branch_number": branch.get("number"),
-                        }
-                    )
-            else:
-                # No specific branch, get all files
-                requests.append(
-                    {
-                        "url": f"{self.url.rstrip('/')}/webapi/api/getfiles?edi={chain_id}",
+                    branch_num = branch.get("number")
+                    url = f"{self.url.rstrip('/')}/webapi/api/getfiles?edi={chain_id}"
+                    if branch_num is not None:
+                        url += f"&branchNumber={branch_num}"
+                    yield {
+                        "url": url,
                         "method": "GET",
                         "chain_id": chain_id,
-                        "branch_number": None,
+                        "branch_number": branch_num,
                     }
-                )
 
-        return requests
+            else:
+                # No specific branch, get all files
+                yield {
+                    "url": f"{self.url.rstrip('/')}/webapi/api/getfiles?edi={chain_id}",
+                    "method": "GET",
+                    "chain_id": chain_id,
+                    "branch_number": None,
+                }
 
     def get_data_from_page(self, req_res):
         """Parse the getfiles API response"""
@@ -90,38 +95,25 @@ class VictoryNewSource(ApiWebEngine):
             Logger.error(f"Failed to parse API response: {e}")
             return []
 
-    def extract_task_from_entry(self, all_trs):
-        """Extract download URLs and metadata from API file entries"""
-        download_urls = []
-        file_names = []
-        file_sizes = []
-
+    async def extract_task_from_entry(self, all_trs):
+        """Extract download URLs and metadata from API file entries - async generator."""
         for entry in all_trs:
             try:
                 file_name = entry.get("fileName", "")
                 if not file_name:
                     continue
 
-                # Build download URL - based on testing, use /download/ endpoint
                 download_url = (
                     f"{self.url.rstrip('/')}/webapi/7290696200003/{file_name}"
                 )
-                download_urls.append(download_url)
-
-                # Extract base file name without extension
                 base_name = file_name.split(".")[0]
-                file_names.append(base_name)
-
-                # Parse file size (format like "562.84 KB")
                 file_size_str = entry.get("fileSize", "0 B")
                 file_size = self._parse_file_size(file_size_str)
-                file_sizes.append(file_size)
+
+                yield FileEntry(name=base_name, url=download_url, size=file_size)
 
             except (AttributeError, KeyError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")
-
-        Logger.debug(f"Extracted {len(download_urls)} download tasks")
-        return download_urls, file_names, file_sizes
 
     def _parse_file_size(self, size_str):
         """Parse file size string like '562.84 KB' to bytes"""

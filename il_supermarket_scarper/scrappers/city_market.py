@@ -13,12 +13,13 @@ from il_supermarket_scarper.utils.status import convert_unit, string_to_float
 class CityMarketGivatayim(Bina):
     """scraper for city market givatayim"""
 
-    def __init__(self, folder_name=None):
+    def __init__(self, file_output=None, status_database=None):
         super().__init__(
             chain=DumpFolderNames.CITY_MARKET_GIVATAYIM,
             chain_id="5359000000000",
             url_perfix="citymarketgivatayim",
-            folder_name=folder_name,
+            file_output=file_output,
+            status_database=status_database,
         )
 
 
@@ -26,36 +27,39 @@ class CityMarketGivatayim(Bina):
 class CityMarketKirtatOno(Bina):
     """scraper for city market givatayim"""
 
-    def __init__(self, folder_name=None):
+    def __init__(self, file_output=None, status_database=None):
         super().__init__(
             chain=DumpFolderNames.CITY_MARKET_KIRYATONO,
             chain_id="5359000000000",
             url_perfix="citymarketkiryatono",
-            folder_name=folder_name,
+            file_output=file_output,
+            status_database=status_database,
         )
 
 
 class CityMarketKiryatGat(Bina):
     """scraper for city market givatayim"""
 
-    def __init__(self, folder_name=None):
+    def __init__(self, file_output=None, status_database=None):
         super().__init__(
             chain=DumpFolderNames.CITY_MARKET_KIRYATGAT,
             chain_id=["7290058288526", "7290058266241", "7290058288090"],
             url_perfix="citymarketkiryatgat",
-            folder_name=folder_name,
+            file_output=file_output,
+            status_database=status_database,
         )
 
 
 class CityMarketShops(MultiPageWeb):
     """scraper for city market givatayim"""
 
-    def __init__(self, folder_name=None):
+    def __init__(self, file_output=None, status_database=None):
         super().__init__(
             chain=DumpFolderNames.CITY_MARKET_SHOPS,
             chain_id="7290000000003",
             url="http://www.citymarket-shops.co.il/",
-            folder_name=folder_name,
+            file_output=file_output,
+            status_database=status_database,
             total_page_xpath="(//li[contains(concat(' ', normalize-space(@class), ' '),"
             + "' pagination-item ')])[last()]/a/@href",
             total_pages_pattern=r"p=(\d+)",

@@ -26,13 +26,12 @@ def lock_by_string():
 
     def decorator(func):
         @wraps(func)
-        def wrapper(scraper_status, *args, **kwargs):
+        def wrapper(collection_name, *args, **kwargs):
             # Get the key for which to acquire the lock (based on the arguments)
-            lock_key = scraper_status.chain.value
-            lock = lock_manager.get_lock(lock_key)
+            lock = lock_manager.get_lock(collection_name)
 
             with lock:
-                return func(scraper_status, *args, **kwargs)
+                return func(collection_name, *args, **kwargs)
 
         return wrapper
 

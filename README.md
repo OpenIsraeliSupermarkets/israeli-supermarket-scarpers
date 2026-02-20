@@ -100,8 +100,52 @@ Then running it using:
                 -e ENABLED_FILE_TYPES="STORE_FILE" \          # see: il_supermarket_scarper/utils/file_types.py
                 -e LIMIT=1 \                                  # number of files you would like to download (remove for unlimited)
                 -e TODAY="2024-10-23 14:35" \                 # the date to download data from
+                -e OUTPUT_MODE="disk" \                       # 'disk' (default) or 'queue' - where to save scraped files
+                -e STORAGE_PATH="./dumps" \                   # (optional) custom storage path for disk mode
                 erlichsefi/israeli-supermarket-scarpers
 
+For queue output mode:
+
+    docker run  -e OUTPUT_MODE="queue" \
+                -e QUEUE_TYPE="memory" \                      # 'memory' (for testing) or 'kafka'
+                erlichsefi/israeli-supermarket-scarpers
+
+For Kafka queue output:
+
+    docker run  -e OUTPUT_MODE="queue" \
+                -e QUEUE_TYPE="kafka" \
+                -e KAFKA_BOOTSTRAP_SERVERS="localhost:9092" \ # Kafka bootstrap servers
+                erlichsefi/israeli-supermarket-scarpers
+
+
+Environment Variables
+-----------
+
+The following environment variables can be used to configure the scraper:
+
+### General Configuration
+- `ENABLED_SCRAPERS`: Comma-separated list of scrapers to enable (e.g., "BAREKET,YAYNO_BITAN"). See `il_supermarket_scarper/scrappers_factory.py` for all available scrapers.
+- `ENABLED_FILE_TYPES`: Comma-separated list of file types to download (e.g., "STORE_FILE,PRICE_FILE"). See `il_supermarket_scarper/utils/file_types.py` for all available types.
+- `LIMIT`: Maximum number of files to download (optional, no limit if not specified).
+- `NUMBER_OF_PROCESSES`: Number of parallel processes to use (default: 5).
+- `TODAY`: Date to download data from, in format "YYYY-MM-DD HH:MM" (e.g., "2024-10-23 14:35").
+
+### Output Configuration
+- `OUTPUT_MODE`: Where to save scraped files (default: "disk")
+  - `disk`: Save files to local filesystem
+  - `queue`: Send files to a message queue
+
+#### Disk Output Mode (default)
+- `STORAGE_PATH`: Custom storage path for files (optional, uses default if not specified).
+
+#### Queue Output Mode
+- `QUEUE_TYPE`: Type of queue to use (required when OUTPUT_MODE="queue")
+  - `memory`: In-memory queue (useful for testing)
+  - `kafka`: Apache Kafka message queue
+
+
+##### Kafka Queue
+- `KAFKA_BOOTSTRAP_SERVERS`: Kafka bootstrap servers (default: "localhost:9092").
 
 
 Contributing

@@ -1,6 +1,7 @@
 import json
 from bs4 import BeautifulSoup
 
+from il_supermarket_scarper.utils import FileEntry
 from il_supermarket_scarper.utils.logger import Logger
 from .web import WebBase
 
@@ -17,20 +18,22 @@ class PublishPrice(WebBase):
         chain,
         chain_id,
         site_infix,
-        folder_name=None,
         domain="prices",
         max_threads=5,
+        file_output=None,
+        status_database=None,
     ):
         super().__init__(
             chain,
             chain_id,
             url=f"https://{domain}.{site_infix}.co.il/",
-            folder_name=folder_name,
             max_threads=max_threads,
+            file_output=file_output,
+            status_database=status_database,
         )
         self.folder = None
 
-    def get_request_url(
+    async def get_request_url(
         self, files_types=None, store_id=None, when_date=None
     ):  # pylint: disable=unused-argument
         """get all links to collect download links from"""
@@ -39,7 +42,7 @@ class PublishPrice(WebBase):
         if when_date:
             formated = when_date.strftime("%Y%m%d")
             formated = f"?p=./{formated}"
-        return [{"url": self.url + formated, "method": "GET"}]
+        yield {"url": self.url + formated, "method": "GET"}
 
     def get_data_from_page(self, req_res):
         soup = BeautifulSoup(req_res.text, features="lxml")
@@ -63,12 +66,9 @@ class PublishPrice(WebBase):
         # all_chains = json.loads(all_data.split("\n")[1])
         return all_files
 
-    def extract_task_from_entry(self, all_trs):
+    async def extract_task_from_entry(self, all_trs):
         """from the trs extract the download urls, file names, and file sizes"""
 
-        download_urls = []
-        file_names = []
-        file_sizes = []
         for x in all_trs:
             try:
                 # Format href with path: url/path/filename
@@ -78,11 +78,7 @@ class PublishPrice(WebBase):
                     href = f"{base_url}/{path}/{x['name']}"
                 else:
                     href = f"{base_url}/{x['name']}"
-                download_urls.append(href)
-                file_names.append(x["name"])
-                # Use formatted size if available, otherwise format it
-                file_sizes.append(x.get("size_formatted", x.get("size", 0)))
+                file_size = x.get("size_formatted", x.get("size", 0))
+                yield FileEntry(name=x["name"], url=href, size=file_size)
             except (AttributeError, KeyError, IndexError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")
-
-        return download_urls, file_names, file_sizes
