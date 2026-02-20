@@ -71,8 +71,8 @@ class Cerberus(Engine):
         """get the file type pattern"""
         file_type_mapping = {
             FileTypesFilters.STORE_FILE.name: "store",
-            FileTypesFilters.PRICE_FILE.name: "price",
-            FileTypesFilters.PROMO_FILE.name: "promo",
+            FileTypesFilters.PRICE_FILE.name: "price[0-9]",
+            FileTypesFilters.PROMO_FILE.name: "promo[0-9]",
             FileTypesFilters.PRICE_FULL_FILE.name: "pricef",
             FileTypesFilters.PROMO_FULL_FILE.name: "promof",
         }

@@ -113,7 +113,9 @@ class SawStatus(BaseModel):
 
     status: str = "saw"
     when: Optional[datetime] = None
-    file_name: FileName
+    file_name: (
+        str  # why not "FileName"? we can see any file, but we should collect them all
+    )
     link: Optional[Optional[AnyUrl]]
     size: Optional[Union[int, float]] = None
 
