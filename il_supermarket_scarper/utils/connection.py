@@ -636,7 +636,7 @@ async def wget_file_to_memory(file_link, timeout=30):
         file_link,
     ] + header_args
     process = await asyncio.create_subprocess_shell(
-        wget_cmd,
+        " ".join(wget_cmd),
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
