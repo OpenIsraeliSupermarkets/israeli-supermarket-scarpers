@@ -101,13 +101,17 @@ class WebBase(Engine):
 
     async def generate_all_files(self, files_types=None, store_id=None, when_date=None):
         """Generate all files from the web site."""
-        async for url in self.get_request_url(
+        gen = self.get_request_url(
             files_types=files_types, store_id=store_id, when_date=when_date
-        ):
-            req_res = await self.session_with_cookies_by_chain(**url)
-            current_trs = self.get_data_from_page(req_res)
-            async for file_entry in self.extract_task_from_entry(current_trs):
-                yield file_entry
+        )
+        try:
+            async for url in gen:
+                req_res = await self.session_with_cookies_by_chain(**url)
+                current_trs = self.get_data_from_page(req_res)
+                async for file_entry in self.extract_task_from_entry(current_trs):
+                    yield file_entry
+        finally:
+            await gen.aclose()
 
     async def collect_files_details_from_site(  # pylint: disable=too-many-locals
         self,

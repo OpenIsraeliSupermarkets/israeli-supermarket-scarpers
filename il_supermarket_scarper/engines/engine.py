@@ -10,17 +10,15 @@ from il_supermarket_scarper.utils import (
     FileTypesFilters,
     Logger,
     ScraperStatus,
-    extract_xml_file_from_gz_file,
     session_with_cookies,
-    url_retrieve,
     url_retrieve_to_memory,
-    wget_file,
     wget_file_to_memory,
     RestartSessionError,
     DumpFolderNames,
     FileOutput,
     DiskFileOutput,
     ScrapingResult,
+    async_url_connection_retry,
 )
 from il_supermarket_scarper.utils.state import FilterState
 from il_supermarket_scarper.utils.databases import AbstractDataBase
@@ -70,6 +68,8 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             scraper = scraper_class(file_output=output)
             asyncio.run(scraper.scrape(limit=10))
     """
+    _DATE_PATTERN_1 = re.compile(r"-(\d{8})(\d{4})?(?=-|\.|$)")
+    _DATE_PATTERN_2 = re.compile(r"-(\d{8})-(\d{6})")
 
     utilize_date_param = True
 
@@ -355,9 +355,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         if limit and not files_types:
             assert limit > 0, "Limit must be greater than 0"
             async for file in intreable_:
-                if limit is None:
-                    yield file
-                elif state.file_pass_limit < limit:
+                if state.file_pass_limit < limit:
                     state.file_pass_limit += 1
                     yield file
                 else:
@@ -420,9 +418,8 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
 
     async def get_by_date(self, requested_date, by_function, intreable_):
         """get by date"""
-        #
         date_format = requested_date.strftime("%Y%m%d")
-        #
+
         async for file in intreable_:
             # StoresFull7290875100001-000-202502250510'
             # Promo7290700100008-000-207-20250224-103225
@@ -442,37 +439,26 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             # Promo7290700100008-000-207-20250224-103225 (YYYYMMDD-HHMMSS)
             # Look for date pattern YYYYMMDD followed by optional time
             # Pattern: -YYYYMMDD followed by optional HHMM, then - or end of string or .
-            date_match = re.search(r"-(\d{8})(\d{4})?(?=-|\.|$)", file_name)
+            date_match = (
+                self._DATE_PATTERN_1.search(file_name)
+                or self._DATE_PATTERN_2.search(file_name)
+            )
+
             if not date_match:
-                # Try pattern with date and time separated by dash: -YYYYMMDD-HHMMSS
-                date_match = re.search(r"-(\d{8})-(\d{6})", file_name)
-                if date_match:
-                    date_str = date_match.group(1)  # YYYYMMDD
-                    time_str = date_match.group(2)[
-                        :4
-                    ]  # Take first 4 digits (HHMM) from HHMMSS
-                    try:
-                        file_datetime = datetime.datetime.strptime(
-                            f"{date_str}{time_str}", "%Y%m%d%H%M"
-                        )
-                        if file_datetime >= cutoff_time:
-                            groups_value.append(file)
-                    except ValueError:
-                        continue
-            else:
-                date_str = date_match.group(1)  # YYYYMMDD
-                time_str = (
-                    date_match.group(2) if date_match.group(2) else "0000"
-                )  # HHMM or default to 0000
-                try:
-                    file_datetime = datetime.datetime.strptime(
-                        f"{date_str}{time_str}", "%Y%m%d%H%M"
-                    )
-                    if file_datetime >= cutoff_time:
-                        groups_value.append(file)
-                except ValueError:
-                    # If parsing fails, skip this file
-                    continue
+                continue
+
+            date_str = date_match.group(1)  # YYYYMMDD
+            time_str = (date_match.group(2) or "0000")[:4] # HHMM, default to 0000
+
+            try:
+                file_datetime = datetime.datetime.strptime(
+                    f"{date_str}{time_str}", "%Y%m%d%H%M"
+                )
+                if file_datetime >= cutoff_time:
+                    groups_value.append(file)
+
+            except ValueError:
+                continue
 
         return groups_value
 
@@ -604,6 +590,14 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             ScrapingResult: Result of processing the file
         """
 
+    def _extract_file_name(self, file_details):
+        """Extract file name from file details for error reporting."""
+        if isinstance(file_details, str):
+            return file_details
+        if isinstance(file_details, tuple) and len(file_details) > 1:
+            return file_details[1]
+        return "unknown"
+
     async def _scrape(  # pylint: disable=too-many-locals
         self,
         state: FilterState,
@@ -630,16 +624,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                     return await self.process_file(file_details)
                 except Exception as e:  # pylint: disable=broad-except
                     Logger.error(f"Error in process_file: {e}")
-                    # Try to extract file_name from file_details for error reporting
-                    file_name = (
-                        file_details
-                        if isinstance(file_details, str)
-                        else (
-                            file_details[1]
-                            if isinstance(file_details, tuple) and len(file_details) > 1
-                            else "unknown"
-                        )
-                    )
+                    file_name = self._extract_file_name(file_details)
                     self.register_download_fail(e, file_name)
                     return ScrapingResult(
                         file_name=file_name,
@@ -649,7 +634,6 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                         restart_and_retry=False,
                     )
 
-        # Get the file generator
         files_generator = self.collect_files_details_from_site(
             state,
             limit=limit,
@@ -673,11 +657,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 # Add new tasks from generator up to max_threads limit
                 while not generator_exhausted and len(pending_tasks) < self.max_threads:
                     try:
-                        file_details = (
-                            await anext(  # pylint: disable=undefined-variable
-                                files_generator
-                            )
-                        )
+                        file_details = await anext(files_generator)
                         task = asyncio.create_task(
                             process_file_with_semaphore(file_details)
                         )
@@ -704,17 +684,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                             yield result
                         except Exception as e:  # pylint: disable=broad-except
                             Logger.error(f"Error processing task: {e}")
-                            # Try to extract file_name from file_details for error reporting
-                            file_name = (
-                                file_details
-                                if isinstance(file_details, str)
-                                else (
-                                    file_details[1]
-                                    if isinstance(file_details, tuple)
-                                    and len(file_details) > 1
-                                    else "unknown"
-                                )
-                            )
+                            file_name = self._extract_file_name(file_details)
                             yield ScrapingResult(
                                 file_name=file_name,
                                 downloaded=False,
@@ -728,6 +698,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                     break
         finally:
             # Clean up any remaining tasks
+            await files_generator.aclose()
             if pending_tasks:
                 for task in pending_tasks:
                     task.cancel()
@@ -776,26 +747,19 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         Yields filtered FileEntry instances.
         Entries with None file_size are kept by default.
         """
-        if min_size is None and max_size is None:
-            async for entry in files:
+        async for entry in files:
+            if self.is_pass_file_size_filter(entry.size, min_size, max_size):
                 yield entry
-        else:
-            async for entry in files:
-                if self.is_pass_file_size_filter(entry.size, min_size, max_size):
-                    yield entry
 
-    async def retrieve_file(self, file_link, file_save_path, timeout=30):
-        """download file"""
-        await asyncio.to_thread(
-            url_retrieve, file_link, file_save_path, timeout=timeout
-        )
-        return file_save_path
-
+    @async_url_connection_retry()
     async def retrieve_file_to_memory(self, file_link, timeout=30):
         """download file directly to memory"""
         return await asyncio.to_thread(
             url_retrieve_to_memory, file_link, timeout=timeout
         )
+
+    async def _wget_file_to_memory(self, file_link, timeout):
+        return await wget_file_to_memory(file_link, timeout)
 
     async def save_and_extract(self, arg):
         """download file and extract it (in-memory)"""
@@ -811,19 +775,18 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         try:
             # Determine file name with extension
             file_name_with_ext = file_name
-            if not (file_name.endswith(".gz") or file_name.endswith(".xml")) and (
-                file_link.endswith(".gz") or file_link.endswith(".xml")
-            ):
+            if (file_link.endswith((".gz", ".xml")) and
+                not file_name.endswith((".gz", ".xml"))):
+
                 file_name_with_ext = file_name + "." + file_link.split(".")[-1]
 
             # Download file content directly to memory
             try:
                 file_content = await self.retrieve_file_to_memory(file_link, timeout=30)
+
             except Exception as e:  # pylint: disable=broad-except
                 Logger.warning(f"Error downloading {file_link}: {e}")
-                file_content = await asyncio.to_thread(
-                    wget_file_to_memory, file_link, timeout=30
-                )
+                file_content = await self._wget_file_to_memory(file_link, timeout=30)
             downloaded = True
 
             # Log file size if it's a gzip file
@@ -864,80 +827,6 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             file_name=file_name,
             downloaded=downloaded,
             extract_succefully=False,
-            error=error,
-            restart_and_retry=restart_and_retry,
-        )
-
-    def _read_file_content(self, file_path: str) -> bytes:
-        """Read file content as bytes (sync operation for thread)."""
-        with open(file_path, "rb") as f:
-            return f.read()
-
-    async def _wget_file(self, file_link, file_save_path):
-        return await asyncio.to_thread(wget_file, file_link, file_save_path)
-
-    async def _save_and_extract(self, file_link, file_save_path):
-        downloaded = False
-        extract_succefully = False
-        error = None
-        restart_and_retry = False
-        file_name = os.path.basename(file_save_path)
-
-        try:
-
-            # add ext if possible
-            if not (
-                file_save_path.endswith(".gz") or file_save_path.endswith(".xml")
-            ) and (file_link.endswith(".gz") or file_link.endswith(".xml")):
-                file_save_path = (
-                    file_save_path + "." + file_link.split("?")[0].split(".")[-1]
-                )
-                file_name = os.path.basename(file_save_path)
-
-            # try to download the file
-            try:
-                file_save_path_with_ext = await self.retrieve_file(
-                    file_link, file_save_path
-                )
-            except Exception as e:  # pylint: disable=broad-except
-                Logger.warning(f"Error downloading {file_link}: {e}")
-                file_save_path_with_ext = await self._wget_file(
-                    file_link, file_save_path
-                )
-            downloaded = True
-
-            if file_save_path_with_ext.endswith("gz"):
-                Logger.debug(
-                    f"File size is {os.path.getsize(file_save_path_with_ext)} bytes."
-                )
-                await asyncio.to_thread(
-                    extract_xml_file_from_gz_file, file_save_path_with_ext
-                )
-
-                await asyncio.to_thread(os.remove, file_save_path_with_ext)
-            extract_succefully = True
-
-            Logger.debug(f"Done downloading {file_link}")
-        except RestartSessionError as exception:
-            Logger.error(
-                f"Error downloading {file_link},extract_succefully={extract_succefully}"
-                f",downloaded={downloaded}"
-            )
-            Logger.error_execption(exception)
-            error = str(exception)
-            restart_and_retry = True
-        except Exception as exception:  # pylint: disable=broad-except
-            Logger.error(
-                f"Error downloading {file_link},extract_succefully={extract_succefully}"
-                f",downloaded={downloaded}"
-            )
-            Logger.error_execption(exception)
-            error = str(exception)
-
-        return ScrapingResult(
-            file_name=file_name,
-            downloaded=downloaded,
-            extract_succefully=extract_succefully,
             error=error,
             restart_and_retry=restart_and_retry,
         )

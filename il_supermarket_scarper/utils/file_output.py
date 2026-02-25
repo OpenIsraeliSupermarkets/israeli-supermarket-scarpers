@@ -5,11 +5,8 @@ import multiprocessing
 from abc import ABC, abstractmethod
 from typing import Any, Dict, AsyncGenerator
 import os
-import gzip
-import io
-import zipfile
 from .logger import Logger
-from .gzip_utils import extract_xml_file_from_gz_file
+from .gzip_utils import extract_xml_from_gz_in_memory
 
 
 class FileOutput(ABC):
@@ -35,6 +32,28 @@ class FileOutput(ABC):
         Returns:
             Dict with keys: file_name, saved, error, metadata
         """
+
+    async def _extract_if_compressed(
+        self, file_content: bytes, file_name: str, extract_gz: bool = True
+    ) -> tuple[bytes, str, bool]:
+        """
+        Extract compressed content if needed.
+
+        Returns:
+            (content, filename, extraction_success)
+        """
+        if not extract_gz or not file_name.endswith(".gz"):
+            return file_content, file_name, True
+
+        try:
+            extracted = await asyncio.to_thread(
+                extract_xml_from_gz_in_memory, file_content, file_name
+            )
+            new_name = os.path.splitext(file_name)[0] + '.xml'
+            return extracted, new_name, True
+        except Exception as e: # pylint: disable=broad-except
+            Logger.error(f"Failed to extract {file_name}: {e}")
+            return file_content, file_name, False
 
     @abstractmethod
     def make_sure_accassible(self):
@@ -75,36 +94,22 @@ class DiskFileOutput(FileOutput):
         file_content: bytes,
         metadata: Dict[str, Any] = None,
     ) -> Dict[str, Any]:
-        """Save file to disk and optionally extract if .gz."""
+        """Decompress file if needed and write final content to disk."""
         saved = False
         extract_successfully = False
         error = None
 
         try:
-            # Determine file path
-            file_save_path = os.path.join(self.storage_path, file_name)
-
-            # Add extension if needed
-            if not (
-                file_save_path.endswith(".gz") or file_save_path.endswith(".xml")
-            ) and (file_link.endswith(".gz") or file_link.endswith(".xml")):
-                file_save_path = (
-                    file_save_path + "." + file_link.split("?")[0].split(".")[-1]
-                )
+            # Extract if it's a .gz file
+            file_content, file_name, extract_successfully = (
+            await self._extract_if_compressed(file_content, file_name)
+            )
 
             # Write file content to disk
+            file_save_path = os.path.join(self.storage_path, file_name)
             await asyncio.to_thread(self._write_file, file_save_path, file_content)
+
             saved = True
-
-            # Extract if it's a .gz file
-            if self.extract_gz and file_save_path.endswith("gz"):
-                Logger.debug(f"File size is {os.path.getsize(file_save_path)} bytes.")
-                await asyncio.to_thread(extract_xml_file_from_gz_file, file_save_path)
-                await asyncio.to_thread(os.remove, file_save_path)
-                extract_successfully = True
-            else:
-                extract_successfully = True
-
             Logger.debug(f"Saved {file_link} to {file_save_path}")
 
         except Exception as exception:  # pylint: disable=broad-except
@@ -174,33 +179,11 @@ class QueueFileOutput(FileOutput):
         error = None
 
         try:
-            # Extract gzipped files in-memory before sending to queue
-            if file_name.endswith(".gz"):
-                try:
-                    # Try gzip extraction first
-                    file_content = gzip.decompress(file_content)
-                    # Change extension from .gz to .xml
-                    file_name = os.path.splitext(file_name)[0] + ".xml"
-                    extract_successfully = True
-                    Logger.debug(f"Extracted gzipped file to {file_name}")
-                except (gzip.BadGzipFile, OSError):
-                    # Try zip extraction as fallback
-                    try:
-                        with zipfile.ZipFile(io.BytesIO(file_content)) as the_zip:
-                            zip_info = the_zip.infolist()[0]
-                            with the_zip.open(zip_info) as the_file:
-                                file_content = the_file.read()
-                        # Change extension from .gz to .xml
-                        file_name = os.path.splitext(file_name)[0] + ".xml"
-                        extract_successfully = True
-                        Logger.debug(f"Extracted zipped file to {file_name}")
-                    except Exception as extract_error:  # pylint: disable=broad-except
-                        Logger.error(f"Failed to extract {file_name}: {extract_error}")
-                        error = str(extract_error)
-                        extract_successfully = False
-            else:
-                extract_successfully = True
-
+            # Extract if it's a .gz file
+            file_content, file_name, extract_successfully = (
+                await self._extract_if_compressed(file_content, file_name)
+            )
+            # Send file to queue
             if extract_successfully:
                 message = {
                     "file_name": file_name,

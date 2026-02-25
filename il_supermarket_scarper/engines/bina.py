@@ -1,12 +1,9 @@
 import json
 import urllib.parse
 import datetime
-import asyncio
 
 from il_supermarket_scarper.utils import (
     Logger,
-    url_retrieve,
-    url_retrieve_to_memory,
     FileTypesFilters,
 )
 
@@ -124,40 +121,18 @@ class Bina(Aspx):
         # Bina don't support file size in the entry
         return None
 
-    async def retrieve_file(self, file_link, file_save_path, timeout=30):
-        """Retrieve file from Bina website"""
-        response_content = await self.session_with_cookies_by_chain(
-            file_link,
-        )
+    async def _resolve_url(self, file_link):
+        """Resolve the download URL from Bina's redirect response."""
+        response_content = await self.session_with_cookies_by_chain(file_link)
         spath = json.loads(response_content.content)
         Logger.debug(f"Found spath: {spath}")
-
-        url = spath[0]["SPath"]
-        ext = file_link.split(".")[-1]
-
-        await asyncio.to_thread(
-            url_retrieve, url, file_save_path + "." + ext, timeout=timeout
-        )
-        return file_save_path + "." + ext
+        return spath[0]["SPath"]
 
     async def retrieve_file_to_memory(self, file_link, timeout=30):
         """Retrieve file from Bina website directly to memory"""
-        response_content = await self.session_with_cookies_by_chain(
-            file_link,
-        )
-        spath = json.loads(response_content.content)
-        Logger.debug(f"Found spath: {spath}")
+        url = await self._resolve_url(file_link)
+        return await super().retrieve_file_to_memory(url, timeout=timeout)
 
-        url = spath[0]["SPath"]
-        return await asyncio.to_thread(url_retrieve_to_memory, url, timeout=timeout)
-
-    async def _wget_file(self, file_link, file_save_path):
-        response_content = await self.session_with_cookies_by_chain(
-            file_link,
-        )
-        spath = json.loads(response_content.content)
-        Logger.debug(f"Found spath: {spath}")
-
-        url = spath[0]["SPath"]
-        ext = file_link.split(".")[-1]
-        return await super()._wget_file(url, file_save_path.split(".")[0] + "." + ext)
+    async def _wget_file_to_memory(self, file_link, timeout):
+        url = await self._resolve_url(file_link)
+        return await super()._wget_file_to_memory(url, timeout)

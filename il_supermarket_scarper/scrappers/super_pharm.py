@@ -1,4 +1,3 @@
-from pathlib import Path
 import urllib.parse
 import datetime
 
@@ -6,7 +5,7 @@ import json
 from il_supermarket_scarper.engines import MultiPageWeb
 from il_supermarket_scarper.utils import (
     Logger,
-    url_connection_retry,
+    async_url_connection_retry,
     DumpFolderNames,
     FileTypesFilters,
 )
@@ -37,8 +36,8 @@ class SuperPharm(MultiPageWeb):
             file_sizes.append(None)  # Super Pharm don't support file size in the entry
         return links, filenames, file_sizes
 
-    @url_connection_retry()
-    async def retrieve_file(self, file_link, file_save_path, timeout=15):
+    @async_url_connection_retry()
+    async def retrieve_file_to_memory(self, file_link, timeout=15):
         """Retrieve file from Super Pharm website"""
         Logger.debug(f"On a new Session: calling {file_link}")
 
@@ -51,10 +50,8 @@ class SuperPharm(MultiPageWeb):
         file_to_save = await self.session_with_cookies_by_chain(
             self.url + spath["href"], timeout=timeout
         )
-        file_to_save_with_ext = file_save_path + ".gz"
-        Path(file_to_save_with_ext).write_bytes(file_to_save.content)
 
-        return file_to_save_with_ext
+        return file_to_save.content
 
     def get_file_types_id(self, files_types=None):
         """get the file type id"""

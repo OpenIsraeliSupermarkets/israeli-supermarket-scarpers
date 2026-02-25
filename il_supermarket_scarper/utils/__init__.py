@@ -1,4 +1,4 @@
-from .gzip_utils import extract_xml_file_from_gz_file
+from .gzip_utils import extract_xml_from_gz_in_memory
 from .logger import Logger
 from .status import (
     get_output_folder,
@@ -29,13 +29,11 @@ from .connection import (
     url_connection_retry,
     disable_when_outside_israel,
     session_with_cookies,
-    url_retrieve,
     url_retrieve_to_memory,
     collect_from_ftp,
-    fetch_temporary_gz_file_from_ftp,
     fetch_file_from_ftp_to_memory,
-    wget_file,
     wget_file_to_memory,
+    async_url_connection_retry,
 )
 from .loop import execute_in_parallel, multiple_page_aggregtion
 from .exceptions import RestartSessionError
