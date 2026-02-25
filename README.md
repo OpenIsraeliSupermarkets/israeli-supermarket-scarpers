@@ -126,6 +126,7 @@ The following environment variables can be used to configure the scraper:
 ### General Configuration
 - `ENABLED_SCRAPERS`: Comma-separated list of scrapers to enable (e.g., "BAREKET,YAYNO_BITAN"). See `il_supermarket_scarper/scrappers_factory.py` for all available scrapers.
 - `ENABLED_FILE_TYPES`: Comma-separated list of file types to download (e.g., "STORE_FILE,PRICE_FILE"). See `il_supermarket_scarper/utils/file_types.py` for all available types.
+- `CLIENT_NAME`: Optional. When set, adds an `X-Client-Name` header to all outgoing HTTP requests (scraper pages and file downloads). Used to identify the client running the service. Omit or leave empty to send no such header.
 - `LIMIT`: Maximum number of files to download (optional, no limit if not specified).
 - `NUMBER_OF_PROCESSES`: Number of parallel processes to use (default: 5).
 - `TODAY`: Date to download data from, in format "YYYY-MM-DD HH:MM" (e.g., "2024-10-23 14:35").

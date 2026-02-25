@@ -1,6 +1,6 @@
 import json
 import requests
-from il_supermarket_scarper.utils import Logger
+from il_supermarket_scarper.utils import Logger, get_client_name_headers
 from il_supermarket_scarper.utils import FileEntry
 from il_supermarket_scarper.utils.state import FilterState
 from .web import WebBase
@@ -27,6 +27,7 @@ class ApiWebEngine(WebBase):
             status_database=status_database,
         )
         self.session = requests.Session()
+        self.session.headers.update(get_client_name_headers())
 
     def get_api_data(self, endpoint, params=None):
         """Make API call and return JSON response"""

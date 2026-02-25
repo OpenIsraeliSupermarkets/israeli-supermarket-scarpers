@@ -186,7 +186,11 @@ def async_url_connection_retry(init_timeout=15):
 @file_cache(ttl=60)
 def get_ip():
     """get the ip of the computer running the code"""
-    response = requests.get("https://api.ipify.org?format=json", timeout=15).json()
+    response = requests.get(
+        "https://api.ipify.org?format=json",
+        timeout=15,
+        headers=get_client_name_headers(),
+    ).json()
     return response["ip"]
 
 
@@ -194,7 +198,11 @@ def get_ip():
 def get_location():
     """get the estimated location of the computer running the code"""
     ip_address = get_ip()
-    response = requests.get(f"https://ipapi.co/{ip_address}/json/", timeout=15).json()
+    response = requests.get(
+        f"https://ipapi.co/{ip_address}/json/",
+        timeout=15,
+        headers=get_client_name_headers(),
+    ).json()
 
     location_data = {
         "ip": ip_address,
@@ -263,6 +271,17 @@ def get_random_user_agent():
     return {"User-Agent": str(user_agents[index])}
 
 
+def get_client_name_headers():
+    """
+    Return X-Client-Name header dict when CLIENT_NAME env var is set and non-empty.
+    Otherwise return empty dict. Used to identify the client in outgoing scraper requests.
+    """
+    value = os.environ.get("CLIENT_NAME", "").strip()
+    if not value:
+        return {}
+    return {"X-Client-Name": value}
+
+
 @url_connection_retry(
     init_timeout=60
 )  # Increased default to handle slow servers like Shufersal
@@ -299,12 +318,13 @@ def session_with_cookies(
         f"On a new Session requesting url: method={method}, url={url}, body={body}"
     )
 
+    request_headers = {**get_client_name_headers(), **(headers or {})}
     if method == "POST":
         response_content = session.post(
-            url, data=body, timeout=timeout, headers=headers
+            url, data=body, timeout=timeout, headers=request_headers
         )
     else:
-        response_content = session.get(url, timeout=timeout, headers=headers)
+        response_content = session.get(url, timeout=timeout, headers=request_headers)
 
     if response_content.status_code != 200:
         Logger.debug(
@@ -381,7 +401,8 @@ def _render_webpage_impl(url, user_agent=None):
             timezone_id="Asia/Jerusalem",
         )
         page = context.new_page()
-        page.goto(url, timeout=60000)
+        extra_headers = get_client_name_headers()
+        page.goto(url, timeout=60000, extra_http_headers=extra_headers or None)
         page.wait_for_load_state("domcontentloaded", timeout=60000)
         content = page.content()
         browser.close()
@@ -435,10 +456,9 @@ def url_retrieve(url, filename, timeout=30):
     # >>> add here timeout if needed
     """alternative to urllib.request.urlretrieve"""
     # https://gist.github.com/xflr6/f29ed682f23fd27b6a0b1241f244e6c9
+    headers = {**get_client_name_headers(), "Accept-Encoding": None}
     with contextlib.closing(
-        requests.get(
-            url, stream=True, timeout=timeout, headers={"Accept-Encoding": None}
-        )
+        requests.get(url, stream=True, timeout=timeout, headers=headers)
     ) as _request:
         _request.raise_for_status()
         size = int(_request.headers.get("Content-Length", "-1"))
@@ -457,10 +477,9 @@ def url_retrieve(url, filename, timeout=30):
 
 def url_retrieve_to_memory(url, timeout=30):
     """Download URL content directly to memory (BytesIO)."""
+    headers = {**get_client_name_headers(), "Accept-Encoding": None}
     with contextlib.closing(
-        requests.get(
-            url, stream=True, timeout=timeout, headers={"Accept-Encoding": None}
-        )
+        requests.get(url, stream=True, timeout=timeout, headers=headers)
     ) as _request:
         _request.raise_for_status()
         size = int(_request.headers.get("Content-Length", "-1"))
@@ -714,12 +733,20 @@ def wget_file(file_link, file_save_path):
     """use wget to download file"""
     Logger.debug(f"trying wget file {file_link} to {file_save_path}.")
 
+    client_headers = get_client_name_headers()
+    header_args = []
+    if client_headers:
+        for name, value in client_headers.items():
+            header_args.append("--header")
+            header_args.append(f"{name}: {value}")
+    wget_cmd = ["wget", "--output-document=" + file_save_path] + header_args + [file_link]
+
     with subprocess.Popen(
-        f"wget --output-document={file_save_path} '{file_link}'",
+        wget_cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        shell=True,
+        shell=False,
     ) as process:
         std_out, std_err = process.communicate()
     Logger.debug(f"Wget stdout {std_out}")

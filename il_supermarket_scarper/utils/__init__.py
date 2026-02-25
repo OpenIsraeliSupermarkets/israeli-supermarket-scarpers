@@ -28,6 +28,7 @@ from .connection import (
     download_connection_retry,
     url_connection_retry,
     disable_when_outside_israel,
+    get_client_name_headers,
     session_with_cookies,
     url_retrieve,
     url_retrieve_to_memory,
