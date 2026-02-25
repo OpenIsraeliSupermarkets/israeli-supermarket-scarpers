@@ -540,6 +540,7 @@ async def collect_from_ftp(
     for filename, size in files_list:
         yield FileEntry(name=filename, url=None, size=size)
 
+
 def _sync_ftp_download_to_memory(
     ftp_host, ftp_username, ftp_password, ftp_path, file_name, ftp_timeout
 ):
@@ -628,7 +629,12 @@ async def wget_file_to_memory(file_link, timeout=30):
         for name, value in client_headers.items():
             header_args.append("--header")
             header_args.append(f"{name}: {value}")
-    wget_cmd = ["wget", f"--timeout={timeout}", "--output-document=-", file_link] + header_args
+    wget_cmd = [
+        "wget",
+        f"--timeout={timeout}",
+        "--output-document=-",
+        file_link,
+    ] + header_args
     process = await asyncio.create_subprocess_shell(
         wget_cmd,
         stdout=asyncio.subprocess.PIPE,
@@ -636,14 +642,12 @@ async def wget_file_to_memory(file_link, timeout=30):
     )
     std_out, std_err = await process.communicate()
 
-    std_err_text = std_err.decode('utf-8', errors='ignore')
+    std_err_text = std_err.decode("utf-8", errors="ignore")
     Logger.debug(f"Wget stderr {std_err_text}")
 
     if process.returncode != 0:
         Logger.error(f"wget failed with return code {process.returncode}")
-        raise FileNotFoundError(
-            f"File download failed, stderr: {std_err_text}"
-        )
+        raise FileNotFoundError(f"File download failed, stderr: {std_err_text}")
 
     buffer = io.BytesIO(std_out)
     buffer.seek(0)
