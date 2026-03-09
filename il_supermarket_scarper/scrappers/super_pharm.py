@@ -36,23 +36,6 @@ class SuperPharm(MultiPageWeb):
             file_sizes.append(None)  # Super Pharm don't support file size in the entry
         return links, filenames, file_sizes
 
-    @async_url_connection_retry()
-    async def retrieve_file_to_memory(self, file_link, timeout=15):
-        """Retrieve file from Super Pharm website"""
-        Logger.debug(f"On a new Session: calling {file_link}")
-
-        response_content = await self.session_with_cookies_by_chain(
-            file_link, timeout=timeout
-        )
-        spath = json.loads(response_content.content)
-        Logger.debug(f"Found spath: {spath}")
-
-        file_to_save = await self.session_with_cookies_by_chain(
-            self.url + spath["href"], timeout=timeout
-        )
-
-        return file_to_save.content
-
     def get_file_types_id(self, files_types=None):
         """get the file type id"""
         if files_types is None:
