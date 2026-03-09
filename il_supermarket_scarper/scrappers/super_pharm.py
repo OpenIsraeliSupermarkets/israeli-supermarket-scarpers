@@ -1,11 +1,8 @@
 import urllib.parse
 import datetime
 
-import json
 from il_supermarket_scarper.engines import MultiPageWeb
 from il_supermarket_scarper.utils import (
-    Logger,
-    async_url_connection_retry,
     DumpFolderNames,
     FileTypesFilters,
 )

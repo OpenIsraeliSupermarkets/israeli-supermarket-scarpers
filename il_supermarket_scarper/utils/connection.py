@@ -1,9 +1,7 @@
 import contextlib
 import io
-import os
 import time
 import socket
-import pickle
 import random
 import asyncio
 import fnmatch
@@ -263,61 +261,40 @@ def get_random_user_agent():
 @url_connection_retry(
     init_timeout=60
 )  # Increased default to handle slow servers like Shufersal
-def session_with_cookies(
-    url, timeout=15, chain_cookie_name=None, method="GET", body=None, headers=None
+def session_request(
+    url, session, method="GET", timeout=15, body=None, headers=None
 ):
     """
-    Request resource with cookies enabled.
+    Request resource with given session.
 
     Parameters:
     - url: URL to request
-    - timeout: Request timeout
-    - chain_cookie_name: Optional, name for saving/loading cookies
+    - session: session object to make request
     - method: HTTP method, defaults to GET
+    - timeout: Request timeout
     - body: Data to be sent in the request body (for POST or PUT requests)
     - headers: Optional dict of custom headers to include in the request
     """
-
-    session = requests.Session()
-    if chain_cookie_name:
-
-        try:
-            with open(chain_cookie_name, "rb") as f:
-                session.cookies.update(pickle.load(f))
-            # session.cookies.load()
-        except FileNotFoundError:
-            Logger.debug("Didn't find cookie file")
-        except Exception as e:
-            # There was an issue with reading the file.
-            os.remove(chain_cookie_name)
-            raise e
-
+    
     Logger.debug(
-        f"On a new Session requesting url: method={method}, url={url}, body={body}"
+        f"On Session requesting url: method={method}, url={url}, body={body}"
     )
 
-    if method == "POST":
-        response_content = session.post(
-            url, data=body, timeout=timeout, headers=headers
-        )
-    else:
-        response_content = session.get(url, timeout=timeout, headers=headers)
+    response = session.request(
+        method, url, data=body, timeout=timeout, headers=headers
+    )
 
-    if response_content.status_code != 200:
+    if response.status_code != 200:
         Logger.debug(
-            f"On Session, got status code: {response_content.status_code}"
-            f", body is {response_content.text} "
+            f"On Session, got status code: {response.status_code}"
+            f", body is {response.text} "
         )
         raise ConnectionError(
             f"Response for {url}, returned with status"
-            f" {response_content.status_code}"
+            f" {response.status_code}"
         )
 
-    if chain_cookie_name and not os.path.exists(chain_cookie_name):
-        with open(chain_cookie_name, "wb") as f:
-            pickle.dump(session.cookies.get_dict(), f)
-
-    return response_content
+    return response
 
 
 def get_from_playwrite(page, extraction_type):

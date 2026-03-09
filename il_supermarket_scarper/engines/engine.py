@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
-import os
 import re
-import uuid
+import requests
 import datetime
 import asyncio
 from typing import AsyncGenerator, Optional
@@ -10,7 +9,7 @@ from il_supermarket_scarper.utils import (
     FileTypesFilters,
     Logger,
     ScraperStatus,
-    session_with_cookies,
+    session_request,
     url_retrieve_to_memory,
     wget_file_to_memory,
     RestartSessionError,
@@ -119,7 +118,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             chain.value, status_database=status_database, file_output=file_output
         )
 
-        self.assigned_cookie = f"{self.chain.name}_{uuid.uuid4()}_cookies.txt"
+        self._session = requests.Session()
         self.storage_path: FileOutput = file_output
         Logger.info(
             f"Initialized {self.chain.value} scraper with"
@@ -471,24 +470,23 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 state.unique_seen.add(k)
                 yield item
 
-    async def session_with_cookies_by_chain(
+    async def request_with_session(
         self, url, method="GET", body=None, timeout=15, headers=None
     ):
-        """request resource with cookie by chain name"""
+        """request resource with engine session"""
         return await asyncio.to_thread(
-            session_with_cookies,
+            session_request,
             url,
-            chain_cookie_name=self.assigned_cookie,
-            timeout=timeout,
+            session=self._session,
             method=method,
+            timeout=timeout,
             body=body,
             headers=headers,
         )
 
     async def _post_scraping(self):
         """job to do post scraping"""
-        if os.path.exists(self.assigned_cookie):
-            os.remove(self.assigned_cookie)
+        self._session.close()
         await self.storage_path.close()
 
     def _validate_scraper_params(self, limit=None, files_types=None, store_id=None):

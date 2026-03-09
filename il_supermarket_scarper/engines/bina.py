@@ -123,7 +123,7 @@ class Bina(Aspx):
 
     async def _resolve_url(self, file_link):
         """Resolve the download URL from Bina's redirect response."""
-        response_content = await self.session_with_cookies_by_chain(file_link)
+        response_content = await self.request_with_session(file_link)
         spath = json.loads(response_content.content)
         Logger.debug(f"Found spath: {spath}")
         return spath[0]["SPath"]
