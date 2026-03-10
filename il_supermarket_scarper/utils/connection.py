@@ -275,7 +275,7 @@ def session_request(
     - body: Data to be sent in the request body (for POST or PUT requests)
     - headers: Optional dict of custom headers to include in the request
     """
-    
+
     Logger.debug(
         f"On Session requesting url: method={method}, url={url}, body={body}"
     )
@@ -403,10 +403,10 @@ def get_from_webpage(cached_page, extraction_type):
     return content
 
 
-def url_retrieve_to_memory(url, timeout=30, chunk_size=8192):
+def url_retrieve_to_memory(url, session, timeout=30, chunk_size=8192):
     """Download URL content directly to memory (BytesIO)."""
     with contextlib.closing(
-        requests.get(
+        session.get(
             url, stream=True, timeout=timeout, headers={"Accept-Encoding": None}
         )
     ) as _request:

@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 import re
-import requests
 import datetime
 import asyncio
 from typing import AsyncGenerator, Optional
+import requests
 from il_supermarket_scarper.utils import (
     FileEntry,
     FileTypesFilters,
@@ -750,13 +750,13 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 yield entry
 
     @async_url_connection_retry()
-    async def retrieve_file_to_memory(self, file_link, timeout=30):
+    async def download_file(self, file_link, timeout=30):
         """download file directly to memory"""
         return await asyncio.to_thread(
-            url_retrieve_to_memory, file_link, timeout=timeout
+            url_retrieve_to_memory, file_link, self._session, timeout=timeout
         )
 
-    async def _wget_file_to_memory(self, file_link, timeout):
+    async def _download_file_via_wget(self, file_link, timeout):
         return await wget_file_to_memory(file_link, timeout)
 
     async def save_and_extract(self, arg):
@@ -780,11 +780,11 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
 
             # Download file content directly to memory
             try:
-                file_content = await self.retrieve_file_to_memory(file_link, timeout=30)
+                file_content = await self.download_file(file_link, timeout=30)
 
             except Exception as e:  # pylint: disable=broad-except
                 Logger.warning(f"Error downloading {file_link}: {e}")
-                file_content = await self._wget_file_to_memory(file_link, timeout=30)
+                file_content = await self._download_file_via_wget(file_link, timeout=30)
             downloaded = True
 
             # Log file size if it's a gzip file
