@@ -22,13 +22,13 @@ When invoked:
 
 **ScraperStability — evidence requirement**
 
-`il_supermarket_scarper/scraper_stability.py` contains per-scraper stability rules that suppress "missing file" failures when upstream data is known to be absent. Before adding or modifying any entry in this file you **must** provide concrete evidence from the CPFTA regulations page that the relevant file has been absent for at least **a couple of consecutive days**:
+`il_supermarket_scarper/scraper_stability.py` contains per-scraper stability rules that suppress "missing file" failures when upstream data is known to be absent.
 
-1. Open [CPFTA price regulations (Hebrew)](https://www.gov.il/he/departments/legalInfo/cpfta_prices_regulations) and locate the expected publication.
-2. Confirm the file is absent on **at least two separate dates** (e.g. screenshots, dated archive links, or explicit test-run logs with timestamps).
-3. Include that evidence in the PR description or commit message. Without it, assume the absence is a transient scraper/network issue and investigate the pipeline first.
+- **Bar to change behavior**: Only add or tighten a rule when CPFTA evidence shows the expected publication has been **missing for more than three consecutive days**. Shorter gaps are usually transient—let CI fail until the bar is met or fix the pipeline; that is acceptable.
+- **Implementation**: Add a **dedicated stability class for that scraper** (do not reuse an unrelated chain). Put the **evidence in a class-level comment** (dates checked, what was absent, link or archive)—and still cite it briefly in the PR or commit message.
+- **Gather evidence**: Open [CPFTA price regulations (Hebrew)](https://www.gov.il/he/departments/legalInfo/cpfta_prices_regulations), confirm the gap across the required span (screenshots, dated archives, or timestamped logs). Without that evidence, treat failures as scraper/network/pipeline issues first.
 
-Do **not** broaden stability rules based on a single observed failure, a single day of missing data, or a foreign-host scraping attempt.
+Do **not** broaden stability rules from a single failure, one or two days off, or a foreign-host-only scrape.
 
 Constraints:
 
