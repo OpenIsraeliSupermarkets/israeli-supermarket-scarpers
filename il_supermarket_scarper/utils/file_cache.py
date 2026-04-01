@@ -51,7 +51,7 @@ def file_cache(ttl=None):
             # Slow path: acquire exclusive per-key lock, then re-check
             os.makedirs(_CACHE_DIR, exist_ok=True)
             lock_path = get_lock_file(func.__name__, cache_key)
-            with open(lock_path, "w") as lock_f:
+            with open(lock_path, "w", encoding="utf-8") as lock_f:
                 fcntl.flock(lock_f, fcntl.LOCK_EX)
                 try:
                     cache = load_cache(cache_file)
@@ -59,10 +59,7 @@ def file_cache(ttl=None):
                     if entry and _is_valid(entry):
                         return entry["result"]
 
-                    try:
-                        result = func(*args, **kwargs)
-                    except Exception:
-                        raise  # do not cache failures
+                    result = func(*args, **kwargs)
                     cache[cache_key] = {"result": result, "timestamp": time.time()}
                     save_cache(cache_file, cache)
                     return result
