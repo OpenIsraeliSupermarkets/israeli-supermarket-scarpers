@@ -367,22 +367,41 @@ def _render_webpage_impl(url, user_agent=None):
     """Render website with Playwright; real browser context to reduce blocking."""
     if user_agent is None:
         user_agent = get_random_user_agent().get("User-Agent", "")
-    with sync_playwright() as p:
-        browser = p.chromium.launch(
-            args=["--disable-blink-features=AutomationControlled"]
-        )
-        context = browser.new_context(
-            user_agent=user_agent,
-            viewport={"width": 1280, "height": 720},
-            locale="he-IL",
-            timezone_id="Asia/Jerusalem",
-        )
-        page = context.new_page()
-        page.goto(url, timeout=60000)
-        page.wait_for_load_state("domcontentloaded", timeout=60000)
-        content = page.content()
-        browser.close()
-    return content
+    last_error = None
+    for attempt in range(3):
+        try:
+            with sync_playwright() as p:
+                browser = p.chromium.launch(
+                    args=["--disable-blink-features=AutomationControlled"]
+                )
+                context = browser.new_context(
+                    user_agent=user_agent,
+                    viewport={"width": 1280, "height": 720},
+                    locale="he-IL",
+                    timezone_id="Asia/Jerusalem",
+                )
+                page = context.new_page()
+                page.goto(url, timeout=90000, wait_until="domcontentloaded")
+                # gov.il renders main content client-side; without this, HTML is an empty shell
+                page.wait_for_selector(
+                    "#content", timeout=90000, state="attached"
+                )
+                with contextlib.suppress(Exception):
+                    page.wait_for_load_state("networkidle", timeout=30000)
+                page.wait_for_load_state("domcontentloaded", timeout=60000)
+                content = page.content()
+                browser.close()
+            if 'id="content"' in content:
+                return content
+        except Exception as error:  # pylint: disable=broad-exception-caught
+            last_error = error
+            if attempt < 2:
+                time.sleep(2 * (attempt + 1))
+                continue
+            raise error
+    if last_error:
+        raise last_error
+    raise RuntimeError("failed to render page with #content")
 
 
 @file_cache(ttl=60)
@@ -402,8 +421,8 @@ def get_from_latast_webpage(url, extraction_type):
     ]
     last_result = None
     for ua in user_agents:
-        content = (
-            _render_webpage_impl(url, user_agent=ua) if ua else render_webpage(url)
+        content = _render_webpage_impl(
+            url, user_agent=ua if ua else None
         )
         result = get_from_webpage(content, extraction_type)
         last_result = result
