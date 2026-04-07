@@ -657,9 +657,11 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 # Add new tasks from generator up to max_threads limit
                 while not generator_exhausted and len(pending_tasks) < self.max_threads:
                     try:
-                        file_details = await anext(
-                            files_generator
-                        )  # pylint: disable=undefined-variable
+                        file_details = (
+                            await anext(  # pylint: disable=undefined-variable
+                                files_generator
+                            )
+                        )
                         task = asyncio.create_task(
                             process_file_with_semaphore(file_details)
                         )
