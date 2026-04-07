@@ -53,3 +53,4 @@ from .scraper_config import ScraperConfig
 from .databases import JsonDataBase, MongoDataBase
 from .scraping_result import ScrapingResult
 from .file_entry import FileEntry
+from .scraper_status_contract import *
