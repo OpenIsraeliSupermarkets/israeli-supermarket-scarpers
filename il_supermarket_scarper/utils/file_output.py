@@ -49,9 +49,9 @@ class FileOutput(ABC):
             extracted = await asyncio.to_thread(
                 extract_xml_from_gz_in_memory, file_content, file_name
             )
-            new_name = os.path.splitext(file_name)[0] + '.xml'
+            new_name = os.path.splitext(file_name)[0] + ".xml"
             return extracted, new_name, True
-        except Exception as e: # pylint: disable=broad-except
+        except Exception as e:  # pylint: disable=broad-except
             Logger.error(f"Failed to extract {file_name}: {e}")
             return file_content, file_name, False
 
@@ -102,7 +102,7 @@ class DiskFileOutput(FileOutput):
         try:
             # Extract if it's a .gz file
             file_content, file_name, extract_successfully = (
-            await self._extract_if_compressed(file_content, file_name)
+                await self._extract_if_compressed(file_content, file_name)
             )
 
             # Write file content to disk

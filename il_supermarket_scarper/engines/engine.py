@@ -68,6 +68,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             scraper = scraper_class(file_output=output)
             asyncio.run(scraper.scrape(limit=10))
     """
+
     _DATE_PATTERN_1 = re.compile(r"-(\d{8})(\d{4})?(?=-|\.|$)")
     _DATE_PATTERN_2 = re.compile(r"-(\d{8})-(\d{6})")
 
@@ -439,16 +440,15 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             # Promo7290700100008-000-207-20250224-103225 (YYYYMMDD-HHMMSS)
             # Look for date pattern YYYYMMDD followed by optional time
             # Pattern: -YYYYMMDD followed by optional HHMM, then - or end of string or .
-            date_match = (
-                self._DATE_PATTERN_1.search(file_name)
-                or self._DATE_PATTERN_2.search(file_name)
-            )
+            date_match = self._DATE_PATTERN_1.search(
+                file_name
+            ) or self._DATE_PATTERN_2.search(file_name)
 
             if not date_match:
                 continue
 
             date_str = date_match.group(1)  # YYYYMMDD
-            time_str = (date_match.group(2) or "0000")[:4] # HHMM, default to 0000
+            time_str = (date_match.group(2) or "0000")[:4]  # HHMM, default to 0000
 
             try:
                 file_datetime = datetime.datetime.strptime(
@@ -657,7 +657,9 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 # Add new tasks from generator up to max_threads limit
                 while not generator_exhausted and len(pending_tasks) < self.max_threads:
                     try:
-                        file_details = await anext(files_generator) # pylint: disable=undefined-variable
+                        file_details = await anext(
+                            files_generator
+                        )  # pylint: disable=undefined-variable
                         task = asyncio.create_task(
                             process_file_with_semaphore(file_details)
                         )
@@ -775,8 +777,9 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         try:
             # Determine file name with extension
             file_name_with_ext = file_name
-            if (file_link.endswith((".gz", ".xml")) and
-                not file_name.endswith((".gz", ".xml"))):
+            if file_link.endswith((".gz", ".xml")) and not file_name.endswith(
+                (".gz", ".xml")
+            ):
 
                 file_name_with_ext = file_name + "." + file_link.split(".")[-1]
 

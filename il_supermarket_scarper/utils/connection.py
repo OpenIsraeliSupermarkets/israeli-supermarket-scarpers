@@ -383,9 +383,7 @@ def _render_webpage_impl(url, user_agent=None):
                 page = context.new_page()
                 page.goto(url, timeout=90000, wait_until="domcontentloaded")
                 # gov.il renders main content client-side; without this, HTML is an empty shell
-                page.wait_for_selector(
-                    "#content", timeout=90000, state="attached"
-                )
+                page.wait_for_selector("#content", timeout=90000, state="attached")
                 with contextlib.suppress(Exception):
                     page.wait_for_load_state("networkidle", timeout=30000)
                 page.wait_for_load_state("domcontentloaded", timeout=60000)
@@ -421,9 +419,7 @@ def get_from_latast_webpage(url, extraction_type):
     ]
     last_result = None
     for ua in user_agents:
-        content = _render_webpage_impl(
-            url, user_agent=ua if ua else None
-        )
+        content = _render_webpage_impl(url, user_agent=ua if ua else None)
         result = get_from_webpage(content, extraction_type)
         last_result = result
         if not _looks_like_block_page(result):
@@ -539,6 +535,7 @@ async def collect_from_ftp(
     for filename, size in files_list:
         yield FileEntry(name=filename, url=None, size=size)
 
+
 def _sync_ftp_download_to_memory(
     ftp_host, ftp_username, ftp_password, ftp_path, file_name, ftp_timeout
 ):
@@ -628,14 +625,12 @@ async def wget_file_to_memory(file_link, timeout=30):
     )
     std_out, std_err = await process.communicate()
 
-    std_err_text = std_err.decode('utf-8', errors='ignore')
+    std_err_text = std_err.decode("utf-8", errors="ignore")
     Logger.debug(f"Wget stderr {std_err_text}")
 
     if process.returncode != 0:
         Logger.error(f"wget failed with return code {process.returncode}")
-        raise FileNotFoundError(
-            f"File download failed, stderr: {std_err_text}"
-        )
+        raise FileNotFoundError(f"File download failed, stderr: {std_err_text}")
 
     buffer = io.BytesIO(std_out)
     buffer.seek(0)

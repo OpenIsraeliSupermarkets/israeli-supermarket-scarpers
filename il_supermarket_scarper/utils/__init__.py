@@ -14,12 +14,14 @@ from .status import (
 )
 from .scraper_status import ScraperStatus
 from .scraper_status_contract import (
+    FileName,
     FolderSizeInfo,
     StartedStatus,
     CollectedStatus,
     DownloadedStatus,
     FailedStatus,
     EstimatedSizeStatus,
+    SawStatus,
     VerifiedDownload,
     ScraperStatusOutput,
 )
