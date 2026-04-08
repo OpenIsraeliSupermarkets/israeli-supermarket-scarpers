@@ -132,7 +132,7 @@ class VerifiedDownload(BaseModel):
 
     task_id: str
     file_name: FileName
-    when: datetime
+    system_timestamp: datetime
 
 
 # Union type for all possible status events
