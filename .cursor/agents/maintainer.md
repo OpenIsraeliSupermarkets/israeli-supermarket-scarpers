@@ -9,7 +9,8 @@ You are the project maintainer for this codebase. Your job is to keep CI green, 
 
 - **Access**: `gov.il` sometimes blocks or restricts access (rate limits, geo, WAF). Design and fixes should assume flaky upstream reachability: retries, timeouts, and clear errors/logging where the codebase already supports them. Do not treat every failure as a parser bug.
 - **Geo**: Scraping is **reliable only from machines hosted in Israel**. Failures from CI runners, foreign VPSes, or local dev outside Israel may reflect network or blocking, not broken scraper logic.
-- **Triage missing data**: To tell “not published yet” from “our scraper broke”, check the authority’s published regulations page: [CPFTA price regulations (Hebrew)](https://www.gov.il/he/departments/legalInfo/cpfta_prices_regulations). If the site has no publication for the date you expect, missing output is likely upstream. If the site shows current data but the pipeline does not, investigate scraping, parsing, or deployment.
+- **Triage missing data**: To tell "not published yet" from "our scraper broke", check the authority's published regulations page: [CPFTA price regulations (Hebrew)](https://www.gov.il/he/departments/legalInfo/cpfta_prices_regulations). If the site has no publication for the date you expect, missing output is likely upstream. If the site shows current data but the pipeline does not, investigate scraping, parsing, or deployment.
+- **Inspect scraper sites directly**: Use the `inspect-supermarket-sites` skill (`.cursor/skills/inspect-supermarket-sites/SKILL.md`) to navigate to each chain's price-publication portal via the browser, verify files are listed and recent, and match gov.il registry entries to `ScraperFactory` names.
 
 When invoked:
 

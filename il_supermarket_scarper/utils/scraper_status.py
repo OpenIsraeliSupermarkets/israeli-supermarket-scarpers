@@ -1,7 +1,7 @@
 import os
 import traceback
 from typing import Optional
-
+import uuid
 from .status import log_folder_details, _now
 from .databases import JsonDataBase, AbstractDataBase
 from .file_output import FileOutput
@@ -34,10 +34,12 @@ class ScraperStatus:
             self.database = JsonDataBase(database_name, status_path)
         else:
             self.database = status_database
-        self.task_id = _now().strftime("%Y%m%d%H%M%S")
+        self.task_id = None
 
     def on_scraping_start(self, limit, files_types, **additional_info):
         """Report that scraping has started."""
+        self.task_id = str(uuid.uuid4())
+
         self._insert_global_status(
             ScraperStatus.STARTED,
             limit=limit,
@@ -81,7 +83,7 @@ class ScraperStatus:
         """Report that the file has been downloaded."""
         # Map results to contract field names
         event_data = {
-            "file_name_downloaded": results.file_name,
+            "file_name": results.file_name,
             "downloaded_successfully": results.downloaded,
             "extracted_successfully": results.extract_succefully,
             "error_message": results.error,
@@ -110,7 +112,11 @@ class ScraperStatus:
         if results.extract_succefully:
             self.database.insert_document(
                 self.VERIFIED_DOWNLOADS,
-                {"file_name": results.file_name, "when": _now()},
+                {
+                    "file_name": results.file_name,
+                    "system_timestamp": _now(),
+                    "task_id": self.task_id,
+                },
             )
 
     def on_scrape_completed(
@@ -135,10 +141,20 @@ class ScraperStatus:
 
     def _insert_global_status(self, status, **additional_info):
         """Insert a global status update (started, estimated_size)."""
-        document = {"status": status, "when": _now(), **additional_info}
+        document = {
+            "status": status,
+            "system_timestamp": _now(),
+            "task_id": self.task_id,
+            **additional_info,
+        }
         self.database.insert_document("global_status", document)
 
     def _insert_event(self, status, **additional_info):
         """Insert an event update (collected, downloaded, failed)."""
-        document = {"status": status, "when": _now(), **additional_info}
+        document = {
+            "status": status,
+            "system_timestamp": _now(),
+            "task_id": self.task_id,
+            **additional_info,
+        }
         self.database.insert_document("events", document)

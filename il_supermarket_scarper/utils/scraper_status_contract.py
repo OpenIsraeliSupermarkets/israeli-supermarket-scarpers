@@ -46,8 +46,9 @@ class FileName(str):
 class StartedStatus(BaseModel):
     """Status event when scraping starts."""
 
+    task_id: str
     status: str = "started"
-    when: Optional[datetime] = None
+    system_timestamp: Optional[datetime] = None
     limit: Optional[int] = None
     files_requested: Optional[List[str]] = None
     store_id: Optional[int] = None
@@ -60,6 +61,7 @@ class StartedStatus(BaseModel):
 class FolderSizeInfo(BaseModel):
     """Information about the size and contents of a folder."""
 
+    task_id: str
     size: float
     unit: str
     folder: str
@@ -69,8 +71,9 @@ class FolderSizeInfo(BaseModel):
 class EstimatedSizeStatus(BaseModel):
     """Status event when scraping is completed."""
 
+    task_id: str
     status: str = "estimated_size"
-    when: Optional[datetime] = None
+    system_timestamp: Optional[datetime] = None
     folder_size: Optional[FolderSizeInfo] = None
     completed_successfully: bool = True
 
@@ -79,8 +82,9 @@ class EstimatedSizeStatus(BaseModel):
 class CollectedStatus(BaseModel):
     """Status event when file details are collected."""
 
+    task_id: str
     status: str = "collected"
-    when: Optional[datetime] = None
+    system_timestamp: Optional[datetime] = None
     file_name: FileName
     link_collected: Optional[AnyUrl]
 
@@ -88,9 +92,10 @@ class CollectedStatus(BaseModel):
 class DownloadedStatus(BaseModel):
     """Status event when files are downloaded."""
 
+    task_id: str
     status: str = "downloaded"
-    when: Optional[datetime] = None
-    file_name_downloaded: FileName
+    system_timestamp: Optional[datetime] = None
+    file_name: FileName
     downloaded_successfully: bool
     extracted_successfully: bool
     error_message: Optional[str] = None
@@ -100,8 +105,9 @@ class DownloadedStatus(BaseModel):
 class FailedStatus(BaseModel):
     """Status event when scraping fails."""
 
+    task_id: str
     status: str = "failed"
-    when: Optional[datetime] = None
+    system_timestamp: Optional[datetime] = None
     execption: str = ""
     traceback: str = ""
     download_url: Optional[AnyUrl]
@@ -111,8 +117,9 @@ class FailedStatus(BaseModel):
 class SawStatus(BaseModel):
     """Status event when file is seen on site."""
 
+    task_id: str
     status: str = "saw"
-    when: Optional[datetime] = None
+    system_timestamp: Optional[datetime] = None
     file_name: (
         str  # why not "FileName"? we can see any file, but we should collect them all
     )
@@ -123,8 +130,9 @@ class SawStatus(BaseModel):
 class VerifiedDownload(BaseModel):
     """Record of a verified downloaded file."""
 
+    task_id: str
     file_name: FileName
-    when: datetime
+    system_timestamp: datetime
 
 
 # Union type for all possible status events
@@ -178,7 +186,7 @@ class ScraperStatusOutput(BaseModel):
                 per_file[event.file_name]["collected"] = True
                 per_file_status_counter[event.file_name].append("collected")
             elif isinstance(event, DownloadedStatus):
-                fn = event.file_name_downloaded
+                fn = event.file_name
                 per_file[fn]["downloaded"] = True
                 per_file_status_counter[fn].append("downloaded")
             elif isinstance(event, FailedStatus):
