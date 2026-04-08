@@ -14,12 +14,14 @@ from .status import (
 )
 from .scraper_status import ScraperStatus
 from .scraper_status_contract import (
+    FileName,
     FolderSizeInfo,
     StartedStatus,
     CollectedStatus,
     DownloadedStatus,
     FailedStatus,
     EstimatedSizeStatus,
+    SawStatus,
     VerifiedDownload,
     ScraperStatusOutput,
 )
@@ -53,3 +55,4 @@ from .scraper_config import ScraperConfig
 from .databases import JsonDataBase, MongoDataBase
 from .scraping_result import ScrapingResult
 from .file_entry import FileEntry
+from .scraper_status_contract import *
