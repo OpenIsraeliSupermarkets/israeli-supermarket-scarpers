@@ -48,7 +48,7 @@ class StartedStatus(BaseModel):
 
     task_id: str
     status: str = "started"
-    when: Optional[datetime] = None
+    system_timestamp: Optional[datetime] = None
     limit: Optional[int] = None
     files_requested: Optional[List[str]] = None
     store_id: Optional[int] = None
@@ -73,7 +73,7 @@ class EstimatedSizeStatus(BaseModel):
 
     task_id: str
     status: str = "estimated_size"
-    when: Optional[datetime] = None
+    system_timestamp: Optional[datetime] = None
     folder_size: Optional[FolderSizeInfo] = None
     completed_successfully: bool = True
 
@@ -84,7 +84,7 @@ class CollectedStatus(BaseModel):
 
     task_id: str
     status: str = "collected"
-    when: Optional[datetime] = None
+    system_timestamp: Optional[datetime] = None
     file_name: FileName
     link_collected: Optional[AnyUrl]
 
@@ -94,7 +94,7 @@ class DownloadedStatus(BaseModel):
 
     task_id: str
     status: str = "downloaded"
-    when: Optional[datetime] = None
+    system_timestamp: Optional[datetime] = None
     file_name: FileName
     downloaded_successfully: bool
     extracted_successfully: bool
@@ -107,7 +107,7 @@ class FailedStatus(BaseModel):
 
     task_id: str
     status: str = "failed"
-    when: Optional[datetime] = None
+    system_timestamp: Optional[datetime] = None
     execption: str = ""
     traceback: str = ""
     download_url: Optional[AnyUrl]
@@ -119,7 +119,7 @@ class SawStatus(BaseModel):
 
     task_id: str
     status: str = "saw"
-    when: Optional[datetime] = None
+    system_timestamp: Optional[datetime] = None
     file_name: (
         str  # why not "FileName"? we can see any file, but we should collect them all
     )

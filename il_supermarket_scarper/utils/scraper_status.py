@@ -112,7 +112,7 @@ class ScraperStatus:
         if results.extract_succefully:
             self.database.insert_document(
                 self.VERIFIED_DOWNLOADS,
-                {"file_name": results.file_name, "when": _now()},
+                {"file_name": results.file_name, "system_timestamp": _now(),"task_id": self.task_id},
             )
 
     def on_scrape_completed(
@@ -137,10 +137,10 @@ class ScraperStatus:
 
     def _insert_global_status(self, status, **additional_info):
         """Insert a global status update (started, estimated_size)."""
-        document = {"status": status, "system_time": _now(), "task_id": self.task_id, **additional_info}
+        document = {"status": status, "system_timestamp": _now(), "task_id": self.task_id, **additional_info}
         self.database.insert_document("global_status", document)
 
     def _insert_event(self, status, **additional_info):
         """Insert an event update (collected, downloaded, failed)."""
-        document = {"status": status, "system_time": _now(),"task_id": self.task_id, **additional_info}
+        document = {"status": status, "system_timestamp": _now(),"task_id": self.task_id, **additional_info}
         self.database.insert_document("events", document)
