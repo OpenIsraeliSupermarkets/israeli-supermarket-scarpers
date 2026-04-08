@@ -83,7 +83,7 @@ class ScraperStatus:
         """Report that the file has been downloaded."""
         # Map results to contract field names
         event_data = {
-            "file_name_downloaded": results.file_name,
+            "file_name": results.file_name,
             "downloaded_successfully": results.downloaded,
             "extracted_successfully": results.extract_succefully,
             "error_message": results.error,
