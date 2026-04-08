@@ -346,9 +346,9 @@ def get_from_playwrite(page, extraction_type):
     return content
 
 
-def _looks_like_block_page(extracted_text: Union[str, List[str]]) -> bool:
+def _looks_like_block_page(extracted_text: Union[str, List[str], None]) -> bool:
     """True if extracted page text looks like a block/captcha page."""
-    if not extracted_text:
+    if extracted_text is None:
         return True
     block_marks = (
         "you have been blocked",
