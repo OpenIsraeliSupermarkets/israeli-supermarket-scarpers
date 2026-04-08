@@ -186,7 +186,7 @@ class ScraperStatusOutput(BaseModel):
                 per_file[event.file_name]["collected"] = True
                 per_file_status_counter[event.file_name].append("collected")
             elif isinstance(event, DownloadedStatus):
-                fn = event.file_name_downloaded
+                fn = event.file_name
                 per_file[fn]["downloaded"] = True
                 per_file_status_counter[fn].append("downloaded")
             elif isinstance(event, FailedStatus):
