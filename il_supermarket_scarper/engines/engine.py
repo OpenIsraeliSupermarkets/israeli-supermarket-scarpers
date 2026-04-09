@@ -1,16 +1,15 @@
 from abc import ABC, abstractmethod
-import os
 import re
-import uuid
 import datetime
 import asyncio
 from typing import AsyncGenerator, Optional
+import requests
 from il_supermarket_scarper.utils import (
     FileEntry,
     FileTypesFilters,
     Logger,
     ScraperStatus,
-    session_with_cookies,
+    session_request,
     url_retrieve_to_memory,
     wget_file_to_memory,
     RestartSessionError,
@@ -120,7 +119,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             chain.value, status_database=status_database, file_output=file_output
         )
 
-        self.assigned_cookie = f"{self.chain.name}_{uuid.uuid4()}_cookies.txt"
+        self._session = requests.Session()
         self.storage_path: FileOutput = file_output
         Logger.info(
             f"Initialized {self.chain.value} scraper with"
@@ -471,24 +470,23 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 state.unique_seen.add(k)
                 yield item
 
-    async def session_with_cookies_by_chain(
+    async def request_with_session(
         self, url, method="GET", body=None, timeout=15, headers=None
     ):
-        """request resource with cookie by chain name"""
+        """request resource with engine session"""
         return await asyncio.to_thread(
-            session_with_cookies,
+            session_request,
             url,
-            chain_cookie_name=self.assigned_cookie,
-            timeout=timeout,
+            session=self._session,
             method=method,
+            timeout=timeout,
             body=body,
             headers=headers,
         )
 
     async def _post_scraping(self):
         """job to do post scraping"""
-        if os.path.exists(self.assigned_cookie):
-            os.remove(self.assigned_cookie)
+        self._session.close()
         await self.storage_path.close()
 
     def _validate_scraper_params(self, limit=None, files_types=None, store_id=None):
@@ -756,13 +754,13 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 yield entry
 
     @async_url_connection_retry()
-    async def retrieve_file_to_memory(self, file_link, timeout=30):
+    async def download_file(self, file_link, timeout=30):
         """download file directly to memory"""
         return await asyncio.to_thread(
-            url_retrieve_to_memory, file_link, timeout=timeout
+            url_retrieve_to_memory, file_link, self._session, timeout=timeout
         )
 
-    async def _wget_file_to_memory(self, file_link, timeout):
+    async def _download_file_via_wget(self, file_link, timeout):
         return await wget_file_to_memory(file_link, timeout)
 
     async def save_and_extract(self, arg):
@@ -787,11 +785,11 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
 
             # Download file content directly to memory
             try:
-                file_content = await self.retrieve_file_to_memory(file_link, timeout=30)
+                file_content = await self.download_file(file_link, timeout=30)
 
             except Exception as e:  # pylint: disable=broad-except
                 Logger.warning(f"Error downloading {file_link}: {e}")
-                file_content = await self._wget_file_to_memory(file_link, timeout=30)
+                file_content = await self._download_file_via_wget(file_link, timeout=30)
             downloaded = True
 
             # Log file size if it's a gzip file
