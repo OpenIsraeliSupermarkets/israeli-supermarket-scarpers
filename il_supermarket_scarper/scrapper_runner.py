@@ -206,13 +206,14 @@ class MainScrapperRunner:  # pylint: disable=too-many-instance-attributes
         self._manager = None
         self._shutdown_flag = None
         self._pool = None
-        # Create file_output and status_database objects during init
-        # so they can be consumed before/during scraping
+        # file_output (including queue handlers) and status DB must exist before run()
+        # so downstream code can call consume() and attach consumers before start().
         self._file_outputs = {}
         self._status_databases = {}
+        self._init_file_outputs()
 
-    def _create_target_objects(self, manager):
-        """create the target objects"""
+    def _init_file_outputs(self):
+        """Create per-scraper file output and status database (not tied to the process pool)."""
         self._file_outputs = {
             scraper_name: create_file_output_for_scraper(
                 scraper_name, self.file_output_config
@@ -225,7 +226,6 @@ class MainScrapperRunner:  # pylint: disable=too-many-instance-attributes
             )
             for scraper_name in self.enabled_scrapers
         }
-        self._shutdown_flag = manager.Value("b", False)
 
     def run(
         self,
@@ -237,16 +237,12 @@ class MainScrapperRunner:  # pylint: disable=too-many-instance-attributes
         single_pass=True,
     ):
         """run the scraper"""
-        self._manager = Manager()
-        self._shutdown_flag = self._manager.Value("b", False)
-
         Logger.info(f"Limit is {limit}")
         Logger.info(f"files_types is {files_types}")
         Logger.info(f"Start scraping {self.enabled_scrapers}.")
 
-        with Manager() as manager:
-            self._create_target_objects(manager)
-
+        with Manager() as self._manager:
+            self._shutdown_flag = self._manager.Value("b", False)
             with Pool(self.multiprocessing) as self._pool:
                 result = self._pool.starmap(
                     scrape_one_wrap,
@@ -271,7 +267,10 @@ class MainScrapperRunner:  # pylint: disable=too-many-instance-attributes
                         for chain_scrapper_class in self.enabled_scrapers
                     ],
                 )
-            return result
+        self._manager = None
+        self._shutdown_flag = None
+        self._pool = None
+        return result
 
     def consume_results(self):
         """consume the scraping results - returns dict mapping scraper names

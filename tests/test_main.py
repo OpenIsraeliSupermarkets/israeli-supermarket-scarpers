@@ -8,6 +8,24 @@ from il_supermarket_scarper.scrappers_factory import ScraperFactory
 from il_supermarket_scarper.utils.file_output import QueueFileOutput
 
 
+def test_queue_outputs_exist_before_start():
+    """Queue handlers must be available before start() for downstream consumers."""
+    scraper = ScarpingTask(
+        enabled_scrapers=[ScraperFactory.BAREKET.name],
+        output_configuration={
+            "output_mode": "queue",
+            "queue_type": "memory",
+        },
+    )
+    consumed = scraper.consume()
+    assert set(consumed) == {ScraperFactory.BAREKET.name}
+    assert isinstance(
+        consumed[ScraperFactory.BAREKET.name], QueueFileOutput
+    )
+    name = consumed[ScraperFactory.BAREKET.name].queue_handler.get_queue_name()
+    assert "bareket" in name.lower()
+
+
 def test_main_to_disk():
     """test the main running with limit of 1 for each chain"""
     with tempfile.TemporaryDirectory() as tmpdirname:

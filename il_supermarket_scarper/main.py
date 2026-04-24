@@ -144,7 +144,10 @@ class ScarpingTask:  # pylint: disable=too-many-instance-attributes
 
     def consume(self):
         """
-        Consume scraping results as they become available.
+        Map enabled scraper names to each chain's file output (disk or queue).
+
+        For queue output, handlers are created when the task is constructed so
+        consumers can read queue names and subscribe before ``start()`` runs.
 
         Returns:
             Generator[ScrapingResult]: Generator yielding ScrapingResult objects
