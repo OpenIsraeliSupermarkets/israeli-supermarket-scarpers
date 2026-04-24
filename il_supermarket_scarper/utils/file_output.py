@@ -270,20 +270,45 @@ class InMemoryQueueHandler(AbstractQueueHandler):
             cls._manager = multiprocessing.Manager()
         return cls._manager
 
-    def __init__(self, queue_name: str = "default"):
+    def __init__(self, queue_name: str = "default", maxsize: int = 0):
         """
         Initialize in-memory queue.
 
         Args:
             queue_name: Name of the queue
+            maxsize: Maximum number of messages in the buffer. When full,
+                :meth:`send` blocks until a consumer takes a message (backpressure).
+                ``0`` means unbounded (legacy behavior, higher memory use).
         """
         self.queue_name = queue_name
-        # Use Manager queue which can be pickled and shared across processes
-        self._queue = self._get_manager().Queue()
+        self._queue_max_size = int(maxsize)
+        manager = self._get_manager()
+        # Unbounded queue so close() can always send the shutdown sentinel; backpressure
+        # is applied with a separate semaphore (see _backpressure) when maxsize > 0.
+        self._queue = manager.Queue()
+        self._backpressure = None
+        if self._queue_max_size > 0:
+            # At most maxsize data messages in flight; blocked producers wait here until
+            # a consumer get()s a message and releases a slot.
+            self._backpressure = manager.BoundedSemaphore(self._queue_max_size)
+
+    @property
+    def queue_max_size(self) -> int:
+        """Configured max buffer size, or 0 for unbounded."""
+        return self._queue_max_size
 
     async def send(self, message: Dict[str, Any]) -> None:
-        """Add message to queue (process-safe)."""
-        self._queue.put(message)
+        """Add message to queue (process-safe). May block when queue is at capacity."""
+        loop = asyncio.get_event_loop()
+        if self._backpressure is not None:
+            await loop.run_in_executor(None, self._backpressure.acquire)
+        try:
+            # Blocking put (unbounded queue never blocks on capacity; semaphore enforces the cap)
+            await loop.run_in_executor(None, self._queue.put, message)
+        except Exception:
+            if self._backpressure is not None:
+                self._backpressure.release()
+            raise
         Logger.debug(f"Added message to in-memory queue: {message['file_name']}")
 
     def get_queue_name(self) -> str:
@@ -305,4 +330,6 @@ class InMemoryQueueHandler(AbstractQueueHandler):
             message = await loop.run_in_executor(None, self._queue.get)
             if message is None:
                 break
+            if self._backpressure is not None:
+                self._backpressure.release()
             yield message
