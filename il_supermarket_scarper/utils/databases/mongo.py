@@ -1,5 +1,3 @@
-import os
-
 from ..status import _now
 from .base import AbstractDataBase
 
@@ -14,18 +12,18 @@ except ImportError:
 class MongoDataBase(AbstractDataBase):
     """A class that represents a MongoDB database."""
 
-    def __init__(self, database_name) -> None:
+    def __init__(self, database_name, connection_url, collection_name) -> None:
         super().__init__(database_name)
         self.myclient = None
         self.store_db = None
+        self.connection_url = connection_url
+        self.collection_name = collection_name
 
     def create_connection(self):
         """Create a connection to the MongoDB database."""
         if PYMONGO_INSTALLED:
-            url = os.environ.get("MONGO_URL", "localhost")
-            port = os.environ.get("MONGO_PORT", "27017")
             self.myclient = pymongo.MongoClient(
-                f"mongodb://{url}:{port}/scraper_status"
+                f"{self.connection_url}/{self.collection_name}"
             )
             self.store_db = self.myclient[self.database_name]
 

@@ -70,6 +70,7 @@ class TestFileOutput:
                 assert message["metadata"]["chain"] == "test"
                 break  # Only check first message
             assert message_count == 1
+            await handler.close()
 
         asyncio.run(run_test())
 

@@ -163,6 +163,8 @@ async def _scrape_one(  # pylint: disable=too-many-locals
             Logger.info(f"[{chain_name}] Continuing to next run...")
 
     Logger.info(f"done scraping {chain_name}")
+    if file_output is not None:
+        await file_output.close()
 
 
 def scrape_one_wrap(chain_scrapper_class, kwargs):
@@ -206,13 +208,14 @@ class MainScrapperRunner:  # pylint: disable=too-many-instance-attributes
         self._manager = None
         self._shutdown_flag = None
         self._pool = None
-        # Create file_output and status_database objects during init
-        # so they can be consumed before/during scraping
+        # file_output (including queue handlers) and status DB must exist before run()
+        # so downstream code can call consume() and attach consumers before start().
         self._file_outputs = {}
         self._status_databases = {}
+        self._init_file_outputs()
 
-    def _create_target_objects(self, manager):
-        """create the target objects"""
+    def _init_file_outputs(self):
+        """Create per-scraper file output and status database (not tied to the process pool)."""
         self._file_outputs = {
             scraper_name: create_file_output_for_scraper(
                 scraper_name, self.file_output_config
@@ -225,7 +228,6 @@ class MainScrapperRunner:  # pylint: disable=too-many-instance-attributes
             )
             for scraper_name in self.enabled_scrapers
         }
-        self._shutdown_flag = manager.Value("b", False)
 
     def run(
         self,
@@ -237,41 +239,53 @@ class MainScrapperRunner:  # pylint: disable=too-many-instance-attributes
         single_pass=True,
     ):
         """run the scraper"""
-        self._manager = Manager()
-        self._shutdown_flag = self._manager.Value("b", False)
-
         Logger.info(f"Limit is {limit}")
         Logger.info(f"files_types is {files_types}")
         Logger.info(f"Start scraping {self.enabled_scrapers}.")
 
-        with Manager() as manager:
-            self._create_target_objects(manager)
-
-            with Pool(self.multiprocessing) as self._pool:
-                result = self._pool.starmap(
-                    scrape_one_wrap,
-                    [
-                        (
-                            chain_scrapper_class,
-                            {
-                                "limit": limit,
-                                "files_types": files_types,
-                                "when_date": when_date,
-                                "min_size": min_size,
-                                "max_size": max_size,
-                                "file_output": self._file_outputs[chain_scrapper_class],
-                                "status_database": self._status_databases[
-                                    chain_scrapper_class
-                                ],
-                                "single_pass": single_pass,
-                                "timeout_in_seconds": self.timeout_in_seconds,
-                                "shutdown_flag": self._shutdown_flag,
-                            },
-                        )
-                        for chain_scrapper_class in self.enabled_scrapers
-                    ],
+        with Manager() as self._manager:
+            self._shutdown_flag = self._manager.Value("b", False)
+            tasks = [
+                (
+                    chain_scrapper_class,
+                    {
+                        "limit": limit,
+                        "files_types": files_types,
+                        "when_date": when_date,
+                        "min_size": min_size,
+                        "max_size": max_size,
+                        "file_output": self._file_outputs[chain_scrapper_class],
+                        "status_database": self._status_databases[chain_scrapper_class],
+                        "single_pass": single_pass,
+                        "timeout_in_seconds": self.timeout_in_seconds,
+                        "shutdown_flag": self._shutdown_flag,
+                    },
                 )
-            return result
+                for chain_scrapper_class in self.enabled_scrapers
+            ]
+            with Pool(self.multiprocessing) as self._pool:
+                async_result = self._pool.starmap_async(scrape_one_wrap, tasks)
+                # Poll so we can terminate the pool from THIS thread when
+                # shutdown is requested.  Calling pool.terminate() from a
+                # different thread while starmap() blocks that same pool
+                # object causes a deadlock in the pool's condition variable.
+                while not async_result.ready():
+                    if self._shutdown_flag.value:
+                        Logger.info("Shutdown flag detected, terminating pool")
+                        self._pool.terminate()
+                        break
+                    async_result.wait(timeout=1.0)
+                result = async_result.get() if async_result.ready() else []
+        self._manager = None
+        self._shutdown_flag = None
+        self._pool = None
+        self._close_file_outputs()
+        return result
+
+    def _close_file_outputs(self):
+        """Send end-of-stream sentinel to every queue output so consumers unblock."""
+        for file_output in self._file_outputs.values():
+            file_output.close_sync()
 
     def consume_results(self):
         """consume the scraping results - returns dict mapping scraper names
@@ -282,12 +296,15 @@ class MainScrapperRunner:  # pylint: disable=too-many-instance-attributes
         }
 
     def shutdown(self):
-        """Stop the scraping process"""
+        """Stop the scraping process.
+
+        Sets the shutdown flag so the background thread's poll loop terminates
+        the pool from within itself (avoids cross-thread pool deadlocks).
+        Immediately closes all queue outputs so blocked consumers unblock.
+        """
         Logger.info("Shutdown requested")
         if self._shutdown_flag is not None:
             self._shutdown_flag.value = True
-        if self._pool is not None:
-            Logger.info("Terminating pool processes")
-            self._pool.terminate()
-            self._pool.join()
-            self._pool = None
+        # Close outputs NOW so any consumer blocked on queue.get() unblocks
+        # immediately, even before the background thread exits.
+        self._close_file_outputs()

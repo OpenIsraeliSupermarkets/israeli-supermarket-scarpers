@@ -71,6 +71,9 @@ class FileOutput(ABC):
     async def close(self):
         """Close the file output."""
 
+    def close_sync(self):
+        """Close the file output synchronously (no-op for non-queue outputs)."""
+
 
 class DiskFileOutput(FileOutput):
     """Save files to disk (current default behavior)."""
@@ -227,6 +230,11 @@ class QueueFileOutput(FileOutput):
         await self.queue_handler.close()
         Logger.debug("Queue handler closed")
 
+    def close_sync(self):
+        """Close the queue handler synchronously to unblock any waiting consumers."""
+        self.queue_handler.close_sync()
+        Logger.debug("Queue handler closed (sync)")
+
 
 class AbstractQueueHandler(ABC):
     """Abstract base class for queue handlers."""
@@ -249,6 +257,11 @@ class AbstractQueueHandler(ABC):
     @abstractmethod
     async def close(self) -> None:
         """Close the queue connection."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def close_sync(self) -> None:
+        """Close the queue connection synchronously."""
         raise NotImplementedError
 
 
@@ -292,6 +305,10 @@ class InMemoryQueueHandler(AbstractQueueHandler):
 
     async def close(self) -> None:
         """Signal that no more messages will be sent."""
+        self._queue.put(None)
+
+    def close_sync(self) -> None:
+        """Signal that no more messages will be sent (synchronous version)."""
         self._queue.put(None)
 
     async def get_all_messages(self) -> AsyncGenerator[Dict[str, Any], None]:

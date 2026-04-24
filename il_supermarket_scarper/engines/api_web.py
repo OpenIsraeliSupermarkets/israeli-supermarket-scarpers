@@ -111,6 +111,9 @@ class ApiWebEngine(WebBase):
         if hasattr(self, "apply_filter_by_type"):
             all_entries = self.apply_filter_by_type(all_entries, files_types)
 
+        if hasattr(self, "dedupe_api_entries"):
+            all_entries = self.dedupe_api_entries(all_entries)
+
         # Async generator pipeline (same as WebBase / multipage_web)
         extracted_files = self.extract_task_from_entry(all_entries)
         files = self.register_all_saw_files_on_site(extracted_files)

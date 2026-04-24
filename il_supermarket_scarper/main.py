@@ -144,7 +144,10 @@ class ScarpingTask:  # pylint: disable=too-many-instance-attributes
 
     def consume(self):
         """
-        Consume scraping results as they become available.
+        Map enabled scraper names to each chain's file output (disk or queue).
+
+        For queue output, handlers are created when the task is constructed so
+        consumers can read queue names and subscribe before ``start()`` runs.
 
         Returns:
             Generator[ScrapingResult]: Generator yielding ScrapingResult objects
@@ -170,10 +173,11 @@ class ScarpingTask:  # pylint: disable=too-many-instance-attributes
         Wait for the scraping thread to complete.
 
         Returns:
-            bool: True if the thread was joined successfully.
+            bool: True if the thread was joined successfully, False if it had
+            already finished before join() was called.
 
         Raises:
-            RuntimeError: If scraping is not running.
+            RuntimeError: If start() has never been called.
 
         Example::
 
@@ -181,10 +185,11 @@ class ScarpingTask:  # pylint: disable=too-many-instance-attributes
             scraper.start()
             scraper.join()  # Wait for completion
         """
-        if self._thread is not None and self._thread.is_alive():
+        if self._thread is None:
+            raise RuntimeError("Scraping has not been started")
+        if self._thread.is_alive():
             self._thread.join()
-            return True
-        raise RuntimeError("Scraping is not running")
+        return True
 
     def stop(self):
         """

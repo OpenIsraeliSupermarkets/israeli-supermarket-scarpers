@@ -137,6 +137,21 @@ class VictoryNewSource(ApiWebEngine):
             Logger.debug(f"Failed to parse file size '{size_str}': {e}")
             return 0
 
+    def dedupe_api_entries(self, all_entries):
+        """One getfiles response per branch repeats the same files; keep first only."""
+        seen = set()
+        out = []
+        for entry in all_entries:
+            if not isinstance(entry, dict):
+                out.append(entry)
+                continue
+            fn = entry.get("fileName") or entry.get("filename") or entry.get("name")
+            if not fn or fn in seen:
+                continue
+            seen.add(fn)
+            out.append(entry)
+        return out
+
     def apply_filter_by_type(self, entries, files_types=None):
         """Filter entries by file type"""
         if not files_types or files_types == FileTypesFilters.all_types():

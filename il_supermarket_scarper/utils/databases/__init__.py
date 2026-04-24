@@ -35,7 +35,9 @@ def create_status_database_for_scraper(scraper_name, config):
 
     if database_type == "mongo":
         # MongoDB database
-        db = MongoDataBase(database_name)
+        connection_url = config.get("connection_url", "localhost")
+        collection_name = config.get("collection_name", "scraper_status")
+        db = MongoDataBase(database_name, connection_url, collection_name)
         return db
 
     raise ValueError(

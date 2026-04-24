@@ -31,8 +31,18 @@ class SuperPharm(MultiPageWeb):
         filenames = []
         file_sizes = []
         for element in html.xpath("//tbody/tr"):  # skip header
-            links.append(self.url + element.xpath("./td[6]/a/@href")[0])
-            filenames.append(element.xpath("./td[2]")[0].text)
+            tds = element.xpath("./td")
+            if len(tds) < 6:
+                continue
+            hrefs = element.xpath("./td[6]/a/@href")
+            if not hrefs:
+                continue
+            name_el = element.xpath("./td[2]")
+            name_text = name_el[0].text if name_el else None
+            if not name_text:
+                continue
+            links.append(self.url + hrefs[0])
+            filenames.append(name_text)
             file_sizes.append(None)  # Super Pharm don't support file size in the entry
         return links, filenames, file_sizes
 
@@ -65,12 +75,13 @@ class SuperPharm(MultiPageWeb):
             if ftype == FileTypesFilters.PRICE_FILE.name:
                 types.append("Price")
             if ftype == FileTypesFilters.PROMO_FILE.name:
-                types.append("Promo")
+                # Site no longer exposes "Promo"; promo rows use PromoFull
+                types.append("PromoFull")
             if ftype == FileTypesFilters.PRICE_FULL_FILE.name:
                 types.append("PriceFull")
             if ftype == FileTypesFilters.PROMO_FULL_FILE.name:
                 types.append("PromoFull")
-        return types
+        return list(dict.fromkeys(types))
 
     def build_params(self, files_types=None, store_id=None, when_date=None):
         """build the params for the request"""
