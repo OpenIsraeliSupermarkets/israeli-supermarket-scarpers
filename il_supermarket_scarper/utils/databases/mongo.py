@@ -23,7 +23,7 @@ class MongoDataBase(AbstractDataBase):
         """Create a connection to the MongoDB database."""
         if PYMONGO_INSTALLED:
             self.myclient = pymongo.MongoClient(
-                f"mongodb://{self.connection_url}/{self.collection_name}"
+                f"{self.connection_url}/{self.collection_name}"
             )
             self.store_db = self.myclient[self.database_name]
 
