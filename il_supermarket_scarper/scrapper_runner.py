@@ -255,9 +255,7 @@ class MainScrapperRunner:  # pylint: disable=too-many-instance-attributes
                         "min_size": min_size,
                         "max_size": max_size,
                         "file_output": self._file_outputs[chain_scrapper_class],
-                        "status_database": self._status_databases[
-                            chain_scrapper_class
-                        ],
+                        "status_database": self._status_databases[chain_scrapper_class],
                         "single_pass": single_pass,
                         "timeout_in_seconds": self.timeout_in_seconds,
                         "shutdown_flag": self._shutdown_flag,

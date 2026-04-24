@@ -1,5 +1,3 @@
-import os
-
 from ..status import _now
 from .base import AbstractDataBase
 

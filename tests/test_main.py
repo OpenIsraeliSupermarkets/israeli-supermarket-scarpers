@@ -19,9 +19,7 @@ def test_queue_outputs_exist_before_start():
     )
     consumed = scraper.consume()
     assert set(consumed) == {ScraperFactory.BAREKET.name}
-    assert isinstance(
-        consumed[ScraperFactory.BAREKET.name], QueueFileOutput
-    )
+    assert isinstance(consumed[ScraperFactory.BAREKET.name], QueueFileOutput)
     name = consumed[ScraperFactory.BAREKET.name].queue_handler.get_queue_name()
     assert "bareket" in name.lower()
 
