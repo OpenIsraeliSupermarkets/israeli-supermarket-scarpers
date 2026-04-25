@@ -21,14 +21,12 @@ async def main():
     # Start scraping (runs in background thread)
     scraper.start(limit=1, when_date=_now())
 
-    # Consume messages AS THEY ARRIVE while scraping runs
-    # All scrapers share queues, so we need to track which are done
-    async def consume_queue(consumed_count: int = 0):
-        """Consume messages from a single queue."""
+    # Consume messages AS THEY ARRIVE while scraping runs.
+    # get_all_messages() yields until the scraper posts None (end-of-stream).
+    async def consume_queue():
+        """Consume messages from all scraper queues until end-of-stream."""
         for name, file_output in scraper.consume().items():
-            count = 0
             async for msg in file_output.queue_handler.get_all_messages():
-                count += 1
                 file_name = msg["file_name"]
                 file_content = msg["file_content"]
                 file_link = msg["file_link"]
@@ -48,14 +46,13 @@ async def main():
                 else:
                     print("  Content: binary data")
 
-                if consumed_count == count:
-                    break
-
-    await consume_queue(consumed_count=1)
-
-    scraper.stop()
+    try:
+        await consume_queue()
+    except Exception as e:
+        print(f"Error consuming queue: {e}")
+        scraper.stop()
+    
     scraper.join()
-
     print("\nDone!")
 
 
