@@ -74,6 +74,51 @@ class TestFileOutput:
 
         asyncio.run(run_test())
 
+    def test_in_memory_queue_backpressure(self):
+        """When the queue is full, send() blocks until a message is received."""
+
+        async def run_test():
+            handler = InMemoryQueueHandler("backpressure", maxsize=2)
+            output = QueueFileOutput(handler)
+
+            for i in (1, 2):
+                result = await output.save_file(
+                    file_link=f"http://example.com/f{i}.xml",
+                    file_name=f"f{i}.xml",
+                    file_content=b"<xml/>",
+                    metadata={"i": i},
+                )
+                assert result["saved"] is True
+
+            task_third = asyncio.create_task(
+                output.save_file(
+                    file_link="http://example.com/f3.xml",
+                    file_name="f3.xml",
+                    file_content=b"<xml/>",
+                    metadata={"i": 3},
+                )
+            )
+            # Third send should be waiting on a full queue
+            await asyncio.sleep(0.05)
+            assert not task_third.done()
+
+            # Drain one slot so the third put can complete
+            gen = handler.get_all_messages()
+            first = await gen.__anext__()
+            assert first["file_name"] == "f1.xml"
+            await asyncio.wait_for(task_third, timeout=2.0)
+            assert task_third.result()["saved"] is True
+
+            await handler.close()
+            # One consumer: drain the rest of the same generator (f2, f3)
+            rest = []
+            async for msg in gen:
+                rest.append(msg)
+            seen = {first["file_name"]} | {m["file_name"] for m in rest}
+            assert seen == {"f1.xml", "f2.xml", "f3.xml"}
+
+        asyncio.run(run_test())
+
     def test_scraper_config_defaults(self):
         """Test ScraperConfig default values."""
         config = ScraperConfig()
