@@ -123,16 +123,16 @@ class Bina(Aspx):
 
     async def _resolve_url(self, file_link):
         """Resolve the download URL from Bina's redirect response."""
-        response_content = await self.session_with_cookies_by_chain(file_link)
+        response_content = await self.request_with_session(file_link)
         spath = json.loads(response_content.content)
         Logger.debug(f"Found spath: {spath}")
         return spath[0]["SPath"]
 
-    async def retrieve_file_to_memory(self, file_link, timeout=30):
+    async def download_file(self, file_link, timeout=30):
         """Retrieve file from Bina website directly to memory"""
         url = await self._resolve_url(file_link)
-        return await super().retrieve_file_to_memory(url, timeout=timeout)
+        return await super().download_file(url, timeout=timeout)
 
-    async def _wget_file_to_memory(self, file_link, timeout):
+    async def _download_file_via_wget(self, file_link, timeout):
         url = await self._resolve_url(file_link)
-        return await super()._wget_file_to_memory(url, timeout)
+        return await super()._download_file_via_wget(url, timeout)
