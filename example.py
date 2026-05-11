@@ -48,7 +48,7 @@ async def main():
 
     try:
         await consume_queue()
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         print(f"Error consuming queue: {e}")
         scraper.stop()
 

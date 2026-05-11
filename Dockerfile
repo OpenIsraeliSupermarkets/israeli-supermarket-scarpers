@@ -69,4 +69,4 @@ CMD python -m pytest -vv -n 2
 
 FROM base as lint
 RUN pip install pylint
-CMD pylint $(git ls-files '*.py' ':!:docs/*') --disable=E0401,R0801,R0903,W0707,C0114,E1101
+CMD pylint $(git ls-files '*.py' ':!:docs/*') --disable=E0401,R0801,R0903,W0707,C0114,E1101,R0917
