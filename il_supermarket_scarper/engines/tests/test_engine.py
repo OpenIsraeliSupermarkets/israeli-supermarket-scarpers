@@ -1,4 +1,5 @@
 """Tests for engine-level deduplication logic (filter_already_downloaded)."""
+
 import tempfile
 import unittest
 
@@ -32,9 +33,7 @@ class TestEngineDeduplication(unittest.IsolatedAsyncioTestCase):
             storage_path = get_output_folder(
                 DumpFolderNames[scraper_enum.name].value, tmpdirname
             )
-            queue_handler = InMemoryQueueHandler(
-                queue_name=f"test_{scraper_enum.name}"
-            )
+            queue_handler = InMemoryQueueHandler(queue_name=f"test_{scraper_enum.name}")
             scraper = init_scraper_function(
                 file_output=QueueFileOutput(queue_handler, storage_path)
             )

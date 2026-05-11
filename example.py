@@ -51,7 +51,7 @@ async def main():
     except Exception as e:
         print(f"Error consuming queue: {e}")
         scraper.stop()
-    
+
     scraper.join()
     print("\nDone!")
 
