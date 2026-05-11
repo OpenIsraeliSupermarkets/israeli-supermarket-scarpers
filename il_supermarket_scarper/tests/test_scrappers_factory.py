@@ -5,7 +5,7 @@ from il_supermarket_scarper.utils import _is_saturday_in_israel
 def test_stable_scraper():
     """test sample stable scarper"""
     assert not ScraperStability.is_validate_scraper_found_no_files(
-        ScraperFactory.VICTORY.name
+        ScraperFactory.VICTORY_NEW_SOURCE.name
     )
 
 
@@ -24,7 +24,7 @@ def test_not_active():
     all_active = ScraperFactory.all_scrapers_name(when_date=test_date)
 
     expected_to_fail = (
-        2  # 'CityMarketKiratGat' is expected to fail and 'Quik' is expected to fail
+        3  # 'CityMarketKiratGat' is expected to fail and 'Quik' and 'Victory' are expected to fail
     )
     if _is_saturday_in_israel(test_date):
         expected_to_fail += 1  # only 'NetivHased' should
