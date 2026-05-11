@@ -1,5 +1,5 @@
 import re
-from il_supermarket_scarper.engines import Matrix, ApiWebEngine
+from il_supermarket_scarper.engines import ApiWebEngine
 from il_supermarket_scarper.utils import (
     DumpFolderNames,
     FileEntry,
@@ -8,31 +8,20 @@ from il_supermarket_scarper.utils import (
 )
 
 
-class Victory(Matrix):
-    """scraper for victory"""
+class _LaibcatalogApiScraper(ApiWebEngine):
+    """Base scraper for laibcatalog.co.il API-based scrapers."""
 
-    def __init__(self, file_output=None, status_database=None):
+    utilize_date_param = False
+
+    def __init__(self, chain, chain_id, file_output=None, status_database=None):
         super().__init__(
-            chain=DumpFolderNames.VICTORY,
-            chain_hebrew_name="ויקטורי",
-            chain_id=["7290696200003", "7290058103393"],
-            file_output=file_output,
-            status_database=status_database,
-        )
-
-
-class VictoryNewSource(ApiWebEngine):
-    """scraper for victory new source using laibcatalog.co.il API"""
-
-    def __init__(self, file_output=None, status_database=None):
-        super().__init__(
-            chain=DumpFolderNames.VICTORY_NEW_SOURCE,
-            chain_id=["7290696200003", "7290058103393"],
+            chain=chain,
+            chain_id=chain_id,
             url="https://laibcatalog.co.il",
             file_output=file_output,
             status_database=status_database,
         )
-        self.chain_hebrew_name = "ויקטורי"
+        self.chain_hebrew_name = None
 
     def get_branches(self, chain_id):
         """Get available branches for a chain ID"""
@@ -47,14 +36,11 @@ class VictoryNewSource(ApiWebEngine):
 
     async def get_request_url(self, files_types=None, store_id=None, when_date=None):
         """Generate API requests for getting file lists"""
-
         for chain_id in self.get_chain_id():
-            # Get branches first
             branches = self.get_branches(chain_id)
             Logger.debug(f"Found {len(branches)} branches for chain {chain_id}")
 
             if store_id is not None:
-                # Filter to specific store/branch
                 branches = [
                     b for b in branches if str(b.get("number")) == str(store_id)
                 ]
@@ -62,7 +48,6 @@ class VictoryNewSource(ApiWebEngine):
                     f"Filtered to {len(branches)} branches for store {store_id}"
                 )
 
-            # Get files for each branch (or all if no branch filter)
             if branches:
                 for branch in branches:
                     branch_num = branch.get("number")
@@ -75,9 +60,7 @@ class VictoryNewSource(ApiWebEngine):
                         "chain_id": chain_id,
                         "branch_number": branch_num,
                     }
-
             else:
-                # No specific branch, get all files
                 yield {
                     "url": f"{self.url.rstrip('/')}/webapi/api/getfiles?edi={chain_id}",
                     "method": "GET",
@@ -97,6 +80,7 @@ class VictoryNewSource(ApiWebEngine):
 
     async def extract_task_from_entry(self, all_trs):
         """Extract download URLs and metadata from API file entries - async generator."""
+        primary_chain_id = self.get_chain_id()[0]
         for entry in all_trs:
             try:
                 file_name = entry.get("fileName", "")
@@ -104,7 +88,7 @@ class VictoryNewSource(ApiWebEngine):
                     continue
 
                 download_url = (
-                    f"{self.url.rstrip('/')}/webapi/7290696200003/{file_name}"
+                    f"{self.url.rstrip('/')}/webapi/{primary_chain_id}/{file_name}"
                 )
                 base_name = file_name.split(".")[0]
                 file_size_str = entry.get("fileSize", "0 B")
@@ -176,3 +160,29 @@ class VictoryNewSource(ApiWebEngine):
                 filtered.append(entry)
 
         return filtered
+
+
+class Victory(_LaibcatalogApiScraper):
+    """scraper for victory - migrated from old ASPX to laibcatalog new API"""
+
+    def __init__(self, file_output=None, status_database=None):
+        super().__init__(
+            chain=DumpFolderNames.VICTORY,
+            chain_id=["7290696200003", "7290058103393"],
+            file_output=file_output,
+            status_database=status_database,
+        )
+        self.chain_hebrew_name = "ויקטורי"
+
+
+class VictoryNewSource(_LaibcatalogApiScraper):
+    """scraper for victory new source using laibcatalog.co.il API"""
+
+    def __init__(self, file_output=None, status_database=None):
+        super().__init__(
+            chain=DumpFolderNames.VICTORY_NEW_SOURCE,
+            chain_id=["7290696200003", "7290058103393"],
+            file_output=file_output,
+            status_database=status_database,
+        )
+        self.chain_hebrew_name = "ויקטורי"

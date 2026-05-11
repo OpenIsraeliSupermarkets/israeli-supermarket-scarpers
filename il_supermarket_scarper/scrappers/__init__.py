@@ -14,7 +14,7 @@ from .het_cohen import HetCohen
 from .keshet import Keshet
 from .king_store import KingStore
 from .maayan2000 import Maayan2000
-from .machsani_ashuk import MahsaniAShuk
+from .machsani_ashuk import MahsaniAShuk, MahsaniAShukNewSource
 from .mega import Mega
 from .meshnat_yosef import MeshnatYosef1, MeshnatYosef2
 from .nativ_hashed import NetivHased
