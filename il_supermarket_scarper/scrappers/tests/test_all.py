@@ -70,6 +70,12 @@ class MahsaniAShukTestCase(make_test_case(ScraperFactory.MAHSANI_ASHUK, 98)):
     """Test case for ScraperFactory.MAHSANI_ASHUK."""
 
 
+class MahsaniAShukNewSourceTestCase(
+    make_test_case(ScraperFactory.MAHSANI_ASHUK_NEW_SOURCE, 1)
+):
+    """Test case for ScraperFactory.MAHSANI_ASHUK_NEW_SOURCE."""
+
+
 # class MegaTestCase(make_test_case(ScraperFactory.MEGA, 37)):
 #     """Test case for ScraperFactory.MEGA."""
 

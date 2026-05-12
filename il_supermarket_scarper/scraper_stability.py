@@ -291,6 +291,18 @@ class DoNotPublishPromo(FullyStable):
         ) or cls.searching_for_promo_full(files_types=files_types)
 
 
+class VictoryMovedToNewSource(FullyStable):
+    """Victory moved to new source"""
+
+    @classmethod
+    def pass_expiration_date(cls):
+        return datetime(9999, 5, 1)
+
+    @classmethod
+    def failire_valid(cls, **_):
+        return True
+
+
 class ScraperStability(Enum):
     """tracker for the stablity of the scraper"""
 
@@ -304,7 +316,7 @@ class ScraperStability(Enum):
     # CITY_MARKET_KIRYATONO = CityMarketKiratOno
     CITY_MARKET_KIRYATGAT = CityMarketKiratGat
     MESHMAT_YOSEF_1 = DoNotPublishPromo
-
+    VICTORY = VictoryMovedToNewSource
     # YOHANANOF = DoNotPublishStores
 
     @classmethod

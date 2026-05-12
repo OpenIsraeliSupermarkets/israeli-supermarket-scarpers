@@ -26,8 +26,9 @@ The test suite is scheduled to run daily, so you can see if the supermarket chai
 Status: [![Scheduled Tests](https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers/actions/workflows/test-suite.yml/badge.svg?event=schedule)](https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers/actions/workflows/test-suite.yml)
 
 Notice:
-- Berekt and Quik are flaky! They will not fail the testing framework, but you can still use them.
-- Some of the scrapers sites are blocked from being accessed from outside of Israel. 
+- Bareket and Quik are flaky! They will not fail the testing framework, but you can still use them.
+- Some of the scrapers sites are blocked from being accessed from outside of Israel.
+- Some chains (Victory, Mahsani Ashuk) have both a legacy source and a new API-based source. Use the `_NEW_SOURCE` variant (e.g. `VICTORY_NEW_SOURCE`, `MAHSANI_ASHUK_NEW_SOURCE`) if the primary scraper stops finding files.
 
 --------
 
@@ -51,6 +52,8 @@ There are a lot of projects in GitHub trying to scrape the supermarket data, but
 
 You only need to run the following code to get all the data currently shared by the supermarkets.
 
+**Simple disk-based scraping:**
+
 ```python
 from il_supermarket_scarper import ScarpingTask
 
@@ -58,6 +61,40 @@ scraper = ScarpingTask()
 scraper.start()
 ```
 
+**Async queue-based scraping (consume files as they are downloaded):**
+
+```python
+import asyncio
+from il_supermarket_scarper import ScarpingTask, ScraperFactory
+from il_supermarket_scarper.utils import _now
+
+async def main():
+    scraper = ScarpingTask(
+        output_configuration={
+            "output_mode": "queue",
+            "queue_type": "memory",
+        },
+        status_configuration={"database_type": "json", "base_path": "status_logs"},
+        multiprocessing=1,
+        enabled_scrapers=[ScraperFactory.BAREKET.name, ScraperFactory.VICTORY.name],
+    )
+
+    scraper.start(limit=1, when_date=_now())
+
+    async def consume_queue():
+        for name, file_output in scraper.consume().items():
+            async for msg in file_output.queue_handler.get_all_messages():
+                file_name = msg["file_name"]
+                file_content = msg["file_content"]
+                file_link = msg["file_link"]
+                metadata = msg["metadata"]
+                print(f"[{name}] {file_name} ({len(file_content)} bytes)")
+
+    await consume_queue()
+    scraper.join()
+
+asyncio.run(main())
+```
 
 Please notice!
 Since new files are constantly uploaded by the supermarket to their site, you will only get the current snapshot. In order to keep getting data, you will need to run this code more than one time to get the newly uploaded files.
@@ -67,7 +104,7 @@ Quick start
 
 il_supermarket_scarper can be installed using pip:
 
-    python3 pip install il-supermarket-scraper
+    python3 -m pip install il-supermarket-scraper
 
 If you want to run the latest version of the code, you can install it from the
 repo directly:
@@ -124,7 +161,8 @@ Environment Variables
 The following environment variables can be used to configure the scraper:
 
 ### General Configuration
-- `ENABLED_SCRAPERS`: Comma-separated list of scrapers to enable (e.g., "BAREKET,YAYNO_BITAN"). See `il_supermarket_scarper/scrappers_factory.py` for all available scrapers.
+- `ENABLED_SCRAPERS`: Comma-separated list of scrapers to enable. See `il_supermarket_scarper/scrappers_factory.py` for all available scrapers. Current options include:
+  `BAREKET`, `YAYNO_BITAN_AND_CARREFOUR`, `COFIX`, `CITY_MARKET_KIRYATGAT`, `CITY_MARKET_SHOPS`, `DOR_ALON`, `GOOD_PHARM`, `HAZI_HINAM`, `HET_COHEN`, `KESHET`, `KING_STORE`, `MAAYAN_2000`, `MAHSANI_ASHUK`, `MAHSANI_ASHUK_NEW_SOURCE`, `NETIV_HASED`, `MESHMAT_YOSEF_1`, `MESHMAT_YOSEF_2`, `OSHER_AD`, `POLIZER`, `RAMI_LEVY`, `SALACH_DABACH`, `SHEFA_BARCART_ASHEM`, `SHUFERSAL`, `SHUK_AHIR`, `STOP_MARKET`, `SUPER_PHARM`, `SUPER_YUDA`, `SUPER_SAPIR`, `FRESH_MARKET_AND_SUPER_DOSH`, `QUIK`, `TIV_TAAM`, `VICTORY`, `VICTORY_NEW_SOURCE`, `YELLOW`, `YOHANANOF`, `ZOL_VEBEGADOL`, `WOLT`
 - `ENABLED_FILE_TYPES`: Comma-separated list of file types to download (e.g., "STORE_FILE,PRICE_FILE"). See `il_supermarket_scarper/utils/file_types.py` for all available types.
 - `LIMIT`: Maximum number of files to download (optional, no limit if not specified).
 - `NUMBER_OF_PROCESSES`: Number of parallel processes to use (default: 5).

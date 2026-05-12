@@ -324,9 +324,7 @@ def get_from_playwrite(page, extraction_type):
     """get the content from the page with playwrite"""
 
     if extraction_type == "update_date":
-        content = page.locator(
-            '//*[@id="content"]/div[1]/div/div/div/div[2]/div[6]/div'
-        ).last.inner_text()
+        content = page.locator("#metaData_updateDate_0").inner_text()
     elif extraction_type == "links_name":
         content = page.evaluate(
             """() => {
@@ -411,6 +409,14 @@ def render_webpage(url, user_agent=None):
 def get_from_latast_webpage(url, extraction_type):
     """get the content from the page with playwrite; retries with different UA if blocked."""
     time.sleep(1)
+
+    # Try the file-cache first to avoid hammering the site on repeated calls
+    cached_content = render_webpage(url)
+    if cached_content and 'id="content"' in cached_content:
+        result = get_from_webpage(cached_content, extraction_type)
+        if not _looks_like_block_page(result):
+            return result
+
     user_agents = [
         None,  # use default from get_random_user_agent
         get_random_user_agent().get("User-Agent", ""),

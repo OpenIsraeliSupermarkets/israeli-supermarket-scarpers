@@ -193,11 +193,13 @@ class ScarpingTask:  # pylint: disable=too-many-instance-attributes
 
     def stop(self):
         """
-        Stop the scraping task and shutdown the runner.
+        Signal an early end to the scraping task.
 
-        This method signals the scraper to stop and cleans up resources.
-        It should be called when you want to terminate scraping before
-        it completes naturally.
+        Posts ``None`` to every queue output as an end-of-stream sentinel so
+        that consumers blocked on ``get_all_messages()`` unblock immediately,
+        then terminates the worker pool.  When scraping completes naturally the
+        sentinel is posted automatically, so you only need to call this when you
+        want to abort early.
 
         Example::
 
@@ -206,6 +208,6 @@ class ScarpingTask:  # pylint: disable=too-many-instance-attributes
 
             # ... do something ...
 
-            scraper.stop()  # Stop scraping
+            scraper.stop()  # abort early; consumers see None and exit
         """
         self.runner.shutdown()

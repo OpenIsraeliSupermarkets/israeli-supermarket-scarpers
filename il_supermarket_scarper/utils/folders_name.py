@@ -20,6 +20,7 @@ class DumpFolderNames(Enum):
     KING_STORE = "KingStore"
     MAAYAN_2000 = "Maayan2000"
     MAHSANI_ASHUK = "MahsaniAShuk"
+    MAHSANI_ASHUK_NEW_SOURCE = "MahsaniAShukNewSource"
     MEGA = "Mega"
     NETIV_HASED = "NetivHased"
     MESHMAT_YOSEF_1 = "MeshnatYosef1"
