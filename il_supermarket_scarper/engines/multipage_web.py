@@ -99,7 +99,7 @@ class MultiPageWeb(WebBase):
             files_types=files_types, store_id=store_id, when_date=when_date
         ):
 
-            main_page_response = await self.session_with_cookies_by_chain(
+            main_page_response = await self.request_with_session(
                 **main_page_request
             )
 
@@ -280,7 +280,7 @@ class MultiPageWeb(WebBase):
     ):
         """additional processing to the links before download"""
 
-        response = await self.session_with_cookies_by_chain(**request)
+        response = await self.request_with_session(**request)
 
         html = lxml_html.fromstring(response.text)
 

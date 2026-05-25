@@ -106,7 +106,7 @@ class WebBase(Engine):
         )
         try:
             async for url in gen:
-                req_res = await self.session_with_cookies_by_chain(**url)
+                req_res = await self.request_with_session(**url)
                 current_trs = self.get_data_from_page(req_res)
                 async for file_entry in self.extract_task_from_entry(current_trs):
                     yield file_entry

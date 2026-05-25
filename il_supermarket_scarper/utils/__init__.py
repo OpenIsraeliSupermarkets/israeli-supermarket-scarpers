@@ -30,7 +30,7 @@ from .connection import (
     download_connection_retry,
     url_connection_retry,
     disable_when_outside_israel,
-    session_with_cookies,
+    session_request,
     url_retrieve_to_memory,
     collect_from_ftp,
     fetch_file_from_ftp_to_memory,
