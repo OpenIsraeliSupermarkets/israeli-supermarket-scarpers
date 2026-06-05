@@ -50,7 +50,7 @@ class HaziHinamTestCase(make_test_case(ScraperFactory.HAZI_HINAM, 206)):
     """Test case for ScraperFactory.HAZI_HINAM."""
 
 
-class HetCohen(make_test_case(ScraperFactory.HET_COHEN, 45)):
+class HetCohen(make_test_case(ScraperFactory.HET_COHEN, 35)):
     """Test case for ScraperFactory.HET_COHEN."""
 
 
@@ -66,8 +66,8 @@ class Maayan2000TestCase(make_test_case(ScraperFactory.MAAYAN_2000, 60)):
     """Test case for ScraperFactory.MAAYAN_2000."""
 
 
-class MahsaniAShukTestCase(make_test_case(ScraperFactory.MAHSANI_ASHUK, 98)):
-    """Test case for ScraperFactory.MAHSANI_ASHUK."""
+# class MahsaniAShukTestCase(make_test_case(ScraperFactory.MAHSANI_ASHUK, 98)):
+#     """Test case for ScraperFactory.MAHSANI_ASHUK (moved to new source)."""
 
 
 class MahsaniAShukNewSourceTestCase(
