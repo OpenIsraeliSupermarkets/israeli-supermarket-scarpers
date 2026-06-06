@@ -215,20 +215,21 @@ def disable_when_outside_israel(function):
             "can't scarper Gov.il site outside IL region."
         )
 
-    execute = True
+    execute = False
     try:
         estimated_location = get_location()
-        execute = not (
+        execute = (
             estimated_location["country"] is not None
-            and estimated_location["country"] != "Israel"
+            and estimated_location["country"] == "Israel"
         )
+        if not execute:
+            Logger.info(f"estimated location is {str(estimated_location)}")
     except Exception as e:  # pylint: disable=broad-exception-caught
-        Logger.warning(f"error in getting location {str(e)}")
+        Logger.warning(f"error in getting location {str(e)}, skipping test")
 
     if execute:
         return function
 
-    Logger.info(f"estimated location is {str(estimated_location)}")
     return _decorator
 
 
