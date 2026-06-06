@@ -18,6 +18,7 @@ from urllib3.exceptions import MaxRetryError, ReadTimeoutError
 
 import requests
 from playwright.sync_api import sync_playwright
+from playwright_stealth import Stealth
 from requests.exceptions import (
     ReadTimeout,
     ConnectionError as RequestsConnectionError,
@@ -361,6 +362,24 @@ def _looks_like_block_page(extracted_text: Union[str, List[str], None]) -> bool:
     return any(mark in lower for mark in block_marks) and len(lower) > 0
 
 
+_STEALTH = Stealth(
+    chrome_runtime=True,
+    navigator_languages_override=("he-IL", "he", "en-US", "en"),
+)
+
+_STEALTH_LAUNCH_ARGS = [
+    "--disable-blink-features=AutomationControlled",
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--disable-dev-shm-usage",
+    "--disable-gpu",
+    "--no-first-run",
+    "--no-default-browser-check",
+    "--disable-infobars",
+    "--lang=he-IL",
+]
+
+
 def _render_webpage_impl(url, user_agent=None):
     """Render website with Playwright; real browser context to reduce blocking."""
     if user_agent is None:
@@ -368,15 +387,14 @@ def _render_webpage_impl(url, user_agent=None):
     last_error = None
     for attempt in range(3):
         try:
-            with sync_playwright() as p:
-                browser = p.chromium.launch(
-                    args=["--disable-blink-features=AutomationControlled"]
-                )
+            with _STEALTH.use_sync(sync_playwright()) as p:
+                browser = p.chromium.launch(args=_STEALTH_LAUNCH_ARGS)
                 context = browser.new_context(
                     user_agent=user_agent,
                     viewport={"width": 1280, "height": 720},
                     locale="he-IL",
                     timezone_id="Asia/Jerusalem",
+                    extra_http_headers={"Accept-Language": "he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7"},
                 )
                 page = context.new_page()
                 page.goto(url, timeout=90000, wait_until="domcontentloaded")
@@ -437,8 +455,8 @@ def get_from_latast_webpage(url, extraction_type):
 def get_from_webpage(cached_page, extraction_type):
     """render website with playwrite from file system cache"""
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch()
+    with _STEALTH.use_sync(sync_playwright()) as p:
+        browser = p.chromium.launch(args=_STEALTH_LAUNCH_ARGS)
         page = browser.new_page()
         page.set_content(cached_page)
         page.wait_for_load_state("domcontentloaded", timeout=60000)
