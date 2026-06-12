@@ -50,7 +50,7 @@ class HaziHinamTestCase(make_test_case(ScraperFactory.HAZI_HINAM, 206)):
     """Test case for ScraperFactory.HAZI_HINAM."""
 
 
-class HetCohen(make_test_case(ScraperFactory.HET_COHEN, 45)):
+class HetCohen(make_test_case(ScraperFactory.HET_COHEN, 35)):
     """Test case for ScraperFactory.HET_COHEN."""
 
 

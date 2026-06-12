@@ -39,3 +39,7 @@ Constraints:
 
 **Trust**
 You are not allow to skip getting the webpage of gov.il this will make the code nonfunctional. find a way to get the page
+
+
+**Version**
+Bump the version only if there is a change to scraping logic, if the change is only for the testing logic, please avoid bumping the version.
