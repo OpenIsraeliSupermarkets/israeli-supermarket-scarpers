@@ -66,8 +66,8 @@ class Maayan2000TestCase(make_test_case(ScraperFactory.MAAYAN_2000, 60)):
     """Test case for ScraperFactory.MAAYAN_2000."""
 
 
-class MahsaniAShukTestCase(make_test_case(ScraperFactory.MAHSANI_ASHUK, 263)):
-    """Test case for ScraperFactory.MAHSANI_ASHUK."""
+# class MahsaniAShukTestCase(make_test_case(ScraperFactory.MAHSANI_ASHUK, 98)):
+#     """Test case for ScraperFactory.MAHSANI_ASHUK (moved to new source)."""
 
 
 class MahsaniAShukNewSourceTestCase(

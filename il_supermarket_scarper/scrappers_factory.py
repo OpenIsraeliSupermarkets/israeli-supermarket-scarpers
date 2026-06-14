@@ -23,7 +23,7 @@ class ScraperFactory(Enum):
     KESHET = all_scrappers.Keshet  # קשת טעמים בע"מ
     KING_STORE = all_scrappers.KingStore  # אלמשהדאוי קינג סטור בע"מ
     MAAYAN_2000 = all_scrappers.Maayan2000  # ג.מ מעיין אלפיים (07) בע"מ
-    MAHSANI_ASHUK = all_scrappers.MahsaniAShukNewSource  # כ.נ מחסני השוק בע"מ (moved to new API)
+    # MAHSANI_ASHUK = all_scrappers.MahsaniAShuk  # כ.נ מחסני השוק בע"מ (moved to new source)
     MAHSANI_ASHUK_NEW_SOURCE = (
         all_scrappers.MahsaniAShukNewSource
     )  # כ.נ מחסני השוק בע"מ
