@@ -54,6 +54,10 @@ class HetCohen(make_test_case(ScraperFactory.HET_COHEN, 35)):
     """Test case for ScraperFactory.HET_COHEN."""
 
 
+class HetCohenNewSourceTestCase(make_test_case(ScraperFactory.HET_COHEN_NEW_SOURCE, 1)):
+    """Test case for ScraperFactory.HET_COHEN_NEW_SOURCE."""
+
+
 class KeshetTestCase(make_test_case(ScraperFactory.KESHET, 5)):
     """Test case for ScraperFactory.KESHET."""
 

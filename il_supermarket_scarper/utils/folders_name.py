@@ -16,6 +16,7 @@ class DumpFolderNames(Enum):
     GOOD_PHARM = "GoodPharm"
     HAZI_HINAM = "HaziHinam"
     HET_COHEN = "HetCohen"
+    HET_COHEN_NEW_SOURCE = "HetCohenNewSource"
     KESHET = "Keshet"
     KING_STORE = "KingStore"
     MAAYAN_2000 = "Maayan2000"

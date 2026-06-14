@@ -41,5 +41,8 @@ Constraints:
 You are not allow to skip getting the webpage of gov.il this will make the code nonfunctional. find a way to get the page
 
 
+**Test coverage**
+Every active (non-commented) entry in `ScraperFactory` (`il_supermarket_scarper/scrappers_factory.py`) must have a corresponding test class in `il_supermarket_scarper/scrappers/tests/test_all.py`. When adding or re-enabling a scraper in the factory, add the matching test class before merging.
+
 **Version**
 Bump the version only if there is a change to scraping logic, if the change is only for the testing logic, please avoid bumping the version.
