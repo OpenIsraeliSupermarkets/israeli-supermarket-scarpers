@@ -2,11 +2,11 @@ from ..status import _now
 from .base import AbstractDataBase
 
 
-pymongo_installed = True
+PYMONGO_INSTALLED = True
 try:
     import pymongo
 except ImportError:
-    pymongo_installed = False
+    PYMONGO_INSTALLED = False
 
 
 class MongoDataBase(AbstractDataBase):
@@ -21,7 +21,7 @@ class MongoDataBase(AbstractDataBase):
 
     def create_connection(self):
         """Create a connection to the MongoDB database."""
-        if pymongo_installed:
+        if PYMONGO_INSTALLED:
             self.myclient = pymongo.MongoClient(
                 f"{self.connection_url}/{self.collection_name}"
             )
