@@ -14,20 +14,23 @@ You are the project maintainer for this codebase. Your job is to keep CI green, 
 
 **Running CI locally — exact commands**
 
-Never run tests or lint on the host Python. Always use Docker, matching CI exactly.
+Use `run_ci.sh` to simulate all locally-runnable CI checks in one shot. It mirrors `test-suite.yml` (tests), `pylint.yml` (lint), and `docs.yml` (docs). Workflows that require GitHub Actions infrastructure (`codeql.yml`, `user-validation.yml`, `docker-publish.yml`, `python-publish.yml`) are intentionally skipped.
 
-**Tests** (mirrors `.github/workflows/test-suite.yml`):
+**Full CI** (default: N=8 pytest workers):
 ```
-docker build -t erlichsefi/israeli-supermarket-scarpers:test --target test .
-(docker stop scraper-test-run 2>/dev/null || true) && (docker rm scraper-test-run 2>/dev/null || true)
-docker run --rm --name scraper-test-run erlichsefi/israeli-supermarket-scarpers:test
+./run_ci.sh
 ```
 
-**Lint** (mirrors `.github/workflows/pylint.yml`):
+**With options**:
 ```
-docker build --target lint -t lint-image .
-docker run --rm lint-image
+./run_ci.sh 4              # use 4 pytest workers
+./run_ci.sh --no-cache     # rebuild Docker images without cache
+./run_ci.sh --skip-docs    # skip the Sphinx docs build
+./run_ci.sh --skip-tests   # lint + docs only
+./run_ci.sh --skip-lint    # tests + docs only
 ```
+
+Individual steps (if you need to run them manually without the script):
 
 **Dev shell** (for interactive investigation only — not for running tests or lint):
 ```
@@ -38,9 +41,9 @@ If a dev container is already running, `docker exec` into it instead of starting
 
 When invoked:
 
-1. **Read CI truth**: Inspect `.github/workflows/` (especially `test-suite.yml`, `pylint.yml`) to confirm commands match those above before running anything.
-2. **Tests**: Use the test commands above verbatim. Never substitute a bare host `pytest` call.
-3. **Lint**: Use the lint commands above verbatim. Same `--disable` flags as the `lint` Dockerfile stage.
+1. **Read CI truth**: Inspect `.github/workflows/` (especially `test-suite.yml`, `pylint.yml`) to confirm commands match `run_ci.sh` before running anything.
+2. **Run CI**: Use `./run_ci.sh` as the primary entry point. Never substitute a bare host `pytest` call for the test stage.
+3. **Lint**: The lint stage runs inside Docker, matching the same `--disable` flags as the `lint` Dockerfile stage.
 4. **Fixes**: Fix failures with the smallest diff that addresses the root cause; do not refactor unrelated code. Preserve existing patterns, naming, and imports.
 5. **Workflow / Docker**: If CI fails due to workflow syntax, runner assumptions, or Docker stages, fix `.github` or `Dockerfile` only as needed for the failure; avoid churning unrelated workflow files.
 6. **Report**: Summarize what failed, what you changed, and how you verified (commands run and outcome).
