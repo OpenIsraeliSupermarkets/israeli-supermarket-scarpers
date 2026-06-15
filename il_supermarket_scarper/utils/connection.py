@@ -1,12 +1,14 @@
 import contextlib
 import io
 import os
+import re
 import time
 import socket
 import pickle
 import random
 import asyncio
 import fnmatch
+from html import unescape
 from ftplib import FTP_TLS, error_perm
 
 from http.client import RemoteDisconnected
@@ -345,6 +347,111 @@ def get_from_playwrite(page, extraction_type):
     return content
 
 
+_GOV_IL_CONTENT_API_BASE = (
+    "https://openapi-gc.digital.gov.il/pub/cio/govil/rest/contentpage/v1"
+)
+_GOV_IL_CLIENT_ID = "9KFgciHHGDyNiqz5MdQS0eK2ApeJYMc6YnElUICpN1atirZc"
+_GOV_IL_ORIGIN = "https://www.gov.il"
+
+
+def _gov_il_page_url_name(url):
+    """Extract gov.il content-page urlName from a page URL."""
+    if "cpfta_prices_regulations" in url:
+        return "cpfta_prices_regulations"
+    if "/pages/" in url:
+        return url.rstrip("/").split("/pages/")[-1].split("?")[0]
+    return None
+
+
+@file_cache(ttl=60)
+@url_connection_retry(init_timeout=30)
+def _fetch_gov_il_content_api(url_name, culture="he", timeout=30):
+    """Fetch page JSON from gov.il public content API (bypasses Cloudflare)."""
+    api_url = (
+        f"{_GOV_IL_CONTENT_API_BASE}/api/content-pages/"
+        f"{url_name}?culture={culture}"
+    )
+    response = requests.get(
+        api_url,
+        timeout=timeout,
+        headers={
+            "x-client-id": _GOV_IL_CLIENT_ID,
+            "Accept": "application/json",
+            "Origin": _GOV_IL_ORIGIN,
+            "Referer": f"{_GOV_IL_ORIGIN}/he/pages/{url_name}",
+        },
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def _extract_links_from_html(html):
+    """Return anchor text from an HTML fragment."""
+    links = re.findall(r"<a[^>]*>(.*?)</a>", html, flags=re.I | re.S)
+    return [
+        re.sub(r"<[^>]+>", "", unescape(link)).strip()
+        for link in links
+        if link.strip()
+    ]
+
+
+def _collect_gov_il_html_sections(content_main):
+    """Yield HTML fragments from gov.il content-main sections."""
+    for key in ("htmlContents", "disclaimers"):
+        for item in content_main.get(key) or []:
+            section = item.get("sectionData") if isinstance(item, dict) else None
+            if section:
+                yield section
+
+
+def _gov_il_api_to_html(data):
+    """Build HTML from gov.il API JSON for Playwright text extraction."""
+    head = data.get("contentHead", {})
+    parts = ["<html><body>"]
+    for key, items in head.get("metaData", {}).items():
+        parts.append(f"<div>{key}:</div>")
+        for item in items:
+            parts.append(f'<div id="{item.get("id", "")}">{item.get("title", "")}</div>')
+    for html in _collect_gov_il_html_sections(data.get("contentMain", {})):
+        parts.append(html)
+    parts.append("</body></html>")
+    return "".join(parts)
+
+
+def _extract_from_gov_il_api(data, extraction_type):
+    """Extract page fields from gov.il content API JSON."""
+    if extraction_type == "update_date":
+        for item in (
+            data.get("contentHead", {}).get("metaData", {}).get("תאריך עדכון", [])
+        ):
+            return item.get("title", "")
+        raise ValueError("update date not found in gov.il API response")
+
+    if extraction_type == "links_name":
+        links = []
+        for html in _collect_gov_il_html_sections(data.get("contentMain", {})):
+            links.extend(_extract_links_from_html(html))
+        return links
+
+    if extraction_type == "all_text":
+        return get_from_webpage(_gov_il_api_to_html(data), extraction_type)
+
+    raise ValueError(f"type '{extraction_type}' is not valid.")
+
+
+def _try_gov_il_api(url, extraction_type):
+    """Try fetching gov.il page data via the public content API."""
+    url_name = _gov_il_page_url_name(url)
+    if not url_name:
+        return None
+    try:
+        data = _fetch_gov_il_content_api(url_name)
+        return _extract_from_gov_il_api(data, extraction_type)
+    except Exception as error:  # pylint: disable=broad-exception-caught
+        Logger.warning(f"gov.il content API failed: {error}")
+        return None
+
+
 def _looks_like_block_page(extracted_text: Union[str, List[str], None]) -> bool:
     """True if extracted page text looks like a block/captcha page."""
     if extracted_text is None:
@@ -425,10 +532,14 @@ def render_webpage(url, user_agent=None):
 
 
 def get_from_latast_webpage(url, extraction_type):
-    """get the content from the page with playwrite; retries with different UA if blocked."""
+    """get page content; gov.il content API first, then Playwright if blocked."""
     time.sleep(1)
 
-    # Try the file-cache first to avoid hammering the site on repeated calls
+    api_result = _try_gov_il_api(url, extraction_type)
+    if api_result is not None and not _looks_like_block_page(api_result):
+        return api_result
+
+    # Fall back to Playwright rendering (may be blocked by Cloudflare)
     cached_content = render_webpage(url)
     if cached_content and 'id="content"' in cached_content:
         result = get_from_webpage(cached_content, extraction_type)
