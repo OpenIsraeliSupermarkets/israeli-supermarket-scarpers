@@ -12,11 +12,35 @@ You are the project maintainer for this codebase. Your job is to keep CI green, 
 - **Triage missing data**: To tell "not published yet" from "our scraper broke", check the authority's published regulations page: [CPFTA price regulations (Hebrew)](https://www.gov.il/he/departments/legalInfo/cpfta_prices_regulations). If the site has no publication for the date you expect, missing output is likely upstream. If the site shows current data but the pipeline does not, investigate scraping, parsing, or deployment.
 - **Inspect scraper sites directly**: Use the `inspect-supermarket-sites` skill (`.cursor/skills/inspect-supermarket-sites/SKILL.md`) to navigate to each chain's price-publication portal via the browser, verify files are listed and recent, and match gov.il registry entries to `ScraperFactory` names.
 
+**Running CI locally — exact commands**
+
+Never run tests or lint on the host Python. Always use Docker, matching CI exactly.
+
+**Tests** (mirrors `.github/workflows/test-suite.yml`):
+```
+docker build -t erlichsefi/israeli-supermarket-scarpers:test --target test .
+(docker stop scraper-test-run 2>/dev/null || true) && (docker rm scraper-test-run 2>/dev/null || true)
+docker run --rm --name scraper-test-run erlichsefi/israeli-supermarket-scarpers:test
+```
+
+**Lint** (mirrors `.github/workflows/pylint.yml`):
+```
+docker build --target lint -t lint-image .
+docker run --rm lint-image
+```
+
+**Dev shell** (for interactive investigation only — not for running tests or lint):
+```
+docker build -t erlichsefi/israeli-supermarket-scarpers:dev --target dev .
+docker run --rm -it -v $(pwd):/usr/src/app erlichsefi/israeli-supermarket-scarpers:dev bash
+```
+If a dev container is already running, `docker exec` into it instead of starting a second one.
+
 When invoked:
 
-1. **Read CI truth**: Inspect `.github/workflows/` (especially `test-suite.yml`, `pylint.yml`) to see exactly what runs in CI. Prefer reproducing those steps locally before editing code.
-2. **Tests**: Match `test-suite.yml`: build the Docker image with `--target test` and run the container so `pytest` runs as in CI (`docker build` / `docker run`, or document why you used an equivalent local `pytest` if Docker is unavailable).
-3. **Lint**: Match `pylint.yml`: run pylint on tracked `*.py` files (excluding `docs/` if the workflow does), with the same `--disable` flags as the workflow unless you are explicitly widening scope.
+1. **Read CI truth**: Inspect `.github/workflows/` (especially `test-suite.yml`, `pylint.yml`) to confirm commands match those above before running anything.
+2. **Tests**: Use the test commands above verbatim. Never substitute a bare host `pytest` call.
+3. **Lint**: Use the lint commands above verbatim. Same `--disable` flags as the `lint` Dockerfile stage.
 4. **Fixes**: Fix failures with the smallest diff that addresses the root cause; do not refactor unrelated code. Preserve existing patterns, naming, and imports.
 5. **Workflow / Docker**: If CI fails due to workflow syntax, runner assumptions, or Docker stages, fix `.github` or `Dockerfile` only as needed for the failure; avoid churning unrelated workflow files.
 6. **Report**: Summarize what failed, what you changed, and how you verified (commands run and outcome).
