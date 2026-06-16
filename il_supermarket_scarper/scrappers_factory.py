@@ -20,10 +20,13 @@ class ScraperFactory(Enum):
     GOOD_PHARM = all_scrappers.GoodPharm  # גוד פארם בע"מ
     HAZI_HINAM = all_scrappers.HaziHinam  # כל בו חצי חינם בע"מ
     HET_COHEN = all_scrappers.HetCohen  # ח. כהן סוכנות מזון ומשקאות בע"מ
+    HET_COHEN_NEW_SOURCE = (
+        all_scrappers.HetCohenNewSource
+    )  # ח. כהן סוכנות מזון ומשקאות בע"מ
     KESHET = all_scrappers.Keshet  # קשת טעמים בע"מ
     KING_STORE = all_scrappers.KingStore  # אלמשהדאוי קינג סטור בע"מ
     MAAYAN_2000 = all_scrappers.Maayan2000  # ג.מ מעיין אלפיים (07) בע"מ
-    MAHSANI_ASHUK = all_scrappers.MahsaniAShuk  # כ.נ מחסני השוק בע"מ
+    # MAHSANI_ASHUK = all_scrappers.MahsaniAShuk  # כ.נ מחסני השוק בע"מ (moved to new source)
     MAHSANI_ASHUK_NEW_SOURCE = (
         all_scrappers.MahsaniAShukNewSource
     )  # כ.נ מחסני השוק בע"מ

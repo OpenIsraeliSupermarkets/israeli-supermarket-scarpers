@@ -71,7 +71,7 @@ class SuperPharm(MultiPageWeb):
         types = []
         for ftype in files_types:
             if ftype == FileTypesFilters.STORE_FILE.name:
-                types.append("StoresFull")
+                types.append("Stores")
             if ftype == FileTypesFilters.PRICE_FILE.name:
                 types.append("Price")
             if ftype == FileTypesFilters.PROMO_FILE.name:

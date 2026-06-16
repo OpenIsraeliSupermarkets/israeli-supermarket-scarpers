@@ -10,7 +10,7 @@ from .connection import get_from_latast_webpage, get_from_webpage
 
 def get_statue_page(extraction_type, source="gov.il"):
     """fetch the gov.il site"""
-    url = "https://www.gov.il/he/departments/legalInfo/cpfta_prices_regulations"
+    url = "https://www.gov.il/he/pages/cpfta_prices_regulations"
     # Create a handle, page, to handle the contents of the website
 
     if source == "gov.il":

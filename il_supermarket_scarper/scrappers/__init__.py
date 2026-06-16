@@ -10,7 +10,7 @@ from .city_market import (
 from .doralon import DorAlon
 from .good_pharm import GoodPharm
 from .hazihinam import HaziHinam
-from .het_cohen import HetCohen
+from .het_cohen import HetCohen, HetCohenNewSource
 from .keshet import Keshet
 from .king_store import KingStore
 from .maayan2000 import Maayan2000
