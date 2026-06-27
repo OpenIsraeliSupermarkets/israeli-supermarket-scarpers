@@ -19,7 +19,7 @@ class ScraperFactory(Enum):
     DOR_ALON = all_scrappers.DorAlon  # דור אלון ניהול מתחמים קמעונאיים בע"מ
     GOOD_PHARM = all_scrappers.GoodPharm  # גוד פארם בע"מ
     HAZI_HINAM = all_scrappers.HaziHinam  # כל בו חצי חינם בע"מ
-    HET_COHEN = all_scrappers.HetCohen  # ח. כהן סוכנות מזון ומשקאות בע"מ
+    # HET_COHEN = all_scrappers.HetCohen  # ח. כהן - moved to new source (laibcatalog API)
     HET_COHEN_NEW_SOURCE = (
         all_scrappers.HetCohenNewSource
     )  # ח. כהן סוכנות מזון ומשקאות בע"מ
