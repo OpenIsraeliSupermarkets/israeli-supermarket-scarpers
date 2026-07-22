@@ -135,7 +135,7 @@ class CityMarketKiratOno(FullyStable):
 
 
 class CityMarketKiratGat(FullyStable):
-    """Netiv Hased is stablity"""
+    """Stability rules for the City Market Kiryat Gat source."""
 
     @classmethod
     def pass_expiration_date(cls):
@@ -151,15 +151,12 @@ class CityMarketKiratGat(FullyStable):
     def failire_valid(
         cls, when_date=None, files_types=None, utilize_date_param=True, **_
     ):
-        """return true if the parser is stble"""
-        return (
-            super(cls, CityMarketKiratGat).failire_valid(
-                when_date=when_date,
-                files_types=files_types,
-                utilize_date_param=utilize_date_param,
-            )
-            or True
-        )  # there is an active issue with the site
+        """Apply the standard timing safeguard without disabling the source."""
+        return super(cls, CityMarketKiratGat).failire_valid(
+            when_date=when_date,
+            files_types=files_types,
+            utilize_date_param=utilize_date_param,
+        )
 
 
 class DoNotPublishStores(FullyStable):
