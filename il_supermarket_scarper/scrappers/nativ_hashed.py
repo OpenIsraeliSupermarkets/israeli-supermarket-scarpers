@@ -2,7 +2,7 @@ from il_supermarket_scarper.engines.web import WebBase
 from il_supermarket_scarper.utils import DumpFolderNames
 
 
-# possible: NetivHased are down in Shabatz
+# NetivHased site is down (HTTP 500); see ScraperStability.NetivHased
 class NetivHased(WebBase):
     """scraper for nativ Hased"""
 

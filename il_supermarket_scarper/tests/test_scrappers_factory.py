@@ -1,5 +1,4 @@
 from il_supermarket_scarper import ScraperStability, ScraperFactory, datetime_in_tlv
-from il_supermarket_scarper.utils import _is_saturday_in_israel
 
 
 def test_stable_scraper():
@@ -23,9 +22,7 @@ def test_not_active():
     all_listed = ScraperFactory.all_listed_scrappers()
     all_active = ScraperFactory.all_scrapers_name(when_date=test_date)
 
-    # 'CityMarketKiratGat' and 'Quik' are expected to fail (Victory old source removed)
-    expected_to_fail = 2
-    if _is_saturday_in_israel(test_date):
-        expected_to_fail += 1  # only 'NetivHased' should
+    # CityMarketKiratGat, Quik, NetivHased (site HTTP 500)
+    expected_to_fail = 3
 
     assert len(set(all_listed) - set(all_active)) == expected_to_fail
