@@ -3,7 +3,6 @@ from enum import Enum
 from datetime import datetime
 
 from il_supermarket_scarper.utils import (
-    _is_saturday_in_israel,
     _now,
     datetime_in_tlv,
     FileTypesFilters,
@@ -28,12 +27,16 @@ class FullyStable:
     ):
         """it is stable if the execution is between midnight
         and morning and the requested date is today fails"""
+        del utilize_date_param  # kept for call-site compatibility
         execution_time = _now()
+        # Only suppress missing files when the *requested* date is today and it is
+        # still before the usual morning publish window. Historical when_date values
+        # must not be treated as "today" just because the scraper ignores date params.
         return (
             when_date is not None
             and execution_time.hour >= 0
             and execution_time.hour < hour_files_expected_to_be_accassible()
-            and (not utilize_date_param or when_date.date() == execution_time.date())
+            and when_date.date() == execution_time.date()
         )
 
     @classmethod
@@ -63,23 +66,21 @@ class SuperFlaky(FullyStable):
 
 
 class NetivHased(FullyStable):
-    """Netiv Hased is stablity"""
+    """Netiv Hased site is down (HTTP 500 on http://141.226.203.152/).
+
+    Evidence: upstream returns HTTP 500 for store/price/promo scrapes as of
+    2026-07-24 (CI NetivHasefTestCase all failing). Previously Saturday-only;
+    site is now unavailable on weekdays too.
+    """
 
     @classmethod
     def pass_expiration_date(cls):
         return datetime(2027, 1, 1)
 
     @classmethod
-    def executed_in_saturday(cls, when_date=None, **_):
-        """if the execution is in saturday"""
-        return _is_saturday_in_israel(when_date)
-
-    @classmethod
-    def failire_valid(cls, when_date=None, utilize_date_param=False, **_):
-        """return true if the parser is stble"""
-        return super(cls, NetivHased).failire_valid(
-            when_date=when_date, utilize_date_param=utilize_date_param
-        ) or cls.executed_in_saturday(when_date=when_date)
+    def failire_valid(cls, **_):
+        """return true if missing files are expected"""
+        return True
 
 
 class CityMarketGivataim(FullyStable):

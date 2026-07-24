@@ -76,7 +76,7 @@ async def main():
         },
         status_configuration={"database_type": "json", "base_path": "status_logs"},
         multiprocessing=1,
-        enabled_scrapers=[ScraperFactory.BAREKET.name, ScraperFactory.VICTORY.name],
+        enabled_scrapers=[ScraperFactory.BAREKET.name, ScraperFactory.VICTORY_NEW_SOURCE.name],
     )
 
     scraper.start(limit=1, when_date=_now())

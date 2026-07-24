@@ -1,1 +1,15 @@
 .cache
+dumps
+docs/build
+**/.pytest_cache
+**/__pycache__
+**/*.pyc
+.venv
+venv
+*.egg-info
+.mypy_cache
+.ruff_cache
+.coverage
+htmlcov
+agent-transcripts
+.cursor

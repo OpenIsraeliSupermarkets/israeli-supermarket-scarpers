@@ -52,7 +52,7 @@ class ScraperFactory(Enum):
     FRESH_MARKET_AND_SUPER_DOSH = all_scrappers.FreshMarketAndSuperDosh  # פרשמרקט
     QUIK = all_scrappers.Quik  # קוויק
     TIV_TAAM = all_scrappers.TivTaam  # טיב טעם רשתות בע"מ
-    VICTORY = all_scrappers.Victory  # ויקטורי רשת סופרמרקטים בע"מ
+    # VICTORY = all_scrappers.Victory  # old Matrix source; gov.il now lists new format only
     VICTORY_NEW_SOURCE = all_scrappers.VictoryNewSource  # ויקטורי רשת סופרמרקטים בע"מ
     YELLOW = all_scrappers.Yellow  # יילו
     YOHANANOF = all_scrappers.Yohananof  # מ. יוחננוף ובניו (1988) בע"מ
