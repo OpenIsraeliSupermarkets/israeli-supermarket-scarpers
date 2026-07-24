@@ -26,3 +26,4 @@ def test_not_active():
     expected_to_fail = 3
 
     assert len(set(all_listed) - set(all_active)) == expected_to_fail
+
