@@ -1,7 +1,6 @@
 .cache
 dumps
 docs/build
-.git
 **/.pytest_cache
 **/__pycache__
 **/*.pyc
