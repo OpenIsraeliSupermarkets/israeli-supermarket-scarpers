@@ -7,7 +7,7 @@ class BareketTestCase(make_test_case(ScraperFactory.BAREKET, 5)):
 
 
 class YaynotBitanAndCarrefourTestCase(
-    make_test_case(ScraperFactory.YAYNO_BITAN_AND_CARREFOUR, 9032)
+    make_test_case(ScraperFactory.YAYNO_BITAN_AND_CARREFOUR, 472)
 ):
     """Test case for ScraperFactory.YAYNO_BITAN_AND_CARREFOUR."""
 
@@ -154,15 +154,15 @@ class TivTaamTestCase(make_test_case(ScraperFactory.TIV_TAAM, 3)):
     """Test case for ScraperFactory.TIV_TAAM."""
 
 
-class VictoryTestCase(make_test_case(ScraperFactory.VICTORY, 71)):
-    """Test case for ScraperFactory.VICTORY."""
+# class VictoryTestCase(make_test_case(ScraperFactory.VICTORY, 71)):
+#     """Test case for ScraperFactory.VICTORY (disabled; gov.il lists new source only)."""
 
 
 class VictoryNewSourceTestCase(make_test_case(ScraperFactory.VICTORY_NEW_SOURCE, 1)):
     """Test case for ScraperFactory.VICTORY_NEW_SOURCE."""
 
 
-class YellowTestCase(make_test_case(ScraperFactory.YELLOW, 100)):
+class YellowTestCase(make_test_case(ScraperFactory.YELLOW, 1)):
     """Test case for ScraperFactory.YELLOW."""
 
 
