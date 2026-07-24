@@ -1,0 +1,32 @@
+name: Notify parsers sync on release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  open-parsers-sync-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout scripts
+        uses: actions/checkout@v4
+      - name: Create parsers sync issue
+        env:
+          GH_TOKEN: ${{ secrets.PARSERS_REPO_TOKEN }}
+          CURSOR_MAINTAINER_WEBHOOK: ${{ secrets.PARSERS_MAINTAINER_WEBHOOK }}
+          CURSOR_WEBHOOK_SECRET: ${{ secrets.PARSERS_MAINTAINER_WEBHOOK_SECRET }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_URL: ${{ github.event.release.html_url }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "PARSERS_REPO_TOKEN is required to open a sync issue on parsers."
+            exit 1
+          fi
+          TAG="${RELEASE_TAG#v}"
+          export SCRAPER_VERSION="$TAG"
+          chmod +x .github/scripts/create_parsers_sync_issue.sh
+          .github/scripts/create_parsers_sync_issue.sh

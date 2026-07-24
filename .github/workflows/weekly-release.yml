@@ -1,0 +1,57 @@
+name: Weekly Release
+
+on:
+  workflow_dispatch:
+  workflow_call:
+    outputs:
+      outcome:
+        description: noop or released
+        value: ${{ jobs.release.outputs.outcome }}
+      version:
+        description: version when released
+        value: ${{ jobs.release.outputs.version }}
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    outputs:
+      outcome: ${{ steps.run.outputs.outcome }}
+      version: ${{ steps.run.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_GITHUB_TOKEN || github.token }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Weekly release (change gate + bump + tag)
+        id: run
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_GITHUB_TOKEN || github.token }}
+        run: |
+          chmod +x .github/scripts/weekly_release.sh
+          .github/scripts/weekly_release.sh
+      - name: Signal daily-publish coordinator
+        if: always() && (steps.run.outputs.outcome == 'noop' || steps.run.outputs.outcome == 'released')
+        env:
+          GH_TOKEN: ${{ secrets.DAILY_PUBLISH_DISPATCH_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "DAILY_PUBLISH_DISPATCH_TOKEN unset; skip coordinator signal."
+            exit 0
+          fi
+          ISO_WEEK=$(date -u +%G-W%V)
+          gh api repos/OpenIsraeliSupermarkets/daily-publish-supermarket-data/dispatches \
+            -f event_type='weekly-release-completed' \
+            -f "client_payload[repo]=israeli-supermarket-scarpers" \
+            -f "client_payload[outcome]=${{ steps.run.outputs.outcome }}" \
+            -f "client_payload[version]=${{ steps.run.outputs.version }}" \
+            -f "client_payload[iso_week]=${ISO_WEEK}"
+          echo "Dispatched weekly-release-completed to daily-publish."
