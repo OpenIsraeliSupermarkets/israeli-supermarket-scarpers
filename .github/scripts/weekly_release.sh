@@ -4,6 +4,11 @@
 # Outputs via GITHUB_OUTPUT when present: outcome=noop|released, version=...
 set -euo pipefail
 
+if [ "${GITHUB_REF_NAME:-}" != "main" ]; then
+  echo "Refusing to run weekly release outside main (got: ${GITHUB_REF_NAME:-unset}). This script pushes directly to main; only run it from main." >&2
+  exit 1
+fi
+
 git fetch --tags --force origin
 LATEST_TAG=$(git tag -l 'v*' --sort=-v:refname | head -n 1 || true)
 if [ -z "${LATEST_TAG}" ]; then

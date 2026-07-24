@@ -45,8 +45,8 @@ BODY_FILE=$(mktemp)
   echo "- [ ] If no changes needed: comment **no need new version** and close"
 } > "$BODY_FILE"
 
-gh label create automation -c "0E8A16" -d "Automation" 2>/dev/null || true
-gh label create sync -c "1D76DB" -d "Upstream sync" 2>/dev/null || true
+gh label create automation --repo "${PARSERS_REPO}" -c "0E8A16" -d "Automation" 2>/dev/null || true
+gh label create sync --repo "${PARSERS_REPO}" -c "1D76DB" -d "Upstream sync" 2>/dev/null || true
 
 # sync label may not exist; create issue with automation (+ sync if present)
 LABEL_ARGS=(--label automation)
