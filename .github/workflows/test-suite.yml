@@ -108,5 +108,7 @@ jobs:
             echo "Not weekend (DOW=${DOW}); skipping weekly release."
             exit 0
           fi
-          gh workflow run weekly-release.yml --ref "${{ github.ref_name }}"
+          gh workflow run weekly-release.yml \
+            --repo "${{ github.repository }}" \
+            --ref "${{ github.ref_name }}"
           echo "Dispatched weekly-release.yml"
