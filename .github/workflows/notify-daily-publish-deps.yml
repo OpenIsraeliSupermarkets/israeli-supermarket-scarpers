@@ -1,0 +1,31 @@
+name: Notify daily-publish deps on release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  open-daily-publish-deps-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout scripts
+        uses: actions/checkout@v4
+      - name: Create daily-publish dependency issue
+        env:
+          GH_TOKEN: ${{ secrets.DAILY_PUBLISH_DISPATCH_TOKEN }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_URL: ${{ github.event.release.html_url }}
+          SOURCE_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "DAILY_PUBLISH_DISPATCH_TOKEN is required to open an issue on daily-publish."
+            exit 1
+          fi
+          export PACKAGE_NAME="il-supermarket-scraper"
+          export PACKAGE_VERSION="${RELEASE_TAG#v}"
+          chmod +x .github/scripts/create_daily_publish_deps_issue.sh
+          .github/scripts/create_daily_publish_deps_issue.sh
