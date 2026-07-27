@@ -9,7 +9,7 @@
 | `PARSERS_MAINTAINER_WEBHOOK` | for sync | parsers maintainer webhook URL (same as parsers `CURSOR_MAINTAINER_WEBHOOK`) |
 | `PARSERS_MAINTAINER_WEBHOOK_SECRET` | optional | Bearer for that webhook |
 | `RELEASE_GITHUB_TOKEN` | if main protected | PAT to push version bump + tags |
-| `DAILY_PUBLISH_DISPATCH_TOKEN` | for coordinator signal | PAT with `actions:write` (repo dispatch) on daily-publish |
+| `DAILY_PUBLISH_DISPATCH_TOKEN` | for coordinator signal + deps issues | PAT with `actions:write` (repo dispatch) and `issues:write` on daily-publish |
 
 ## israeli-supermarket-parsers
 | Secret | Required | Purpose |
