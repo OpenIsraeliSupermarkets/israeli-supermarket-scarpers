@@ -15,19 +15,22 @@ from typing import Any, Dict, List, Tuple
 
 
 def load(path: str) -> Dict[str, Any]:
+    """Load a latency_bench JSON payload from disk."""
     with open(path, encoding="utf-8") as handle:
         return json.load(handle)
 
 
 def index_by_scraper(payload: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    """Index scraper result rows by scraper name."""
     return {item["scraper"]: item for item in payload.get("scrapers", [])}
 
 
 def format_row(cols: List[str], widths: List[int]) -> str:
+    """Format one plain-text table row with fixed column widths."""
     return " | ".join(c.ljust(w) for c, w in zip(cols, widths))
 
 
-def compare(
+def compare(  # pylint: disable=too-many-locals
     base: Dict[str, Any],
     branch: Dict[str, Any],
     max_regression: float,
@@ -156,6 +159,7 @@ def compare(
 
 
 def parse_args():
+    """Parse CLI arguments for latency comparison."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base", required=True, help="Base (main) JSON path")
     parser.add_argument("--branch", required=True, help="Branch JSON path")
@@ -185,6 +189,7 @@ def parse_args():
 
 
 def main() -> int:
+    """Compare base vs branch latency JSON and exit non-zero on regressions."""
     args = parse_args()
     soft_fail = args.soft_fail and not args.no_soft_fail
     base = load(args.base)

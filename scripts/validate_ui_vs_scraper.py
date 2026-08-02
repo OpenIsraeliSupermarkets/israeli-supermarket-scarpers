@@ -55,6 +55,7 @@ class NoOpStatusDatabase(AbstractDataBase):
         self._update_last_modified()
 
     def insert_documents(self, collection_name, document):
+        """Append one document or a list of documents into memory."""
         bucket = self._data.setdefault(collection_name, [])
         if isinstance(document, list):
             bucket.extend(document)
@@ -174,7 +175,9 @@ def _collect_names_from_page(page, file_name_xpath: str) -> Set[str]:
     return {norm_name(text) for text in texts if text and text.strip()}
 
 
-def _wait_for_listing_change(page, file_name_xpath: str, before_url: str, before_first: str) -> bool:
+def _wait_for_listing_change(
+    page, file_name_xpath: str, before_url: str, before_first: str
+) -> bool:
     """Wait until URL or first filename cell changes after a pager click."""
     for _ in range(60):
         page.wait_for_timeout(250)
@@ -395,6 +398,7 @@ async def validate_one(enum_name: str) -> Dict[str, Any]:
 
 
 async def run(scrapers: List[str]) -> List[Dict[str, Any]]:
+    """Validate each scraper and return per-chain result rows."""
     Logger.set_logging_level(os.environ.get("VALIDATE_LOG_LEVEL", "ERROR"))
     results = []
     for name in scrapers:
@@ -417,6 +421,7 @@ async def run(scrapers: List[str]) -> List[Dict[str, Any]]:
 
 
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
+    """Parse CLI arguments for UI-vs-scraper validation."""
     parser = argparse.ArgumentParser(description=__doc__)
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
@@ -459,6 +464,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
 
 
 def main(argv: Optional[List[str]] = None) -> int:
+    """Run validation, write JSON report, and exit non-zero on UI gaps."""
     args = parse_args(argv)
     scrapers = resolve_scrapers(args)
     results = asyncio.run(run(scrapers))

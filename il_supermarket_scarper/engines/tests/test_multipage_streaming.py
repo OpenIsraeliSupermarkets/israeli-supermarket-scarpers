@@ -42,7 +42,7 @@ class TestMultiPageStreaming(unittest.IsolatedAsyncioTestCase):
             release_slow = asyncio.Event()
             yielded_names = []
 
-            async def fake_process_links(
+            async def fake_process_links(  # pylint: disable=unused-argument
                 state,
                 request,
                 limit=None,
@@ -94,7 +94,7 @@ class TestMultiPageStreaming(unittest.IsolatedAsyncioTestCase):
             slow_entered = asyncio.Event()
             slow_cancelled = asyncio.Event()
 
-            async def fake_process_links(
+            async def fake_process_links(  # pylint: disable=unused-argument
                 state,
                 request,
                 limit=None,
@@ -140,7 +140,7 @@ class TestMultiPageStreaming(unittest.IsolatedAsyncioTestCase):
 
             fetched_pages = []
 
-            async def fake_process_links(
+            async def fake_process_links(  # pylint: disable=unused-argument
                 state,
                 request,
                 limit=None,

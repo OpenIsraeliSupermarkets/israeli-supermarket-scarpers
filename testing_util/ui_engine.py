@@ -17,7 +17,7 @@ _PAGINATION_NEXT_LI = (
 
 
 @dataclass(frozen=True)
-class UiListingPath:
+class UiListingPath:  # pylint: disable=too-many-instance-attributes
     """How to reach the human-visible file listing for a scraper.
 
     ``inventory``:
@@ -126,7 +126,10 @@ class UIEngine(Enum):
         landing_path="",
         clicks=(),
         file_name_xpath="//table[contains(@class,'gzTable')]//tbody/tr/td[2]",
-        next_page_xpath='//*[@class="mvc-grid-pager"]/button[normalize-space()="›" and not(@disabled)]',
+        next_page_xpath=(
+            '//*[@class="mvc-grid-pager"]'
+            '/button[normalize-space()="›" and not(@disabled)]'
+        ),
     )
     CITY_MARKET_SHOPS = _striped_table_ui("CITY_MARKET_SHOPS")
     HAZI_HINAM = _striped_table_ui("HAZI_HINAM")
@@ -187,6 +190,9 @@ def configured_ui_scrapers() -> List[str]:
 
 def factory_scrapers() -> List[str]:
     """All listed ScraperFactory enum names (import here to avoid circular imports in tests)."""
-    from il_supermarket_scarper.scrappers_factory import ScraperFactory
+    # Local import keeps testing_util usable without pulling the full package graph.
+    from il_supermarket_scarper.scrappers_factory import (  # pylint: disable=import-outside-toplevel
+        ScraperFactory,
+    )
 
     return ScraperFactory.all_listed_scrappers()

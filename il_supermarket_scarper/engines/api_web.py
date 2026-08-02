@@ -77,6 +77,29 @@ class ApiWebEngine(WebBase):
             return None
         return entry.get("fileName") or entry.get("filename") or entry.get("name")
 
+    def _dedupe_streaming_entries(self, entries, seen_names):
+        """Drop duplicate API filenames; keep non-dict entries as-is."""
+        deduped = []
+        for entry in entries:
+            filename = self._entry_filename(entry)
+            if not filename:
+                if not isinstance(entry, dict):
+                    deduped.append(entry)
+                continue
+            if filename in seen_names:
+                continue
+            seen_names.add(filename)
+            deduped.append(entry)
+        return deduped
+
+    def _filter_streamed_entries(self, entries, files_types, seen_names):
+        """Apply optional type filter and streaming dedupe to one batch."""
+        if hasattr(self, "apply_filter_by_type"):
+            entries = self.apply_filter_by_type(entries, files_types)
+        if hasattr(self, "dedupe_api_entries"):
+            entries = self._dedupe_streaming_entries(entries, seen_names)
+        return entries
+
     async def extract_task_from_entry(self, all_trs):
         """Extract download tasks from API data"""
         for entry in all_trs:
@@ -93,8 +116,8 @@ class ApiWebEngine(WebBase):
             except (AttributeError, KeyError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")
 
-    async def _stream_api_file_entries(self, files_types=None, store_id=None, when_date=None):
-        """Yield FileEntry objects as each listing request completes."""
+    async def _collect_request_infos(self, files_types=None, store_id=None, when_date=None):
+        """Materialize listing request infos from get_request_url."""
         request_infos = []
         requests_to_make = self.get_request_url(
             files_types=files_types, store_id=store_id, when_date=when_date
@@ -105,15 +128,21 @@ class ApiWebEngine(WebBase):
                     request_infos.append(request_info)
         finally:
             await requests_to_make.aclose()
+        return request_infos
 
-        request_queue = list(request_infos)
-        pending = set()
+    async def _stream_api_file_entries(
+        self, files_types=None, store_id=None, when_date=None
+    ):
+        """Yield FileEntry objects as each listing request completes."""
+        request_queue = await self._collect_request_infos(
+            files_types=files_types, store_id=store_id, when_date=when_date
+        )
+        flight = {"pending": set()}
         max_in_flight = max(1, self.max_threads)
         seen_names = set()
-        apply_type_filter = hasattr(self, "apply_filter_by_type")
-        streaming_dedupe = hasattr(self, "dedupe_api_entries")
 
         def schedule_requests():
+            pending = flight["pending"]
             while len(pending) < max_in_flight and request_queue:
                 request_info = request_queue.pop(0)
                 pending.add(
@@ -124,32 +153,21 @@ class ApiWebEngine(WebBase):
 
         schedule_requests()
         try:
-            while pending:
-                done, pending = await asyncio.wait(
-                    pending, return_when=asyncio.FIRST_COMPLETED
+            while flight["pending"]:
+                done, flight["pending"] = await asyncio.wait(
+                    flight["pending"], return_when=asyncio.FIRST_COMPLETED
                 )
                 completed_batches = [task.result() for task in done]
                 schedule_requests()
                 for entries in completed_batches:
-                    if apply_type_filter:
-                        entries = self.apply_filter_by_type(entries, files_types)
-                    if streaming_dedupe:
-                        deduped = []
-                        for entry in entries:
-                            filename = self._entry_filename(entry)
-                            if not filename:
-                                if not isinstance(entry, dict):
-                                    deduped.append(entry)
-                                continue
-                            if filename in seen_names:
-                                continue
-                            seen_names.add(filename)
-                            deduped.append(entry)
-                        entries = deduped
+                    entries = self._filter_streamed_entries(
+                        entries, files_types, seen_names
+                    )
                     async for file_entry in self.extract_task_from_entry(entries):
                         yield file_entry
         finally:
             request_queue.clear()
+            pending = flight["pending"]
             for task in pending:
                 task.cancel()
             if pending:

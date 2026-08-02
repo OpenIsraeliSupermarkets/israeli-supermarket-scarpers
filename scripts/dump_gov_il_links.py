@@ -113,6 +113,7 @@ SKILL_FALLBACK_LINKS: List[Dict[str, Any]] = [
 
 
 def fetch_html(url: str) -> str:
+    """Fetch a gov.il page, rejecting Cloudflare/blocked responses."""
     response = requests.get(
         url,
         timeout=60,
@@ -128,6 +129,7 @@ def fetch_html(url: str) -> str:
 
 
 def extract_links(html: str, page_url: str) -> List[Dict[str, Any]]:
+    """Extract external retailer portal links from a CPFTA HTML page."""
     soup = BeautifulSoup(html, "lxml")
     rows: List[Dict[str, Any]] = []
     seen = set()
@@ -164,6 +166,7 @@ def extract_links(html: str, page_url: str) -> List[Dict[str, Any]]:
 
 
 def parse_args():
+    """Parse CLI arguments for dumping gov.il retailer links."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--output",
@@ -179,6 +182,7 @@ def parse_args():
 
 
 def main() -> int:
+    """Fetch or fall back and write the retailer links JSON map."""
     args = parse_args()
     errors: List[str] = []
     links: Optional[List[Dict[str, Any]]] = None

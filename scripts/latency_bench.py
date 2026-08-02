@@ -42,6 +42,7 @@ class NoOpStatusDatabase(AbstractDataBase):
         self._update_last_modified()
 
     def insert_documents(self, collection_name, document):
+        """Append one document or a list of documents into memory."""
         bucket = self._data.setdefault(collection_name, [])
         if isinstance(document, list):
             bucket.extend(document)
@@ -55,6 +56,7 @@ class NoOpStatusDatabase(AbstractDataBase):
         return False
 
     def _update_last_modified(self):
+        """Stamp in-memory last-modified metadata."""
         self._data.setdefault("_metadata", {})["last_modified"] = _now()
 
     def get_last_modified(self):
@@ -130,6 +132,7 @@ async def run_benchmark(scrapers: List[str], limit: int) -> Dict[str, Any]:
 
 
 def parse_args():
+    """Parse CLI arguments for the latency benchmark."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--scrapers",
@@ -151,6 +154,7 @@ def parse_args():
 
 
 def main():
+    """Run the latency benchmark and write JSON results."""
     args = parse_args()
     scrapers = resolve_scrapers(args.scrapers)
     payload = asyncio.run(run_benchmark(scrapers, args.limit))

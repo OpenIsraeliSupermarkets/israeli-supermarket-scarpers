@@ -6,6 +6,7 @@ from testing_util.ui_engine import UI_DEFERRED, UIEngine, factory_scrapers
 
 
 def test_ui_engine_keys_are_scraper_factory_members():
+    """UIEngine member names must be ScraperFactory members."""
     factory_names = set(ScraperFactory.all_listed_scrappers())
     ui_names = set(UIEngine.__members__.keys())
 
@@ -14,6 +15,7 @@ def test_ui_engine_keys_are_scraper_factory_members():
 
 
 def test_ui_engine_path_key_matches_member_name():
+    """Each UiListingPath.key must equal its UIEngine member name."""
     mismatches = []
     for name, member in UIEngine.__members__.items():
         if member.value.key != name:
@@ -22,6 +24,7 @@ def test_ui_engine_path_key_matches_member_name():
 
 
 def test_ui_deferred_are_factory_members_not_in_ui_engine():
+    """Deferred names must exist in the factory and not already have UI paths."""
     factory_names = set(ScraperFactory.all_listed_scrappers())
     for name in UI_DEFERRED:
         assert name in factory_names, f"UI_DEFERRED {name} is not a factory member"
@@ -31,6 +34,7 @@ def test_ui_deferred_are_factory_members_not_in_ui_engine():
 
 
 def test_every_factory_scraper_has_ui_registry():
+    """Every factory scraper is either configured in UIEngine or deferred."""
     factory_names = set(factory_scrapers())
     covered = set(UIEngine.__members__) | UI_DEFERRED
     missing = factory_names - covered
