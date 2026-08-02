@@ -16,9 +16,24 @@ import os
 import sys
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse
 
 import requests
 from bs4 import BeautifulSoup
+
+
+def _is_skipped_host(href: str) -> bool:
+    """True for gov.il / Cloudflare hosts (ignore path/query substrings)."""
+    host = (urlparse(href).hostname or "").lower()
+    if not host:
+        return True
+    return (
+        host == "gov.il"
+        or host.endswith(".gov.il")
+        or host == "cloudflare.com"
+        or host.endswith(".cloudflare.com")
+    )
+
 
 GOV_IL_URLS = (
     "https://www.gov.il/he/departments/legalInfo/cpfta_prices_regulations",
@@ -287,7 +302,7 @@ def extract_links(html: str, page_url: str) -> List[Dict[str, Any]]:
         text = " ".join(anchor.get_text(" ", strip=True).split())
         if not href.startswith("http"):
             continue
-        if "gov.il" in href or "cloudflare.com" in href:
+        if _is_skipped_host(href):
             continue
         key = (text, href)
         if key in seen:
