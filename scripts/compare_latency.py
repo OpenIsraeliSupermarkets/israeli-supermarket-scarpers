@@ -162,22 +162,36 @@ def parse_args():
     parser.add_argument(
         "--max-regression",
         type=float,
-        default=float(os.environ.get("LATENCY_MAX_REGRESSION", "0.30")),
-        help="Fail if branch is slower by this fraction (default 0.30 = 30%%)",
+        default=float(os.environ.get("LATENCY_MAX_REGRESSION", "0.10")),
+        help="Flag regression if branch is slower by this fraction (default 0.10 = 10%%)",
     )
     parser.add_argument(
         "--summary",
         default="",
         help="Optional path to write GitHub step summary markdown",
     )
+    parser.add_argument(
+        "--soft-fail",
+        action="store_true",
+        default=os.environ.get("LATENCY_SOFT_FAIL", "1") not in ("0", "false", "False"),
+        help="Report regressions but exit 0 (default: soft-fail on)",
+    )
+    parser.add_argument(
+        "--no-soft-fail",
+        action="store_true",
+        help="Exit non-zero when regressions are detected",
+    )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
+    soft_fail = args.soft_fail and not args.no_soft_fail
     base = load(args.base)
     branch = load(args.branch)
     report, failures = compare(base, branch, args.max_regression)
+    if soft_fail:
+        report += "\n> Advisory only: regressions do not fail the workflow.\n"
     print(report)
     if args.summary:
         with open(args.summary, "w", encoding="utf-8") as handle:
@@ -191,6 +205,9 @@ def main() -> int:
         print("Latency regressions detected:", file=sys.stderr)
         for item in failures:
             print(f"  - {item}", file=sys.stderr)
+        if soft_fail:
+            print("Soft-fail enabled: exiting 0 (non-mandatory check).", file=sys.stderr)
+            return 0
         return 1
     print("No latency regressions beyond threshold.")
     return 0

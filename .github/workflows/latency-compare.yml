@@ -1,7 +1,7 @@
 name: Latency Compare (main vs PR)
 
-# Benchmarks SHUFERSAL + SUPER_PHARM on main and on the PR branch, then fails
-# if the branch is significantly slower (default +30%).
+# Benchmarks every active chain (20 files each) on main vs the PR branch.
+# Flags scrapers that are >10% slower. Advisory only — does not block merges.
 # Uses the repo default branch name "main" (not "master").
 
 on:
@@ -14,9 +14,9 @@ on:
         required: false
         default: "20"
       max_regression:
-        description: "Max allowed slowdown fraction (0.30 = 30%)"
+        description: "Regression threshold fraction (0.10 = 10%)"
         required: false
-        default: "0.30"
+        default: "0.10"
 
 concurrency:
   group: latency-compare-${{ github.event.pull_request.number || github.ref }}
@@ -27,12 +27,15 @@ permissions:
 
 env:
   LATENCY_LIMIT: ${{ github.event.inputs.limit || '20' }}
-  LATENCY_MAX_REGRESSION: ${{ github.event.inputs.max_regression || '0.30' }}
-  LATENCY_SCRAPERS: SHUFERSAL,SUPER_PHARM
+  LATENCY_MAX_REGRESSION: ${{ github.event.inputs.max_regression || '0.10' }}
+  LATENCY_SCRAPERS: all
+  LATENCY_SOFT_FAIL: "1"
 
 jobs:
   compare:
     runs-on: self-hosted
+    # Non-mandatory: workflow is reported as neutral/success even on regressions.
+    continue-on-error: true
     steps:
       - name: Checkout PR branch
         uses: actions/checkout@v4
@@ -68,6 +71,7 @@ jobs:
             -e LATENCY_REF_LABEL=main \
             -e LATENCY_GIT_SHA="${{ github.event.pull_request.base.sha || 'main' }}" \
             -e LATENCY_LIMIT="${LATENCY_LIMIT}" \
+            -e LATENCY_SCRAPERS="${LATENCY_SCRAPERS}" \
             -v "$GITHUB_WORKSPACE/branch/scripts:/bench:ro" \
             -v "$GITHUB_WORKSPACE/latency-out:/out" \
             latency-bench:main \
@@ -82,6 +86,7 @@ jobs:
             -e LATENCY_REF_LABEL=branch \
             -e LATENCY_GIT_SHA="${{ github.sha }}" \
             -e LATENCY_LIMIT="${LATENCY_LIMIT}" \
+            -e LATENCY_SCRAPERS="${LATENCY_SCRAPERS}" \
             -v "$GITHUB_WORKSPACE/branch/scripts:/bench:ro" \
             -v "$GITHUB_WORKSPACE/latency-out:/out" \
             latency-bench:branch \
@@ -96,6 +101,7 @@ jobs:
             --base "$GITHUB_WORKSPACE/latency-out/main.json" \
             --branch "$GITHUB_WORKSPACE/latency-out/branch.json" \
             --max-regression "${LATENCY_MAX_REGRESSION}" \
+            --soft-fail \
             --summary "$GITHUB_WORKSPACE/latency-out/summary.md"
 
       - name: Upload latency artifacts

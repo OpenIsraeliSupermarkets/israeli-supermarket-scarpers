@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Wall-clock latency benchmark for representative supermarket scrapers.
+"""Wall-clock latency benchmark for supermarket scrapers.
 
 Used by CI to compare base (main) vs PR branch performance. Imports the
 installed ``il_supermarket_scarper`` package, so the same script can be
@@ -22,10 +22,12 @@ from il_supermarket_scarper.utils.databases import AbstractDataBase
 from il_supermarket_scarper.utils.status import _now
 
 
-DEFAULT_SCRAPERS = [
-    ScraperFactory.SHUFERSAL.name,
-    ScraperFactory.SUPER_PHARM.name,
-]
+def resolve_scrapers(spec: str) -> List[str]:
+    """Parse scraper list; ``all`` means every active chain."""
+    spec = (spec or "all").strip()
+    if spec.lower() == "all":
+        return ScraperFactory.all_scrapers_name()
+    return [name.strip() for name in spec.split(",") if name.strip()]
 
 
 class NoOpStatusDatabase(AbstractDataBase):
@@ -131,14 +133,14 @@ def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--scrapers",
-        default=",".join(DEFAULT_SCRAPERS),
-        help="Comma-separated scraper names",
+        default=os.environ.get("LATENCY_SCRAPERS", "all"),
+        help="Comma-separated scraper names, or 'all' (default)",
     )
     parser.add_argument(
         "--limit",
         type=int,
         default=int(os.environ.get("LATENCY_LIMIT", "20")),
-        help="Files per scraper",
+        help="Files per scraper (default: 20)",
     )
     parser.add_argument(
         "--output",
@@ -150,7 +152,7 @@ def parse_args():
 
 def main():
     args = parse_args()
-    scrapers = [s.strip() for s in args.scrapers.split(",") if s.strip()]
+    scrapers = resolve_scrapers(args.scrapers)
     payload = asyncio.run(run_benchmark(scrapers, args.limit))
     os.makedirs(os.path.dirname(os.path.abspath(args.output)) or ".", exist_ok=True)
     with open(args.output, "w", encoding="utf-8") as handle:
