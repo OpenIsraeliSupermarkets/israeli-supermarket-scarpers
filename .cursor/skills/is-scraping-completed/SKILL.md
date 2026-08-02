@@ -1,5 +1,5 @@
 ---
-name: inspect-supermarket-sites
+name: is-scraping-completed
 description: Validate that Israeli supermarket scrapers retrieve every file available on the chain's UI/site (UI ⊆ scraper). Use when checking scraper availability, comparing site vs API listings, inspecting gov.il CPFTA portals, or troubleshooting missing files.
 ---
 
