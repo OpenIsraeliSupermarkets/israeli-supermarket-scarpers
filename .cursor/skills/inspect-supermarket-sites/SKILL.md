@@ -1,48 +1,100 @@
 ---
 name: inspect-supermarket-sites
-description: Visually inspect Israeli supermarket price-publication sites via the browser to verify files are available for download. Use when asked to check a supermarket site, verify scraper availability, inspect price files, browse the gov.il CPFTA page, or troubleshoot a specific scraper not finding files.
+description: Validate that Israeli supermarket scrapers retrieve every file available on the chain's UI/site (UI ⊆ scraper). Use when checking scraper availability, comparing site vs API listings, inspecting gov.il CPFTA portals, or troubleshooting missing files.
 ---
 
-# Inspect Israeli Supermarket Sites
+# Inspect / Validate Supermarket Sites
 
-## Quick start
+## Expectation
 
-1. Open the browser to the gov.il registry page to find the chain's official portal link.
-2. Navigate to the scraper's actual URL (from the table below) to verify files are listed.
-3. For FTP-based scrapers (Cerberus engine), use a browser FTP URL or note that direct UI inspection is not possible.
+When the scraper runs in Python (list-only discovery), **all files downloadable via the UI/site must be retrieved**:
 
----
+`site_file_set ⊆ scraper_collect_files_details_from_site`
 
-## Gov.il Registry Page
+Do **not** filter to “stable” scrapers unless the user asks — instantiate via `ScraperFactory.<NAME>.value`.
 
-**URL:** https://www.gov.il/he/departments/legalInfo/cpfta_prices_regulations
-
-This page lists all chains subject to the Price Transparency Law. Each entry has a link to the chain's price-publication portal.
-
-**Workflow:**
-1. Navigate to the page.
-2. Find the row matching the Hebrew company name (see table below).
-3. Follow the link to the chain's portal and verify files are available.
-
-> Note: The gov.il page may block non-Israeli IPs (returns 403). If blocked, go directly to the scraper URL.
+Prefer scripts over browser screenshots. Use the browser only when HTTP/FTP listing fails.
 
 ---
 
-## Scraper → URL Reference
+## Effortless commands
 
-### Web UI Scrapers (directly browsable)
+From the repo root (package installed / `PYTHONPATH` set):
 
-| ScraperFactory Name | Hebrew Name | Engine | URL to visit |
+```bash
+# One sample per engine (default smoke)
+python scripts/validate_ui_vs_scraper.py --per-engine
+
+# Specific chains (including unstable)
+python scripts/validate_ui_vs_scraper.py --scrapers QUIK,BAREKET,TIV_TAAM
+
+# Every ScraperFactory member (slow; includes stability-disabled)
+python scripts/validate_ui_vs_scraper.py --all-listed --output scripts/validation_ui_vs_scraper.json
+
+# Dump portal URL map once (live gov.il, or skill fallback on Cloudflare 403)
+python scripts/dump_gov_il_links.py --output scripts/gov_il_links.json
+python scripts/dump_gov_il_links.py --fallback-only   # skip network to gov.il
+```
+
+`validate_ui_vs_scraper.py` exits `1` if any chain has UI files missing from the scraper set.
+
+Report fields: `ui_count`, `scraper_count`, `ui_not_in_scraper`, `missing_sample`, `enabled_by_factory`, `engine`.
+
+---
+
+## Agent workflow
+
+1. Run `scripts/validate_ui_vs_scraper.py` for the requested scope (`--per-engine` unless told otherwise).
+2. Optionally run `scripts/dump_gov_il_links.py` to confirm gov.il portal URLs match scraper URLs.
+3. On **FAIL**: open only that chain’s portal (skill URL table or gov.il JSON) and diagnose.
+4. On gov.il **403**: skip registry; use fallback URLs below.
+5. Do **not** call `scrape()` for discovery counts — it downloads. Validation uses `collect_files_details_from_site`.
+
+### Yield-order footgun
+
+- Web / ApiWeb / MultiPageWeb: `collect_files_details_from_site` yields `(url, name)`.
+- Cerberus: yields `(name, url)`.
+- The validate script handles both via `pick_filename`.
+
+---
+
+## How site inventory is collected (by engine)
+
+| Engine | Site / UI source | Notes |
+|---|---|---|
+| PublishPrice | HTTP page `const files = [...]` | Same array the paginated UI renders |
+| Bina | `MainIO_Hok.aspx` JSON (`FileNm`) | Query `_=<chain_id>&WFileType=0` |
+| ApiWeb | `/webapi/api/getbranches` + `getfiles` | Same backend as laibcatalog SPA |
+| MultiPageWeb / WebBase | `generate_all_files()` HTML crawl | Full pagination, not page-1 only |
+| Cerberus | FTP `MLSD`/`NLST` | No browser; host `url.retail.publishedprices.co.il` |
+| Matrix | ASPX table filtered by Hebrew name | Legacy; factory often uses `*_NEW_SOURCE` instead |
+
+---
+
+## Gov.il registry
+
+**URL:** https://www.gov.il/he/departments/legalInfo/cpfta_prices_regulations  
+(alt: https://www.gov.il/he/pages/cpfta_prices_regulations)
+
+May block non-IL IPs (Cloudflare 403). `dump_gov_il_links.py` falls back to the skill URL table automatically. Browser CDP can still scrape a live gov.il session when available.
+
+---
+
+## Scraper → URL reference
+
+### Web UI
+
+| ScraperFactory | Hebrew | Engine | URL |
 |---|---|---|---|
 | BAREKET | עוף והודו ברקת | Bina | http://superbareket.binaprojects.com/MainIO_Hok.aspx |
 | CITY_MARKET_KIRYATGAT | סיטי מרקט | Bina | http://citymarketkiryatgat.binaprojects.com/MainIO_Hok.aspx |
 | CITY_MARKET_SHOPS | סיטי מרקט | MultiPageWeb | http://www.citymarket-shops.co.il/ |
 | GOOD_PHARM | גוד פארם | Bina | http://goodpharm.binaprojects.com/MainIO_Hok.aspx |
 | HAZI_HINAM | כל בו חצי חינם | MultiPageWeb | https://shop.hazi-hinam.co.il/Prices |
-| HET_COHEN | ח. כהן | Matrix | https://laibcatalog.co.il/NBCompetitionRegulations.aspx |
+| HET_COHEN_NEW_SOURCE | ח. כהן | ApiWeb | https://laibcatalog.co.il/hcohen/index.html |
 | KING_STORE | אלמשהדאוי קינג סטור | Bina | http://kingstore.binaprojects.com/MainIO_Hok.aspx |
 | MAAYAN_2000 | מעיין אלפיים | Bina | http://maayan2000.binaprojects.com/MainIO_Hok.aspx |
-| MAHSANI_ASHUK | מחסני השוק | Matrix | https://laibcatalog.co.il/NBCompetitionRegulations.aspx |
+| MAHSANI_ASHUK_NEW_SOURCE | מחסני השוק | ApiWeb | https://laibcatalog.co.il/mshuk/index.html |
 | MESHMAT_YOSEF_1 | משנת יוסף | WebBase | https://list-files.w5871031-kt.workers.dev/ |
 | NETIV_HASED | נתיב החסד | WebBase | http://141.226.203.152/ |
 | QUIK | קוויק | PublishPrice | https://prices.quik.co.il/ |
@@ -51,24 +103,18 @@ This page lists all chains subject to the Price Transparency Law. Each entry has
 | SHUK_AHIR | שוק העיר | Bina | http://shuk-hayir.binaprojects.com/MainIO_Hok.aspx |
 | SUPER_PHARM | סופר פארם | MultiPageWeb | http://prices.super-pharm.co.il/ |
 | SUPER_SAPIR | סופר ספיר | Bina | http://supersapir.binaprojects.com/MainIO_Hok.aspx |
-| TIV_TAAM | טיב טעם | Cerberus/FTP | — see FTP section — |
-| VICTORY | ויקטורי | Matrix | https://laibcatalog.co.il/NBCompetitionRegulations.aspx |
-| VICTORY_NEW_SOURCE | ויקטורי | ApiWeb | https://laibcatalog.co.il |
+| VICTORY_NEW_SOURCE | ויקטורי | ApiWeb | https://laibcatalog.co.il/victory/index.html |
 | WOLT | וולט | WebBase | https://wm-gateway.wolt.com/isr-prices/public/v1/index.html |
 | YAYNO_BITAN_AND_CARREFOUR | יינות ביתן / קרפור | PublishPrice | https://prices.carrefour.co.il/ |
-| YELLOW | יילו | Cerberus/FTP | — see FTP section — |
-| YOHANANOF | יוחננוף | Cerberus/FTP | — see FTP section — |
 | ZOL_VEBEGADOL | זול ובגדול | Bina | http://zolvebegadol.binaprojects.com/MainIO_Hok.aspx |
 
-### FTP-Based Scrapers (Cerberus engine)
+### FTP (Cerberus) — `url.retail.publishedprices.co.il`
 
-These scrapers use FTP at `url.retail.publishedprices.co.il`. You cannot browse them via a web browser directly.
-
-| ScraperFactory Name | Hebrew Name | FTP Username | FTP Path |
+| ScraperFactory | Hebrew | FTP user | Path |
 |---|---|---|---|
 | COFIX | קופיקס | SuperCofixApp | / |
 | DOR_ALON | דור אלון | doralon | / |
-| FRESH_MARKET_AND_SUPER_DOSH | פרשמרקט / סופרדוש | freshmarket | / |
+| FRESH_MARKET_AND_SUPER_DOSH | פרשמרקט | freshmarket | / |
 | KESHET | קשת טעמים | Keshet | / |
 | OSHER_AD | אושר עד | osherad | / |
 | POLIZER | פוליצר | politzer | / |
@@ -80,51 +126,26 @@ These scrapers use FTP at `url.retail.publishedprices.co.il`. You cannot browse 
 | YELLOW | יילו | Paz_bo | / |
 | YOHANANOF | יוחננוף | yohananof | / |
 
-To inspect FTP scrapers, use a terminal: `ftp url.retail.publishedprices.co.il` then login with the username above (password is usually empty or matches the username).
+Password is usually empty. Prefer `validate_ui_vs_scraper.py` over interactive `ftp`.
 
 ---
 
-## Engine-Specific Inspection Notes
+## Checklist
 
-### Bina (`binaprojects.com`)
-- Page: `http://{prefix}.binaprojects.com/MainIO_Hok.aspx`
-- Shows a table of files grouped by type (Store, Price, Promo, PriceFull, PromoFull).
-- Healthy sign: rows visible in the table, files dated today or within the last few days.
+- [ ] Site reachable
+- [ ] `ui_count` and `scraper_count` from the script
+- [ ] `ui_not_in_scraper == 0` (PASS)
+- [ ] Files recent (1–3 days) when investigating FAIL
+- [ ] Chain id in filenames matches scraper `chain_id`
+- [ ] Unstable / DNS-dead chains recorded (e.g. QUIK) — do not silently skip
 
-### Matrix (`laibcatalog.co.il`)
-- Page: `https://laibcatalog.co.il/NBCompetitionRegulations.aspx`
-- Multiple chains share this page (HET_COHEN, MAHSANI_ASHUK, VICTORY).
-- Filter by Hebrew chain name to see the correct chain's files.
-
-### PublishPrice (`prices.{infix}.co.il`)
-- Simple directory listing of `.gz` files.
-- Healthy sign: files named with today's date in the filename.
-
-### MultiPageWeb (Shufersal, Super Pharm, etc.)
-- Each has its own web portal design.
-- Look for a file listing or download section.
-
-### WebBase (Netiv Hased, Meshnat Yosef, Wolt)
-- Simple HTTP page listing files directly.
-
----
-
-## Inspection Checklist
-
-When checking a scraper site, verify:
-
-- [ ] Site is reachable (no 403/404/timeout)
-- [ ] Files are listed (not empty page)
-- [ ] Files are recent (within last 1-3 days)
-- [ ] File types present: Price, PriceFull, Promo, PromoFull, Store
-- [ ] Chain ID in filenames matches the expected chain_id from `scrappers_factory.py`
-
-## Common Issues
+## Common issues
 
 | Symptom | Likely cause |
 |---|---|
-| Empty file list | Scraper site down or chain not publishing |
-| Files older than 3 days | Chain publishing irregularly |
-| Wrong chain_id in files | Site_infix/url_prefix mismatch |
-| FTP connection refused | Password changed or IP blocked |
-| 403 on gov.il | Non-Israeli IP — use VPN or go directly to scraper URL |
+| `ui_not_in_scraper > 0` | Scraper filter/XPath/EDI bug |
+| Site unreachable / DNS | Chain down; may be why scraper is stability-disabled |
+| ApiWeb 400 on secondary EDI | Empty branches; primary EDI may still list all files |
+| Paginated UI “page 1 only” | Always use full inventory (`const files` / all pages / FTP LIST) |
+| gov.il 403 | Non-IL IP — use skill URLs or `dump_gov_il_links.py` fallback |
+| Cerberus name mismatch in ad-hoc code | Yield order is `(name, url)`, not `(url, name)` |
