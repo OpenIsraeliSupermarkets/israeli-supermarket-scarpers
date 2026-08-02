@@ -44,16 +44,7 @@ from il_supermarket_scarper.utils.databases import AbstractDataBase
 from il_supermarket_scarper.utils.state import FilterState
 from il_supermarket_scarper.utils.status import _now
 
-# Prefer these when sampling one scraper per engine (includes unstable).
-PREFERRED_PER_ENGINE = {
-    "PublishPrice": "YAYNO_BITAN_AND_CARREFOUR",
-    "Bina": "BAREKET",
-    "MultiPageWeb": "CITY_MARKET_SHOPS",
-    "ApiWeb": "VICTORY_NEW_SOURCE",
-    "WebBase": "MESHMAT_YOSEF_1",
-    "Cerberus": "TIV_TAAM",
-    "Matrix": "VICTORY",  # only if re-enabled in factory
-}
+
 
 
 class NoOpStatusDatabase(AbstractDataBase):
@@ -89,18 +80,7 @@ class NoOpStatusDatabase(AbstractDataBase):
 
 def engine_name(cls) -> str:
     """Best-effort engine label from MRO."""
-    for cand, name in (
-        (ApiWebEngine, "ApiWeb"),
-        (Matrix, "Matrix"),
-        (MultiPageWeb, "MultiPageWeb"),
-        (Bina, "Bina"),
-        (Cerberus, "Cerberus"),
-        (PublishPrice, "PublishPrice"),
-        (WebBase, "WebBase"),
-    ):
-        if issubclass(cls, cand):
-            return name
-    return "Unknown"
+    return cls.__name__
 
 
 def norm_name(name: Optional[str]) -> str:
@@ -154,11 +134,7 @@ def resolve_scrapers(args: argparse.Namespace) -> List[str]:
             by_engine[engine_name(cls)].append(name)
         chosen = []
         for eng, names in sorted(by_engine.items()):
-            preferred = PREFERRED_PER_ENGINE.get(eng)
-            if preferred and preferred in names:
-                chosen.append(preferred)
-            else:
-                chosen.append(names[0])
+            chosen.append(names[0])
         return chosen
     raise SystemExit("Specify --per-engine, --all-listed, or --scrapers")
 
