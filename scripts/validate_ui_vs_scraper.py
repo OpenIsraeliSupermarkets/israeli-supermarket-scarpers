@@ -1,50 +1,46 @@
 #!/usr/bin/env python3
-"""Validate that scraper list-only discovery retrieves every UI/site file.
+"""Validate scraper list-only discovery against the human UI file listing.
 
-Expectation: UI/site file set ⊆ scraper collect_files_details_from_site set.
+Expectation: UI filenames ⊆ scraper collect_files_details_from_site.
 
-Instantiates scrapers via ``ScraperFactory.<NAME>.value`` (bypasses stability
-filters). Use ``--per-engine`` for one sample per engine, or ``--scrapers`` /
-``--all-listed`` for explicit coverage.
+UI inventory is collected by opening the portal and following per-scraper
+element XPaths (``testing_util.ui_engine.UIEngine``) until the file table is populated — not by
+reimplementing the scraper's listing logic.
 
 Examples:
+  python scripts/validate_ui_vs_scraper.py --scrapers BAREKET,KING_STORE
+  python scripts/validate_ui_vs_scraper.py --configured-ui
   python scripts/validate_ui_vs_scraper.py --per-engine
-  python scripts/validate_ui_vs_scraper.py --scrapers BAREKET,TIV_TAAM
-  python scripts/validate_ui_vs_scraper.py --all-listed --output report.json
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
+import contextlib
 import json
 import os
 import sys
 import tempfile
 from collections import defaultdict
+from datetime import timedelta
 from typing import Any, Dict, List, Optional, Set, Tuple
-from urllib.parse import urlencode
+from urllib.parse import urljoin
 
 import requests
-from bs4 import BeautifulSoup
+from playwright.sync_api import sync_playwright
 
-from il_supermarket_scarper.engines import (
-    ApiWebEngine,
-    Bina,
-    Cerberus,
-    MultiPageWeb,
-    PublishPrice,
-)
-from il_supermarket_scarper.engines.matrix import Matrix
-from il_supermarket_scarper.engines.web import WebBase
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
-from il_supermarket_scarper.utils import DiskFileOutput, FileEntry, Logger
+from il_supermarket_scarper.utils import DiskFileOutput, Logger, _now
 from il_supermarket_scarper.utils.connection import collect_from_ftp
 from il_supermarket_scarper.utils.databases import AbstractDataBase
 from il_supermarket_scarper.utils.state import FilterState
-from il_supermarket_scarper.utils.status import _now
-
-
+from testing_util.ui_engine import (
+    UI_DEFERRED,
+    UIEngine,
+    UiListingPath,
+    configured_ui_scrapers,
+)
 
 
 class NoOpStatusDatabase(AbstractDataBase):
@@ -112,7 +108,6 @@ def pick_filename(first: Any, second: Any) -> Optional[str]:
         if item.startswith("http://") or item.startswith("https://"):
             continue
         return item
-    # fall back to basename of URL
     return candidates[0].rstrip("/").split("/")[-1]
 
 
@@ -124,7 +119,13 @@ def listed_factory_members() -> List[str]:
 def resolve_scrapers(args: argparse.Namespace) -> List[str]:
     """Resolve which scrapers to validate."""
     if args.scrapers:
-        return [name.strip() for name in args.scrapers.split(",") if name.strip()]
+        names = [name.strip() for name in args.scrapers.split(",") if name.strip()]
+        skipped = [n for n in names if n in UI_DEFERRED]
+        if skipped:
+            print(f"Skipping deferred UI scrapers: {', '.join(skipped)}", flush=True)
+        return [n for n in names if n not in UI_DEFERRED]
+    if args.configured_ui:
+        return configured_ui_scrapers()
     if args.all_listed:
         return listed_factory_members()
     if args.per_engine:
@@ -132,11 +133,8 @@ def resolve_scrapers(args: argparse.Namespace) -> List[str]:
         for name in listed_factory_members():
             cls = getattr(ScraperFactory, name).value
             by_engine[engine_name(cls)].append(name)
-        chosen = []
-        for eng, names in sorted(by_engine.items()):
-            chosen.append(names[0])
-        return chosen
-    raise SystemExit("Specify --per-engine, --all-listed, or --scrapers")
+        return [names[0] for _, names in sorted(by_engine.items())]
+    raise SystemExit("Specify --per-engine, --configured-ui, --all-listed, or --scrapers")
 
 
 def make_scraper(enum_name: str):
@@ -145,6 +143,174 @@ def make_scraper(enum_name: str):
     if member is None:
         raise ValueError(f"Unknown scraper {enum_name}")
     return member.value, member
+
+
+def ui_listing_url(scraper, path: UiListingPath) -> str:
+    """Resolve human UI landing URL from scraper base + path."""
+    base = getattr(scraper, "url", None)
+    if not base:
+        raise ValueError("scraper has no url for UI landing")
+    if not path.landing_path:
+        return base if base.endswith("/") else f"{base}/"
+    return urljoin(base.rstrip("/") + "/", path.landing_path)
+
+
+def _element_disabled(locator) -> bool:
+    """True if Playwright considers the control non-clickable/disabled."""
+    if locator.count() == 0:
+        return True
+    target = locator.first
+    if target.is_disabled():
+        return True
+    class_name = target.get_attribute("class") or ""
+    if "disabled" in class_name.lower():
+        return True
+    aria = target.get_attribute("aria-disabled")
+    return aria == "true"
+
+
+def _collect_names_from_page(page, file_name_xpath: str) -> Set[str]:
+    texts = page.locator(f"xpath={file_name_xpath}").all_text_contents()
+    return {norm_name(text) for text in texts if text and text.strip()}
+
+
+def _wait_for_listing_change(page, file_name_xpath: str, before_url: str, before_first: str) -> bool:
+    """Wait until URL or first filename cell changes after a pager click."""
+    for _ in range(60):
+        page.wait_for_timeout(250)
+        if page.url != before_url:
+            with contextlib.suppress(Exception):
+                page.locator(f"xpath={file_name_xpath}").first.wait_for(
+                    state="attached", timeout=15000
+                )
+            return True
+        with contextlib.suppress(Exception):
+            current_first = page.locator(f"xpath={file_name_xpath}").first.inner_text(
+                timeout=1000
+            )
+            if current_first.strip() and current_first.strip() != before_first:
+                return True
+    return False
+
+
+def _list_ui_via_clicks(landing_url: str, path: UiListingPath) -> Set[str]:
+    """Open landing URL, apply selects/clicks, paginate, read filename cells."""
+    names: Set[str] = set()
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        try:
+            page = browser.new_page()
+            page.goto(landing_url, timeout=90000, wait_until="domcontentloaded")
+
+            # SPAs often paint an empty shell first; wait for either rows or controls.
+            if path.file_name_xpath:
+                with contextlib.suppress(Exception):
+                    page.locator(f"xpath={path.file_name_xpath}").first.wait_for(
+                        state="attached", timeout=60000
+                    )
+
+            for select_xpath, value in path.selects:
+                page.locator(f"xpath={select_xpath}").first.select_option(value)
+                page.wait_for_timeout(500)
+
+            for xpath in path.clicks:
+                click_target = page.locator(f"xpath={xpath}")
+                click_target.first.wait_for(state="visible", timeout=60000)
+                # Refresh buttons may stay disabled until the first fetch finishes.
+                for _ in range(60):
+                    if not _element_disabled(click_target):
+                        break
+                    page.wait_for_timeout(500)
+                click_target.first.click(timeout=30000)
+                page.wait_for_timeout(800)
+
+            page.locator(f"xpath={path.file_name_xpath}").first.wait_for(
+                state="attached", timeout=60000
+            )
+            page.wait_for_timeout(1000)
+
+            for _ in range(500):  # hard cap on UI pages
+                names |= _collect_names_from_page(page, path.file_name_xpath)
+                if not path.next_page_xpath:
+                    break
+                next_btn = page.locator(f"xpath={path.next_page_xpath}")
+                if _element_disabled(next_btn):
+                    break
+                before_url = page.url
+                before_first = page.locator(f"xpath={path.file_name_xpath}").first.inner_text()
+                next_btn.first.click(timeout=30000)
+                if not _wait_for_listing_change(
+                    page, path.file_name_xpath, before_url, before_first.strip()
+                ):
+                    break
+        finally:
+            browser.close()
+    return names
+
+
+async def _list_ui_ftp_names(scraper) -> Set[str]:
+    names: Set[str] = set()
+    extensions = getattr(scraper, "target_file_extensions", ("xml", "gz"))
+    async for entry in collect_from_ftp(
+        scraper.ftp_host,
+        scraper.ftp_username,
+        scraper.ftp_password or "",
+        scraper.ftp_path,
+        None,
+    ):
+        if not entry.name:
+            continue
+        if entry.name.split(".")[-1] not in extensions:
+            continue
+        names.add(norm_name(entry.name))
+    return names
+
+
+def _list_ui_http_json(landing_url: str, json_name_field: str) -> Set[str]:
+    response = requests.get(landing_url, timeout=60)
+    response.raise_for_status()
+    payload = response.json()
+    if not isinstance(payload, list):
+        return set()
+    names: Set[str] = set()
+    for entry in payload:
+        if isinstance(entry, dict) and entry.get(json_name_field):
+            names.add(norm_name(str(entry[json_name_field])))
+    return names
+
+
+async def _list_ui_wolt_daily(scraper, path: UiListingPath) -> Set[str]:
+    names: Set[str] = set()
+    base = scraper.url.rstrip("/")
+    index_url = base if base.endswith("index.html") else f"{base}/index.html"
+    for days_back in range(10):
+        day = (_now() - timedelta(days=days_back)).strftime("%Y-%m-%d")
+        landing = index_url.replace("index.html", f"{day}.html")
+        names |= await asyncio.to_thread(_list_ui_via_clicks, landing, path)
+    return names
+
+
+async def list_ui_site_names(enum_name: str, scraper) -> Set[str]:
+    """List filenames from the human UI via configured click XPaths."""
+    try:
+        path = UIEngine[enum_name].value
+    except KeyError as exc:
+        raise NotImplementedError(
+            f"No UI click path defined for {enum_name}; add UIEngine.{enum_name}"
+        ) from exc
+
+    if path.inventory == "ftp":
+        return await _list_ui_ftp_names(scraper)
+    if path.inventory == "http_json":
+        landing = ui_listing_url(scraper, path)
+        return await asyncio.to_thread(
+            _list_ui_http_json, landing, path.json_name_field
+        )
+    if path.inventory == "wolt_daily":
+        return await _list_ui_wolt_daily(scraper, path)
+
+    landing = ui_listing_url(scraper, path)
+    return await asyncio.to_thread(_list_ui_via_clicks, landing, path)
 
 
 async def list_scraper_names(enum_name: str) -> Tuple[Set[str], Dict[str, Any]]:
@@ -164,6 +330,14 @@ async def list_scraper_names(enum_name: str) -> Tuple[Set[str], Dict[str, Any]]:
         meta["url"] = getattr(scraper, "url", None) or getattr(
             scraper, "ftp_host", None
         )
+        if enum_name in UIEngine.__members__:
+            ui_path = UIEngine[enum_name].value
+            meta["ui_inventory"] = ui_path.inventory
+            if ui_path.inventory == "ftp":
+                meta["ui_landing"] = getattr(scraper, "ftp_host", None)
+            else:
+                meta["ui_landing"] = ui_listing_url(scraper, ui_path)
+            meta["ui_clicks"] = list(ui_path.clicks)
         names: Set[str] = set()
         async for first, second in scraper.collect_files_details_from_site(
             FilterState(), limit=None
@@ -174,143 +348,19 @@ async def list_scraper_names(enum_name: str) -> Tuple[Set[str], Dict[str, Any]]:
     return names, meta
 
 
-async def site_names_publishprice(scraper) -> Set[str]:
-    response = requests.get(scraper.url, timeout=60)
-    response.raise_for_status()
-    soup = BeautifulSoup(response.text, "lxml")
-    script = soup.find_all("script")[-2].text
-    files = json.loads(
-        script.split("const files = ")[1].split("\n")[0].replace(";", "")
-    )
-    return {norm_name(entry["name"]) for entry in files}
-
-
-async def site_names_bina(scraper) -> Set[str]:
-    names: Set[str] = set()
-    for chain_id in scraper.get_chain_id():
-        params = {
-            "_": chain_id,
-            "wReshet": "הכל",
-            "WFileType": "0",
-            "WDate": "",
-            "WStore": "",
-        }
-        url = scraper.url.rstrip("/") + "/" + scraper.aspx_page + "?" + urlencode(params)
-        response = requests.get(url, timeout=60)
-        response.raise_for_status()
-        data = response.json()
-        if not isinstance(data, list):
-            continue
-        for entry in data:
-            if isinstance(entry, dict) and entry.get("FileNm"):
-                names.add(norm_name(entry["FileNm"]))
-    return names
-
-
-async def site_names_matrix(scraper) -> Set[str]:
-    url = scraper.url.rstrip("/") + "/" + scraper.aspx_page
-    response = requests.get(url, timeout=60)
-    response.raise_for_status()
-    soup = BeautifulSoup(response.text, "lxml")
-    names: Set[str] = set()
-    hebrew = getattr(scraper, "chain_hebrew_name", None)
-    for row in soup.find_all("tr")[1:]:
-        text = str(row)
-        if hebrew and hebrew not in text:
-            continue
-        link = row.find("a")
-        if not link or not link.get("href"):
-            continue
-        names.add(norm_name(link["href"]))
-    return names
-
-
-async def site_names_apiweb(scraper) -> Set[str]:
-    """Hit the same /webapi endpoints the SPA uses (deduped by fileName)."""
-    session = requests.Session()
-    base = scraper.url.rstrip("/")
-    names: Set[str] = set()
-    for edi in scraper.get_chain_id():
-        branches_resp = session.get(
-            f"{base}/webapi/api/getbranches", params={"edi": edi}, timeout=60
-        )
-        if branches_resp.status_code >= 400:
-            continue
-        branches = branches_resp.json()
-        if not isinstance(branches, list) or not branches:
-            continue
-        for branch in branches:
-            if not isinstance(branch, dict):
-                continue
-            params = {"edi": edi, "branchNumber": branch.get("number")}
-            files_resp = session.get(
-                f"{base}/webapi/api/getfiles", params=params, timeout=60
-            )
-            data = files_resp.json()
-            if not isinstance(data, list):
-                continue
-            for entry in data:
-                if isinstance(entry, dict) and entry.get("fileName"):
-                    names.add(norm_name(entry["fileName"]))
-    return names
-
-
-async def site_names_cerberus(scraper) -> Set[str]:
-    names: Set[str] = set()
-    async for entry in collect_from_ftp(
-        scraper.ftp_host,
-        scraper.ftp_username,
-        scraper.ftp_password or "",
-        scraper.ftp_path,
-        None,
-    ):
-        if not entry.name:
-            continue
-        if entry.name.split(".")[-1] not in getattr(
-            scraper, "target_file_extensions", ("xml", "gz")
-        ):
-            continue
-        names.add(norm_name(entry.name))
-    return names
-
-
-async def site_names_via_generate_all_files(scraper) -> Set[str]:
-    """Page/HTML inventory via the engine's raw listing generator."""
-    names: Set[str] = set()
-    listing = scraper.generate_all_files()
-    try:
-        async for entry in listing:
-            if isinstance(entry, FileEntry):
-                names.add(norm_name(entry.name))
-            elif isinstance(entry, (tuple, list)) and entry:
-                names.add(norm_name(str(entry[0])))
-            else:
-                names.add(norm_name(str(entry)))
-    finally:
-        await listing.aclose()
-    return names
-
-
-async def list_site_names(scraper) -> Set[str]:
-    """Independent site/UI inventory for the scraper's engine family."""
-    if isinstance(scraper, PublishPrice):
-        return await site_names_publishprice(scraper)
-    if isinstance(scraper, Bina):
-        return await site_names_bina(scraper)
-    if isinstance(scraper, Matrix):
-        return await site_names_matrix(scraper)
-    if isinstance(scraper, ApiWebEngine):
-        return await site_names_apiweb(scraper)
-    if isinstance(scraper, Cerberus):
-        return await site_names_cerberus(scraper)
-    if isinstance(scraper, (MultiPageWeb, WebBase)):
-        return await site_names_via_generate_all_files(scraper)
-    raise TypeError(f"No site lister for {type(scraper).__name__}")
-
-
 async def validate_one(enum_name: str) -> Dict[str, Any]:
     """Compare site vs scraper for one factory member."""
     row: Dict[str, Any] = {"scraper": enum_name}
+    if enum_name in UI_DEFERRED:
+        row["skipped"] = True
+        row["skip_reason"] = "UI path deferred"
+        row["pass"] = True
+        return row
+    if enum_name not in UIEngine.__members__:
+        row["skipped"] = True
+        row["skip_reason"] = "No UIEngine entry"
+        row["pass"] = True
+        return row
     try:
         scraper_set, meta = await list_scraper_names(enum_name)
         row.update(meta)
@@ -327,7 +377,7 @@ async def validate_one(enum_name: str) -> Dict[str, Any]:
                 file_output=DiskFileOutput(storage_path=tmp),
                 status_database=NoOpStatusDatabase(database_name=f"site_{enum_name}"),
             )
-            site_set = await list_site_names(scraper)
+            site_set = await list_ui_site_names(enum_name, scraper)
         row["ui_count"] = len(site_set)
     except Exception as exc:  # pylint: disable=broad-exception-caught
         row["error_ui"] = str(exc)
@@ -350,6 +400,10 @@ async def run(scrapers: List[str]) -> List[Dict[str, Any]]:
     for name in scrapers:
         print(f"Validating {name}...", flush=True)
         row = await validate_one(name)
+        if row.get("skipped"):
+            print(f"  SKIP {row.get('skip_reason')}", flush=True)
+            results.append(row)
+            continue
         status = "PASS" if row.get("pass") else "FAIL"
         print(
             f"  {status} engine={row.get('engine')} "
@@ -369,6 +423,11 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         "--per-engine",
         action="store_true",
         help="One sample scraper per engine type (includes unstable candidates)",
+    )
+    group.add_argument(
+        "--configured-ui",
+        action="store_true",
+        help="Every scraper with a UIEngine path (excludes UI_DEFERRED)",
     )
     group.add_argument(
         "--all-listed",

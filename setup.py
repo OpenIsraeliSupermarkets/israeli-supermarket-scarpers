@@ -23,6 +23,7 @@ setup(
         "il_supermarket_scarper.scrappers",
         "il_supermarket_scarper.utils",
         "il_supermarket_scarper.utils.databases",
+        "testing_util",
     ],
     # Needed for dependencies
     install_requires=required,

@@ -1,0 +1,92 @@
+[
+  {
+    "scraper": "BAREKET",
+    "engine": "Bareket",
+    "class": "Bareket",
+    "enabled_by_factory": true,
+    "url": "http://superbareket.binaprojects.com/",
+    "ui_landing": "http://superbareket.binaprojects.com/Main.aspx",
+    "ui_clicks": [
+      "//*[@id=\"Button1\"]"
+    ],
+    "scraper_count": 1000,
+    "ui_count": 1000,
+    "ui_not_in_scraper": 0,
+    "scraper_not_in_ui": 0,
+    "missing_sample": [],
+    "extra_sample": [],
+    "pass": true
+  },
+  {
+    "scraper": "KING_STORE",
+    "engine": "KingStore",
+    "class": "KingStore",
+    "enabled_by_factory": true,
+    "url": "http://kingstore.binaprojects.com/",
+    "ui_landing": "http://kingstore.binaprojects.com/Main.aspx",
+    "ui_clicks": [
+      "//*[@id=\"Button1\"]"
+    ],
+    "scraper_count": 1000,
+    "ui_count": 1000,
+    "ui_not_in_scraper": 0,
+    "scraper_not_in_ui": 0,
+    "missing_sample": [],
+    "extra_sample": [],
+    "pass": true
+  },
+  {
+    "scraper": "SHUK_AHIR",
+    "engine": "ShukAhir",
+    "class": "ShukAhir",
+    "enabled_by_factory": true,
+    "url": "http://shuk-hayir.binaprojects.com/",
+    "ui_landing": "http://shuk-hayir.binaprojects.com/Main.aspx",
+    "ui_clicks": [
+      "//*[@id=\"Button1\"]"
+    ],
+    "scraper_count": 1000,
+    "ui_count": 1000,
+    "ui_not_in_scraper": 0,
+    "scraper_not_in_ui": 0,
+    "missing_sample": [],
+    "extra_sample": [],
+    "pass": true
+  },
+  {
+    "scraper": "HET_COHEN_NEW_SOURCE",
+    "engine": "HetCohenNewSource",
+    "class": "HetCohenNewSource",
+    "enabled_by_factory": true,
+    "url": "https://laibcatalog.co.il",
+    "ui_landing": "https://laibcatalog.co.il/hcohen/index.html",
+    "ui_clicks": [
+      "//*[@id=\"btnRefresh\"]"
+    ],
+    "scraper_count": 141,
+    "ui_count": 141,
+    "ui_not_in_scraper": 0,
+    "scraper_not_in_ui": 0,
+    "missing_sample": [],
+    "extra_sample": [],
+    "pass": true
+  },
+  {
+    "scraper": "MAHSANI_ASHUK_NEW_SOURCE",
+    "engine": "MahsaniAShukNewSource",
+    "class": "MahsaniAShukNewSource",
+    "enabled_by_factory": true,
+    "url": "https://laibcatalog.co.il",
+    "ui_landing": "https://laibcatalog.co.il/mshuk/index.html",
+    "ui_clicks": [
+      "//*[@id=\"btnRefresh\"]"
+    ],
+    "scraper_count": 2071,
+    "ui_count": 2071,
+    "ui_not_in_scraper": 0,
+    "scraper_not_in_ui": 0,
+    "missing_sample": [],
+    "extra_sample": [],
+    "pass": true
+  }
+]
