@@ -140,7 +140,9 @@ class UIEngine(Enum):
 
     # --- laibcatalog SPAs ---
     VICTORY_NEW_SOURCE = _laibcatalog_spa_ui("VICTORY_NEW_SOURCE", "victory/index.html")
-    HET_COHEN_NEW_SOURCE = _laibcatalog_spa_ui("HET_COHEN_NEW_SOURCE", "hcohen/index.html")
+    HET_COHEN_NEW_SOURCE = _laibcatalog_spa_ui(
+        "HET_COHEN_NEW_SOURCE", "hcohen/index.html"
+    )
     MAHSANI_ASHUK_NEW_SOURCE = _laibcatalog_spa_ui(
         "MAHSANI_ASHUK_NEW_SOURCE", "mshuk/index.html"
     )

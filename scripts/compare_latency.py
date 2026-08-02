@@ -129,7 +129,9 @@ def compare(  # pylint: disable=too-many-locals
             ]
         )
 
-    widths = [max(len(headers[i]), *(len(r[i]) for r in rows)) for i in range(len(headers))]
+    widths = [
+        max(len(headers[i]), *(len(r[i]) for r in rows)) for i in range(len(headers))
+    ]
     lines = [
         "## Latency compare (main vs branch)",
         "",
@@ -211,7 +213,9 @@ def main() -> int:
         for item in failures:
             print(f"  - {item}", file=sys.stderr)
         if soft_fail:
-            print("Soft-fail enabled: exiting 0 (non-mandatory check).", file=sys.stderr)
+            print(
+                "Soft-fail enabled: exiting 0 (non-mandatory check).", file=sys.stderr
+            )
             return 0
         return 1
     print("No latency regressions beyond threshold.")

@@ -368,8 +368,7 @@ def _gov_il_page_url_name(url):
 def _fetch_gov_il_content_api(url_name, culture="he", timeout=30):
     """Fetch page JSON from gov.il public content API (bypasses Cloudflare)."""
     api_url = (
-        f"{_GOV_IL_CONTENT_API_BASE}/api/content-pages/"
-        f"{url_name}?culture={culture}"
+        f"{_GOV_IL_CONTENT_API_BASE}/api/content-pages/" f"{url_name}?culture={culture}"
     )
     response = requests.get(
         api_url,
@@ -389,9 +388,7 @@ def _extract_links_from_html(html):
     """Return anchor text from an HTML fragment."""
     links = re.findall(r"<a[^>]*>(.*?)</a>", html, flags=re.I | re.S)
     return [
-        re.sub(r"<[^>]+>", "", unescape(link)).strip()
-        for link in links
-        if link.strip()
+        re.sub(r"<[^>]+>", "", unescape(link)).strip() for link in links if link.strip()
     ]
 
 
@@ -411,7 +408,9 @@ def _gov_il_api_to_html(data):
     for key, items in head.get("metaData", {}).items():
         parts.append(f"<div>{key}:</div>")
         for item in items:
-            parts.append(f'<div id="{item.get("id", "")}">{item.get("title", "")}</div>')
+            parts.append(
+                f'<div id="{item.get("id", "")}">{item.get("title", "")}</div>'
+            )
     for html in _collect_gov_il_html_sections(data.get("contentMain", {})):
         parts.append(html)
     parts.append("</body></html>")
@@ -501,7 +500,9 @@ def _render_webpage_impl(url, user_agent=None):
                     viewport={"width": 1280, "height": 720},
                     locale="he-IL",
                     timezone_id="Asia/Jerusalem",
-                    extra_http_headers={"Accept-Language": "he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7"},
+                    extra_http_headers={
+                        "Accept-Language": "he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7"
+                    },
                 )
                 page = context.new_page()
                 page.goto(url, timeout=90000, wait_until="domcontentloaded")

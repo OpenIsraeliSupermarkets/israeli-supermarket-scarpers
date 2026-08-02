@@ -135,7 +135,9 @@ def resolve_scrapers(args: argparse.Namespace) -> List[str]:
             cls = getattr(ScraperFactory, name).value
             by_engine[engine_name(cls)].append(name)
         return [names[0] for _, names in sorted(by_engine.items())]
-    raise SystemExit("Specify --per-engine, --configured-ui, --all-listed, or --scrapers")
+    raise SystemExit(
+        "Specify --per-engine, --configured-ui, --all-listed, or --scrapers"
+    )
 
 
 def make_scraper(enum_name: str):
@@ -240,7 +242,9 @@ def _list_ui_via_clicks(landing_url: str, path: UiListingPath) -> Set[str]:
                 if _element_disabled(next_btn):
                     break
                 before_url = page.url
-                before_first = page.locator(f"xpath={path.file_name_xpath}").first.inner_text()
+                before_first = page.locator(
+                    f"xpath={path.file_name_xpath}"
+                ).first.inner_text()
                 next_btn.first.click(timeout=30000)
                 if not _wait_for_listing_change(
                     page, path.file_name_xpath, before_url, before_first.strip()

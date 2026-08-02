@@ -116,7 +116,9 @@ class ApiWebEngine(WebBase):
             except (AttributeError, KeyError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")
 
-    async def _collect_request_infos(self, files_types=None, store_id=None, when_date=None):
+    async def _collect_request_infos(
+        self, files_types=None, store_id=None, when_date=None
+    ):
         """Materialize listing request infos from get_request_url."""
         request_infos = []
         requests_to_make = self.get_request_url(
