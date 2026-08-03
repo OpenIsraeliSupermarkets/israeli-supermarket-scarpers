@@ -1,0 +1,119 @@
+name: Latency Compare (main vs PR)
+
+# Benchmarks every active chain (20 files each) on main vs the PR branch.
+# Flags scrapers that are >10% slower. Advisory only — does not block merges.
+# Uses the repo default branch name "main" (not "master").
+
+on:
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Files per scraper"
+        required: false
+        default: "20"
+      max_regression:
+        description: "Regression threshold fraction (0.10 = 10%)"
+        required: false
+        default: "0.10"
+
+concurrency:
+  group: latency-compare-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  LATENCY_LIMIT: ${{ github.event.inputs.limit || '20' }}
+  LATENCY_MAX_REGRESSION: ${{ github.event.inputs.max_regression || '0.10' }}
+  LATENCY_SCRAPERS: all
+  LATENCY_SOFT_FAIL: "1"
+
+jobs:
+  compare:
+    runs-on: self-hosted
+    # Non-mandatory: workflow is reported as neutral/success even on regressions.
+    continue-on-error: true
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          path: branch
+          fetch-depth: 0
+
+      - name: Checkout main (base)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main
+          fetch-depth: 1
+
+      - name: Free disk space
+        run: |
+          df --human-readable
+          docker 2>/dev/null 1>&2 rmi $(docker image ls --all --quiet) || true
+          df --human-readable
+
+      - name: Build base (main) image
+        working-directory: main
+        run: docker build -t latency-bench:main --target base .
+
+      - name: Build branch image
+        working-directory: branch
+        run: docker build -t latency-bench:branch --target base .
+
+      - name: Benchmark main
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/latency-out"
+          docker run --rm \
+            -e LATENCY_REF_LABEL=main \
+            -e LATENCY_GIT_SHA="${{ github.event.pull_request.base.sha || 'main' }}" \
+            -e LATENCY_LIMIT="${LATENCY_LIMIT}" \
+            -e LATENCY_SCRAPERS="${LATENCY_SCRAPERS}" \
+            -v "$GITHUB_WORKSPACE/branch/scripts:/bench:ro" \
+            -v "$GITHUB_WORKSPACE/latency-out:/out" \
+            latency-bench:main \
+            python /bench/latency_bench.py \
+              --scrapers "${LATENCY_SCRAPERS}" \
+              --limit "${LATENCY_LIMIT}" \
+              --output /out/main.json
+
+      - name: Benchmark branch
+        run: |
+          docker run --rm \
+            -e LATENCY_REF_LABEL=branch \
+            -e LATENCY_GIT_SHA="${{ github.sha }}" \
+            -e LATENCY_LIMIT="${LATENCY_LIMIT}" \
+            -e LATENCY_SCRAPERS="${LATENCY_SCRAPERS}" \
+            -v "$GITHUB_WORKSPACE/branch/scripts:/bench:ro" \
+            -v "$GITHUB_WORKSPACE/latency-out:/out" \
+            latency-bench:branch \
+            python /bench/latency_bench.py \
+              --scrapers "${LATENCY_SCRAPERS}" \
+              --limit "${LATENCY_LIMIT}" \
+              --output /out/branch.json
+
+      - name: Compare latency
+        run: |
+          python3 "$GITHUB_WORKSPACE/branch/scripts/compare_latency.py" \
+            --base "$GITHUB_WORKSPACE/latency-out/main.json" \
+            --branch "$GITHUB_WORKSPACE/latency-out/branch.json" \
+            --max-regression "${LATENCY_MAX_REGRESSION}" \
+            --soft-fail \
+            --summary "$GITHUB_WORKSPACE/latency-out/summary.md"
+
+      - name: Upload latency artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: latency-compare
+          path: latency-out/
+          if-no-files-found: warn
+
+      - name: Docker cleanup
+        if: always()
+        run: |
+          docker rmi latency-bench:main latency-bench:branch 2>/dev/null || true
+          docker builder prune -f 2>/dev/null || true

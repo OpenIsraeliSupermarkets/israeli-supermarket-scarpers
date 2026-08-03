@@ -360,7 +360,9 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                     state.file_pass_limit += 1
                     yield file
                 else:
-                    break  # Stop consuming once limit is reached
+                    # Stop consuming; caller should aclose upstream listing gens
+                    # so parallel page/branch fetches can cancel.
+                    break
         else:
             async for file in intreable_:
                 yield file

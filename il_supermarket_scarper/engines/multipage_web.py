@@ -85,6 +85,103 @@ class MultiPageWeb(WebBase):
 
         return int(pages[0])
 
+    def _pages_to_scrape(self, main_page_request, total_pages):
+        """Build the list of page request dicts for one listing root."""
+        if total_pages is None:
+            return [main_page_request]
+        return [
+            {
+                **main_page_request,
+                "url": (
+                    main_page_request["url"]
+                    + f"{self.page_argument}="
+                    + str(page_number)
+                ),
+            }
+            for page_number in range(1, total_pages + 1)
+        ]
+
+    async def _process_single_page(
+        self,
+        req,
+        state,
+        limit=None,
+        files_types=None,
+        store_id=None,
+        when_date=None,
+        random_selection=False,
+    ):
+        """Collect filtered FileEntry objects from one listing page."""
+        results = []
+        async for entry in self.process_links_before_download(
+            state,
+            req,
+            limit=limit,
+            files_types=files_types,
+            store_id=store_id,
+            when_date=when_date,
+            random_selection=random_selection,
+        ):
+            results.append(entry)
+        return results
+
+    async def _stream_page_queue(  # pylint: disable=too-many-locals
+        self,
+        page_queue,
+        state,
+        limit=None,
+        files_types=None,
+        store_id=None,
+        when_date=None,
+        random_selection=False,
+    ) -> AsyncGenerator[FileEntry, None]:
+        """Yield page results with bounded in-flight fetches."""
+        # Bound in-flight page fetches, yield as each page finishes so
+        # Engine._scrape can start downloads while later pages load.
+        # aclose() clears the queue and cancels in-flight work after limit.
+        flight = {"pending": set()}
+        max_in_flight = max(1, self.max_threads)
+
+        def schedule_pages():
+            pending = flight["pending"]
+            while len(pending) < max_in_flight and page_queue:
+                req = page_queue.pop(0)
+                pending.add(
+                    asyncio.create_task(
+                        self._process_single_page(
+                            req,
+                            state,
+                            limit=limit,
+                            files_types=files_types,
+                            store_id=store_id,
+                            when_date=when_date,
+                            random_selection=random_selection,
+                        )
+                    )
+                )
+
+        schedule_pages()
+        try:
+            while flight["pending"]:
+                done, flight["pending"] = await asyncio.wait(
+                    flight["pending"], return_when=asyncio.FIRST_COMPLETED
+                )
+                completed_entries = []
+                for task in done:
+                    completed_entries.extend(task.result())
+                # Refill slots before yielding so listing stays ahead of
+                # downloads while the consumer is busy.
+                schedule_pages()
+                for entry in completed_entries:
+                    yield entry
+        finally:
+            page_queue.clear()
+            pending = flight["pending"]
+            for task in pending:
+                task.cancel()
+            if pending:
+                await asyncio.gather(*pending, return_exceptions=True)
+
     async def generate_all_files(
         self,
         files_types=None,
@@ -106,48 +203,19 @@ class MultiPageWeb(WebBase):
             total_pages = self.get_number_of_pages(main_page_response)
             Logger.info(f"Found {total_pages} pages")
 
-            # if there is only one page, call it again,
-            # in the future, we can skip scrap it again
-            if total_pages is None:
-                pages_to_scrape = [main_page_request]
-            else:
-                pages_to_scrape = list(
-                    map(
-                        lambda page_number, req=main_page_request: {
-                            **req,
-                            "url": req["url"]
-                            + f"{self.page_argument}="
-                            + str(page_number),
-                        },
-                        range(1, total_pages + 1),
-                    )
-                )
-
-            # we pass the state between pages to keep the total input count
-            # we don't pass the state to the process_links_before_download function
-            # becuase later in the apply_limit function we will pass the state
-            # to the apply_limit function
-            cross_pages_state = FilterState()
-            # Process pages in parallel using asyncio.gather
-
-            async def process_single_page(req, state=cross_pages_state):
-                results = []
-                async for task in self.process_links_before_download(
-                    state,
-                    req,
-                    limit=limit,
-                    files_types=files_types,
-                    store_id=store_id,
-                    when_date=when_date,
-                    random_selection=random_selection,
-                ):
-                    results.append(task)
-                return results
-
-            tasks = [process_single_page(req) for req in pages_to_scrape]
-            for task_group in await asyncio.gather(*tasks):
-                for task in task_group:
-                    yield task
+            # Shared filter state across pages (limit is applied later in
+            # collect_files_details_from_site to avoid per-page races).
+            page_queue = self._pages_to_scrape(main_page_request, total_pages)
+            async for entry in self._stream_page_queue(
+                page_queue,
+                FilterState(),
+                limit=limit,
+                files_types=files_types,
+                store_id=store_id,
+                when_date=when_date,
+                random_selection=random_selection,
+            ):
+                yield entry
 
     async def collect_files_details_from_site(  # pylint: disable=too-many-locals
         self,
@@ -164,48 +232,51 @@ class MultiPageWeb(WebBase):
         random_selection=False,
     ) -> AsyncGenerator[tuple[str, str], None]:
 
-        # Aggregate results from all pages
-        files = self.generate_all_files(
+        # Stream page results; close the root listing gen when limit/consumer
+        # stops so unfinished page tasks are cancelled.
+        listing = self.generate_all_files(
             limit=limit,
             files_types=files_types,
             store_id=store_id,
             when_date=when_date,
             random_selection=random_selection,
         )
+        try:
+            files = self.register_all_saw_files_on_site(listing)
 
-        files = self.register_all_saw_files_on_site(files)
+            # Filter by file size if specified
+            if min_size is not None or max_size is not None:
+                filtered_gen = self.filter_by_file_size(
+                    files,
+                    min_size=min_size,
+                    max_size=max_size,
+                )
+            else:
+                filtered_gen = files
 
-        # Filter by file size if specified
-        if min_size is not None or max_size is not None:
-            filtered_gen = self.filter_by_file_size(
-                files,
-                min_size=min_size,
-                max_size=max_size,
+            bad_files_filtered = self.filter_bad_files(
+                filtered_gen,
+                filter_null=filter_null,
+                filter_zero=filter_zero,
+                by_function=lambda x: x.name,
             )
-        else:
-            filtered_gen = files
 
-        bad_files_filtered = self.filter_bad_files(
-            filtered_gen,
-            filter_null=filter_null,
-            filter_zero=filter_zero,
-            by_function=lambda x: x.name,
-        )
+            limited_files = self.apply_limit_zip(
+                state,
+                bad_files_filtered,
+                limit=limit,
+                files_types=files_types,
+                by_function=lambda x: x.name,
+                store_id=store_id,
+                when_date=when_date,
+                files_names_to_scrape=files_names_to_scrape,
+                random_selection=random_selection,
+            )
 
-        limited_files = self.apply_limit_zip(
-            state,
-            bad_files_filtered,
-            limit=limit,
-            files_types=files_types,
-            by_function=lambda x: x.name,
-            store_id=store_id,
-            when_date=when_date,
-            files_names_to_scrape=files_names_to_scrape,
-            random_selection=random_selection,
-        )
-
-        async for entry in limited_files:
-            yield entry.url, entry.name
+            async for entry in limited_files:
+                yield entry.url, entry.name
+        finally:
+            await listing.aclose()
 
     def get_file_size_from_entry(
         self, html, link_element
@@ -292,13 +363,13 @@ class MultiPageWeb(WebBase):
             for url, name, size in zip(file_links, filenames, file_sizes):
                 yield FileEntry(name=name, url=url, size=size)
 
-        # Apply filters but NOT the limit here to avoid race conditions
-        # when processing pages in parallel. The limit will be applied once
-        # at the collect_files_details_from_site level after all pages are aggregated
+        # Apply filters but NOT the limit here to avoid race conditions when
+        # processing pages in parallel. Limit is applied once in
+        # collect_files_details_from_site as entries stream in.
         filtered_files = self.apply_limit_zip(
             state,
             generate_from_lists(),
-            limit=None,  # Don't apply limit per page - let it be applied once after aggregation
+            limit=None,  # Don't apply limit per page
             files_types=files_types,
             by_function=lambda x: x.name,
             store_id=store_id,

@@ -1,3 +1,4 @@
+import asyncio
 import json
 import requests
 from il_supermarket_scarper.utils import Logger
@@ -56,6 +57,49 @@ class ApiWebEngine(WebBase):
             Logger.error(f"Failed to parse API response: {e}")
             return []
 
+    def _fetch_entries_for_request(self, request_info):
+        """Sync fetch of one listing endpoint (run in a worker thread)."""
+        try:
+            response = self.session.get(request_info["url"])
+            response.raise_for_status()
+            page_data = self.get_data_from_page(response)
+            if isinstance(page_data, list):
+                return page_data
+            return [page_data]
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            Logger.error(f"Failed to get data from {request_info['url']}: {e}")
+            return []
+
+    @staticmethod
+    def _entry_filename(entry):
+        """Best-effort filename key for streaming dedupe."""
+        if not isinstance(entry, dict):
+            return None
+        return entry.get("fileName") or entry.get("filename") or entry.get("name")
+
+    def _dedupe_streaming_entries(self, entries, seen_names):
+        """Drop duplicate API filenames; keep non-dict entries as-is."""
+        deduped = []
+        for entry in entries:
+            filename = self._entry_filename(entry)
+            if not filename:
+                if not isinstance(entry, dict):
+                    deduped.append(entry)
+                continue
+            if filename in seen_names:
+                continue
+            seen_names.add(filename)
+            deduped.append(entry)
+        return deduped
+
+    def _filter_streamed_entries(self, entries, files_types, seen_names):
+        """Apply optional type filter and streaming dedupe to one batch."""
+        if hasattr(self, "apply_filter_by_type"):
+            entries = self.apply_filter_by_type(entries, files_types)
+        if hasattr(self, "dedupe_api_entries"):
+            entries = self._dedupe_streaming_entries(entries, seen_names)
+        return entries
+
     async def extract_task_from_entry(self, all_trs):
         """Extract download tasks from API data"""
         for entry in all_trs:
@@ -72,6 +116,65 @@ class ApiWebEngine(WebBase):
             except (AttributeError, KeyError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")
 
+    async def _collect_request_infos(
+        self, files_types=None, store_id=None, when_date=None
+    ):
+        """Materialize listing request infos from get_request_url."""
+        request_infos = []
+        requests_to_make = self.get_request_url(
+            files_types=files_types, store_id=store_id, when_date=when_date
+        )
+        try:
+            async for request_info in requests_to_make:
+                if request_info:
+                    request_infos.append(request_info)
+        finally:
+            await requests_to_make.aclose()
+        return request_infos
+
+    async def _stream_api_file_entries(
+        self, files_types=None, store_id=None, when_date=None
+    ):
+        """Yield FileEntry objects as each listing request completes."""
+        request_queue = await self._collect_request_infos(
+            files_types=files_types, store_id=store_id, when_date=when_date
+        )
+        flight = {"pending": set()}
+        max_in_flight = max(1, self.max_threads)
+        seen_names = set()
+
+        def schedule_requests():
+            pending = flight["pending"]
+            while len(pending) < max_in_flight and request_queue:
+                request_info = request_queue.pop(0)
+                pending.add(
+                    asyncio.create_task(
+                        asyncio.to_thread(self._fetch_entries_for_request, request_info)
+                    )
+                )
+
+        schedule_requests()
+        try:
+            while flight["pending"]:
+                done, flight["pending"] = await asyncio.wait(
+                    flight["pending"], return_when=asyncio.FIRST_COMPLETED
+                )
+                completed_batches = [task.result() for task in done]
+                schedule_requests()
+                for entries in completed_batches:
+                    entries = self._filter_streamed_entries(
+                        entries, files_types, seen_names
+                    )
+                    async for file_entry in self.extract_task_from_entry(entries):
+                        yield file_entry
+        finally:
+            request_queue.clear()
+            pending = flight["pending"]
+            for task in pending:
+                task.cancel()
+            if pending:
+                await asyncio.gather(*pending, return_exceptions=True)
+
     async def collect_files_details_from_site(  # pylint: disable=too-many-locals
         self,
         state: FilterState,
@@ -87,60 +190,37 @@ class ApiWebEngine(WebBase):
         random_selection=False,
     ):
         """collect file details from API endpoints"""
-        all_entries = []
-
-        # Get API endpoints to query (async generator)
-        requests_to_make = self.get_request_url(
+        listing = self._stream_api_file_entries(
             files_types=files_types, store_id=store_id, when_date=when_date
         )
+        try:
+            files = self.register_all_saw_files_on_site(listing)
 
-        # Fetch data from each endpoint
-        async for request_info in requests_to_make:
-            try:
-                response = self.session.get(request_info["url"])
-                response.raise_for_status()
-                page_data = self.get_data_from_page(response)
-                if isinstance(page_data, list):
-                    all_entries.extend(page_data)
-                else:
-                    all_entries.append(page_data)
-            except Exception as e:  # pylint: disable=broad-exception-caught
-                Logger.error(f"Failed to get data from {request_info['url']}: {e}")
+            if min_size is not None or max_size is not None:
+                filtered_files = self.filter_by_file_size(
+                    files, min_size=min_size, max_size=max_size
+                )
+            else:
+                filtered_files = files
 
-        # Apply filtering if needed
-        if hasattr(self, "apply_filter_by_type"):
-            all_entries = self.apply_filter_by_type(all_entries, files_types)
-
-        if hasattr(self, "dedupe_api_entries"):
-            all_entries = self.dedupe_api_entries(all_entries)
-
-        # Async generator pipeline (same as WebBase / multipage_web)
-        extracted_files = self.extract_task_from_entry(all_entries)
-        files = self.register_all_saw_files_on_site(extracted_files)
-
-        if min_size is not None or max_size is not None:
-            filtered_files = self.filter_by_file_size(
-                files, min_size=min_size, max_size=max_size
+            bad_files_filtered = self.filter_bad_files(
+                filtered_files,
+                filter_null=filter_null,
+                filter_zero=filter_zero,
+                by_function=lambda x: x.name,
             )
-        else:
-            filtered_files = files
 
-        bad_files_filtered = self.filter_bad_files(
-            filtered_files,
-            filter_null=filter_null,
-            filter_zero=filter_zero,
-            by_function=lambda x: x.name,
-        )
-
-        async for entry in self.apply_limit(
-            state,
-            bad_files_filtered,
-            limit=limit,
-            files_types=files_types,
-            by_function=lambda x: x.name,
-            store_id=store_id,
-            when_date=when_date,
-            files_names_to_scrape=files_names_to_scrape,
-            random_selection=random_selection,
-        ):
-            yield entry.url, entry.name
+            async for entry in self.apply_limit(
+                state,
+                bad_files_filtered,
+                limit=limit,
+                files_types=files_types,
+                by_function=lambda x: x.name,
+                store_id=store_id,
+                when_date=when_date,
+                files_names_to_scrape=files_names_to_scrape,
+                random_selection=random_selection,
+            ):
+                yield entry.url, entry.name
+        finally:
+            await listing.aclose()

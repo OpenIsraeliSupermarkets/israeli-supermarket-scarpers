@@ -23,13 +23,14 @@ setup(
         "il_supermarket_scarper.scrappers",
         "il_supermarket_scarper.utils",
         "il_supermarket_scarper.utils.databases",
+        "testing_util",
     ],
     # Needed for dependencies
     install_requires=required,
     tests_require=dev_required,
     extras_require={"test": ["pytest", "pytest-xdist"]},
     # *strongly* suggested for sharing
-    version="1.0.6",
+    version="1.0.7",
     # The license can be anything you like
     license="CUSTOM",
     description="python package that implement a scraping for israeli supermarket data",
