@@ -29,11 +29,11 @@ class ApiWebEngine(WebBase):
         )
         self.session = requests.Session()
 
-    def get_api_data(self, endpoint, params=None):
+    def get_api_data(self, endpoint, params=None, timeout=30):
         """Make API call and return JSON response"""
         url = f"{self.url.rstrip('/')}{endpoint}"
         try:
-            response = self.session.get(url, params=params)
+            response = self.session.get(url, params=params, timeout=timeout)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
@@ -60,7 +60,8 @@ class ApiWebEngine(WebBase):
     def _fetch_entries_for_request(self, request_info):
         """Sync fetch of one listing endpoint (run in a worker thread)."""
         try:
-            response = self.session.get(request_info["url"])
+            timeout = request_info.get("timeout", 30)
+            response = self.session.get(request_info["url"], timeout=timeout)
             response.raise_for_status()
             page_data = self.get_data_from_page(response)
             if isinstance(page_data, list):
