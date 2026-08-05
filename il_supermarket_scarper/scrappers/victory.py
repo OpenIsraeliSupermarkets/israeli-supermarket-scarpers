@@ -42,6 +42,8 @@ class _LaibcatalogApiScraper(ApiWebEngine):
         branchNumber, so we issue one listing request per chain_id. Per-branch
         fan-out previously scheduled dozens of identical (or hung) requests and
         could block the scraper forever when a listing call had no timeout.
+        Chains with no branches are skipped: getfiles without a valid root
+        returns HTTP 400 ("FilesRootPath is invalid").
         """
         for chain_id in self.get_chain_id():
             url = f"{self.url.rstrip('/')}/webapi/api/getfiles?edi={chain_id}"
@@ -54,6 +56,11 @@ class _LaibcatalogApiScraper(ApiWebEngine):
                 )
             else:
                 branches = self.get_branches(chain_id)
+                if not branches:
+                    Logger.debug(
+                        f"No branches for chain {chain_id}; skipping getfiles"
+                    )
+                    continue
                 Logger.debug(
                     f"Found {len(branches)} branches for chain {chain_id}; "
                     "listing files once for the whole chain"
