@@ -12,8 +12,8 @@ class YaynotBitanAndCarrefourTestCase(
     """Test case for ScraperFactory.YAYNO_BITAN_AND_CARREFOUR."""
 
 
-class CofixTestCase(make_test_case(ScraperFactory.COFIX, 405)):
-    """Test case for ScraperFactory.COFIX."""
+# class CofixTestCase(make_test_case(ScraperFactory.COFIX, 405)):
+#     """Test case for ScraperFactory.COFIX."""
 
 
 # class CityMarketGivatayimTestCase(
@@ -146,8 +146,8 @@ class FreshMarketAndSuperDoshTestCase(
     """Test case for ScraperFactory.FRESH_MARKET_AND_SUPER_DOSH."""
 
 
-class QuikTestCase(make_test_case(ScraperFactory.QUIK, None)):
-    """Test case for ScraperFactory.QUIK."""
+# class QuikTestCase(make_test_case(ScraperFactory.QUIK, None)):
+#     """Test case for ScraperFactory.QUIK."""
 
 
 class TivTaamTestCase(make_test_case(ScraperFactory.TIV_TAAM, 3)):

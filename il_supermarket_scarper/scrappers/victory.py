@@ -36,38 +36,42 @@ class _LaibcatalogApiScraper(ApiWebEngine):
         return self.get_api_data("/webapi/api/getfiles", params)
 
     async def get_request_url(self, files_types=None, store_id=None, when_date=None):
-        """Generate API requests for getting file lists"""
+        """Generate API requests for getting file lists.
+
+        laibcatalog's getfiles returns the full chain catalog regardless of
+        branchNumber, so we issue one listing request per chain_id. Per-branch
+        fan-out previously scheduled dozens of identical (or hung) requests and
+        could block the scraper forever when a listing call had no timeout.
+        Chains with no branches are skipped: getfiles without a valid root
+        returns HTTP 400 ("FilesRootPath is invalid").
+        """
         for chain_id in self.get_chain_id():
-            branches = self.get_branches(chain_id)
-            Logger.debug(f"Found {len(branches)} branches for chain {chain_id}")
-
+            url = f"{self.url.rstrip('/')}/webapi/api/getfiles?edi={chain_id}"
+            branch_num = None
             if store_id is not None:
-                branches = [
-                    b for b in branches if str(b.get("number")) == str(store_id)
-                ]
+                branch_num = store_id
+                url += f"&branchNumber={store_id}"
                 Logger.debug(
-                    f"Filtered to {len(branches)} branches for store {store_id}"
+                    f"Listing files for chain {chain_id} store {store_id}"
                 )
-
-            if branches:
-                for branch in branches:
-                    branch_num = branch.get("number")
-                    url = f"{self.url.rstrip('/')}/webapi/api/getfiles?edi={chain_id}"
-                    if branch_num is not None:
-                        url += f"&branchNumber={branch_num}"
-                    yield {
-                        "url": url,
-                        "method": "GET",
-                        "chain_id": chain_id,
-                        "branch_number": branch_num,
-                    }
             else:
-                yield {
-                    "url": f"{self.url.rstrip('/')}/webapi/api/getfiles?edi={chain_id}",
-                    "method": "GET",
-                    "chain_id": chain_id,
-                    "branch_number": None,
-                }
+                branches = self.get_branches(chain_id)
+                if not branches:
+                    Logger.debug(
+                        f"No branches for chain {chain_id}; skipping getfiles"
+                    )
+                    continue
+                Logger.debug(
+                    f"Found {len(branches)} branches for chain {chain_id}; "
+                    "listing files once for the whole chain"
+                )
+            yield {
+                "url": url,
+                "method": "GET",
+                "chain_id": chain_id,
+                "branch_number": branch_num,
+                "timeout": 60,
+            }
 
     def get_data_from_page(self, req_res):
         """Parse the getfiles API response"""

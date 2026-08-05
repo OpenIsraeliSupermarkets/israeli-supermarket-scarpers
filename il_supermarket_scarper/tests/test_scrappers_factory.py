@@ -22,7 +22,7 @@ def test_not_active():
     all_listed = ScraperFactory.all_listed_scrappers()
     all_active = ScraperFactory.all_scrapers_name(when_date=test_date)
 
-    # CityMarketKiratGat, Quik, NetivHased (site HTTP 500)
-    expected_to_fail = 3
+    # CityMarketKiratGat, NetivHased (site HTTP 500)
+    expected_to_fail = 2
 
     assert len(set(all_listed) - set(all_active)) == expected_to_fail

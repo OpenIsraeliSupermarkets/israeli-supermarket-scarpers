@@ -11,7 +11,7 @@ class ScraperFactory(Enum):
     BAREKET = all_scrappers.Bareket  # עוף והודו ברקת - חנות המפעל בע"מ
     YAYNO_BITAN_AND_CARREFOUR = all_scrappers.YaynotBitanAndCarrefour  # יינות ביתן
     # YAYNO_BITAN = all_scrappers.YaynotBitan  # יינות ביתן
-    COFIX = all_scrappers.Cofix  # קופיקס בע"מ
+    # COFIX = all_scrappers.Cofix  # סופר קופיקס; gov.il 04.08.2026 folded into Rami Levy
     # CITY_MARKET_GIVATAYIM = all_scrappers.CityMarketGivatayim
     # CITY_MARKET_KIRYATONO = all_scrappers.CityMarketKirtatOno
     CITY_MARKET_KIRYATGAT = all_scrappers.CityMarketKiryatGat  # סיטי מרקט
@@ -50,7 +50,7 @@ class ScraperFactory(Enum):
     SUPER_YUDA = all_scrappers.SuperYuda  # סופר יודה
     SUPER_SAPIR = all_scrappers.SuperSapir  # סופר ספיר בע"מ
     FRESH_MARKET_AND_SUPER_DOSH = all_scrappers.FreshMarketAndSuperDosh  # פרשמרקט
-    QUIK = all_scrappers.Quik  # קוויק
+    # QUIK = all_scrappers.Quik  # קוויק; gov.il 04.08.2026 dropped dedicated link (under Rami Levy)
     TIV_TAAM = all_scrappers.TivTaam  # טיב טעם רשתות בע"מ
     # VICTORY = all_scrappers.Victory  # old Matrix source; gov.il now lists new format only
     VICTORY_NEW_SOURCE = all_scrappers.VictoryNewSource  # ויקטורי רשת סופרמרקטים בע"מ

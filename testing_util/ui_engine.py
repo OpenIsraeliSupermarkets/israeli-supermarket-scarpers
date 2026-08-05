@@ -136,7 +136,7 @@ class UIEngine(Enum):
 
     # --- PublishPrice SPA ---
     YAYNO_BITAN_AND_CARREFOUR = _publishprice_spa_ui("YAYNO_BITAN_AND_CARREFOUR")
-    QUIK = _publishprice_spa_ui("QUIK")
+    # QUIK = _publishprice_spa_ui("QUIK")  # disabled with ScraperFactory.QUIK
 
     # --- laibcatalog SPAs ---
     VICTORY_NEW_SOURCE = _laibcatalog_spa_ui("VICTORY_NEW_SOURCE", "victory/index.html")
@@ -170,7 +170,7 @@ class UIEngine(Enum):
     )
 
     # --- Cerberus (FTP directory listing; no browser UI) ---
-    COFIX = _cerberus_ftp_ui("COFIX")
+    # COFIX = _cerberus_ftp_ui("COFIX")  # disabled with ScraperFactory.COFIX
     DOR_ALON = _cerberus_ftp_ui("DOR_ALON")
     KESHET = _cerberus_ftp_ui("KESHET")
     OSHER_AD = _cerberus_ftp_ui("OSHER_AD")

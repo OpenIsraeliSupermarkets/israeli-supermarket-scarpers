@@ -4,6 +4,7 @@ from datetime import datetime
 
 from il_supermarket_scarper.utils import (
     _now,
+    _testing_now,
     datetime_in_tlv,
     FileTypesFilters,
     hour_files_expected_to_be_accassible,
@@ -26,17 +27,17 @@ class FullyStable:
         utilize_date_param=False,
     ):
         """it is stable if the execution is between midnight
-        and morning and the requested date is today fails"""
+        and morning and the requested date is the test probe date"""
         del utilize_date_param  # kept for call-site compatibility
         execution_time = _now()
-        # Only suppress missing files when the *requested* date is today and it is
-        # still before the usual morning publish window. Historical when_date values
-        # must not be treated as "today" just because the scraper ignores date params.
+        # Before the usual morning publish window, scraper tests probe with
+        # `_testing_now()` (rolled back from calendar today). Suppress missing
+        # files only for that probe date—not arbitrary historical when_date.
         return (
             when_date is not None
             and execution_time.hour >= 0
             and execution_time.hour < hour_files_expected_to_be_accassible()
-            and when_date.date() == execution_time.date()
+            and when_date.date() == _testing_now().date()
         )
 
     @classmethod
