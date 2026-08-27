@@ -78,7 +78,12 @@ jobs:
     # Always open an issue when pytest failed. Do not use failure() alone:
     # continue-on-error used to mark the pytest step successful, so the
     # build job stayed green and this job was skipped.
-    if: always() && needs.build.result != 'cancelled' && needs.build.outputs.pytest_failed == 'true'
+    if: >
+      always()
+      && needs.build.result != 'cancelled'
+      && needs.build.outputs.pytest_failed == 'true'
+      && github.event_name != 'pull_request'
+      && github.event_name != 'push'
     runs-on: ubuntu-latest
     permissions:
       issues: write
