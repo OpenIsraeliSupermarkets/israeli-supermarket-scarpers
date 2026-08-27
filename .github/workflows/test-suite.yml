@@ -49,13 +49,19 @@ jobs:
         id: test_result
         if: always()
         env:
-          PYTEST_CONCLUSION: ${{ steps.pytest.conclusion }}
+          # continue-on-error: true rewrites conclusion to "success".
+          # outcome is the real pytest result (failure vs success).
+          PYTEST_OUTCOME: ${{ steps.pytest.outcome }}
         run: |
-          if [ "$PYTEST_CONCLUSION" = "failure" ]; then
-            echo "failed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "failed=false" >> "$GITHUB_OUTPUT"
+          failed=false
+          if [ "$PYTEST_OUTCOME" = "failure" ]; then
+            failed=true
           fi
+          if [ -f pytest-log.txt ] && grep -qE '^(FAILED |ERROR )' pytest-log.txt; then
+            failed=true
+          fi
+          echo "failed=${failed}" >> "$GITHUB_OUTPUT"
+          echo "pytest outcome=${PYTEST_OUTCOME} failed=${failed}"
       - name: Upload pytest log
         if: steps.test_result.outputs.failed == 'true'
         uses: actions/upload-artifact@v4
@@ -69,7 +75,10 @@ jobs:
 
   create-issue:
     needs: build
-    if: failure() && needs.build.outputs.pytest_failed == 'true'
+    # Always open an issue when pytest failed. Do not use failure() alone:
+    # continue-on-error used to mark the pytest step successful, so the
+    # build job stayed green and this job was skipped.
+    if: always() && needs.build.result != 'cancelled' && needs.build.outputs.pytest_failed == 'true'
     runs-on: ubuntu-latest
     permissions:
       issues: write
