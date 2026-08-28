@@ -779,13 +779,14 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         restart_and_retry = False
 
         try:
-            # Determine file name with extension
+            # Determine file name with extension (case-insensitive check)
             file_name_with_ext = file_name
-            if file_link.endswith((".gz", ".xml")) and not file_name.endswith(
+            file_link_lower = file_link.lower()
+            file_name_lower = file_name.lower()
+            if file_link_lower.endswith((".gz", ".xml")) and not file_name_lower.endswith(
                 (".gz", ".xml")
             ):
-
-                file_name_with_ext = file_name + "." + file_link.split(".")[-1]
+                file_name_with_ext = file_name + "." + file_link.split(".")[-1].lower()
 
             # Download file content directly to memory
             try:
