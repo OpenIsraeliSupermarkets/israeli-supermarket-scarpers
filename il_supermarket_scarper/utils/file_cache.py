@@ -8,7 +8,7 @@ from functools import wraps
 if os.name == "posix":
     import fcntl
 else:
-    fcntl = None
+    fcntl = None  # pylint: disable=invalid-name
 
 _CACHE_DIR = ".cache"
 
