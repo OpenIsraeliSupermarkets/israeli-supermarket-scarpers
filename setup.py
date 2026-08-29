@@ -27,6 +27,7 @@ setup(
     ],
     # Needed for dependencies
     install_requires=required,
+    python_requires=">=3.8,<3.13",
     tests_require=dev_required,
     extras_require={"test": ["pytest", "pytest-xdist"]},
     # *strongly* suggested for sharing
