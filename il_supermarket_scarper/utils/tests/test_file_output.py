@@ -75,6 +75,65 @@ class TestFileOutput:
 
         asyncio.run(run_test())
 
+    def test_queue_file_output_extracts_gzip_without_extension(self):
+        """Test queue output extracts gzip content without .gz extension."""
+
+        async def run_test():
+            handler = InMemoryQueueHandler("test_queue")
+            output = QueueFileOutput(handler, extract_gz=True)
+
+            xml_content = b"<xml>test content</xml>"
+            gzip_content = gzip.compress(xml_content)
+
+            result = await output.save_file(
+                file_link="http://example.com/Stores7290058108879-000",
+                file_name="Stores7290058108879-000",
+                file_content=gzip_content,
+                metadata={"chain": "KingStore"},
+            )
+
+            assert result["saved"] is True
+            assert result["extract_successfully"] is True
+            assert result["file_name"] == "Stores7290058108879-000.xml"
+
+            # Verify extracted content was sent
+            async for message in handler.get_all_messages():
+                assert message["file_name"] == "Stores7290058108879-000.xml"
+                assert message["file_content"] == xml_content
+                break
+            await handler.close()
+
+        asyncio.run(run_test())
+
+    def test_queue_file_output_respects_extract_gz_false(self):
+        """Test queue output preserves compressed content when extract_gz=False."""
+
+        async def run_test():
+            handler = InMemoryQueueHandler("test_queue")
+            output = QueueFileOutput(handler, extract_gz=False)
+
+            xml_content = b"<xml>test content</xml>"
+            gzip_content = gzip.compress(xml_content)
+
+            result = await output.save_file(
+                file_link="http://example.com/test.xml.gz",
+                file_name="test.xml.gz",
+                file_content=gzip_content,
+                metadata={"chain": "test"},
+            )
+
+            assert result["saved"] is True
+            assert result["file_name"] == "test.xml.gz"
+
+            # Verify compressed content was sent
+            async for message in handler.get_all_messages():
+                assert message["file_name"] == "test.xml.gz"
+                assert message["file_content"] == gzip_content
+                break
+            await handler.close()
+
+        asyncio.run(run_test())
+
     def test_scraper_config_defaults(self):
         """Test ScraperConfig default values."""
         config = ScraperConfig()

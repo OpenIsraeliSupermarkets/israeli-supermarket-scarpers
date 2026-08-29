@@ -8,6 +8,25 @@ GZIP_MAGIC_BYTES = b"\x1f\x8b"
 ZIP_MAGIC_BYTES = b"PK"
 
 
+def is_compressed_content(data: bytes) -> bool:
+    """
+    Check if the given data is compressed (gzip or zip) by examining magic bytes.
+
+    This detects compression by content rather than filename, which is important
+    because some servers (e.g., KingStore, SuperSapir) return gzip-compressed
+    content under filenames that don't end in .gz.
+
+    Args:
+        data: The file content to check
+
+    Returns:
+        True if the data starts with gzip (0x1f8b) or zip (PK) magic bytes
+    """
+    if len(data) < 2:
+        return False
+    return data[:2] in (GZIP_MAGIC_BYTES, ZIP_MAGIC_BYTES)
+
+
 def extract_xml_from_gz_in_memory(source_file, file_name):
     """Extract xml from gz file or stream"""
 

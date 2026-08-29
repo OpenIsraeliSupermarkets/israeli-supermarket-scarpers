@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, AsyncGenerator
 import os
 from .logger import Logger
-from .gzip_utils import extract_xml_from_gz_in_memory, GZIP_MAGIC_BYTES, ZIP_MAGIC_BYTES
+from .gzip_utils import extract_xml_from_gz_in_memory, is_compressed_content
 
 
 class FileOutput(ABC):
@@ -46,11 +46,7 @@ class FileOutput(ABC):
         Returns:
             (content, filename, extraction_success)
         """
-        is_compressed = len(file_content) >= 2 and file_content[:2] in (
-            GZIP_MAGIC_BYTES,
-            ZIP_MAGIC_BYTES,
-        )
-        if not extract_gz or not is_compressed:
+        if not extract_gz or not is_compressed_content(file_content):
             return file_content, file_name, True
 
         try:
@@ -168,6 +164,7 @@ class QueueFileOutput(FileOutput):
         self,
         queue_handler: "AbstractQueueHandler",
         storage_path: str = "/tmp/il_supermarket_status",
+        extract_gz: bool = True,
     ):
         """
         Initialize queue file output.
@@ -175,9 +172,11 @@ class QueueFileOutput(FileOutput):
         Args:
             queue_handler: An implementation of AbstractQueueHandler
             storage_path: Path for storing status files (default: /tmp/il_supermarket_status)
+            extract_gz: Whether to extract compressed files before sending to queue
         """
         self.queue_handler: AbstractQueueHandler = queue_handler
         self.storage_path = storage_path
+        self.extract_gz = extract_gz
         os.makedirs(storage_path, exist_ok=True)
 
     async def save_file(
@@ -187,15 +186,17 @@ class QueueFileOutput(FileOutput):
         file_content: bytes,
         metadata: Dict[str, Any] = None,
     ) -> Dict[str, Any]:
-        """Send file to queue, extracting gzipped files first."""
+        """Send file to queue, extracting compressed files first."""
         saved = False
         extract_successfully = False
         error = None
 
         try:
-            # Extract if it's a .gz file
+            # Extract if it's compressed (detected by magic bytes)
             file_content, file_name, extract_successfully = (
-                await self._extract_if_compressed(file_content, file_name)
+                await self._extract_if_compressed(
+                    file_content, file_name, self.extract_gz
+                )
             )
             # Send file to queue
             if extract_successfully:
