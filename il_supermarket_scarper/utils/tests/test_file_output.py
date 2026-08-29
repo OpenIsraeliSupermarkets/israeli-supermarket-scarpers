@@ -1,6 +1,7 @@
 """Tests for file output configuration."""
 
 import asyncio
+import gzip
 import os
 import tempfile
 
@@ -141,6 +142,122 @@ class TestFileOutput:
         handler = InMemoryQueueHandler("myqueue")
         queue = QueueFileOutput(handler)
         assert queue.get_output_location() == "queue:memory:myqueue"
+
+    def test_disk_output_extracts_gzip_with_gz_extension(self):
+        """Test that gzip files with .gz extension are extracted."""
+
+        async def run_test():
+            with tempfile.TemporaryDirectory() as tmpdir:
+                output = DiskFileOutput(tmpdir, extract_gz=True)
+
+                xml_content = b"<xml>test content</xml>"
+                gzip_content = gzip.compress(xml_content)
+
+                result = await output.save_file(
+                    file_link="http://example.com/test.xml.gz",
+                    file_name="test.xml.gz",
+                    file_content=gzip_content,
+                    metadata={"chain": "test"},
+                )
+
+                assert result["saved"] is True
+                assert result["extract_successfully"] is True
+                assert result["file_name"] == "test.xml"
+                assert os.path.exists(os.path.join(tmpdir, "test.xml"))
+
+                with open(os.path.join(tmpdir, "test.xml"), "rb") as f:
+                    content = f.read()
+                    assert content == xml_content
+
+        asyncio.run(run_test())
+
+    def test_disk_output_extracts_gzip_without_gz_extension(self):
+        """Test that gzip files WITHOUT .gz extension are still extracted.
+
+        This is the bug fix for KingStore/SuperSapir where servers return
+        gzip-compressed content under filenames that don't end in .gz.
+        """
+
+        async def run_test():
+            with tempfile.TemporaryDirectory() as tmpdir:
+                output = DiskFileOutput(tmpdir, extract_gz=True)
+
+                xml_content = b"<xml>test content</xml>"
+                gzip_content = gzip.compress(xml_content)
+
+                result = await output.save_file(
+                    file_link="http://example.com/Stores7290058108879-000",
+                    file_name="Stores7290058108879-000",
+                    file_content=gzip_content,
+                    metadata={"chain": "KingStore"},
+                )
+
+                assert result["saved"] is True
+                assert result["extract_successfully"] is True
+                assert result["file_name"] == "Stores7290058108879-000.xml"
+                assert os.path.exists(
+                    os.path.join(tmpdir, "Stores7290058108879-000.xml")
+                )
+
+                with open(
+                    os.path.join(tmpdir, "Stores7290058108879-000.xml"), "rb"
+                ) as f:
+                    content = f.read()
+                    assert content == xml_content
+
+        asyncio.run(run_test())
+
+    def test_disk_output_does_not_extract_uncompressed_content(self):
+        """Test that uncompressed content is saved as-is."""
+
+        async def run_test():
+            with tempfile.TemporaryDirectory() as tmpdir:
+                output = DiskFileOutput(tmpdir, extract_gz=True)
+
+                xml_content = b"<xml>test content</xml>"
+
+                result = await output.save_file(
+                    file_link="http://example.com/test.xml",
+                    file_name="test.xml",
+                    file_content=xml_content,
+                    metadata={"chain": "test"},
+                )
+
+                assert result["saved"] is True
+                assert result["extract_successfully"] is True
+                assert result["file_name"] == "test.xml"
+
+                with open(os.path.join(tmpdir, "test.xml"), "rb") as f:
+                    content = f.read()
+                    assert content == xml_content
+
+        asyncio.run(run_test())
+
+    def test_disk_output_respects_extract_gz_false(self):
+        """Test that extract_gz=False preserves compressed content."""
+
+        async def run_test():
+            with tempfile.TemporaryDirectory() as tmpdir:
+                output = DiskFileOutput(tmpdir, extract_gz=False)
+
+                xml_content = b"<xml>test content</xml>"
+                gzip_content = gzip.compress(xml_content)
+
+                result = await output.save_file(
+                    file_link="http://example.com/test.xml.gz",
+                    file_name="test.xml.gz",
+                    file_content=gzip_content,
+                    metadata={"chain": "test"},
+                )
+
+                assert result["saved"] is True
+                assert result["file_name"] == "test.xml.gz"
+
+                with open(os.path.join(tmpdir, "test.xml.gz"), "rb") as f:
+                    content = f.read()
+                    assert content == gzip_content
+
+        asyncio.run(run_test())
 
 
 if __name__ == "__main__":

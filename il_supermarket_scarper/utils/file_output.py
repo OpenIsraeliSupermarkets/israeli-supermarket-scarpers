@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, AsyncGenerator
 import os
 from .logger import Logger
-from .gzip_utils import extract_xml_from_gz_in_memory
+from .gzip_utils import extract_xml_from_gz_in_memory, GZIP_MAGIC_BYTES, ZIP_MAGIC_BYTES
 
 
 class FileOutput(ABC):
@@ -39,17 +39,26 @@ class FileOutput(ABC):
         """
         Extract compressed content if needed.
 
+        Detects compression by content magic bytes (gzip: 0x1f8b, zip: PK)
+        rather than filename extension, since some servers return compressed
+        content under filenames without .gz extension.
+
         Returns:
             (content, filename, extraction_success)
         """
-        if not extract_gz or not file_name.endswith(".gz"):
+        is_compressed = len(file_content) >= 2 and file_content[:2] in (
+            GZIP_MAGIC_BYTES,
+            ZIP_MAGIC_BYTES,
+        )
+        if not extract_gz or not is_compressed:
             return file_content, file_name, True
 
         try:
             extracted = await asyncio.to_thread(
                 extract_xml_from_gz_in_memory, file_content, file_name
             )
-            new_name = os.path.splitext(file_name)[0] + ".xml"
+            base_name = file_name[:-3] if file_name.endswith(".gz") else file_name
+            new_name = os.path.splitext(base_name)[0] + ".xml"
             return extracted, new_name, True
         except Exception as e:  # pylint: disable=broad-except
             Logger.error(f"Failed to extract {file_name}: {e}")
@@ -103,9 +112,11 @@ class DiskFileOutput(FileOutput):
         error = None
 
         try:
-            # Extract if it's a .gz file
+            # Extract if it's compressed
             file_content, file_name, extract_successfully = (
-                await self._extract_if_compressed(file_content, file_name)
+                await self._extract_if_compressed(
+                    file_content, file_name, self.extract_gz
+                )
             )
 
             # Write file content to disk
