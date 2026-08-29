@@ -1,9 +1,13 @@
-import fcntl
 import hashlib
-import os
 import json
+import os
 import time
 from functools import wraps
+
+if os.name == "posix":
+    import fcntl
+else:
+    fcntl = None
 
 _CACHE_DIR = ".cache"
 
