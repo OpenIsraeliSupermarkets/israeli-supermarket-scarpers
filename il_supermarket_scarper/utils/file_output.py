@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, AsyncGenerator
 import os
 from .logger import Logger
-from .gzip_utils import extract_xml_from_gz_in_memory
+from .gzip_utils import extract_xml_from_gz_in_memory, is_compressed_content
 
 
 class FileOutput(ABC):
@@ -39,17 +39,22 @@ class FileOutput(ABC):
         """
         Extract compressed content if needed.
 
+        Detects compression by content magic bytes (gzip: 0x1f8b, zip: PK)
+        rather than filename extension, since some servers return compressed
+        content under filenames without .gz extension.
+
         Returns:
             (content, filename, extraction_success)
         """
-        if not extract_gz or not file_name.endswith(".gz"):
+        if not extract_gz or not is_compressed_content(file_content):
             return file_content, file_name, True
 
         try:
             extracted = await asyncio.to_thread(
                 extract_xml_from_gz_in_memory, file_content, file_name
             )
-            new_name = os.path.splitext(file_name)[0] + ".xml"
+            base_name = file_name[:-3] if file_name.endswith(".gz") else file_name
+            new_name = os.path.splitext(base_name)[0] + ".xml"
             return extracted, new_name, True
         except Exception as e:  # pylint: disable=broad-except
             Logger.error(f"Failed to extract {file_name}: {e}")
@@ -103,9 +108,11 @@ class DiskFileOutput(FileOutput):
         error = None
 
         try:
-            # Extract if it's a .gz file
+            # Extract if it's compressed
             file_content, file_name, extract_successfully = (
-                await self._extract_if_compressed(file_content, file_name)
+                await self._extract_if_compressed(
+                    file_content, file_name, self.extract_gz
+                )
             )
 
             # Write file content to disk
@@ -157,6 +164,7 @@ class QueueFileOutput(FileOutput):
         self,
         queue_handler: "AbstractQueueHandler",
         storage_path: str = "/tmp/il_supermarket_status",
+        extract_gz: bool = True,
     ):
         """
         Initialize queue file output.
@@ -164,9 +172,11 @@ class QueueFileOutput(FileOutput):
         Args:
             queue_handler: An implementation of AbstractQueueHandler
             storage_path: Path for storing status files (default: /tmp/il_supermarket_status)
+            extract_gz: Whether to extract compressed files before sending to queue
         """
         self.queue_handler: AbstractQueueHandler = queue_handler
         self.storage_path = storage_path
+        self.extract_gz = extract_gz
         os.makedirs(storage_path, exist_ok=True)
 
     async def save_file(
@@ -176,15 +186,17 @@ class QueueFileOutput(FileOutput):
         file_content: bytes,
         metadata: Dict[str, Any] = None,
     ) -> Dict[str, Any]:
-        """Send file to queue, extracting gzipped files first."""
+        """Send file to queue, extracting compressed files first."""
         saved = False
         extract_successfully = False
         error = None
 
         try:
-            # Extract if it's a .gz file
+            # Extract if it's compressed (detected by magic bytes)
             file_content, file_name, extract_successfully = (
-                await self._extract_if_compressed(file_content, file_name)
+                await self._extract_if_compressed(
+                    file_content, file_name, self.extract_gz
+                )
             )
             # Send file to queue
             if extract_successfully:
