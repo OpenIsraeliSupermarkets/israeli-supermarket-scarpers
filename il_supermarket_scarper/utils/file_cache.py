@@ -1,9 +1,14 @@
-import fcntl
 import hashlib
 import os
 import json
 import time
 from functools import wraps
+
+# fcntl is POSIX-only; skip file locking on Windows
+if os.name == "posix":
+    import fcntl
+else:
+    fcntl = None  # pylint: disable=invalid-name
 
 _CACHE_DIR = ".cache"
 
@@ -50,21 +55,30 @@ def file_cache(ttl=None):
 
             # Slow path: acquire exclusive per-key lock, then re-check
             os.makedirs(_CACHE_DIR, exist_ok=True)
-            lock_path = get_lock_file(func.__name__, cache_key)
-            with open(lock_path, "w", encoding="utf-8") as lock_f:
-                fcntl.flock(lock_f, fcntl.LOCK_EX)
-                try:
-                    cache = load_cache(cache_file)
-                    entry = cache.get(cache_key)
-                    if entry and _is_valid(entry):
-                        return entry["result"]
 
-                    result = func(*args, **kwargs)
-                    cache[cache_key] = {"result": result, "timestamp": time.time()}
-                    save_cache(cache_file, cache)
-                    return result
-                finally:
-                    fcntl.flock(lock_f, fcntl.LOCK_UN)
+            if fcntl:
+                # POSIX: use file locking to prevent concurrent fetches
+                lock_path = get_lock_file(func.__name__, cache_key)
+                with open(lock_path, "w", encoding="utf-8") as lock_f:
+                    fcntl.flock(lock_f, fcntl.LOCK_EX)
+                    try:
+                        cache = load_cache(cache_file)
+                        entry = cache.get(cache_key)
+                        if entry and _is_valid(entry):
+                            return entry["result"]
+
+                        result = func(*args, **kwargs)
+                        cache[cache_key] = {"result": result, "timestamp": time.time()}
+                        save_cache(cache_file, cache)
+                        return result
+                    finally:
+                        fcntl.flock(lock_f, fcntl.LOCK_UN)
+            else:
+                # Non-POSIX (e.g., Windows): skip locking, just fetch and cache
+                result = func(*args, **kwargs)
+                cache[cache_key] = {"result": result, "timestamp": time.time()}
+                save_cache(cache_file, cache)
+                return result
 
         def generate_cache_key(args, kwargs):
             key_parts = []
