@@ -2,8 +2,10 @@ import datetime
 import re
 import os
 import enum
+from urllib.parse import urlparse
 import holidays
 import pytz
+from bs4 import BeautifulSoup
 from .logger import Logger
 from .connection import get_from_latast_webpage, get_from_webpage
 
@@ -33,6 +35,31 @@ def get_cached_page():
     ) as page_cache:
         cache = page_cache.read()
     return cache
+
+
+def get_cpfta_retailer_links(source="cache"):
+    """Parse retailer name+href pairs from cpfta_prices_regulations HTML."""
+    if source != "cache":
+        raise ValueError(f"source '{source}' is not valid.")
+
+    soup = BeautifulSoup(get_cached_page(), features="lxml")
+    rows = []
+    for table_row in soup.find_all("tr"):
+        cells = table_row.find_all("td")
+        if not cells:
+            continue
+        name = cells[0].get_text(" ", strip=True)
+        if not name:
+            continue
+        for anchor in table_row.find_all("a", href=True):
+            href = anchor["href"].strip()
+            if not href.startswith("http"):
+                continue
+            host = (urlparse(href).hostname or "").lower()
+            if not host or host == "gov.il" or host.endswith(".gov.il"):
+                continue
+            rows.append({"name": name, "href": href})
+    return rows
 
 
 def get_status():

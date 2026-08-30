@@ -1,31 +1,53 @@
 # pylint: disable=arguments-differ,arguments-renamed
-from enum import Enum
+import tempfile
 from datetime import datetime
-import json
-import os
+from enum import Enum
+from urllib.parse import urlparse
 
+import il_supermarket_scarper.scrappers as all_scrappers
 from il_supermarket_scarper.utils import (
     _now,
     _testing_now,
     datetime_in_tlv,
+    DumpFolderNames,
     FileTypesFilters,
     hour_files_expected_to_be_accassible,
 )
+from il_supermarket_scarper.utils.file_output import DiskFileOutput
 from il_supermarket_scarper.utils.logger import Logger
+from il_supermarket_scarper.utils.status import get_cpfta_retailer_links
 
 
-def _load_gov_il_links():
-    """Load gov.il links from cached JSON file."""
-    json_path = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "scripts",
-        "gov_il_links.json",
-    )
-    if not os.path.exists(json_path):
-        return {}
-    with open(json_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
-    return {link["scraper"]: link for link in data.get("links", [])}
+def _url_host(url):
+    """Return a normalized hostname from a URL, or empty string."""
+    if not url:
+        return ""
+    parsed = urlparse(url if "://" in url else f"http://{url}")
+    host = (parsed.hostname or "").lower()
+    if host.startswith("www."):
+        host = host[4:]
+    return host
+
+
+def _scraper_class_for(name):
+    """Resolve a ScraperStability member name to its scraper class."""
+    class_name = DumpFolderNames[name].value
+    return getattr(all_scrappers, class_name)
+
+
+def _configured_url_for(name):
+    """Return the URL configured on the scraper class (not gov.il)."""
+    scraper_cls = _scraper_class_for(name)
+    with tempfile.TemporaryDirectory() as tmp:
+        instance = scraper_cls(file_output=DiskFileOutput(storage_path=tmp))
+        url = getattr(instance, "url", None)
+        if url:
+            return url
+        ftp_host = getattr(instance, "ftp_host", None)
+        if ftp_host:
+            ftp_path = getattr(instance, "ftp_path", "") or ""
+            return f"ftp://{ftp_host}{ftp_path}"
+    return None
 
 
 class FullyStable:
@@ -33,10 +55,6 @@ class FullyStable:
 
     # If True, the retailer is no longer on gov.il and scraper is expected to not work
     is_deprecated = False
-
-    # Expected URL from gov.il (if different from scraper's hardcoded URL)
-    # Set this when gov.il lists a different URL than what the scraper uses
-    expected_gov_il_url = None
 
     @classmethod
     def pass_expiration_date(cls):
@@ -90,17 +108,12 @@ class SuperFlaky(FullyStable):
 
 
 class NetivHased(FullyStable):
-    """Netiv Hased site moved from hardcoded IP to new domain.
+    """Netiv Hased site is down (HTTP 500 on http://141.226.203.152/).
 
-    Evidence: upstream returns HTTP 500 for http://141.226.203.152/ as of
-    2026-07-24 (CI NetivHasefTestCase all failing). However, gov.il lists
-    the retailer at https://app.netiv-hesed.com/ which is live and serving files.
-
-    Status: UNSTABLE (not deprecated) - retailer still on gov.il, URL needs update.
+    Evidence: upstream returns HTTP 500 for store/price/promo scrapes as of
+    2026-07-24 (CI NetivHasefTestCase all failing). Previously Saturday-only;
+    site is now unavailable on weekdays too.
     """
-
-    is_deprecated = False
-    expected_gov_il_url = "https://app.netiv-hesed.com/"
 
     @classmethod
     def pass_expiration_date(cls):
@@ -165,16 +178,7 @@ class CityMarketKiratOno(FullyStable):
 
 
 class CityMarketKiratGat(FullyStable):
-    """City Market Kiryat Gat stability.
-
-    Note: The `or True` was removed on 2026-08-30 because the site
-    (https://citymarketkiryatgat.binaprojects.com/) is now working and
-    actively publishing files. The previous "active issue" appears resolved.
-
-    Status: UNSTABLE during promo_full file requests only (inherits from FullyStable).
-    """
-
-    is_deprecated = False
+    """Netiv Hased is stablity"""
 
     @classmethod
     def pass_expiration_date(cls):
@@ -191,11 +195,14 @@ class CityMarketKiratGat(FullyStable):
         cls, when_date=None, files_types=None, utilize_date_param=True, **_
     ):
         """return true if the parser is stble"""
-        return super(cls, CityMarketKiratGat).failire_valid(
-            when_date=when_date,
-            files_types=files_types,
-            utilize_date_param=utilize_date_param,
-        ) or cls.searching_for_update_promo_full(files_types=files_types)
+        return (
+            super(cls, CityMarketKiratGat).failire_valid(
+                when_date=when_date,
+                files_types=files_types,
+                utilize_date_param=utilize_date_param,
+            )
+            or True
+        )  # there is an active issue with the site
 
 
 class DoNotPublishStores(FullyStable):
@@ -446,7 +453,7 @@ class ScraperStability(Enum):
 
         Unstable scrapers are those whose failire_valid() always returns True
         but the retailer is still listed on gov.il. These need investigation:
-        - URL may have changed (check expected_gov_il_url)
+        - URL may have changed (compare scraper class URL to cpfta HTML)
         - Site may have recovered
         - Site may be temporarily down (retailer's fault)
         """
@@ -456,53 +463,49 @@ class ScraperStability(Enum):
 
     @classmethod
     def get_url_drift(cls):
-        """Return scrapers where our URL differs from gov.il expected URL.
+        """Return unstable scrapers whose scraper-class URL is not on gov.il.
 
-        Returns dict of {scraper_name: {"expected": url, "reason": str}}.
-        Only includes scrapers with expected_gov_il_url set.
+        Compares the URL configured on the scraper class against hrefs parsed
+        from cpfta_prices_regulations HTML.
         """
+        gov_il_hosts = {
+            _url_host(link["href"]) for link in get_cpfta_retailer_links()
+        }
         drift = {}
-        for name in cls.__members__:
-            stabler = cls[name].value
-            expected_url = getattr(stabler, "expected_gov_il_url", None)
-            if expected_url:
+        for name in cls.get_unstable_scrapers():
+            scraper_url = _configured_url_for(name)
+            if scraper_url and _url_host(scraper_url) not in gov_il_hosts:
                 drift[name] = {
-                    "expected_gov_il_url": expected_url,
-                    "reason": (stabler.__doc__ or "").split("\n")[0].strip(),
+                    "scraper_url": scraper_url,
+                    "reason": (cls[name].value.__doc__ or "").split("\n")[0].strip(),
                 }
         return drift
 
     @classmethod
     def validate_against_gov_il(cls):
-        """Check if unstable scrapers are still listed on gov.il.
+        """Check if unstable scrapers' configured URLs appear on gov.il.
 
         Returns dict with:
-        - "unstable_on_gov_il": scrapers that are unstable AND on gov.il (need fixing)
-        - "unstable_not_on_gov_il": scrapers marked unstable but NOT on gov.il
-        - "url_drift": scrapers where our URL differs from gov.il
+        - "unstable_on_gov_il": unstable scrapers whose scraper URL is listed
+        - "unstable_not_on_gov_il": unstable scrapers whose scraper URL is not
+        - "url_drift": same as get_url_drift()
         """
-        gov_il_links = _load_gov_il_links()
-        gov_il_scrapers = set(gov_il_links.keys())
-
+        gov_il_hosts = {
+            _url_host(link["href"]) for link in get_cpfta_retailer_links()
+        }
         unstable = set(cls.get_unstable_scrapers())
+        url_drift = cls.get_url_drift()
 
         result = {
             "unstable_on_gov_il": [],
             "unstable_not_on_gov_il": [],
-            "url_drift": {},
+            "url_drift": url_drift,
         }
 
         for name in unstable:
-            if name in gov_il_scrapers:
+            scraper_url = _configured_url_for(name)
+            if scraper_url and _url_host(scraper_url) in gov_il_hosts:
                 result["unstable_on_gov_il"].append(name)
-                # Check for URL drift
-                stabler = cls[name].value
-                expected_url = getattr(stabler, "expected_gov_il_url", None)
-                if expected_url:
-                    result["url_drift"][name] = {
-                        "scraper_expected": expected_url,
-                        "gov_il_href": gov_il_links[name].get("href"),
-                    }
             else:
                 result["unstable_not_on_gov_il"].append(name)
 

@@ -4,6 +4,7 @@ from il_supermarket_scarper.utils.status import (
     get_status,
     get_status_date,
     get_statue_page,
+    get_cpfta_retailer_links,
 )
 from il_supermarket_scarper.utils.connection import disable_when_outside_israel
 from il_supermarket_scarper.utils.validation import show_text_diff, extract_main_content
@@ -40,3 +41,15 @@ def test_page_complete_diff():
     ), "gov.il page did not contain main content (possible block page)"
     assert cached_main is not None, "cached page did not contain main content"
     assert current_main == cached_main, show_text_diff(cached_main, current_main)
+
+
+def test_cpfta_retailer_links_from_cached_html():
+    """Parse retailer hrefs from cached cpfta_prices_regulations HTML."""
+    links = get_cpfta_retailer_links(source="cache")
+    hrefs = {link["href"] for link in links}
+
+    assert links, "cached cpfta HTML should contain retailer links"
+    assert any("app.netiv-hesed.com" in href for href in hrefs)
+    assert any("citymarketkiryatgat.binaprojects.com" in href for href in hrefs)
+    assert not any("141.226.203.152" in href for href in hrefs)
+    assert not any("prices.quik.co.il" in href for href in hrefs)

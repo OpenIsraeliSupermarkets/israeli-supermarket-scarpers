@@ -260,7 +260,8 @@ def make_test_case(scraper_enum, store_id):
                         Logger.warning(
                             f"Scraper {scraper_enum.name} marked as 'expected to fail' "
                             f"but returned {len(files_found)} files. "
-                            f"Consider removing it from ScraperStability or updating its failire_valid()."
+                            "Consider removing it from ScraperStability "
+                            "or updating its failire_valid()."
                         )
 
                     for file in files_found:
