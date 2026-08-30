@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import List, Literal, Optional, Tuple
 
-InventoryKind = Literal["browser", "ftp", "http_json", "wolt_daily"]
+InventoryKind = Literal["browser", "ftp", "http_json", "wolt_daily", "hazi_hinam"]
 
 _PAGINATION_NEXT_LI = (
     "//li[contains(concat(' ', normalize-space(@class), ' '), ' pagination-item ') "
@@ -26,6 +26,7 @@ class UiListingPath:  # pylint: disable=too-many-instance-attributes
       - ``http_json``: single GET to ``landing_path`` / scraper URL; JSON array field
         ``json_name_field``.
       - ``wolt_daily``: last 10 day HTML pages under ``…/YYYY-MM-DD.html``.
+      - ``hazi_hinam``: Hazi Hinam — pagination links drop date; walk ``?p=N&d=`` pages.
     """
 
     clicks: Tuple[str, ...]
@@ -132,7 +133,13 @@ class UIEngine(Enum):
         ),
     )
     CITY_MARKET_SHOPS = _striped_table_ui("CITY_MARKET_SHOPS")
-    HAZI_HINAM = _striped_table_ui("HAZI_HINAM")
+    # Pagination links drop the date query param; validate_ui_vs_scraper walks pages via URL.
+    HAZI_HINAM = UiListingPath(
+        key="HAZI_HINAM",
+        inventory="hazi_hinam",
+        clicks=(),
+        file_name_xpath="//table[contains(@class,'table-striped')]/tbody/tr/td[3]",
+    )
 
     # --- PublishPrice SPA ---
     YAYNO_BITAN_AND_CARREFOUR = _publishprice_spa_ui("YAYNO_BITAN_AND_CARREFOUR")
@@ -152,7 +159,7 @@ class UIEngine(Enum):
         key="NETIV_HASED",
         landing_path="",
         clicks=(),
-        file_name_xpath="//table//tr[td]//a",
+        file_name_xpath="//table/tbody/tr/td[6]",
     )
     MESHMAT_YOSEF_1 = UiListingPath(
         key="MESHMAT_YOSEF_1",

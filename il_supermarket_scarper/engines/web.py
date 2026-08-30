@@ -1,4 +1,5 @@
 import re
+from urllib.parse import parse_qs, urljoin, urlparse
 from bs4 import BeautifulSoup
 from il_supermarket_scarper.utils import FileEntry, Logger
 from il_supermarket_scarper.utils import convert_nl_size_to_bytes, UnitSize
@@ -60,13 +61,25 @@ class WebBase(Engine):
             Logger.debug(f"Error extracting file size from entry: {e}")
         return None
 
+    def _absolute_download_url(self, href):
+        """Resolve a listing href against the site base without introducing '//'."""
+        return urljoin(self.url, href)
+
+    def _file_name_from_href(self, href):
+        """Prefer ?fileName= on download endpoints; else last path segment."""
+        file_name = parse_qs(urlparse(href).query).get("fileName", [""])[0]
+        if file_name:
+            return file_name.split(".")[0]
+        return href.split(".")[0].split("/")[-1]
+
     async def extract_task_from_entry(self, all_trs):
         """extract download links, file names, and file sizes from page list"""
 
         for x in all_trs:
             try:
-                name = x.a.attrs["href"].split(".")[0].split("/")[-1]
-                url = self.url + x.a.attrs["href"]
+                href = x.a.attrs["href"]
+                name = self._file_name_from_href(href)
+                url = self._absolute_download_url(href)
                 size = self.get_file_size_from_entry(x)
                 yield FileEntry(name=name, url=url, size=size)
             except (AttributeError, KeyError, IndexError, TypeError) as e:

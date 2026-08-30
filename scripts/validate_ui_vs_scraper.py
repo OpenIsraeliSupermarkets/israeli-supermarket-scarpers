@@ -20,6 +20,7 @@ import asyncio
 import contextlib
 import json
 import os
+import re
 import sys
 import tempfile
 from collections import defaultdict
@@ -255,6 +256,47 @@ def _list_ui_via_clicks(landing_url: str, path: UiListingPath) -> Set[str]:
     return names
 
 
+def _list_ui_hazi_hinam(landing_url: str, path: UiListingPath) -> Set[str]:
+    """Hazi Hinam pager links omit the date param; walk pages with date from the form."""
+    names: Set[str] = set()
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        try:
+            page = browser.new_page()
+            page.goto(landing_url, timeout=90000, wait_until="domcontentloaded")
+            page.locator(f"xpath={path.file_name_xpath}").first.wait_for(
+                state="attached", timeout=60000
+            )
+            page.wait_for_timeout(1000)
+            date_val = page.get_by_role("textbox", name="תאריך").input_value()
+            page_num = 1
+            total_pages = 1
+            while page_num <= 500:
+                names |= _collect_names_from_page(page, path.file_name_xpath)
+                last_href = page.locator(
+                    "(//li[contains(concat(' ', normalize-space(@class), ' '), "
+                    "' pagination-item ')])[last()]/a"
+                ).first.get_attribute("href")
+                if last_href:
+                    match = re.search(r"p=(\d+)", last_href)
+                    if match:
+                        total_pages = int(match.group(1))
+                if page_num >= total_pages:
+                    break
+                page_num += 1
+                next_url = (
+                    f"{landing_url.rstrip('/')}?p={page_num}&s=&f=&t=&d={date_val}"
+                )
+                page.goto(next_url, timeout=90000, wait_until="domcontentloaded")
+                page.locator(f"xpath={path.file_name_xpath}").first.wait_for(
+                    state="attached", timeout=60000
+                )
+                page.wait_for_timeout(1000)
+        finally:
+            browser.close()
+    return names
+
+
 async def _list_ui_ftp_names(scraper) -> Set[str]:
     names: Set[str] = set()
     extensions = getattr(scraper, "target_file_extensions", ("xml", "gz"))
@@ -315,6 +357,9 @@ async def list_ui_site_names(enum_name: str, scraper) -> Set[str]:
         )
     if path.inventory == "wolt_daily":
         return await _list_ui_wolt_daily(scraper, path)
+    if path.inventory == "hazi_hinam":
+        landing = ui_listing_url(scraper, path)
+        return await asyncio.to_thread(_list_ui_hazi_hinam, landing, path)
 
     landing = ui_listing_url(scraper, path)
     return await asyncio.to_thread(_list_ui_via_clicks, landing, path)
