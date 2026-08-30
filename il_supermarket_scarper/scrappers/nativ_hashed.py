@@ -2,7 +2,7 @@ from il_supermarket_scarper.engines.web import WebBase
 from il_supermarket_scarper.utils import DumpFolderNames
 
 
-# NetivHased site is down (HTTP 500); see ScraperStability.NetivHased
+# Still listed on gov.il as app.netiv-hesed.com; scrape is expected to fail.
 class NetivHased(WebBase):
     """scraper for nativ Hased"""
 
@@ -12,7 +12,7 @@ class NetivHased(WebBase):
         super().__init__(
             chain=DumpFolderNames.NETIV_HASED,
             chain_id="7290058160839",
-            url="http://141.226.203.152/",
+            url="https://app.netiv-hesed.com/",
             file_output=file_output,
             status_database=status_database,
         )

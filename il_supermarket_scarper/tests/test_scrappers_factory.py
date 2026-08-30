@@ -1,6 +1,6 @@
 from il_supermarket_scarper import ScraperStability, ScraperFactory, datetime_in_tlv
 from il_supermarket_scarper.scraper_stability import ScraperKind
-from il_supermarket_scarper.utils.status import get_cpfta_retailer_hosts
+from il_supermarket_scarper.utils.status import get_cpfta_retailer_hosts, href_host
 import tempfile
 
 from il_supermarket_scarper.utils.file_output import DiskFileOutput
@@ -50,10 +50,40 @@ def test_scraper_kinds():
 
 def test_always_failing_login_details_match_gov_il():
     """Always-failing scrapers must still be listed in the cached gov.il HTML."""
+    gov_il_hosts = get_cpfta_retailer_hosts()
     for name in ScraperStability.get_always_failing_scrapers():
-        scraper_cls = ScraperFactory.get(name)
+        scraper_cls = ScraperFactory[name].value
         with tempfile.TemporaryDirectory() as tmp:
             instance = scraper_cls(file_output=DiskFileOutput(storage_path=tmp))
             login_details = instance.get_login_details()
-            assert get_cpfta_retailer_hosts(login_details)
+            host = href_host(login_details.url)
+            assert host in gov_il_hosts, (
+                f"{name} host {host!r} from {login_details!r} "
+                "is not in cpfta_prices_regulations"
+            )
+
+
+def _login_details_for(name):
+    scraper_cls = ScraperFactory[name].value
+    with tempfile.TemporaryDirectory() as tmp:
+        instance = scraper_cls(file_output=DiskFileOutput(storage_path=tmp))
+        return instance.get_login_details()
+
+
+def test_login_details_include_credentials_when_set():
+    """Username and password are included only when the scraper has them."""
+    web = _login_details_for("NETIV_HASED")
+    assert web.url == "https://app.netiv-hesed.com/"
+    assert web.username is None
+    assert web.password is None
+
+    ftp_user_only = _login_details_for("RAMI_LEVY")
+    assert ftp_user_only.url == "ftp://url.retail.publishedprices.co.il/"
+    assert ftp_user_only.username == "RamiLevi"
+    assert ftp_user_only.password is None
+
+    ftp_with_password = _login_details_for("YELLOW")
+    assert ftp_with_password.url == "ftp://url.retail.publishedprices.co.il/"
+    assert ftp_with_password.username == "Paz_bo"
+    assert ftp_with_password.password == "paz468"
    

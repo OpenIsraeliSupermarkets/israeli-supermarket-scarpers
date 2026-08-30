@@ -1,18 +1,14 @@
 # pylint: disable=arguments-differ,arguments-renamed
-import tempfile
 from datetime import datetime
 from enum import Enum
 
-import il_supermarket_scarper.scrappers as all_scrappers
 from il_supermarket_scarper.utils import (
     _now,
     _testing_now,
     datetime_in_tlv,
-    DumpFolderNames,
     FileTypesFilters,
     hour_files_expected_to_be_accassible,
 )
-from il_supermarket_scarper.utils.file_output import DiskFileOutput
 from il_supermarket_scarper.utils.logger import Logger
 
 
