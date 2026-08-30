@@ -211,6 +211,37 @@ class SuperYuda(FullyStable):
         ) or cls.searching_for_store_full(files_types=files_types)
 
 
+class Yellow(FullyStable):
+    """Yellow (Paz / יילו) does not publish store files.
+
+    Evidence 2026-08-30: FTP url.retail.publishedprices.co.il user Paz_bo
+    listed 591 Price/Promo files (dated 2026-08-30) and 0 filenames containing
+    'store'. Root listing has no subdirectories. Other Yellow file types scrape
+    successfully. CPFTA still lists יילו (page update 12.08.2026):
+    https://www.gov.il/he/pages/cpfta_prices_regulations
+    """
+
+    @classmethod
+    def pass_expiration_date(cls):
+        return datetime(2027, 1, 1)
+
+    @classmethod
+    def searching_for_store_full(cls, files_types=None, **_):
+        """Yellow FTP listing contains no store files."""
+        return files_types and files_types == [FileTypesFilters.STORE_FILE.name]
+
+    @classmethod
+    def failire_valid(
+        cls, when_date=None, files_types=None, utilize_date_param=True, **_
+    ):
+        """return true if the parser is stble"""
+        return super(cls, Yellow).failire_valid(
+            when_date=when_date,
+            files_types=files_types,
+            utilize_date_param=utilize_date_param,
+        ) or cls.searching_for_store_full(files_types=files_types)
+
+
 class QuikSiteIsDown(DeprecatedScraper):
     """Quik no longer has a dedicated gov.il listing (folded into Carrefour)."""
 
@@ -295,6 +326,7 @@ class ScraperStability(Enum):
     # NETIV_HASED = NetivHased  # recovered 2026-08-30: https://app.netiv-hesed.com/ lists files
     QUIK = QuikSiteIsDown
     SUPER_YUDA = SuperYuda
+    YELLOW = Yellow
     COFIX = PublishOnlyStores
     # SALACH_DABACH = DoNotPublishStores
     # # CITY_MARKET_GIVATAYIM = CityMarketGivataim
