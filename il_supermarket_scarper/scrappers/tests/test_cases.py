@@ -239,15 +239,8 @@ def make_test_case(scraper_enum, store_id):
                 files_found = os.listdir(download_path)
 
                 self._make_sure_status_file_is_valid(download_path)
-                expected_to_fail = ScraperStability.is_validate_scraper_found_no_files(
-                    scraper_enum.name,
-                    limit=limit,
-                    files_types=file_type,
-                    store_id=store_id,
-                    when_date=when_date,
-                    utilize_date_param=scraper_enum.value.utilize_date_param,
-                )
-                if expected_to_fail:
+                
+                if ScraperStability.is_always_failing(scraper_enum.name):
                     assert not files_found, (
                         f"Scraper {scraper_enum.name} expected to fail "
                         f"but returned {len(files_found)} files. "

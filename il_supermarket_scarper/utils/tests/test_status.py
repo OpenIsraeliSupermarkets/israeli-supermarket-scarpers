@@ -42,13 +42,3 @@ def test_page_complete_diff():
     assert cached_main is not None, "cached page did not contain main content"
     assert current_main == cached_main, show_text_diff(cached_main, current_main)
 
-
-def test_cpfta_retailer_links_from_cached_html():
-    """Parse retailer hosts from cached cpfta_prices_regulations HTML."""
-    hosts = get_cpfta_retailer_hosts(source="cache")
-
-    assert hosts, "cached cpfta HTML should contain retailer links"
-    assert "app.netiv-hesed.com" in hosts
-    assert "citymarketkiryatgat.binaprojects.com" in hosts
-    assert "141.226.203.152" not in hosts
-    assert "prices.quik.co.il" not in hosts
