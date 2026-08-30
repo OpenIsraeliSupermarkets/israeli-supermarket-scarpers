@@ -1,8 +1,8 @@
+import tempfile
+
 from il_supermarket_scarper import ScraperStability, ScraperFactory, datetime_in_tlv
 from il_supermarket_scarper.scraper_stability import ScraperKind
 from il_supermarket_scarper.utils.status import get_cpfta_retailer_hosts, href_host
-import tempfile
-
 from il_supermarket_scarper.utils.file_output import DiskFileOutput
 
 
@@ -34,10 +34,7 @@ def test_not_active():
 def test_scraper_kinds():
     """Three kinds: edge-case, always-failing (still on gov.il), deprecated."""
     assert set(ScraperStability.get_deprecated_scrapers()) == {"QUIK", "VICTORY"}
-    assert set(ScraperStability.get_always_failing_scrapers()) == {
-        "CITY_MARKET_KIRYATGAT",
-        "NETIV_HASED",
-    }
+    assert set(ScraperStability.get_always_failing_scrapers()) == set()
 
     factory_names = set(ScraperFactory.all_listed_scrappers())
     for name in ScraperStability.get_deprecated_scrapers():

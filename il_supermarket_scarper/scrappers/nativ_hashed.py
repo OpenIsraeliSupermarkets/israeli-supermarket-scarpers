@@ -2,7 +2,7 @@ from il_supermarket_scarper.engines.web import WebBase
 from il_supermarket_scarper.utils import DumpFolderNames
 
 
-# Still listed on gov.il as app.netiv-hesed.com; scrape is expected to fail.
+# Listed on gov.il as https://app.netiv-hesed.com/
 class NetivHased(WebBase):
     """scraper for nativ Hased"""
 

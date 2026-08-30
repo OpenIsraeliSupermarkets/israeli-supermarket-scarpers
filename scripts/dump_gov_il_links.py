@@ -106,7 +106,7 @@ SKILL_FALLBACK_LINKS: List[Dict[str, Any]] = [
         "scraper": "NETIV_HASED",
         "hebrew": "נתיב החסד",
         "engine": "WebBase",
-        "href": "http://141.226.203.152/",
+        "href": "https://app.netiv-hesed.com/",
     },
     {
         "scraper": "QUIK",
@@ -297,7 +297,7 @@ def extract_links(html: str, page_url: str) -> List[Dict[str, Any]]:
     soup = BeautifulSoup(html, "lxml")
     rows: List[Dict[str, Any]] = []
     seen = set()
-    for anchor in soup.find_all("a", href=True):
+    for anchor in soup.find_all("a", href=True) or []:
         href = anchor["href"].strip()
         text = " ".join(anchor.get_text(" ", strip=True).split())
         if not href.startswith("http"):

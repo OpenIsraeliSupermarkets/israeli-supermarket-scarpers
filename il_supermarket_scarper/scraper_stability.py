@@ -104,7 +104,7 @@ class SuperFlaky(FullyStable):
 
 
 class NetivHased(AlwaysFailing):
-    """Still on gov.il; scraper URL must match the cached listing."""
+    """Was always-failing on the old IP; app.netiv-hesed.com recovered 2026-08-30."""
 
 
 class CityMarketGivataim(FullyStable):
@@ -292,14 +292,14 @@ class ScraperStability(Enum):
     """tracker for the stablity of the scraper"""
 
     # COFIX = DoNotPublishStores
-    NETIV_HASED = NetivHased
+    # NETIV_HASED = NetivHased  # recovered 2026-08-30: https://app.netiv-hesed.com/ lists files
     QUIK = QuikSiteIsDown
     SUPER_YUDA = SuperYuda
     COFIX = PublishOnlyStores
     # SALACH_DABACH = DoNotPublishStores
     # # CITY_MARKET_GIVATAYIM = CityMarketGivataim
     # CITY_MARKET_KIRYATONO = CityMarketKiratOno
-    # CITY_MARKET_KIRYATGAT = CityMarketKiratGat
+    # CITY_MARKET_KIRYATGAT = CityMarketKiratGat  # recovered 2026-08-30: bina portal lists files
     MESHMAT_YOSEF_1 = DoNotPublishPromo
     VICTORY = VictoryMovedToNewSource
     # YOHANANOF = DoNotPublishStores

@@ -55,7 +55,8 @@ def get_cpfta_retailer_links(source="cache"):
 
     soup = BeautifulSoup(get_cached_page(), features="lxml")
     rows = []
-    for table_row in soup.find_all("tr"):
+    table_rows = soup.find_all("tr") or []
+    for table_row in table_rows:
         cells = table_row.find_all("td")
         if not cells:
             continue

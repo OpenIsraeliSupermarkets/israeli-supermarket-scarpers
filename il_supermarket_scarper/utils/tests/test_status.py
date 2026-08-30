@@ -4,7 +4,6 @@ from il_supermarket_scarper.utils.status import (
     get_status,
     get_status_date,
     get_statue_page,
-    get_cpfta_retailer_hosts,
 )
 from il_supermarket_scarper.utils.connection import disable_when_outside_israel
 from il_supermarket_scarper.utils.validation import show_text_diff, extract_main_content
@@ -41,4 +40,3 @@ def test_page_complete_diff():
     ), "gov.il page did not contain main content (possible block page)"
     assert cached_main is not None, "cached page did not contain main content"
     assert current_main == cached_main, show_text_diff(cached_main, current_main)
-

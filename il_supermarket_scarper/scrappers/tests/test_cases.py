@@ -239,7 +239,7 @@ def make_test_case(scraper_enum, store_id):
                 files_found = os.listdir(download_path)
 
                 self._make_sure_status_file_is_valid(download_path)
-                
+
                 if ScraperStability.is_always_failing(scraper_enum.name):
                     assert not files_found, (
                         f"Scraper {scraper_enum.name} expected to fail "
