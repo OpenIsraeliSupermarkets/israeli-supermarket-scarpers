@@ -37,6 +37,17 @@ def get_cached_page():
     return cache
 
 
+def href_host(url):
+    """Return a normalized hostname from a URL, or empty string."""
+    if not url:
+        return ""
+    parsed = urlparse(url if "://" in url else f"http://{url}")
+    host = (parsed.hostname or "").lower()
+    if host.startswith("www."):
+        host = host[4:]
+    return host
+
+
 def get_cpfta_retailer_links(source="cache"):
     """Parse retailer name+href pairs from cpfta_prices_regulations HTML."""
     if source != "cache":
@@ -55,11 +66,16 @@ def get_cpfta_retailer_links(source="cache"):
             href = anchor["href"].strip()
             if not href.startswith("http"):
                 continue
-            host = (urlparse(href).hostname or "").lower()
+            host = href_host(href)
             if not host or host == "gov.il" or host.endswith(".gov.il"):
                 continue
             rows.append({"name": name, "href": href})
     return rows
+
+
+def get_cpfta_retailer_hosts(source="cache"):
+    """Hostnames of retailer portals listed in cpfta_prices_regulations."""
+    return {href_host(link["href"]) for link in get_cpfta_retailer_links(source)}
 
 
 def get_status():
