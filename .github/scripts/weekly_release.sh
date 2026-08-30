@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Change-gate weekly release: noop if no commits since last v* tag; else tag and release.
 # Bumps setup.py patch only when it still matches the latest v* tag (skip if already bumped).
+# Re-runnable: an existing tag or release is reused instead of failing.
 # Env: GITHUB_TOKEN (contents write), GITHUB_REPOSITORY
 # Outputs via GITHUB_OUTPUT when present: outcome=noop|released, version=...
 set -euo pipefail
@@ -10,8 +11,32 @@ if [ "${GITHUB_REF_NAME:-}" != "main" ]; then
   exit 1
 fi
 
+# Must precede any commit or annotated tag, both of which need an author.
+git config user.name "github-actions[bot]"
+git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+emit_output() {
+  if [ -n "${GITHUB_OUTPUT:-}" ]; then
+    echo "outcome=$1" >> "$GITHUB_OUTPUT"
+    if [ -n "${2:-}" ]; then
+      echo "version=$2" >> "$GITHUB_OUTPUT"
+    fi
+  fi
+}
+
+create_release() {
+  local tag="$1"
+  local start_tag="${2:-}"
+  local args=(--title "${tag}" --generate-notes)
+  if [ -n "${start_tag}" ]; then
+    args+=(--notes-start-tag "${start_tag}")
+  fi
+  gh release create "${tag}" "${args[@]}"
+}
+
 git fetch --tags --force origin
 LATEST_TAG=$(git tag -l 'v*' --sort=-v:refname | head -n 1 || true)
+export LATEST_TAG
 if [ -z "${LATEST_TAG}" ]; then
   echo "No existing v* tags; treating all history as candidates."
   COMMIT_COUNT=$(git rev-list --count HEAD)
@@ -21,58 +46,78 @@ fi
 echo "Latest tag: ${LATEST_TAG:-<none>}; commits since: ${COMMIT_COUNT}"
 
 if [ "${COMMIT_COUNT}" -eq 0 ]; then
-  if [ -n "${GITHUB_OUTPUT:-}" ]; then
-    echo "outcome=noop" >> "$GITHUB_OUTPUT"
+  # A previous run can die after pushing the tag but before creating the release,
+  # which leaves nothing to publish from. Finish that release instead of nooping.
+  if [ -n "${LATEST_TAG}" ] && ! gh release view "${LATEST_TAG}" >/dev/null 2>&1; then
+    PREVIOUS_TAG=$(git tag -l 'v*' --sort=-v:refname | sed -n 2p || true)
+    echo "Tag ${LATEST_TAG} has no GitHub release; creating it."
+    create_release "${LATEST_TAG}" "${PREVIOUS_TAG}"
+    emit_output released "${LATEST_TAG#v}"
+    exit 0
   fi
+  emit_output noop
   echo "No commits since last tag; noop."
   exit 0
 fi
 
-read -r SKIP_BUMP NEW_VERSION <<EOF
-$(python - <<PY
+if ! VERSION_INFO=$(python - <<'PY'
+import os
 import re
+import sys
 from pathlib import Path
 
-def parse_version(v: str) -> tuple[int, ...]:
-    return tuple(int(x) for x in v.split("."))
+
+def parse_version(value):
+    parts = value.split(".")
+    if len(parts) != 3 or not all(part.isdigit() for part in parts):
+        sys.exit(f"unsupported version {value!r} in setup.py (expected MAJOR.MINOR.PATCH)")
+    return tuple(int(part) for part in parts)
+
 
 text = Path("setup.py").read_text(encoding="utf-8")
 match = re.search(r'version\s*=\s*"([^"]+)"', text)
 if not match:
-    raise SystemExit("version= not found in setup.py")
+    sys.exit("version= not found in setup.py")
 current = match.group(1)
-tag_version = "${LATEST_TAG#v}" if "${LATEST_TAG:-}" else ""
+current_parts = parse_version(current)
 
-if tag_version and parse_version(current) > parse_version(tag_version):
-    print(f"yes {current}")
+tag = os.environ.get("LATEST_TAG", "")
+tag_version = tag[1:] if tag.startswith("v") else tag
+
+if tag_version and current_parts > parse_version(tag_version):
+    print(f"yes {current} {current}")
 else:
-    major, minor, patch = parse_version(current)
-    bumped = f"{major}.{minor}.{patch + 1}"
-    print(f"no {bumped}")
+    major, minor, patch = current_parts
+    print(f"no {current} {major}.{minor}.{patch + 1}")
 PY
-)
-EOF
+); then
+  echo "Failed to determine the release version from setup.py." >&2
+  exit 1
+fi
+
+read -r SKIP_BUMP CURRENT_VERSION NEW_VERSION <<<"${VERSION_INFO}"
+if [ "${SKIP_BUMP}" != "yes" ] && [ "${SKIP_BUMP}" != "no" ]; then
+  echo "Unexpected version computation output: ${VERSION_INFO}" >&2
+  exit 1
+fi
+if ! [[ "${NEW_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "Refusing to release invalid version: '${NEW_VERSION}'" >&2
+  exit 1
+fi
 
 if [ "${SKIP_BUMP}" = "yes" ]; then
   echo "setup.py already at ${NEW_VERSION} (latest tag ${LATEST_TAG:-<none>}); skipping bump."
 else
-  CURRENT=$(python - <<'PY'
-import re, pathlib
-text = pathlib.Path("setup.py").read_text(encoding="utf-8")
-m = re.search(r'version\s*=\s*"([^"]+)"', text)
-if not m:
-    raise SystemExit("version= not found in setup.py")
-print(m.group(1))
-PY
-  )
-  echo "Bumping setup.py ${CURRENT} -> ${NEW_VERSION}"
+  echo "Bumping setup.py ${CURRENT_VERSION} -> ${NEW_VERSION}"
 
-  python - <<PY
+  CURRENT_VERSION="${CURRENT_VERSION}" NEW_VERSION="${NEW_VERSION}" python - <<'PY'
+import os
 from pathlib import Path
+
 path = Path("setup.py")
 text = path.read_text(encoding="utf-8")
-old = 'version="${CURRENT}"'
-new = 'version="${NEW_VERSION}"'
+old = 'version="{}"'.format(os.environ["CURRENT_VERSION"])
+new = 'version="{}"'.format(os.environ["NEW_VERSION"])
 if old not in text:
     raise SystemExit(f"expected {old!r} in setup.py")
 path.write_text(text.replace(old, new, 1), encoding="utf-8")
@@ -83,19 +128,25 @@ PY
   git push origin HEAD:main
 fi
 
-git config user.name "github-actions[bot]"
-git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
 TAG="v${NEW_VERSION}"
-git tag -a "${TAG}" -m "Release ${TAG}"
-git push origin "${TAG}"
 
-gh release create "${TAG}" \
-  --title "${TAG}" \
-  --notes "Weekly release ${TAG} (auto). Commits since ${LATEST_TAG:-beginning}: ${COMMIT_COUNT}."
-
-if [ -n "${GITHUB_OUTPUT:-}" ]; then
-  echo "outcome=released" >> "$GITHUB_OUTPUT"
-  echo "version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
+if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+  echo "Tag ${TAG} already exists locally; reusing it."
+else
+  git tag -a "${TAG}" -m "Release ${TAG}"
 fi
+
+if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
+  echo "Tag ${TAG} already on origin; not pushing."
+else
+  git push origin "${TAG}"
+fi
+
+if gh release view "${TAG}" >/dev/null 2>&1; then
+  echo "Release ${TAG} already exists; leaving it as is."
+else
+  create_release "${TAG}" "${LATEST_TAG}"
+fi
+
+emit_output released "${NEW_VERSION}"
 echo "Released ${TAG}"

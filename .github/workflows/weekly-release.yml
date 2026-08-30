@@ -14,6 +14,11 @@ on:
 permissions:
   contents: write
 
+# Never cancel a run mid-push: it could leave a pushed tag without a release.
+concurrency:
+  group: weekly-release
+  cancel-in-progress: false
+
 jobs:
   release:
     runs-on: ubuntu-latest
