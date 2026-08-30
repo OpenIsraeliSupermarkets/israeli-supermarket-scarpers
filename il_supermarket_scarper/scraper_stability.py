@@ -355,3 +355,26 @@ class ScraperStability(Enum):
                 f"datetime.now(): {datetime.now().strftime('%Y-%m-%d')}"
             )
         return expected_to_fail
+
+    @classmethod
+    def get_permanently_failing_scrapers(cls):
+        """Return scraper names with unconditional failire_valid() methods.
+
+        These are scrapers whose failire_valid() always returns True regardless
+        of parameters, indicating a permanent site outage. If such a scraper
+        starts returning files, it may have recovered and should be re-evaluated.
+        """
+        unconditional = []
+        for name in cls.__members__:
+            stabler = cls[name].value
+            if stabler.pass_expiration_date() <= datetime.now():
+                continue
+            test_result = stabler.failire_valid(
+                when_date=None,
+                files_types=None,
+                store_id=None,
+                utilize_date_param=False,
+            )
+            if test_result:
+                unconditional.append(name)
+        return unconditional
