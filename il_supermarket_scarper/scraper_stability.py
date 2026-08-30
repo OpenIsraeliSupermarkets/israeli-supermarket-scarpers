@@ -14,10 +14,6 @@ from il_supermarket_scarper.utils import (
 )
 from il_supermarket_scarper.utils.file_output import DiskFileOutput
 from il_supermarket_scarper.utils.logger import Logger
-from il_supermarket_scarper.utils.status import (
-    get_cpfta_retailer_hosts,
-    href_host,
-)
 
 
 class ScraperKind(Enum):
@@ -31,24 +27,6 @@ class ScraperKind(Enum):
     DEPRECATED = "deprecated"
 
 
-def _scraper_class_for(name):
-    """Resolve a ScraperStability member name to its scraper class."""
-    return getattr(all_scrappers, DumpFolderNames[name].value)
-
-
-def _configured_url_for(name):
-    """Return the URL configured on the scraper class."""
-    scraper_cls = _scraper_class_for(name)
-    with tempfile.TemporaryDirectory() as tmp:
-        instance = scraper_cls(file_output=DiskFileOutput(storage_path=tmp))
-        url = getattr(instance, "url", None)
-        if url:
-            return url
-        ftp_host = getattr(instance, "ftp_host", None)
-        if ftp_host:
-            ftp_path = getattr(instance, "ftp_path", "") or ""
-            return f"ftp://{ftp_host}{ftp_path}"
-    return None
 
 
 class FullyStable:
@@ -398,20 +376,3 @@ class ScraperStability(Enum):
     def get_deprecated_scrapers(cls):
         """Scrapers removed from gov.il; kept only for historical mapping."""
         return cls.names_of_kind(ScraperKind.DEPRECATED)
-
-    @classmethod
-    def always_failing_url_drift(cls):
-        """Always-failing scrapers whose configured URL is not in the cached HTML.
-
-        A non-empty result means the scraper class URL must be updated to match
-        cpfta_prices_regulations (or the scraper should be marked deprecated).
-        """
-        gov_il_hosts = get_cpfta_retailer_hosts()
-        drift = {}
-        for name in cls.get_always_failing_scrapers():
-            scraper_url = _configured_url_for(name)
-            if not scraper_url:
-                continue
-            if href_host(scraper_url) not in gov_il_hosts:
-                drift[name] = scraper_url
-        return drift

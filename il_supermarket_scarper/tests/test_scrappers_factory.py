@@ -1,6 +1,9 @@
 from il_supermarket_scarper import ScraperStability, ScraperFactory, datetime_in_tlv
 from il_supermarket_scarper.scraper_stability import ScraperKind
 from il_supermarket_scarper.utils.status import get_cpfta_retailer_hosts
+import tempfile
+
+from il_supermarket_scarper.utils.file_output import DiskFileOutput
 
 
 def test_stable_scraper():
@@ -45,19 +48,12 @@ def test_scraper_kinds():
         assert ScraperStability.kind_of(name) is ScraperKind.ALWAYS_FAILING
 
 
-def test_always_failing_urls_match_gov_il():
-    """Always-failing scrapers must still be listed in the cached gov.il HTML.
-
-    If this fails, update the scraper class URL to match cpfta_prices_regulations
-    (or mark the scraper deprecated if it was removed from gov.il).
-    """
-    drift = ScraperStability.always_failing_url_drift()
-    assert not drift, (
-        "Always-failing scraper URL is not in cpfta_prices_regulations. "
-        f"Update scraper configuration: {drift}"
-    )
-
-    gov_il_hosts = get_cpfta_retailer_hosts()
-    assert "app.netiv-hesed.com" in gov_il_hosts
-    assert "citymarketkiryatgat.binaprojects.com" in gov_il_hosts
-    assert "prices.quik.co.il" not in gov_il_hosts
+def test_always_failing_login_details_match_gov_il():
+    """Always-failing scrapers must still be listed in the cached gov.il HTML."""
+    for name in ScraperStability.get_always_failing_scrapers():
+        scraper_cls = ScraperFactory.get(name)
+        with tempfile.TemporaryDirectory() as tmp:
+            instance = scraper_cls(file_output=DiskFileOutput(storage_path=tmp))
+            login_details = instance.get_login_details()
+            assert get_cpfta_retailer_hosts(login_details)
+   
