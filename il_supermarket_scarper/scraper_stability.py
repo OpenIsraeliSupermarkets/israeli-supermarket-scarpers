@@ -27,8 +27,6 @@ class ScraperKind(Enum):
     DEPRECATED = "deprecated"
 
 
-
-
 class FullyStable:
     """fully stable is stablity"""
 
