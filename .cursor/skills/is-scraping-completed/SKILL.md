@@ -183,56 +183,7 @@ Encoded for BAREKET in `scripts/validate_ui_vs_scraper.py` → `UIEngine.BAREKET
 
 May block non-IL IPs (Cloudflare 403). `dump_gov_il_links.py` falls back to the skill URL table automatically. Browser CDP can still scrape a live gov.il session when available.
 
----
-
-## Scraper → URL reference
-
-### Web UI
-
-| ScraperFactory | Hebrew | Engine | URL |
-|---|---|---|---|
-| BAREKET | עוף והודו ברקת | Bina | http://superbareket.binaprojects.com/MainIO_Hok.aspx |
-| CITY_MARKET_KIRYATGAT | סיטי מרקט | Bina | http://citymarketkiryatgat.binaprojects.com/MainIO_Hok.aspx |
-| CITY_MARKET_SHOPS | סיטי מרקט | MultiPageWeb | http://www.citymarket-shops.co.il/ |
-| GOOD_PHARM | גוד פארם | Bina | http://goodpharm.binaprojects.com/MainIO_Hok.aspx |
-| HAZI_HINAM | כל בו חצי חינם | MultiPageWeb | https://shop.hazi-hinam.co.il/Prices |
-| HET_COHEN_NEW_SOURCE | ח. כהן | ApiWeb | https://laibcatalog.co.il/hcohen/index.html |
-| KING_STORE | אלמשהדאוי קינג סטור | Bina | http://kingstore.binaprojects.com/MainIO_Hok.aspx |
-| MAAYAN_2000 | מעיין אלפיים | Bina | http://maayan2000.binaprojects.com/MainIO_Hok.aspx |
-| MAHSANI_ASHUK_NEW_SOURCE | מחסני השוק | ApiWeb | https://laibcatalog.co.il/mshuk/index.html |
-| MESHMAT_YOSEF_1 | משנת יוסף | WebBase | https://list-files.w5871031-kt.workers.dev/ |
-| NETIV_HASED | נתיב החסד | WebBase | http://141.226.203.152/ |
-| QUIK | קוויק | PublishPrice | https://prices.quik.co.il/ |
-| SHEFA_BARCART_ASHEM | שפע ברכת השם | Bina | http://shefabirkathashem.binaprojects.com/MainIO_Hok.aspx |
-| SHUFERSAL | שופרסל | MultiPageWeb | https://prices.shufersal.co.il/ |
-| SHUK_AHIR | שוק העיר | Bina | http://shuk-hayir.binaprojects.com/MainIO_Hok.aspx |
-| SUPER_PHARM | סופר פארם | MultiPageWeb | http://prices.super-pharm.co.il/ |
-| SUPER_SAPIR | סופר ספיר | Bina | http://supersapir.binaprojects.com/MainIO_Hok.aspx |
-| VICTORY_NEW_SOURCE | ויקטורי | ApiWeb | https://laibcatalog.co.il/victory/index.html |
-| WOLT | וולט | WebBase | https://wm-gateway.wolt.com/isr-prices/public/v1/index.html |
-| YAYNO_BITAN_AND_CARREFOUR | יינות ביתן / קרפור | PublishPrice | https://prices.carrefour.co.il/ |
-| ZOL_VEBEGADOL | זול ובגדול | Bina | http://zolvebegadol.binaprojects.com/MainIO_Hok.aspx |
-
-### FTP (Cerberus) — `url.retail.publishedprices.co.il`
-
-| ScraperFactory | Hebrew | FTP user | Path |
-|---|---|---|---|
-| COFIX | קופיקס | SuperCofixApp | / |
-| DOR_ALON | דור אלון | doralon | / |
-| FRESH_MARKET_AND_SUPER_DOSH | פרשמרקט | freshmarket | / |
-| KESHET | קשת טעמים | Keshet | / |
-| OSHER_AD | אושר עד | osherad | / |
-| POLIZER | פוליצר | politzer | / |
-| RAMI_LEVY | רמי לוי | RamiLevi | / |
-| SALACH_DABACH | סאלח דבאח | SalachD | / |
-| STOP_MARKET | סטופ מרקט | Stop_Market | / |
-| SUPER_YUDA | סופר יודה | yuda_ho | /Yuda |
-| TIV_TAAM | טיב טעם | TivTaam | / |
-| YELLOW | יילו | Paz_bo | / |
-| YOHANANOF | יוחננוף | yohananof | / |
-
-Password is usually empty.
-
+Local Cache in: il_supermarket_scarper/utils/tests/cpfta_prices_regulations
 ---
 
 ## Checklist
