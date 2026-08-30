@@ -17,15 +17,29 @@ def test_stable_scraper():
 
 
 def test_not_active():
-    """test grap between active and not"""
+    """Test scrapers that are listed in factory but disabled by stability rules.
+
+    Note: ScraperStability may contain entries for scrapers that are no longer
+    in ScraperFactory (e.g., QUIK, VICTORY were removed from factory but their
+    stability rules remain). Only scrapers IN the factory can be "not active".
+    """
     test_date = datetime_in_tlv(2024, 12, 12, 0, 0, 0)
     all_listed = ScraperFactory.all_listed_scrappers()
     all_active = ScraperFactory.all_scrapers_name(when_date=test_date)
 
-    # CityMarketKiratGat, NetivHased (site HTTP 500)
-    expected_to_fail = 2
+    # Get permanently failing scrapers that are also in the factory
+    permanent_fail = set(ScraperStability.get_permanently_failing_scrapers())
+    factory_scrapers = set(all_listed)
+    expected_not_active = permanent_fail & factory_scrapers
 
-    assert len(set(all_listed) - set(all_active)) == expected_to_fail
+    actual_not_active = set(all_listed) - set(all_active)
+
+    assert actual_not_active == expected_not_active, (
+        f"Not-active scrapers mismatch. "
+        f"Expected: {expected_not_active}, "
+        f"Actual: {actual_not_active}. "
+        f"Difference: {actual_not_active.symmetric_difference(expected_not_active)}"
+    )
 
 
 def test_permanently_failing_scrapers_documented():
@@ -47,14 +61,13 @@ def test_permanently_failing_scrapers_documented():
 
     # Document the known permanently-failing scrapers and why:
     # - NETIV_HASED: Site moved from http://141.226.203.152/ to https://app.netiv-hesed.com/
-    #   The hardcoded IP returns HTTP 500. URL needs update.
-    # - CITY_MARKET_KIRYATGAT: Marked failing due to historical site issues.
-    #   Site appears to be working now; `or True` should be removed.
+    #   (UNSTABLE - on gov.il, URL needs update)
     # - QUIK: Site DNS resolution fails (prices.quik.co.il).
+    #   (UNSTABLE - on gov.il, retailer's site is down)
     # - VICTORY: Moved to new source (VICTORY_NEW_SOURCE).
+    #   (DEPRECATED - replaced by new scraper, not expected on gov.il)
     expected_permanent_fail = {
         "NETIV_HASED",
-        "CITY_MARKET_KIRYATGAT",
         "QUIK",
         "VICTORY",
     }
@@ -65,3 +78,73 @@ def test_permanently_failing_scrapers_documented():
         f"Removed: {expected_permanent_fail - permanent_fail}. "
         f"If a scraper recovered, update its URL and remove its failire_valid override."
     )
+
+
+def test_deprecated_vs_unstable_scrapers():
+    """Verify deprecated scrapers are distinct from unstable ones.
+
+    - Deprecated: Retailers no longer on gov.il (e.g., VICTORY replaced by VICTORY_NEW_SOURCE)
+    - Unstable: Retailers still on gov.il but scraper is broken (need fixing)
+
+    Unstable scrapers should have their URLs validated against gov.il.
+    If gov.il shows a different URL, update the scraper.
+    """
+    deprecated = set(ScraperStability.get_deprecated_scrapers())
+    unstable = set(ScraperStability.get_unstable_scrapers())
+
+    # Deprecated scrapers - OK to not work, not expected on gov.il
+    expected_deprecated = {"VICTORY"}
+    assert deprecated == expected_deprecated, (
+        f"Deprecated scrapers changed. "
+        f"Added: {deprecated - expected_deprecated}, "
+        f"Removed: {expected_deprecated - deprecated}."
+    )
+
+    # Unstable scrapers - still on gov.il, need attention
+    expected_unstable = {"NETIV_HASED", "QUIK"}
+    assert unstable == expected_unstable, (
+        f"Unstable scrapers changed. "
+        f"Added: {unstable - expected_unstable}, "
+        f"Removed: {expected_unstable - unstable}."
+    )
+
+
+def test_unstable_scrapers_on_gov_il():
+    """Verify unstable scrapers are validated against gov.il listings.
+
+    If a scraper is marked as unstable (expected to fail) but is still listed
+    on gov.il, we need to investigate and fix it. This test documents which
+    scrapers need attention.
+
+    For scrapers with URL drift (our URL differs from gov.il):
+    - Update the scraper's URL to match gov.il
+    - Remove the failire_valid() override once working
+    """
+    validation = ScraperStability.validate_against_gov_il()
+
+    # All unstable scrapers that are on gov.il need attention
+    unstable_on_gov_il = set(validation["unstable_on_gov_il"])
+    url_drift = validation["url_drift"]
+
+    # Document expected state - these need fixing but are known issues
+    expected_unstable_on_gov_il = {"NETIV_HASED", "QUIK"}
+    assert unstable_on_gov_il == expected_unstable_on_gov_il, (
+        f"Unstable scrapers on gov.il changed. "
+        f"New scrapers needing attention: {unstable_on_gov_il - expected_unstable_on_gov_il}, "
+        f"Resolved: {expected_unstable_on_gov_il - unstable_on_gov_il}."
+    )
+
+    # Document known URL drift - these explicitly need URL updates
+    expected_url_drift = {"NETIV_HASED"}
+    assert set(url_drift.keys()) == expected_url_drift, (
+        f"URL drift detected. "
+        f"New drift: {set(url_drift.keys()) - expected_url_drift}, "
+        f"Resolved: {expected_url_drift - set(url_drift.keys())}. "
+        f"Update scraper URLs to match gov.il listings."
+    )
+
+    # Verify NETIV_HASED URL drift is documented
+    if "NETIV_HASED" in url_drift:
+        assert url_drift["NETIV_HASED"]["scraper_expected"] == "https://app.netiv-hesed.com/", (
+            "NETIV_HASED expected URL should be https://app.netiv-hesed.com/"
+        )

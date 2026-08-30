@@ -1,6 +1,8 @@
 # pylint: disable=arguments-differ,arguments-renamed
 from enum import Enum
 from datetime import datetime
+import json
+import os
 
 from il_supermarket_scarper.utils import (
     _now,
@@ -12,8 +14,29 @@ from il_supermarket_scarper.utils import (
 from il_supermarket_scarper.utils.logger import Logger
 
 
+def _load_gov_il_links():
+    """Load gov.il links from cached JSON file."""
+    json_path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "scripts",
+        "gov_il_links.json",
+    )
+    if not os.path.exists(json_path):
+        return {}
+    with open(json_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    return {link["scraper"]: link for link in data.get("links", [])}
+
+
 class FullyStable:
     """fully stable is stablity"""
+
+    # If True, the retailer is no longer on gov.il and scraper is expected to not work
+    is_deprecated = False
+
+    # Expected URL from gov.il (if different from scraper's hardcoded URL)
+    # Set this when gov.il lists a different URL than what the scraper uses
+    expected_gov_il_url = None
 
     @classmethod
     def pass_expiration_date(cls):
@@ -67,12 +90,17 @@ class SuperFlaky(FullyStable):
 
 
 class NetivHased(FullyStable):
-    """Netiv Hased site is down (HTTP 500 on http://141.226.203.152/).
+    """Netiv Hased site moved from hardcoded IP to new domain.
 
-    Evidence: upstream returns HTTP 500 for store/price/promo scrapes as of
-    2026-07-24 (CI NetivHasefTestCase all failing). Previously Saturday-only;
-    site is now unavailable on weekdays too.
+    Evidence: upstream returns HTTP 500 for http://141.226.203.152/ as of
+    2026-07-24 (CI NetivHasefTestCase all failing). However, gov.il lists
+    the retailer at https://app.netiv-hesed.com/ which is live and serving files.
+
+    Status: UNSTABLE (not deprecated) - retailer still on gov.il, URL needs update.
     """
+
+    is_deprecated = False
+    expected_gov_il_url = "https://app.netiv-hesed.com/"
 
     @classmethod
     def pass_expiration_date(cls):
@@ -137,7 +165,16 @@ class CityMarketKiratOno(FullyStable):
 
 
 class CityMarketKiratGat(FullyStable):
-    """Netiv Hased is stablity"""
+    """City Market Kiryat Gat stability.
+
+    Note: The `or True` was removed on 2026-08-30 because the site
+    (https://citymarketkiryatgat.binaprojects.com/) is now working and
+    actively publishing files. The previous "active issue" appears resolved.
+
+    Status: UNSTABLE during promo_full file requests only (inherits from FullyStable).
+    """
+
+    is_deprecated = False
 
     @classmethod
     def pass_expiration_date(cls):
@@ -154,14 +191,11 @@ class CityMarketKiratGat(FullyStable):
         cls, when_date=None, files_types=None, utilize_date_param=True, **_
     ):
         """return true if the parser is stble"""
-        return (
-            super(cls, CityMarketKiratGat).failire_valid(
-                when_date=when_date,
-                files_types=files_types,
-                utilize_date_param=utilize_date_param,
-            )
-            or True
-        )  # there is an active issue with the site
+        return super(cls, CityMarketKiratGat).failire_valid(
+            when_date=when_date,
+            files_types=files_types,
+            utilize_date_param=utilize_date_param,
+        ) or cls.searching_for_update_promo_full(files_types=files_types)
 
 
 class DoNotPublishStores(FullyStable):
@@ -213,7 +247,13 @@ class SuperYuda(FullyStable):
 
 
 class QuikSiteIsDown(FullyStable):
-    """Quik site is down"""
+    """Quik site is down (DNS resolution fails for prices.quik.co.il).
+
+    Status: UNSTABLE (not deprecated) - retailer still on gov.il but site is unreachable.
+    This is a retailer-side issue, not our scraper's fault.
+    """
+
+    is_deprecated = False
 
     @classmethod
     def pass_expiration_date(cls):
@@ -294,7 +334,13 @@ class DoNotPublishPromo(FullyStable):
 
 
 class VictoryMovedToNewSource(FullyStable):
-    """Victory moved to new source"""
+    """Victory moved to new source (VICTORY_NEW_SOURCE).
+
+    Status: DEPRECATED - this scraper is replaced by VICTORY_NEW_SOURCE.
+    The old Victory scraper should not be used; gov.il now lists the new source.
+    """
+
+    is_deprecated = True
 
     @classmethod
     def pass_expiration_date(cls):
@@ -378,3 +424,86 @@ class ScraperStability(Enum):
             if test_result:
                 unconditional.append(name)
         return unconditional
+
+    @classmethod
+    def get_deprecated_scrapers(cls):
+        """Return scraper names that are deprecated (not expected on gov.il).
+
+        Deprecated scrapers are those whose retailers are no longer listed on
+        gov.il (e.g., merged with another chain, went out of business, or
+        replaced by a new source).
+        """
+        deprecated = []
+        for name in cls.__members__:
+            stabler = cls[name].value
+            if getattr(stabler, "is_deprecated", False):
+                deprecated.append(name)
+        return deprecated
+
+    @classmethod
+    def get_unstable_scrapers(cls):
+        """Return scraper names that are unstable but NOT deprecated.
+
+        Unstable scrapers are those whose failire_valid() always returns True
+        but the retailer is still listed on gov.il. These need investigation:
+        - URL may have changed (check expected_gov_il_url)
+        - Site may have recovered
+        - Site may be temporarily down (retailer's fault)
+        """
+        permanently_failing = set(cls.get_permanently_failing_scrapers())
+        deprecated = set(cls.get_deprecated_scrapers())
+        return list(permanently_failing - deprecated)
+
+    @classmethod
+    def get_url_drift(cls):
+        """Return scrapers where our URL differs from gov.il expected URL.
+
+        Returns dict of {scraper_name: {"expected": url, "reason": str}}.
+        Only includes scrapers with expected_gov_il_url set.
+        """
+        drift = {}
+        for name in cls.__members__:
+            stabler = cls[name].value
+            expected_url = getattr(stabler, "expected_gov_il_url", None)
+            if expected_url:
+                drift[name] = {
+                    "expected_gov_il_url": expected_url,
+                    "reason": (stabler.__doc__ or "").split("\n")[0].strip(),
+                }
+        return drift
+
+    @classmethod
+    def validate_against_gov_il(cls):
+        """Check if unstable scrapers are still listed on gov.il.
+
+        Returns dict with:
+        - "unstable_on_gov_il": scrapers that are unstable AND on gov.il (need fixing)
+        - "unstable_not_on_gov_il": scrapers marked unstable but NOT on gov.il
+        - "url_drift": scrapers where our URL differs from gov.il
+        """
+        gov_il_links = _load_gov_il_links()
+        gov_il_scrapers = set(gov_il_links.keys())
+
+        unstable = set(cls.get_unstable_scrapers())
+
+        result = {
+            "unstable_on_gov_il": [],
+            "unstable_not_on_gov_il": [],
+            "url_drift": {},
+        }
+
+        for name in unstable:
+            if name in gov_il_scrapers:
+                result["unstable_on_gov_il"].append(name)
+                # Check for URL drift
+                stabler = cls[name].value
+                expected_url = getattr(stabler, "expected_gov_il_url", None)
+                if expected_url:
+                    result["url_drift"][name] = {
+                        "scraper_expected": expected_url,
+                        "gov_il_href": gov_il_links[name].get("href"),
+                    }
+            else:
+                result["unstable_not_on_gov_il"].append(name)
+
+        return result
