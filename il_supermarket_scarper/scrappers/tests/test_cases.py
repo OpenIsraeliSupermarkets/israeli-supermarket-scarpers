@@ -240,13 +240,21 @@ def make_test_case(scraper_enum, store_id):
 
                 self._make_sure_status_file_is_valid(download_path)
 
+                expected_empty = ScraperStability.is_validate_scraper_found_no_files(
+                    scraper_enum.name,
+                    limit=limit,
+                    files_types=file_type,
+                    store_id=store_id,
+                    when_date=when_date,
+                    utilize_date_param=scraper_enum.value.utilize_date_param,
+                )
                 if ScraperStability.is_always_failing(scraper_enum.name):
                     assert not files_found, (
                         f"Scraper {scraper_enum.name} expected to fail "
                         f"but returned {len(files_found)} files. "
                         "Update ScraperStability or the scraper URL."
                     )
-                else:
+                elif not expected_empty:
                     self._make_sure_filter_work(
                         files_found,
                         file_type=file_type,
