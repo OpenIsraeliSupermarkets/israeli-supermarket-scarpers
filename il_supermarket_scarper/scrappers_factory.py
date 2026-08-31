@@ -150,6 +150,8 @@ class ScraperFactory(Enum):
     @classmethod
     def is_scraper_enabled(cls, enum, limit=None, files_types=None, when_date=None):
         """get scraper value base on the enum value, if it disabled, return None"""
+        if cls.is_deprecated(enum.name):
+            return False
         env_var_value = os.environ.get("DISABLED_SCRAPPERS")
         if env_var_value is not None:
             disabled_scrappers = list(map(str.strip, env_var_value.split(",")))

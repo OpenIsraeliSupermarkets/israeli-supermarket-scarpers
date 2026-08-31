@@ -11,9 +11,11 @@ def test_scrapers_folders_match():
     """test the number of scrapers are the same as listed at the gov.il site"""
     scrapers_keys = ScraperFactory.all_scrapers_name()
     dump_keys = DumpFolderNames.all_folders_names()
+    active_folders = DumpFolderNames.active_folder_names()
 
     assert set(scrapers_keys) & set(dump_keys) == set(scrapers_keys)
     assert set(scrapers_keys) - set(dump_keys) == set()
+    assert set(scrapers_keys) <= set(active_folders)
 
 
 @disable_when_outside_israel

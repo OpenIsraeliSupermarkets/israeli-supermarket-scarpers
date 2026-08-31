@@ -2,6 +2,8 @@ import tempfile
 
 from il_supermarket_scarper import ScraperStability, ScraperFactory, datetime_in_tlv
 from il_supermarket_scarper.scraper_stability import ScraperKind
+from il_supermarket_scarper.utils.deprecated_scrapers import DeprecatedScrapers
+from il_supermarket_scarper.utils.folders_name import DumpFolderNames
 from il_supermarket_scarper.utils.status import get_cpfta_retailer_hosts, href_host
 from il_supermarket_scarper.utils.file_output import DiskFileOutput
 
@@ -43,6 +45,35 @@ def test_scraper_kinds():
     for name in ScraperStability.get_always_failing_scrapers():
         assert name in factory_names, f"always-failing {name} must stay in factory"
         assert ScraperStability.kind_of(name) is ScraperKind.ALWAYS_FAILING
+
+
+def test_deprecated_scrapers_match_factory_and_folders():
+    """DeprecatedScrapers is the single list used by factory listing and dump folders."""
+    deprecated = DeprecatedScrapers.names()
+    factory_members = {member.name for member in ScraperFactory}
+    folder_members = {member.name for member in DumpFolderNames}
+
+    assert deprecated <= factory_members
+    assert deprecated <= folder_members
+    assert set(ScraperFactory.get_deprecated_scrapers()) == deprecated
+    assert set(ScraperFactory.all_listed_scrappers()) & deprecated == set()
+    assert set(DumpFolderNames.active_folder_names()) & deprecated == set()
+    assert set(DumpFolderNames.active_folder_names()) == set(
+        ScraperFactory.all_listed_scrappers()
+    )
+    assert set(ScraperFactory.all_listed_scrappers(include_deprecated=True)) == (
+        factory_members
+    )
+    assert factory_members == folder_members
+
+
+def test_all_active_excludes_deprecated():
+    """Production all_scrapers_name() must not return deprecated scrapers."""
+    deprecated = DeprecatedScrapers.names()
+    assert set(ScraperFactory.all_scrapers_name()) & deprecated == set()
+    for name in deprecated:
+        assert ScraperFactory.is_deprecated(name)
+        assert not ScraperFactory.is_scraper_enabled(ScraperFactory[name])
 
 
 def test_always_failing_login_details_match_gov_il():
