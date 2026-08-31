@@ -69,6 +69,19 @@ def load_configuration():  # pylint: disable=too-many-branches
 
         output_configuration["queue_type"] = queue_type
 
+        # Max messages buffered per-chain in the in-memory queue. When full,
+        # downloads block until a consumer receives (reduces total RAM).
+        queue_max = os.getenv("QUEUE_MAX_SIZE", "32")
+        try:
+            queue_max_size = int(queue_max)
+        except ValueError as exc:
+            raise ValueError(
+                f"QUEUE_MAX_SIZE must be an integer, but got {queue_max}"
+            ) from exc
+        if queue_max_size < 0:
+            raise ValueError("QUEUE_MAX_SIZE must be non-negative (0 = unbounded)")
+        output_configuration["queue_max_size"] = queue_max_size
+
     else:
         # Disk output configuration (default)
         output_configuration["base_storage_path"] = os.getenv("STORAGE_PATH", "dumps")
