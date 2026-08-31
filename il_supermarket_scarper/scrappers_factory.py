@@ -2,25 +2,8 @@ import random
 import os
 from enum import Enum
 import il_supermarket_scarper.scrappers as all_scrappers
-from il_supermarket_scarper.scraper_stability import ScraperStability, ScraperKind
-
-
-# Deprecated scrapers that are no longer on gov.il or have been replaced.
-# These are kept in the enum for reference but excluded from active scraping.
-# Use ScraperFactory.is_deprecated() to check if a scraper is deprecated.
-DEPRECATED_SCRAPERS = {
-    # Replaced by new sources (gov.il lists new source only):
-    "VICTORY",  # replaced by VICTORY_NEW_SOURCE (laibcatalog API)
-    "HET_COHEN",  # replaced by HET_COHEN_NEW_SOURCE (laibcatalog API)
-    "MAHSANI_ASHUK",  # replaced by MAHSANI_ASHUK_NEW_SOURCE (laibcatalog API)
-    # Removed from gov.il / folded into other chains:
-    "COFIX",  # gov.il 12.08.2026 folded into Rami Levy
-    "MEGA",  # merged with other chains
-    "CITY_MARKET_GIVATAYIM",  # closed
-    "CITY_MARKET_KIRYATONO",  # closed
-    # Site permanently down (DNS fails), no longer on gov.il dedicated listing:
-    "QUIK",  # gov.il 12.08.2026 dropped dedicated link (under Rami Levy)
-}
+from il_supermarket_scarper.scraper_stability import ScraperStability
+from il_supermarket_scarper.utils.deprecated_scrapers import DeprecatedScrapers
 
 
 class ScraperFactory(Enum):
@@ -70,7 +53,7 @@ class ScraperFactory(Enum):
     WOLT = all_scrappers.Wolt  # וולט אופריישנס סרוויסס ישראל בע"מ
 
     # === DEPRECATED SCRAPERS ===
-    # Listed for reference; excluded from all_listed_scrappers() via DEPRECATED_SCRAPERS.
+    # Listed for reference; excluded from all_listed_scrappers() via DeprecatedScrapers.
     VICTORY = all_scrappers.Victory  # DEPRECATED: replaced by VICTORY_NEW_SOURCE
     QUIK = all_scrappers.Quik  # DEPRECATED: site down, removed from gov.il
     HET_COHEN = all_scrappers.HetCohen  # DEPRECATED: replaced by HET_COHEN_NEW_SOURCE
@@ -91,18 +74,20 @@ class ScraperFactory(Enum):
         if include_deprecated:
             return list(member.name for member in cls)
         return [
-            member.name for member in cls if member.name not in DEPRECATED_SCRAPERS
+            member.name
+            for member in cls
+            if member.name not in DeprecatedScrapers.names()
         ]
 
     @classmethod
     def get_deprecated_scrapers(cls):
         """Get list of deprecated scraper names."""
-        return [name for name in DEPRECATED_SCRAPERS if hasattr(cls, name)]
+        return [name for name in DeprecatedScrapers.names() if hasattr(cls, name)]
 
     @classmethod
     def is_deprecated(cls, scraper_name):
         """Check if a scraper is deprecated."""
-        return scraper_name in DEPRECATED_SCRAPERS
+        return scraper_name in DeprecatedScrapers.names()
 
     @classmethod
     def all_active(cls, limit=None, files_types=None, when_date=None):
