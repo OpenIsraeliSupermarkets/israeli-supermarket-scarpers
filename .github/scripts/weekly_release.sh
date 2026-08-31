@@ -2,7 +2,7 @@
 # Change-gate weekly release: noop if no commits since last v* tag; else tag and release.
 # Bumps setup.py patch only when it still matches the latest v* tag (skip if already bumped).
 # Re-runnable: an existing tag or release is reused instead of failing.
-# Env: GITHUB_TOKEN (contents write), GITHUB_REPOSITORY
+# Env: GH_TOKEN / GITHUB_TOKEN (contents write; App installation token or PAT), GITHUB_REPOSITORY
 # Outputs via GITHUB_OUTPUT when present: outcome=noop|released, version=...
 set -euo pipefail
 

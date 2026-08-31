@@ -11,11 +11,25 @@ jobs:
   open-parsers-sync-issue:
     runs-on: ubuntu-latest
     steps:
+      - name: Mint GitHub App installation token
+        id: app-token
+        if: ${{ vars.APP_CLIENT_ID != '' }}
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            israeli-supermarket-scarpers
+            israeli-supermarket-parsers
+            daily-publish-supermarket-data
       - name: Checkout scripts
         uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token || github.token }}
       - name: Create parsers sync issue
         env:
-          GH_TOKEN: ${{ secrets.PARSERS_REPO_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.PARSERS_REPO_TOKEN }}
           CURSOR_MAINTAINER_WEBHOOK: ${{ secrets.PARSERS_MAINTAINER_WEBHOOK }}
           CURSOR_WEBHOOK_SECRET: ${{ secrets.PARSERS_MAINTAINER_WEBHOOK_SECRET }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
@@ -23,7 +37,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${GH_TOKEN:-}" ]; then
-            echo "PARSERS_REPO_TOKEN is required to open a sync issue on parsers."
+            echo "App token or PARSERS_REPO_TOKEN is required to open a sync issue on parsers."
             exit 1
           fi
           TAG="${RELEASE_TAG#v}"

@@ -26,11 +26,23 @@ jobs:
       outcome: ${{ steps.run.outputs.outcome }}
       version: ${{ steps.run.outputs.version }}
     steps:
+      - name: Mint GitHub App installation token
+        id: app-token
+        if: ${{ vars.APP_CLIENT_ID != '' }}
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            israeli-supermarket-scarpers
+            israeli-supermarket-parsers
+            daily-publish-supermarket-data
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.RELEASE_GITHUB_TOKEN || github.token }}
+          token: ${{ steps.app-token.outputs.token || secrets.RELEASE_GITHUB_TOKEN || github.token }}
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -38,18 +50,18 @@ jobs:
       - name: Weekly release (change gate + bump + tag)
         id: run
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_GITHUB_TOKEN || github.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.RELEASE_GITHUB_TOKEN || github.token }}
         run: |
           chmod +x .github/scripts/weekly_release.sh
           .github/scripts/weekly_release.sh
       - name: Signal daily-publish coordinator
         if: always() && (steps.run.outputs.outcome == 'noop' || steps.run.outputs.outcome == 'released')
         env:
-          GH_TOKEN: ${{ secrets.DAILY_PUBLISH_DISPATCH_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.DAILY_PUBLISH_DISPATCH_TOKEN }}
         run: |
           set -euo pipefail
           if [ -z "${GH_TOKEN:-}" ]; then
-            echo "DAILY_PUBLISH_DISPATCH_TOKEN unset; skip coordinator signal."
+            echo "No App token or DAILY_PUBLISH_DISPATCH_TOKEN; skip coordinator signal."
             exit 0
           fi
           ISO_WEEK=$(date -u +%G-W%V)
