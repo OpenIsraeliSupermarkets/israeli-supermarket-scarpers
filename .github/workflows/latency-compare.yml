@@ -33,7 +33,9 @@ env:
 
 jobs:
   compare:
-    runs-on: self-hosted
+    runs-on:
+      - self-hosted
+      - ci
     # Non-mandatory: workflow is reported as neutral/success even on regressions.
     continue-on-error: true
     steps:
