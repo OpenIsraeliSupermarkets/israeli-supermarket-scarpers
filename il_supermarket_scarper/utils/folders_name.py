@@ -60,5 +60,7 @@ class DumpFolderNames(Enum):
     @classmethod
     def active_folder_names(cls):
         """get the name of folders whose scraper is still active in ScraperFactory"""
-        deprecated = {"COFIX", "QUIK", "HET_COHEN", "MAHSANI_ASHUK", "VICTORY"}
-        return [e.name for e in cls if e.name not in deprecated]
+        # Lazy import to avoid circular dependency
+        from il_supermarket_scarper.scrappers_factory import DEPRECATED_SCRAPERS
+
+        return [e.name for e in cls if e.name not in DEPRECATED_SCRAPERS]
