@@ -11,18 +11,32 @@ jobs:
   open-daily-publish-deps-issue:
     runs-on: ubuntu-latest
     steps:
+      - name: Mint GitHub App installation token
+        id: app-token
+        if: ${{ vars.APP_CLIENT_ID != '' }}
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            israeli-supermarket-scarpers
+            israeli-supermarket-parsers
+            daily-publish-supermarket-data
       - name: Checkout scripts
         uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token || github.token }}
       - name: Create daily-publish dependency issue
         env:
-          GH_TOKEN: ${{ secrets.DAILY_PUBLISH_DISPATCH_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.DAILY_PUBLISH_DISPATCH_TOKEN }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
           RELEASE_URL: ${{ github.event.release.html_url }}
           SOURCE_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           if [ -z "${GH_TOKEN:-}" ]; then
-            echo "DAILY_PUBLISH_DISPATCH_TOKEN is required to open an issue on daily-publish."
+            echo "App token or DAILY_PUBLISH_DISPATCH_TOKEN is required to open an issue on daily-publish."
             exit 1
           fi
           export PACKAGE_NAME="il-supermarket-scraper"
