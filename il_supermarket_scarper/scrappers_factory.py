@@ -3,34 +3,29 @@ import os
 from enum import Enum
 import il_supermarket_scarper.scrappers as all_scrappers
 from il_supermarket_scarper.scraper_stability import ScraperStability
+from il_supermarket_scarper.utils.deprecated_scrapers import DeprecatedScrapers
 
 
 class ScraperFactory(Enum):
     """all scrapers avaliabe"""
 
+    # === ACTIVE SCRAPERS ===
     BAREKET = all_scrappers.Bareket  # עוף והודו ברקת - חנות המפעל בע"מ
     YAYNO_BITAN_AND_CARREFOUR = all_scrappers.YaynotBitanAndCarrefour  # יינות ביתן
-    # YAYNO_BITAN = all_scrappers.YaynotBitan  # יינות ביתן
-    # COFIX = all_scrappers.Cofix  # סופר קופיקס; gov.il 12.08.2026 folded into Rami Levy
-    # CITY_MARKET_GIVATAYIM = all_scrappers.CityMarketGivatayim
-    # CITY_MARKET_KIRYATONO = all_scrappers.CityMarketKirtatOno
     CITY_MARKET_KIRYATGAT = all_scrappers.CityMarketKiryatGat  # סיטי מרקט
     CITY_MARKET_SHOPS = all_scrappers.CityMarketShops  # סיטי מרקט
     DOR_ALON = all_scrappers.DorAlon  # דור אלון ניהול מתחמים קמעונאיים בע"מ
     GOOD_PHARM = all_scrappers.GoodPharm  # גוד פארם בע"מ
     HAZI_HINAM = all_scrappers.HaziHinam  # כל בו חצי חינם בע"מ
-    # HET_COHEN = all_scrappers.HetCohen  # ח. כהן - moved to new source (laibcatalog API)
     HET_COHEN_NEW_SOURCE = (
         all_scrappers.HetCohenNewSource
     )  # ח. כהן סוכנות מזון ומשקאות בע"מ
     KESHET = all_scrappers.Keshet  # קשת טעמים בע"מ
     KING_STORE = all_scrappers.KingStore  # אלמשהדאוי קינג סטור בע"מ
     MAAYAN_2000 = all_scrappers.Maayan2000  # ג.מ מעיין אלפיים (07) בע"מ
-    # MAHSANI_ASHUK = all_scrappers.MahsaniAShuk  # כ.נ מחסני השוק בע"מ (moved to new source)
     MAHSANI_ASHUK_NEW_SOURCE = (
         all_scrappers.MahsaniAShukNewSource
     )  # כ.נ מחסני השוק בע"מ
-    # MEGA = all_scrappers.Mega  # קרפור \ מגה
     NETIV_HASED = all_scrappers.NetivHased  # נתיב החסד - סופר חסד בע"מ (כולל ברכל)
     MESHMAT_YOSEF_1 = (
         all_scrappers.MeshnatYosef1
@@ -50,19 +45,49 @@ class ScraperFactory(Enum):
     SUPER_YUDA = all_scrappers.SuperYuda  # סופר יודה
     SUPER_SAPIR = all_scrappers.SuperSapir  # סופר ספיר בע"מ
     FRESH_MARKET_AND_SUPER_DOSH = all_scrappers.FreshMarketAndSuperDosh  # פרשמרקט
-    # QUIK = all_scrappers.Quik  # קוויק; gov.il 12.08.2026 dropped dedicated link (under Rami Levy)
     TIV_TAAM = all_scrappers.TivTaam  # טיב טעם רשתות בע"מ
-    # VICTORY = all_scrappers.Victory  # old Matrix source; gov.il now lists new format only
     VICTORY_NEW_SOURCE = all_scrappers.VictoryNewSource  # ויקטורי רשת סופרמרקטים בע"מ
     YELLOW = all_scrappers.Yellow  # יילו
     YOHANANOF = all_scrappers.Yohananof  # מ. יוחננוף ובניו (1988) בע"מ
     ZOL_VEBEGADOL = all_scrappers.ZolVeBegadol  # זול ובגדול בע"מ
     WOLT = all_scrappers.Wolt  # וולט אופריישנס סרוויסס ישראל בע"מ
 
+    # === DEPRECATED SCRAPERS ===
+    # Listed for reference; excluded from all_listed_scrappers() via DeprecatedScrapers.
+    VICTORY = all_scrappers.Victory  # DEPRECATED: replaced by VICTORY_NEW_SOURCE
+    QUIK = all_scrappers.Quik  # DEPRECATED: site down, removed from gov.il
+    HET_COHEN = all_scrappers.HetCohen  # DEPRECATED: replaced by HET_COHEN_NEW_SOURCE
+    MAHSANI_ASHUK = all_scrappers.MahsaniAShuk  # DEPRECATED: replaced by new source
+    COFIX = all_scrappers.Cofix  # DEPRECATED: folded into Rami Levy
+    MEGA = all_scrappers.Mega  # DEPRECATED: merged with other chains
+    CITY_MARKET_GIVATAYIM = all_scrappers.CityMarketGivatayim  # DEPRECATED: closed
+    CITY_MARKET_KIRYATONO = all_scrappers.CityMarketKirtatOno  # DEPRECATED: closed
+
     @classmethod
-    def all_listed_scrappers(cls):
-        """get all the scarpers and filter disabled scrapers"""
-        return list(member.name for member in cls)
+    def all_listed_scrappers(cls, include_deprecated=False):
+        """Get all scrapers, optionally excluding deprecated ones.
+
+        Args:
+            include_deprecated: If True, include deprecated scrapers.
+                              Default is False (exclude deprecated).
+        """
+        if include_deprecated:
+            return list(member.name for member in cls)
+        return [
+            member.name
+            for member in cls
+            if member.name not in DeprecatedScrapers.names()
+        ]
+
+    @classmethod
+    def get_deprecated_scrapers(cls):
+        """Get list of deprecated scraper names."""
+        return [name for name in DeprecatedScrapers.names() if hasattr(cls, name)]
+
+    @classmethod
+    def is_deprecated(cls, scraper_name):
+        """Check if a scraper is deprecated."""
+        return scraper_name in DeprecatedScrapers.names()
 
     @classmethod
     def all_active(cls, limit=None, files_types=None, when_date=None):
@@ -125,6 +150,8 @@ class ScraperFactory(Enum):
     @classmethod
     def is_scraper_enabled(cls, enum, limit=None, files_types=None, when_date=None):
         """get scraper value base on the enum value, if it disabled, return None"""
+        if cls.is_deprecated(enum.name):
+            return False
         env_var_value = os.environ.get("DISABLED_SCRAPPERS")
         if env_var_value is not None:
             disabled_scrappers = list(map(str.strip, env_var_value.split(",")))

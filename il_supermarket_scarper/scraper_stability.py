@@ -1,6 +1,6 @@
 # pylint: disable=arguments-differ,arguments-renamed
-from enum import Enum
 from datetime import datetime
+from enum import Enum
 
 from il_supermarket_scarper.utils import (
     _now,
@@ -12,8 +12,21 @@ from il_supermarket_scarper.utils import (
 from il_supermarket_scarper.utils.logger import Logger
 
 
+class ScraperKind(Enum):
+    """How a scraper is expected to behave in tests and production."""
+
+    # Listed on gov.il; failire_valid() covers known edge cases only
+    EDGE_CASE = "edge_case"
+    # Listed on gov.il; every scrape is expected to fail
+    ALWAYS_FAILING = "always_failing"
+    # Gone from gov.il; keep the class for historical folder mapping, do not run
+    DEPRECATED = "deprecated"
+
+
 class FullyStable:
     """fully stable is stablity"""
+
+    kind = ScraperKind.EDGE_CASE
 
     @classmethod
     def pass_expiration_date(cls):
@@ -54,6 +67,30 @@ class FullyStable:
         )
 
 
+class AlwaysFailing(FullyStable):
+    """Still listed on gov.il; every scrape is expected to fail."""
+
+    kind = ScraperKind.ALWAYS_FAILING
+
+    @classmethod
+    def failire_valid(cls, **_):
+        return True
+
+
+class DeprecatedScraper(FullyStable):
+    """Removed from gov.il; keep the class for historical folder mapping."""
+
+    kind = ScraperKind.DEPRECATED
+
+    @classmethod
+    def pass_expiration_date(cls):
+        return datetime(9999, 5, 1)
+
+    @classmethod
+    def failire_valid(cls, **_):
+        return True
+
+
 class SuperFlaky(FullyStable):
     """super flaky is stablity"""
 
@@ -66,22 +103,8 @@ class SuperFlaky(FullyStable):
         return True
 
 
-class NetivHased(FullyStable):
-    """Netiv Hased site is down (HTTP 500 on http://141.226.203.152/).
-
-    Evidence: upstream returns HTTP 500 for store/price/promo scrapes as of
-    2026-07-24 (CI NetivHasefTestCase all failing). Previously Saturday-only;
-    site is now unavailable on weekdays too.
-    """
-
-    @classmethod
-    def pass_expiration_date(cls):
-        return datetime(2027, 1, 1)
-
-    @classmethod
-    def failire_valid(cls, **_):
-        """return true if missing files are expected"""
-        return True
+class NetivHased(AlwaysFailing):
+    """Was always-failing on the old IP; app.netiv-hesed.com recovered 2026-08-30."""
 
 
 class CityMarketGivataim(FullyStable):
@@ -136,32 +159,8 @@ class CityMarketKiratOno(FullyStable):
         ) or cls.searching_for_update_promo(files_types=files_types)
 
 
-class CityMarketKiratGat(FullyStable):
-    """Netiv Hased is stablity"""
-
-    @classmethod
-    def pass_expiration_date(cls):
-        """return the expiration date"""
-        return datetime(2027, 3, 1)
-
-    @classmethod
-    def searching_for_update_promo_full(cls, files_types=None, **_):
-        """if the execution is in saturday"""
-        return files_types and files_types == [FileTypesFilters.PROMO_FULL_FILE.name]
-
-    @classmethod
-    def failire_valid(
-        cls, when_date=None, files_types=None, utilize_date_param=True, **_
-    ):
-        """return true if the parser is stble"""
-        return (
-            super(cls, CityMarketKiratGat).failire_valid(
-                when_date=when_date,
-                files_types=files_types,
-                utilize_date_param=utilize_date_param,
-            )
-            or True
-        )  # there is an active issue with the site
+class CityMarketKiratGat(AlwaysFailing):
+    """Still on gov.il; expected to fail until the scraper is reliable."""
 
 
 class DoNotPublishStores(FullyStable):
@@ -212,16 +211,39 @@ class SuperYuda(FullyStable):
         ) or cls.searching_for_store_full(files_types=files_types)
 
 
-class QuikSiteIsDown(FullyStable):
-    """Quik site is down"""
+class Yellow(FullyStable):
+    """Yellow (Paz / יילו) does not publish store files.
+
+    Evidence 2026-08-30: FTP url.retail.publishedprices.co.il user Paz_bo
+    listed 591 Price/Promo files (dated 2026-08-30) and 0 filenames containing
+    'store'. Root listing has no subdirectories. Other Yellow file types scrape
+    successfully. CPFTA still lists יילו (page update 12.08.2026):
+    https://www.gov.il/he/pages/cpfta_prices_regulations
+    """
 
     @classmethod
     def pass_expiration_date(cls):
-        return datetime(2027, 5, 1)
+        return datetime(2027, 1, 1)
 
     @classmethod
-    def failire_valid(cls, **_):
-        return True
+    def searching_for_store_full(cls, files_types=None, **_):
+        """Yellow FTP listing contains no store files."""
+        return files_types and files_types == [FileTypesFilters.STORE_FILE.name]
+
+    @classmethod
+    def failire_valid(
+        cls, when_date=None, files_types=None, utilize_date_param=True, **_
+    ):
+        """return true if the parser is stble"""
+        return super(cls, Yellow).failire_valid(
+            when_date=when_date,
+            files_types=files_types,
+            utilize_date_param=utilize_date_param,
+        ) or cls.searching_for_store_full(files_types=files_types)
+
+
+class QuikSiteIsDown(DeprecatedScraper):
+    """Quik no longer has a dedicated gov.il listing (folded into Carrefour)."""
 
 
 class PublishOnlyStores(FullyStable):
@@ -293,30 +315,23 @@ class DoNotPublishPromo(FullyStable):
         ) or cls.searching_for_promo_full(files_types=files_types)
 
 
-class VictoryMovedToNewSource(FullyStable):
-    """Victory moved to new source"""
-
-    @classmethod
-    def pass_expiration_date(cls):
-        return datetime(9999, 5, 1)
-
-    @classmethod
-    def failire_valid(cls, **_):
-        return True
+class VictoryMovedToNewSource(DeprecatedScraper):
+    """Old Victory source; gov.il lists VICTORY_NEW_SOURCE only."""
 
 
 class ScraperStability(Enum):
     """tracker for the stablity of the scraper"""
 
     # COFIX = DoNotPublishStores
-    NETIV_HASED = NetivHased
+    # NETIV_HASED = NetivHased  # recovered 2026-08-30: https://app.netiv-hesed.com/ lists files
     QUIK = QuikSiteIsDown
     SUPER_YUDA = SuperYuda
+    YELLOW = Yellow
     COFIX = PublishOnlyStores
     # SALACH_DABACH = DoNotPublishStores
     # # CITY_MARKET_GIVATAYIM = CityMarketGivataim
     # CITY_MARKET_KIRYATONO = CityMarketKiratOno
-    CITY_MARKET_KIRYATGAT = CityMarketKiratGat
+    # CITY_MARKET_KIRYATGAT = CityMarketKiratGat  # recovered 2026-08-30: bina portal lists files
     MESHMAT_YOSEF_1 = DoNotPublishPromo
     VICTORY = VictoryMovedToNewSource
     # YOHANANOF = DoNotPublishStores
@@ -355,3 +370,35 @@ class ScraperStability(Enum):
                 f"datetime.now(): {datetime.now().strftime('%Y-%m-%d')}"
             )
         return expected_to_fail
+
+    @classmethod
+    def kind_of(cls, name):
+        """Return the ScraperKind for a scraper name, defaulting to EDGE_CASE."""
+        if name not in cls.__members__:
+            return ScraperKind.EDGE_CASE
+        return getattr(cls[name].value, "kind", ScraperKind.EDGE_CASE)
+
+    @classmethod
+    def names_of_kind(cls, kind):
+        """Return scraper names registered with the given ScraperKind."""
+        return [name for name in cls.__members__ if cls.kind_of(name) is kind]
+
+    @classmethod
+    def is_deprecated(cls, name):
+        """True if this scraper was removed from gov.il and should not be run."""
+        return cls.kind_of(name) is ScraperKind.DEPRECATED
+
+    @classmethod
+    def is_always_failing(cls, name):
+        """True if every scrape is expected to fail, but the retailer is on gov.il."""
+        return cls.kind_of(name) is ScraperKind.ALWAYS_FAILING
+
+    @classmethod
+    def get_always_failing_scrapers(cls):
+        """Scrapers that still must be listed on gov.il and are expected to fail."""
+        return cls.names_of_kind(ScraperKind.ALWAYS_FAILING)
+
+    @classmethod
+    def get_deprecated_scrapers(cls):
+        """Scrapers removed from gov.il; kept only for historical mapping."""
+        return cls.names_of_kind(ScraperKind.DEPRECATED)

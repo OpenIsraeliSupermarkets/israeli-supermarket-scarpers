@@ -16,7 +16,6 @@ from il_supermarket_scarper.utils import (
     get_output_folder,
     ScraperStatusOutput,
 )
-from il_supermarket_scarper.scrappers_factory import ScraperFactory
 from il_supermarket_scarper.scraper_stability import ScraperStability
 from il_supermarket_scarper.utils import (
     QueueFileOutput,
@@ -180,93 +179,101 @@ def make_test_case(scraper_enum, store_id):
         ):
             self._delete_download_folder(dump_path)
             os.makedirs(dump_path)
-            init_scraper_function = ScraperFactory.get(scraper_enum)
 
-            if init_scraper_function is None:
-                Logger.warning(f"{scraper_enum} is disabled.")
-            else:
-                try:
-                    # Create storage path with chain subdirectory
-                    storage_path = get_output_folder(
-                        DumpFolderNames[scraper_enum.name].value, dump_path
+            if ScraperStability.is_deprecated(scraper_enum.name):
+                Logger.warning(f"{scraper_enum} is deprecated.")
+                return
+
+            try:
+                # Create storage path with chain subdirectory
+                storage_path = get_output_folder(
+                    DumpFolderNames[scraper_enum.name].value, dump_path
+                )
+
+                # Create in-memory queue handler for testing
+                queue_handler = InMemoryQueueHandler(
+                    queue_name=f"test_{scraper_enum.name}"
+                )
+
+                # Use QueueFileOutput instead of DiskFileOutput
+                scraper = scraper_enum.value(
+                    file_output=QueueFileOutput(queue_handler, storage_path)
+                )
+
+                kwarg = {
+                    "limit": limit,
+                    "files_types": file_type,
+                    "store_id": store_id,
+                    "when_date": when_date,
+                    "filter_null": True,
+                    "filter_zero": True,
+                    "min_size": 1,
+                    "max_size": 10000000,
+                }
+
+                async for _ in scraper.scrape(**kwarg):
+                    pass
+
+                # Write queued files to disk for validation
+                os.makedirs(storage_path, exist_ok=True)
+                async for message in queue_handler.get_all_messages():
+                    file_name = message["file_name"]
+                    file_content = message["file_content"]
+
+                    # Determine file path
+                    file_save_path = os.path.join(storage_path, file_name)
+
+                    # Write file to disk
+                    with open(file_save_path, "wb") as f:
+                        f.write(file_content)
+
+                files_found = os.listdir(dump_path)
+                assert (
+                    len(files_found) == 2
+                ), "only one folder should exists and the status folder"
+                assert DumpFolderNames[scraper_enum.name].value in files_found
+
+                download_path = os.path.join(
+                    dump_path, DumpFolderNames[scraper_enum.name].value
+                )
+                files_found = os.listdir(download_path)
+
+                self._make_sure_status_file_is_valid(download_path)
+
+                expected_empty = ScraperStability.is_validate_scraper_found_no_files(
+                    scraper_enum.name,
+                    limit=limit,
+                    files_types=file_type,
+                    store_id=store_id,
+                    when_date=when_date,
+                    utilize_date_param=scraper_enum.value.utilize_date_param,
+                )
+                if ScraperStability.is_always_failing(scraper_enum.name):
+                    assert not files_found, (
+                        f"Scraper {scraper_enum.name} expected to fail "
+                        f"but returned {len(files_found)} files. "
+                        "Update ScraperStability or the scraper URL."
                     )
-
-                    # Create in-memory queue handler for testing
-                    queue_handler = InMemoryQueueHandler(
-                        queue_name=f"test_{scraper_enum.name}"
-                    )
-
-                    # Use QueueFileOutput instead of DiskFileOutput
-                    scraper = init_scraper_function(
-                        file_output=QueueFileOutput(queue_handler, storage_path)
-                    )
-
-                    kwarg = {
-                        "limit": limit,
-                        "files_types": file_type,
-                        "store_id": store_id,
-                        "when_date": when_date,
-                        "filter_null": True,
-                        "filter_zero": True,
-                        "min_size": 1,
-                        "max_size": 10000000,
-                    }
-
-                    async for _ in scraper.scrape(**kwarg):
-                        pass
-
-                    # Write queued files to disk for validation
-                    os.makedirs(storage_path, exist_ok=True)
-                    async for message in queue_handler.get_all_messages():
-                        file_name = message["file_name"]
-                        file_content = message["file_content"]
-
-                        # Determine file path
-                        file_save_path = os.path.join(storage_path, file_name)
-
-                        # Write file to disk
-                        with open(file_save_path, "wb") as f:
-                            f.write(file_content)
-
-                    files_found = os.listdir(dump_path)
-                    assert (
-                        len(files_found) == 2
-                    ), "only one folder should exists and the status folder"
-                    assert DumpFolderNames[scraper_enum.name].value in files_found
-
-                    download_path = os.path.join(
-                        dump_path, DumpFolderNames[scraper_enum.name].value
-                    )
-                    files_found = os.listdir(download_path)
-
-                    self._make_sure_status_file_is_valid(download_path)
-                    if not ScraperStability.is_validate_scraper_found_no_files(
-                        scraper_enum.name,
+                elif not expected_empty:
+                    self._make_sure_filter_work(
+                        files_found,
+                        file_type=file_type,
                         limit=limit,
-                        files_types=file_type,
                         store_id=store_id,
                         when_date=when_date,
-                        utilize_date_param=scraper_enum.value.utilize_date_param,
-                    ):
-                        self._make_sure_filter_work(
-                            files_found,
-                            file_type=file_type,
-                            limit=limit,
-                            store_id=store_id,
-                            when_date=when_date,
-                        )
+                    )
 
-                    for file in files_found:
-                        self._make_sure_file_contain_chain_ids(
-                            scraper.get_chain_id(), file
-                        )
-                        self._make_sure_file_extension_is_xml(file)
+                for file in files_found:
+                    self._make_sure_file_contain_chain_ids(
+                        scraper.get_chain_id(), file
+                    )
+                    self._make_sure_file_extension_is_xml(file)
 
-                        self._make_sure_file_is_xml_readable(
-                            os.path.join(download_path, file)
-                        )
-                finally:
-                    self._delete_download_folder(dump_path)
+                    self._make_sure_file_is_xml_readable(
+                        os.path.join(download_path, file)
+                    )
+            finally:
+                self._delete_download_folder(dump_path)
 
         def _get_temp_folder(self):
             """get a temp folder to download the files into"""

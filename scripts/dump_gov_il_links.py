@@ -106,7 +106,7 @@ SKILL_FALLBACK_LINKS: List[Dict[str, Any]] = [
         "scraper": "NETIV_HASED",
         "hebrew": "נתיב החסד",
         "engine": "WebBase",
-        "href": "http://141.226.203.152/",
+        "href": "https://app.netiv-hesed.com/",
     },
     {
         "scraper": "QUIK",
@@ -292,12 +292,23 @@ def fetch_html(url: str) -> str:
     return text
 
 
+def fetch_via_content_api() -> str:
+    """Fetch CPFTA HTML via the public gov.il content API (bypasses Cloudflare)."""
+    # Local import: dump script also runs as a standalone helper.
+    from il_supermarket_scarper.utils.connection import (  # pylint: disable=import-outside-toplevel
+        _fetch_gov_il_content_api,
+        _gov_il_api_to_html,
+    )
+
+    return _gov_il_api_to_html(_fetch_gov_il_content_api("cpfta_prices_regulations"))
+
+
 def extract_links(html: str, page_url: str) -> List[Dict[str, Any]]:
     """Extract external retailer portal links from a CPFTA HTML page."""
     soup = BeautifulSoup(html, "lxml")
     rows: List[Dict[str, Any]] = []
     seen = set()
-    for anchor in soup.find_all("a", href=True):
+    for anchor in soup.find_all("a", href=True) or []:
         href = anchor["href"].strip()
         text = " ".join(anchor.get_text(" ", strip=True).split())
         if not href.startswith("http"):
@@ -365,6 +376,20 @@ def main() -> int:
                 break
             except Exception as exc:  # pylint: disable=broad-exception-caught
                 errors.append(f"{url}: {exc}")
+
+        if links is None:
+            try:
+                html = fetch_via_content_api()
+                extracted = extract_links(
+                    html, "https://www.gov.il/he/pages/cpfta_prices_regulations"
+                )
+                if extracted:
+                    links = extracted
+                    source = "gov.il_content_api"
+                else:
+                    errors.append("content API: fetched but 0 retailer links")
+            except Exception as exc:  # pylint: disable=broad-exception-caught
+                errors.append(f"content API: {exc}")
 
     if links is None:
         links = list(SKILL_FALLBACK_LINKS)

@@ -1,5 +1,7 @@
 from enum import Enum
 
+from .deprecated_scrapers import DeprecatedScrapers
+
 
 class DumpFolderNames(Enum):
     """all the folder that files will be download to"""
@@ -60,5 +62,4 @@ class DumpFolderNames(Enum):
     @classmethod
     def active_folder_names(cls):
         """get the name of folders whose scraper is still active in ScraperFactory"""
-        deprecated = {"COFIX", "QUIK", "HET_COHEN", "MAHSANI_ASHUK", "VICTORY"}
-        return [e.name for e in cls if e.name not in deprecated]
+        return [e.name for e in cls if e.name not in DeprecatedScrapers.names()]

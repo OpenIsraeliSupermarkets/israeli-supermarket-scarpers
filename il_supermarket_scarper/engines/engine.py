@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 import os
 import re
 import uuid
@@ -22,6 +23,15 @@ from il_supermarket_scarper.utils import (
 )
 from il_supermarket_scarper.utils.state import FilterState
 from il_supermarket_scarper.utils.databases import AbstractDataBase
+
+
+@dataclass(frozen=True)
+class LoginDetails:
+    """Portal or FTP connection details for a scraper."""
+
+    url: str
+    username: Optional[str] = None
+    password: Optional[str] = None
 
 
 class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
@@ -137,6 +147,22 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             str: The storage path string from the file output handler.
         """
         return self.storage_path.get_storage_path()
+
+    def get_login_details(self) -> LoginDetails:
+        """Return connection details: url, plus username/password when set."""
+        url = getattr(self, "url", None)
+        if not url:
+            ftp_host = getattr(self, "ftp_host", None)
+            if not ftp_host:
+                raise AttributeError(f"{type(self).__name__} has no login details")
+            ftp_path = getattr(self, "ftp_path", "") or ""
+            url = f"ftp://{ftp_host}{ftp_path}"
+
+        return LoginDetails(
+            url=url,
+            username=getattr(self, "ftp_username", None) or None,
+            password=getattr(self, "ftp_password", None) or None,
+        )
 
     def is_valid_file_empty(self, file_name):
         """
