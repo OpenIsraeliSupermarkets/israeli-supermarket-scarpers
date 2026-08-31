@@ -18,7 +18,9 @@ permissions:
 
 jobs:
   build:
-    runs-on: self-hosted
+    runs-on:
+      - self-hosted
+      - ci
     outputs:
       pytest_failed: ${{ steps.test_result.outputs.failed }}
     steps:
