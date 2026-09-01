@@ -806,7 +806,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 raise
             return await self._wget_file_to_memory(file_link, timeout)
 
-    async def save_and_extract(self, arg):
+    async def save_and_extract(self, arg):  # pylint: disable=too-many-locals
         """download file and extract it (in-memory)
 
         Re-downloads a few times on extract failure. If extract still fails
