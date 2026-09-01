@@ -318,31 +318,6 @@ class TestFileOutput:
 
         asyncio.run(run_test())
 
-    def test_disk_has_downloaded_file_matches_stem_with_or_without_extension(self):
-        """Disk dedupe must see extracted .xml even when status stored a .gz stem."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            output = DiskFileOutput(tmpdir, extract_gz=False)
-            path = os.path.join(
-                tmpdir, "Promo7290027600007-001-001-20260831-220000.xml"
-            )
-            with open(path, "wb") as handle:
-                handle.write(b"<xml/>")
-            assert output.has_downloaded_file(
-                "Promo7290027600007-001-001-20260831-220000"
-            )
-            assert output.has_downloaded_file(
-                "Promo7290027600007-001-001-20260831-220000.gz"
-            )
-            assert not output.has_downloaded_file(
-                "Price7290027600007-001-001-20260831-220000"
-            )
-
-    def test_queue_has_downloaded_file_trusts_status_db(self):
-        """Queue output cannot see dumps, so already-downloaded stays DB-gated."""
-        handler = InMemoryQueueHandler("test_queue")
-        output = QueueFileOutput(handler)
-        assert output.has_downloaded_file("Promo7290027600007-001-001-20260831-220000")
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

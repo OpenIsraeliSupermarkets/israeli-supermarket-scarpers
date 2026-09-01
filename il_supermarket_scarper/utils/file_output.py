@@ -79,17 +79,6 @@ class FileOutput(ABC):
     def close_sync(self):
         """Close the file output synchronously (no-op for non-queue outputs)."""
 
-    def has_downloaded_file(self, file_name: str) -> bool:
-        """Whether a previously downloaded file is still held by this output.
-
-        Queue outputs cannot inspect consumer-side storage, so they return True
-        and the status DB remains the source of truth. Disk outputs check that
-        the artifact still exists; daily-publish deletes dumps between runs
-        while keeping ``verified_downloads``.
-        """
-        del file_name
-        return True
-
 
 class DiskFileOutput(FileOutput):
     """Save files to disk (current default behavior)."""
@@ -163,23 +152,6 @@ class DiskFileOutput(FileOutput):
     def get_storage_path(self) -> str:
         """Return the storage path for status files and metadata."""
         return self.storage_path
-
-    def has_downloaded_file(self, file_name: str) -> bool:
-        """True when a dump with this stem still exists on disk."""
-        folder = self.get_storage_path()
-        if not folder or not os.path.isdir(folder):
-            return False
-        base = os.path.splitext(os.path.basename(str(file_name)))[0]
-        try:
-            for entry in os.listdir(folder):
-                path = os.path.join(folder, entry)
-                if not os.path.isfile(path):
-                    continue
-                if os.path.splitext(entry)[0] == base:
-                    return True
-        except OSError:
-            return False
-        return False
 
     async def close(self):
         """Close the file output."""
