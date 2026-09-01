@@ -36,6 +36,11 @@ Expectation:
 
 Do **not** call `scrape()` for discovery — it downloads.
 
+Listing PASS does not prove files fetch. After this skill, use
+[`is-download-completed`](../is-download-completed/SKILL.md)
+(`scripts/validate_downloads.py`): it calls `scrape()` with a fresh status DB
+and **stops on the first download or extract failure**.
+
 ---
 
 ## Agent workflow

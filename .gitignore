@@ -21,3 +21,4 @@ docs/*
 test_data/*
 scripts/gov_il_links.json
 scripts/validation_ui_vs_scraper.json
+scripts/validation_downloads.json
