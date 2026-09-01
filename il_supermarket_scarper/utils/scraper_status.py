@@ -34,6 +34,7 @@ class ScraperStatus:
             self.database = JsonDataBase(database_name, status_path)
         else:
             self.database = status_database
+        self.file_output = file_output
         self.task_id = None
 
     def on_scraping_start(self, limit, files_types, **additional_info):
@@ -97,12 +98,20 @@ class ScraperStatus:
     ):
         """Filter files already existing in long-term memory or previously downloaded."""
         async for file in filelist:
+            file_name = by_function(file)
             already_downloaded = self.database.already_downloaded(
-                self.VERIFIED_DOWNLOADS, {"file_name": by_function(file)}
+                self.VERIFIED_DOWNLOADS, {"file_name": file_name}
             )
+            if (
+                already_downloaded
+                and self.file_output is not None
+                and not self.file_output.has_downloaded_file(file_name)
+            ):
+                # Status remembers the download, but the dump was deleted
+                # (e.g. daily-publish clean_dump_files). Collect it again.
+                already_downloaded = False
             required_file = (
-                files_names_to_scrape is None
-                or by_function(file) in files_names_to_scrape
+                files_names_to_scrape is None or file_name in files_names_to_scrape
             )
             if not already_downloaded and required_file:
                 yield file

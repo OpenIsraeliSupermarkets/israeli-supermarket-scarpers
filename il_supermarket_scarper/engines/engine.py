@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from html import unescape
 import os
 import re
+import shutil
 import uuid
 import datetime
 import asyncio
@@ -809,17 +811,20 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             file_name_with_ext = file_name
             file_link_lower = file_link.lower()
             file_name_lower = file_name.lower()
-            if file_link_lower.endswith((".gz", ".xml")) and not file_name_lower.endswith(
+            if file_link_lower.endswith(
                 (".gz", ".xml")
-            ):
+            ) and not file_name_lower.endswith((".gz", ".xml")):
                 file_name_with_ext = file_name + "." + file_link.split(".")[-1].lower()
 
             # Download file content directly to memory
+            file_link = unescape(file_link)
             try:
                 file_content = await self.retrieve_file_to_memory(file_link, timeout=30)
 
             except Exception as e:  # pylint: disable=broad-except
                 Logger.warning(f"Error downloading {file_link}: {e}")
+                if not shutil.which("wget"):
+                    raise
                 file_content = await self._wget_file_to_memory(file_link, timeout=30)
             downloaded = True
 

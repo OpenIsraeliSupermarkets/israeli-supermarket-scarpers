@@ -1,13 +1,17 @@
 """Tests for engine-level deduplication logic (filter_already_downloaded)."""
 
+import os
 import tempfile
 import unittest
 
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
 from il_supermarket_scarper.utils import (
+    DiskFileOutput,
     DumpFolderNames,
+    FileEntry,
     QueueFileOutput,
     InMemoryQueueHandler,
+    ScraperStatus,
     get_output_folder,
 )
 
@@ -68,3 +72,53 @@ class TestEngineDeduplication(unittest.IsolatedAsyncioTestCase):
                 0,
                 f"{first_file} should not be downloaded again but got {second_results}",
             )
+
+
+class TestDiskAlreadyDownloaded(unittest.IsolatedAsyncioTestCase):
+    """Disk output must re-collect files after dumps are deleted."""
+
+    async def test_redownloads_when_dump_was_cleaned(self):
+        """Status says downloaded, dump folder is empty → yield the file again."""
+        file_name = "Promo7290696200003-001-089-20260829-060446"
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            dumps = os.path.join(tmpdirname, "dumps")
+            output = DiskFileOutput(dumps)
+            status = ScraperStatus("VictoryNewSource", file_output=output)
+            status.database.insert_document(
+                ScraperStatus.VERIFIED_DOWNLOADS, {"file_name": file_name}
+            )
+
+            async def files():
+                yield FileEntry(name=file_name, url="https://example.com/x.gz", size=1)
+
+            got = [
+                entry
+                async for entry in status.filter_already_downloaded(
+                    None, files(), by_function=lambda entry: entry.name
+                )
+            ]
+            self.assertEqual([entry.name for entry in got], [file_name])
+
+    async def test_skips_when_dump_still_on_disk(self):
+        """Status says downloaded and the xml is still there → skip."""
+        file_name = "Promo7290696200003-001-089-20260829-060446"
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            dumps = os.path.join(tmpdirname, "dumps")
+            output = DiskFileOutput(dumps)
+            with open(os.path.join(dumps, f"{file_name}.xml"), "wb") as handle:
+                handle.write(b"<xml/>")
+            status = ScraperStatus("VictoryNewSource", file_output=output)
+            status.database.insert_document(
+                ScraperStatus.VERIFIED_DOWNLOADS, {"file_name": file_name}
+            )
+
+            async def files():
+                yield FileEntry(name=file_name, url="https://example.com/x.gz", size=1)
+
+            got = [
+                entry
+                async for entry in status.filter_already_downloaded(
+                    None, files(), by_function=lambda entry: entry.name
+                )
+            ]
+            self.assertEqual(got, [])
