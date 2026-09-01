@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from html import unescape
 import os
 import re
+import shutil
 import uuid
 import datetime
 import asyncio
@@ -795,10 +797,13 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
 
     async def _download_file_content(self, file_link, timeout=30):
         """Download file bytes; fall back to wget if requests fails."""
+        file_link = unescape(file_link)
         try:
             return await self.retrieve_file_to_memory(file_link, timeout=timeout)
         except Exception as e:  # pylint: disable=broad-except
             Logger.warning(f"Error downloading {file_link}: {e}")
+            if not shutil.which("wget"):
+                raise
             return await self._wget_file_to_memory(file_link, timeout)
 
     async def save_and_extract(self, arg):
@@ -823,11 +828,12 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             file_name_with_ext = file_name
             file_link_lower = file_link.lower()
             file_name_lower = file_name.lower()
-            if file_link_lower.endswith((".gz", ".xml")) and not file_name_lower.endswith(
+            if file_link_lower.endswith(
                 (".gz", ".xml")
-            ):
+            ) and not file_name_lower.endswith((".gz", ".xml")):
                 file_name_with_ext = file_name + "." + file_link.split(".")[-1].lower()
 
+            file_link = unescape(file_link)
             for attempt in range(1, max_attempts + 1):
                 file_content = await self._download_file_content(file_link, timeout=30)
                 downloaded = True
