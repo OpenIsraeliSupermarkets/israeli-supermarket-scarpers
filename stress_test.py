@@ -127,7 +127,7 @@ def categorize_hotspots(project_stats):
     """Group project stats into optimization buckets."""
     buckets = defaultdict(lambda: {"tottime": 0.0, "cumtime": 0.0, "functions": []})
     rules = (
-        ("network", ("connection.py", "session_with", "url_retrieve", "wget_file")),
+        ("network", ("connection.py", "session_with", "url_retrieve", "wget_file", "curl")),
         ("listing", ("multipage_web.py", "collect_files", "generate_all_files")),
         ("download", ("retrieve_file", "save_and_extract", "process_file")),
         ("gzip_io", ("gzip_utils.py", "file_output.py", "_extract_if", "_write_file")),

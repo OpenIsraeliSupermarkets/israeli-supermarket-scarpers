@@ -751,21 +751,21 @@ async def fetch_file_from_ftp_to_memory(  # pylint: disable=too-many-locals
 
 
 async def wget_file_to_memory(file_link, timeout=30):
-    """Download file to memory using wget (fallback when requests fails)."""
-    Logger.debug(f"trying to download file {file_link} to memory (wget fallback).")
+    """Download file to memory using curl (fallback when requests fails)."""
+    Logger.debug(f"trying to download file {file_link} to memory (curl fallback).")
 
     process = await asyncio.create_subprocess_shell(
-        f"wget --timeout={timeout} --output-document=- '{file_link}'",
+        f"curl -sS --fail --max-time {timeout} '{file_link}'",
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
     std_out, std_err = await process.communicate()
 
     std_err_text = std_err.decode("utf-8", errors="ignore")
-    Logger.debug(f"Wget stderr {std_err_text}")
+    Logger.debug(f"curl stderr {std_err_text}")
 
     if process.returncode != 0:
-        Logger.error(f"wget failed with return code {process.returncode}")
+        Logger.error(f"curl failed with return code {process.returncode}")
         raise FileNotFoundError(f"File download failed, stderr: {std_err_text}")
 
     buffer = io.BytesIO(std_out)
