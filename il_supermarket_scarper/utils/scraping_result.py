@@ -14,6 +14,7 @@ class ScrapingResult:
             extract_succefully=True,
             error=None,
             restart_and_retry=False,
+            source_corrupt=False,
         )
     """
 
@@ -24,12 +25,16 @@ class ScrapingResult:
         extract_succefully: bool,
         error: Optional[str] = None,
         restart_and_retry: bool = False,
+        source_corrupt: bool = False,
     ):
         self.file_name = file_name
         self.downloaded = downloaded
         self.extract_succefully = extract_succefully
         self.error = error
         self.restart_and_retry = restart_and_retry
+        # True when the remote file itself is truncated/corrupt (download size
+        # matched, extract still failed after retries). Not a fetch bug.
+        self.source_corrupt = source_corrupt
 
     def __len__(self) -> int:
         """
@@ -45,7 +50,8 @@ class ScrapingResult:
             f"downloaded={self.downloaded}, "
             f"extract_succefully={self.extract_succefully}, "
             f"error={self.error!r}, "
-            f"restart_and_retry={self.restart_and_retry})"
+            f"restart_and_retry={self.restart_and_retry}, "
+            f"source_corrupt={self.source_corrupt})"
         )
 
     def __bool__(self) -> bool:

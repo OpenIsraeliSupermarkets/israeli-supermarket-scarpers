@@ -18,6 +18,8 @@ every file the scraper would collect **downloads and extracts**
 
 Stop at the **first** download or extract failure. Do not keep scraping the rest of the chain.
 
+**Exception — `source_corrupt`:** if the remote published a truncated/bad archive (full-size download, extract still fails after retries), the scraper marks `source_corrupt=True`. Validation **skips** those files (`skipped_corrupt`) and continues. That is not a fetch bug.
+
 ## When to use
 
 | Use this skill | Use `is-scraping-completed` instead |
@@ -48,7 +50,7 @@ python scripts/validate_downloads.py --all-listed --output scripts/validation_do
 
 3. Default is **all files**, fail-fast. Use `--limit N` only when the user asks for a cheaper smoke.
 4. On **FAIL**: record `failed_file`, `error`, how many succeeded before the stop. Stay on that chain; do not move on until the failure is understood.
-5. On **PASS**: `failed=0` and `downloaded > 0`.
+5. On **PASS**: `failed=0` and `downloaded > 0` (optional `skipped_corrupt > 0` is OK).
 
 `scrape()` may have a few in-flight downloads (`max_threads`). Breaking the generator cancels the rest; report the first failed result.
 
@@ -56,7 +58,7 @@ python scripts/validate_downloads.py --all-listed --output scripts/validation_do
 
 - [ ] Fresh status (no `verified_downloads` skip)
 - [ ] `scrape()` used (not list-only discovery)
-- [ ] Stopped on first download/extract failure
+- [ ] Stopped on first download/extract failure (source_corrupt skips continue)
 - [ ] `downloaded > 0` and `failed == 0` (PASS)
 - [ ] First failure includes filename + error (FAIL)
 
@@ -66,5 +68,6 @@ python scripts/validate_downloads.py --all-listed --output scripts/validation_do
 |---|---|
 | `wget: not found` / SAS `&amp;` in URL | Download path (`requests` / wget fallback) |
 | First file fails, rest not tried | Expected — fail-fast |
+| `skipped_corrupt` / `source corrupt after N downloads` | Remote truncated gzip; not a scraper bug |
 | `no files downloaded` | Empty listing or filters; confirm with listing skill |
 | PASS here, quality `saw>0 downloaded=0` | Prior `verified_downloads` skip — not a fetch bug |

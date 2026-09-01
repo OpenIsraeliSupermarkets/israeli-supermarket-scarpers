@@ -4,7 +4,11 @@ import unittest
 
 from il_supermarket_scarper.utils import ScrapingResult
 
-from scripts.validate_downloads import consume_until_failure, is_download_ok
+from scripts.validate_downloads import (
+    consume_until_failure,
+    is_download_ok,
+    is_source_corrupt_skip,
+)
 
 
 def _ok(name: str) -> ScrapingResult:
@@ -24,6 +28,16 @@ def _fail(name: str, error: str) -> ScrapingResult:
     )
 
 
+def _corrupt(name: str) -> ScrapingResult:
+    return ScrapingResult(
+        file_name=name,
+        downloaded=True,
+        extract_succefully=False,
+        error="source corrupt after 3 downloads: extract failed",
+        source_corrupt=True,
+    )
+
+
 class TestDownloadHelpers(unittest.IsolatedAsyncioTestCase):
     """Fail-fast contract for validate_downloads."""
 
@@ -40,6 +54,9 @@ class TestDownloadHelpers(unittest.IsolatedAsyncioTestCase):
                 )
             )
         )
+        self.assertFalse(is_download_ok(_corrupt("a")))
+        self.assertTrue(is_source_corrupt_skip(_corrupt("a")))
+        self.assertFalse(is_source_corrupt_skip(_fail("a", "wget")))
 
     async def test_consume_stops_on_first_failure(self):
         """Later files must not be pulled after the first failed result."""
@@ -64,6 +81,23 @@ class TestDownloadHelpers(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(summary["error"], "wget: not found")
         self.assertEqual(pulled, ["one", "two", "three"])
 
+    async def test_consume_skips_source_corrupt(self):
+        """Confirmed remote-corrupt archives do not fail-fast the chain."""
+        pulled = []
+
+        async def results():
+            items = (_ok("one"), _corrupt("bad.gz"), _ok("three"))
+            for item in items:
+                pulled.append(item.file_name)
+                yield item
+
+        summary = await consume_until_failure(results())
+        self.assertEqual(summary["downloaded"], 2)
+        self.assertEqual(summary["skipped_corrupt"], 1)
+        self.assertEqual(summary["failed"], 0)
+        self.assertFalse(summary["stopped_on_failure"])
+        self.assertEqual(pulled, ["one", "bad.gz", "three"])
+
     async def test_consume_all_ok(self):
         """A full successful drain reports no failure."""
 
@@ -74,6 +108,7 @@ class TestDownloadHelpers(unittest.IsolatedAsyncioTestCase):
         summary = await consume_until_failure(results())
         self.assertEqual(summary["downloaded"], 2)
         self.assertEqual(summary["failed"], 0)
+        self.assertEqual(summary["skipped_corrupt"], 0)
         self.assertFalse(summary["stopped_on_failure"])
 
 

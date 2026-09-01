@@ -793,16 +793,30 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
     async def _wget_file_to_memory(self, file_link, timeout):
         return await wget_file_to_memory(file_link, timeout)
 
+    async def _download_file_content(self, file_link, timeout=30):
+        """Download file bytes; fall back to wget if requests fails."""
+        try:
+            return await self.retrieve_file_to_memory(file_link, timeout=timeout)
+        except Exception as e:  # pylint: disable=broad-except
+            Logger.warning(f"Error downloading {file_link}: {e}")
+            return await self._wget_file_to_memory(file_link, timeout)
+
     async def save_and_extract(self, arg):
-        """download file and extract it (in-memory)"""
+        """download file and extract it (in-memory)
+
+        Re-downloads a few times on extract failure. If extract still fails
+        after full downloads, mark ``source_corrupt`` (remote file is bad).
+        """
 
         file_link, file_name = arg
         Logger.debug(f"Processing {file_link} (in-memory)")
 
-        # Download the file content first
         downloaded = False
         error = None
         restart_and_retry = False
+        source_corrupt = False
+        extract_succefully = False
+        max_attempts = 3
 
         try:
             # Determine file name with extension (case-insensitive check)
@@ -814,37 +828,55 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             ):
                 file_name_with_ext = file_name + "." + file_link.split(".")[-1].lower()
 
-            # Download file content directly to memory
-            try:
-                file_content = await self.retrieve_file_to_memory(file_link, timeout=30)
+            for attempt in range(1, max_attempts + 1):
+                file_content = await self._download_file_content(file_link, timeout=30)
+                downloaded = True
 
-            except Exception as e:  # pylint: disable=broad-except
-                Logger.warning(f"Error downloading {file_link}: {e}")
-                file_content = await self._wget_file_to_memory(file_link, timeout=30)
-            downloaded = True
+                if file_name_with_ext.endswith(".gz"):
+                    Logger.debug(f"File size is {len(file_content)} bytes.")
 
-            # Log file size if it's a gzip file
-            if file_name_with_ext.endswith(".gz"):
-                Logger.debug(f"File size is {len(file_content)} bytes.")
+                result = await self.storage_path.save_file(
+                    file_link=file_link,
+                    file_name=file_name_with_ext,
+                    file_content=file_content,
+                    metadata={
+                        "chain": self.chain.value,
+                        "chain_id": self.chain_id,
+                        "original_filename": file_name,
+                    },
+                )
 
-            # Use the file output handler to save
-            result = await self.storage_path.save_file(
-                file_link=file_link,
-                file_name=file_name_with_ext,
-                file_content=file_content,
-                metadata={
-                    "chain": self.chain.value,
-                    "chain_id": self.chain_id,
-                    "original_filename": file_name,
-                },
-            )
+                extract_succefully = result.get("extract_successfully", False)
+                error = result.get("error")
+                if extract_succefully:
+                    return ScrapingResult(
+                        file_name=file_name,
+                        downloaded=downloaded,
+                        extract_succefully=True,
+                        error=None,
+                        restart_and_retry=False,
+                        source_corrupt=False,
+                    )
+
+                Logger.warning(
+                    f"Extract failed for {file_name} "
+                    f"(attempt {attempt}/{max_attempts}): {error}"
+                )
+                if attempt == max_attempts:
+                    source_corrupt = True
+                    error = (
+                        f"source corrupt after {max_attempts} downloads: "
+                        f"{error or 'extract failed'}"
+                    )
+                    Logger.error(error)
 
             return ScrapingResult(
                 file_name=file_name,
                 downloaded=downloaded,
-                extract_succefully=result.get("extract_successfully", False),
-                error=result.get("error"),
+                extract_succefully=False,
+                error=error,
                 restart_and_retry=False,
+                source_corrupt=source_corrupt,
             )
 
         except RestartSessionError as exception:
@@ -863,4 +895,5 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             extract_succefully=False,
             error=error,
             restart_and_retry=restart_and_retry,
+            source_corrupt=source_corrupt,
         )

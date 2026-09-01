@@ -174,12 +174,18 @@ class Cerberus(Engine):
                 yield entry.name, entry.url
 
     async def persist_from_ftp(self, file_name):
-        """download file to memory and extract it."""
+        """download file to memory and extract it.
+
+        Re-downloads a few times on extract failure (truncated transfer). If the
+        FTP SIZE matched and extract still fails, mark ``source_corrupt`` —
+        the remote file itself is bad, not our fetch path.
+        """
         downloaded = False
         extract_succefully = False
         restart_and_retry = False
+        source_corrupt = False
         error = None
-        ext = None
+        max_attempts = 3
         try:
             ext = file_name.split(".")[-1] if "." in file_name else ""
             if ext not in ["gz", "xml"]:
@@ -187,36 +193,49 @@ class Cerberus(Engine):
 
             Logger.debug(f"Start persisting file {file_name} (in-memory)")
 
-            # Download file directly to memory
-            file_content = await fetch_file_from_ftp_to_memory(
-                self.ftp_host,
-                self.ftp_username,
-                self.ftp_password,
-                self.ftp_path,
-                file_name,
-                30,
-            )
-            downloaded = True
+            for attempt in range(1, max_attempts + 1):
+                file_content = await fetch_file_from_ftp_to_memory(
+                    self.ftp_host,
+                    self.ftp_username,
+                    self.ftp_password,
+                    self.ftp_path,
+                    file_name,
+                    30,
+                )
+                downloaded = True
 
-            if ext == "gz":
-                Logger.debug(f"File size is {len(file_content)} bytes.")
+                if ext == "gz":
+                    Logger.debug(f"File size is {len(file_content)} bytes.")
 
-            # Use the file output handler to save
-            result = await self.storage_path.save_file(
-                file_link="",  # FTP doesn't have a URL
-                file_name=file_name,
-                file_content=file_content,
-                metadata={
-                    "chain": self.chain.value,
-                    "chain_id": self.chain_id,
-                    "original_filename": file_name,
-                    "source": "ftp",
-                },
-            )
+                result = await self.storage_path.save_file(
+                    file_link="",  # FTP doesn't have a URL
+                    file_name=file_name,
+                    file_content=file_content,
+                    metadata={
+                        "chain": self.chain.value,
+                        "chain_id": self.chain_id,
+                        "original_filename": file_name,
+                        "source": "ftp",
+                    },
+                )
 
-            Logger.debug(f"Done persisting file {file_name}")
-            extract_succefully = result.get("extract_successfully", False)
-            error = result.get("error")
+                extract_succefully = result.get("extract_successfully", False)
+                error = result.get("error")
+                if extract_succefully:
+                    Logger.debug(f"Done persisting file {file_name}")
+                    break
+
+                Logger.warning(
+                    f"Extract failed for {file_name} "
+                    f"(attempt {attempt}/{max_attempts}): {error}"
+                )
+                if attempt == max_attempts:
+                    source_corrupt = True
+                    error = (
+                        f"source corrupt after {max_attempts} downloads: "
+                        f"{error or 'extract failed'}"
+                    )
+                    Logger.error(error)
         except Exception as exception:  # pylint: disable=broad-except
             Logger.error(
                 f"Error downloading {file_name},extract_succefully={extract_succefully}"
@@ -232,4 +251,5 @@ class Cerberus(Engine):
             extract_succefully=extract_succefully,
             restart_and_retry=restart_and_retry,
             error=error,
+            source_corrupt=source_corrupt,
         )

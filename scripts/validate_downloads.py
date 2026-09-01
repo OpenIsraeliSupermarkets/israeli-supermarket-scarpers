@@ -144,13 +144,23 @@ def is_download_ok(result: ScrapingResult) -> bool:
     return bool(result.extract_succefully)
 
 
+def is_source_corrupt_skip(result: ScrapingResult) -> bool:
+    """True when the remote file itself is corrupt (not a fetch bug)."""
+    return bool(getattr(result, "source_corrupt", False))
+
+
 async def consume_until_failure(
     results: AsyncGenerator[ScrapingResult, None],
 ) -> Dict[str, Any]:
-    """Drain scrape results; stop at the first extract/download failure."""
+    """Drain scrape results; stop at the first extract/download failure.
+
+    Confirmed ``source_corrupt`` results are skipped (counted, not failed):
+    the remote published a truncated/bad archive after a complete download.
+    """
     summary: Dict[str, Any] = {
         "downloaded": 0,
         "failed": 0,
+        "skipped_corrupt": 0,
         "stopped_on_failure": False,
     }
     async for result in results:
@@ -158,6 +168,14 @@ async def consume_until_failure(
             summary["downloaded"] += 1
             if summary["downloaded"] % 25 == 0:
                 print(f"    {summary['downloaded']} ok...", flush=True)
+            continue
+        if is_source_corrupt_skip(result):
+            summary["skipped_corrupt"] += 1
+            print(
+                f"    skip corrupt source file={result.file_name} "
+                f"error={result.error}",
+                flush=True,
+            )
             continue
         summary["failed"] = 1
         summary["stopped_on_failure"] = True
@@ -179,6 +197,7 @@ async def download_one(enum_name: str, limit: Optional[int]) -> Dict[str, Any]:
         "limit": limit,
         "downloaded": 0,
         "failed": 0,
+        "skipped_corrupt": 0,
         "pass": False,
         "stopped_on_failure": False,
     }
@@ -218,10 +237,12 @@ async def run(scrapers: List[str], limit: Optional[int]) -> List[Dict[str, Any]]
             extra = f" file={row['failed_file']} error={row.get('error')}"
         elif row.get("error"):
             extra = f" error={row['error']}"
+        skipped = row.get("skipped_corrupt") or 0
+        skipped_extra = f" skipped_corrupt={skipped}" if skipped else ""
         print(
             f"  {status} engine={row.get('engine')} "
             f"downloaded={row.get('downloaded')} failed={row.get('failed')}"
-            f"{extra}",
+            f"{skipped_extra}{extra}",
             flush=True,
         )
         results.append(row)
