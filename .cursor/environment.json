@@ -1,0 +1,4 @@
+{
+  "name": "Israeli Supermarket Scrapers",
+  "install": "sudo apt-get update && sudo apt-get install -y wget && pip install -e ."
+}
