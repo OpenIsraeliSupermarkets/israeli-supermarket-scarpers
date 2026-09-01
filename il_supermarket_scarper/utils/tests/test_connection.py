@@ -1,20 +1,68 @@
-# the code no longer save to files, test redundent?
+"""Unit tests for download helpers."""
+
+import asyncio
+from unittest.mock import patch
+
+from il_supermarket_scarper.utils.connection import (
+    url_retrieve_to_memory,
+    wget_file_to_memory,
+)
 
 
-# import os
-# import pytest
-# from il_supermarket_scarper.utils.connection import wget_file
+class _FakeResponse:
+    """Minimal requests response for url_retrieve_to_memory."""
+
+    def __init__(self, body=b"data"):
+        self.headers = {"Content-Length": str(len(body))}
+        self._body = body
+
+    def raise_for_status(self):
+        """No-op success."""
+
+    def iter_content(self, chunk_size=8192):  # pylint: disable=unused-argument
+        """Yield the body once."""
+        yield self._body
+
+    def close(self):
+        """No-op close for contextlib.closing."""
 
 
-# def test_wget_file_dont_exist():
-#     """Test wget file that does not exist"""
-#     with pytest.raises(FileNotFoundError):
-#         wget_file(
-#             "https://pricesprodpublic.blob.core.windows.net/price/"
-#             "Price7290027600007-036-202503181800.gz?sv=2014-02-14&sr=b"
-#             "&sig=Me8hez2oy5vClACdE5fVOyyu5Qef%2FlEJSQYfMvQAOKg%3D&"
-#             "se=2025-03-18T18%3A02%3A59Z&sp=r",
-#             "some_file.gz",
-#         )
+def test_url_retrieve_unescapes_html_entities_and_sends_user_agent():
+    """Azure SAS links in HTML use &amp;; requests must see a decoded URL."""
+    captured = {}
 
-#     assert not os.path.exists("some_file.gz")
+    def fake_get(url, **kwargs):
+        captured["url"] = url
+        captured["headers"] = kwargs.get("headers")
+        return _FakeResponse(b"gzxx")
+
+    with patch("il_supermarket_scarper.utils.connection.requests.get", fake_get):
+        body = url_retrieve_to_memory(
+            "https://blob.example/promo/file.gz?sv=2014-02-14&amp;sr=b&amp;sp=r"
+        )
+
+    assert body == b"gzxx"
+    assert (
+        captured["url"] == "https://blob.example/promo/file.gz?sv=2014-02-14&sr=b&sp=r"
+    )
+    assert "User-Agent" in captured["headers"]
+
+
+def test_wget_missing_does_not_shell_out():
+    """Daily-publish images have no wget; fallback must fail closed, not /bin/sh."""
+
+    async def run():
+        with patch(
+            "il_supermarket_scarper.utils.connection.shutil.which", return_value=None
+        ), patch(
+            "il_supermarket_scarper.utils.connection.asyncio.create_subprocess_shell"
+        ) as subprocess_shell:
+            try:
+                await wget_file_to_memory("https://example.com/file.gz")
+            except FileNotFoundError as exc:
+                assert "wget is not installed" in str(exc)
+            else:
+                raise AssertionError("expected FileNotFoundError")
+            subprocess_shell.assert_not_called()
+
+    asyncio.run(run())

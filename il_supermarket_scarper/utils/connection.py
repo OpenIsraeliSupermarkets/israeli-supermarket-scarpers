@@ -2,6 +2,7 @@ import contextlib
 import io
 import os
 import re
+import shutil
 import time
 import socket
 import pickle
@@ -579,10 +580,12 @@ def get_from_webpage(cached_page, extraction_type):
 
 def url_retrieve_to_memory(url, timeout=30, chunk_size=8192):
     """Download URL content directly to memory (BytesIO)."""
+    url = unescape(url)
+    headers = get_random_user_agent()
+    # Keep gzip bytes intact; requests would otherwise decode Content-Encoding.
+    headers["Accept-Encoding"] = None
     with contextlib.closing(
-        requests.get(
-            url, stream=True, timeout=timeout, headers={"Accept-Encoding": None}
-        )
+        requests.get(url, stream=True, timeout=timeout, headers=headers)
     ) as _request:
         _request.raise_for_status()
         size = int(_request.headers.get("Content-Length", "-1"))
@@ -752,6 +755,10 @@ async def fetch_file_from_ftp_to_memory(  # pylint: disable=too-many-locals
 
 async def wget_file_to_memory(file_link, timeout=30):
     """Download file to memory using wget (fallback when requests fails)."""
+    file_link = unescape(file_link)
+    if not shutil.which("wget"):
+        raise FileNotFoundError("wget is not installed")
+
     Logger.debug(f"trying to download file {file_link} to memory (wget fallback).")
 
     process = await asyncio.create_subprocess_shell(
