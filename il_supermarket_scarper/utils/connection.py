@@ -51,6 +51,9 @@ exceptions = (
     LoadError,
 )
 
+# FTP size-mismatch raises ValueError; include it only for FTP retries.
+ftp_exceptions = exceptions + (ValueError,)
+
 
 def download_connection_retry():
     """decorator the define the retry logic of connections tring to download files"""
@@ -678,16 +681,31 @@ async def collect_from_ftp(
 def _sync_ftp_download_to_memory(
     ftp_host, ftp_username, ftp_password, ftp_path, file_name, ftp_timeout
 ):
-    """Synchronous FTP download using FTP_TLS to BytesIO"""
+    """Synchronous FTP download using FTP_TLS to BytesIO.
+
+    When the server reports a SIZE, the downloaded byte count must match;
+    otherwise raise so the caller retries (truncated transfer).
+    """
     socket.setdefaulttimeout(ftp_timeout)
     file_buffer = io.BytesIO()
     ftp = FTP_TLS(ftp_host, ftp_username, ftp_password, timeout=ftp_timeout)
     ftp.trust_server_pasv_ipv4_address = True
     ftp.cwd(ftp_path)
+    expected_size = None
+    try:
+        ftp.voidcmd("TYPE I")
+        expected_size = ftp.size(file_name)
+    except error_perm:
+        expected_size = None
     ftp.retrbinary("RETR " + file_name, file_buffer.write)
     ftp.quit()
-    file_buffer.seek(0)  # Reset to beginning for reading
-    return file_buffer.getvalue()  # Return bytes
+    data = file_buffer.getvalue()
+    if expected_size is not None and len(data) != expected_size:
+        raise ValueError(
+            f"Truncated FTP download for {file_name}: "
+            f"got {len(data)} out of {expected_size} bytes"
+        )
+    return data
 
 
 async def fetch_file_from_ftp_to_memory(  # pylint: disable=too-many-locals
@@ -720,7 +738,7 @@ async def fetch_file_from_ftp_to_memory(  # pylint: disable=too-many-locals
                 _timeout,
             )
             return file_content
-        except exceptions as error:
+        except ftp_exceptions as error:
             _tries -= 1
             is_final_attempt = not _tries
 
