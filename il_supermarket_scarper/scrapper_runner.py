@@ -75,6 +75,7 @@ async def _scrape_one(  # pylint: disable=too-many-locals
     limit=None,
     single_pass=False,
     files_types=None,
+    file_name_regex=None,
     store_id=None,
     when_date=None,
     min_size=None,
@@ -120,7 +121,7 @@ async def _scrape_one(  # pylint: disable=too-many-locals
             files_types=files_types,
             store_id=store_id,
             when_date=when_date,
-            files_names_to_scrape=None,
+            file_name_regex=file_name_regex,
             filter_null=False,
             filter_zero=False,
             min_size=min_size,
@@ -233,6 +234,7 @@ class MainScrapperRunner:  # pylint: disable=too-many-instance-attributes
         self,
         limit=None,
         files_types=None,
+        file_name_regex=None,
         when_date=False,
         min_size=None,
         max_size=None,
@@ -241,6 +243,7 @@ class MainScrapperRunner:  # pylint: disable=too-many-instance-attributes
         """run the scraper"""
         Logger.info(f"Limit is {limit}")
         Logger.info(f"files_types is {files_types}")
+        Logger.info(f"file_name_regex is {file_name_regex}")
         Logger.info(f"Start scraping {self.enabled_scrapers}.")
 
         with Manager() as self._manager:
@@ -251,6 +254,7 @@ class MainScrapperRunner:  # pylint: disable=too-many-instance-attributes
                     {
                         "limit": limit,
                         "files_types": files_types,
+                        "file_name_regex": file_name_regex,
                         "when_date": when_date,
                         "min_size": min_size,
                         "max_size": max_size,

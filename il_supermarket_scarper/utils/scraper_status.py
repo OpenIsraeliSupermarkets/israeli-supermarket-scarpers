@@ -92,19 +92,13 @@ class ScraperStatus:
         self._insert_event(ScraperStatus.DOWNLOADED, **event_data)
         self._add_downloaded_files_to_list(results)
 
-    async def filter_already_downloaded(
-        self, files_names_to_scrape, filelist, by_function=lambda x: x
-    ):
+    async def filter_already_downloaded(self, filelist, by_function=lambda x: x):
         """Filter files already existing in long-term memory or previously downloaded."""
         async for file in filelist:
             already_downloaded = self.database.already_downloaded(
                 self.VERIFIED_DOWNLOADS, {"file_name": by_function(file)}
             )
-            required_file = (
-                files_names_to_scrape is None
-                or by_function(file) in files_names_to_scrape
-            )
-            if not already_downloaded and required_file:
+            if not already_downloaded:
                 yield file
 
     def _add_downloaded_files_to_list(self, results: ScrapingResult):

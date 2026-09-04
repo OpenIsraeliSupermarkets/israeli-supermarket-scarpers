@@ -95,7 +95,7 @@ class WebBase(Engine):
         by_function=lambda x: x.name,
         store_id=None,
         when_date=None,
-        files_names_to_scrape=None,
+        file_name_regex=None,
         random_selection=False,
     ):
         """apply limit to zip"""
@@ -108,7 +108,7 @@ class WebBase(Engine):
             by_function=by_function,
             store_id=store_id,
             when_date=when_date,
-            files_names_to_scrape=files_names_to_scrape,
+            file_name_regex=file_name_regex,
             random_selection=random_selection,
         ):
             yield item
@@ -143,7 +143,7 @@ class WebBase(Engine):
         files_types=None,
         store_id=None,
         when_date=None,
-        files_names_to_scrape=None,
+        file_name_regex=None,
         filter_null=False,
         filter_zero=False,
         min_size=None,
@@ -183,7 +183,7 @@ class WebBase(Engine):
             by_function=lambda x: x.name,
             store_id=store_id,
             when_date=when_date,
-            files_names_to_scrape=files_names_to_scrape,
+            file_name_regex=file_name_regex,
             random_selection=random_selection,
         ):
             yield entry.url, entry.name

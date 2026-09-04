@@ -125,7 +125,7 @@ class Cerberus(Engine):
         files_types=None,
         store_id=None,
         when_date=None,
-        files_names_to_scrape=None,
+        file_name_regex=None,
         filter_null=False,
         filter_zero=False,
         min_size=None,
@@ -169,7 +169,7 @@ class Cerberus(Engine):
                 files_types=files_types,
                 store_id=store_id,
                 when_date=when_date,
-                files_names_to_scrape=files_names_to_scrape,
+                file_name_regex=file_name_regex,
                 by_function=lambda x: x.name,
             ):
                 yield entry.name, entry.url

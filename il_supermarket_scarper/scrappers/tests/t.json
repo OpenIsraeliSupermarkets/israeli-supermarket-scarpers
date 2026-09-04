@@ -6,7 +6,7 @@
             "limit": 1,
             "files_requested": null,
             "store_id": null,
-            "files_names_to_scrape": null,
+            "file_name_regex": null,
             "when_date": null,
             "filter_nul": true,
             "filter_zero": true,

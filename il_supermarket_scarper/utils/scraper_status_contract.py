@@ -52,7 +52,7 @@ class StartedStatus(BaseModel):
     limit: Optional[int] = None
     files_requested: Optional[List[str]] = None
     store_id: Optional[int] = None
-    files_names_to_scrape: Optional[List[str]] = None
+    file_name_regex: Optional[str] = None
     when_date: Optional[datetime] = None
     filter_null: bool = False
     filter_zero: bool = False

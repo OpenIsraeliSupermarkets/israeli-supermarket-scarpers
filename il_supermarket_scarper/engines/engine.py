@@ -278,6 +278,18 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             if pattern.search(by_function(file)):
                 yield file
 
+    async def filter_by_file_name_regex(
+        self,
+        intreable: AsyncGenerator[FileEntry, None],
+        file_name_regex,
+        by_function=lambda x: x.name,
+    ):
+        """Yield files whose name matches ``file_name_regex`` via ``re.search``."""
+        pattern = self._compile_file_name_regex(file_name_regex)
+        async for file in intreable:
+            if pattern.search(by_function(file)):
+                yield file
+
     async def apply_limit(
         self,
         state: FilterState,
@@ -287,7 +299,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         by_function=lambda x: x.name,
         store_id=None,
         when_date=None,
-        files_names_to_scrape=None,
+        file_name_regex=None,
         random_selection=False,
     ):
         """
@@ -309,8 +321,8 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             store_id (str, optional): Store ID to filter by. Defaults to None.
             when_date (datetime, optional): Date to filter files by.
                 Defaults to None.
-            files_names_to_scrape (list, optional): Specific file names to scrape.
-                Defaults to None.
+            file_name_regex (str, optional): Regex matched against file names
+                with ``re.search``. Defaults to None (no name filter).
             random_selection (bool, optional): If True, randomly select files
                 from the last 48 hours. Defaults to False.
 
@@ -342,7 +354,6 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
 
         # filter files already downloaded
         intreable_: AsyncGenerator[FileEntry, None] = self.filter_already_downloaded(
-            files_names_to_scrape,
             files_list,
             by_function=by_function,
         )
@@ -354,6 +365,11 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         if store_id:
             intreable_ = self.filter_by_store_id(
                 intreable_, store_id, by_function=by_function
+            )
+
+        if file_name_regex:
+            intreable_ = self.filter_by_file_name_regex(
+                intreable_, file_name_regex, by_function=by_function
             )
 
         # filter by file type
@@ -521,7 +537,26 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             os.remove(self.assigned_cookie)
         await self.storage_path.close()
 
-    def _validate_scraper_params(self, limit=None, files_types=None, store_id=None):
+    @staticmethod
+    def _compile_file_name_regex(file_name_regex):
+        """Compile ``file_name_regex`` or return None when unset."""
+        if not file_name_regex:
+            return None
+        if not isinstance(file_name_regex, str):
+            raise ValueError(
+                "file_name_regex must be a string or None, "
+                f"not {type(file_name_regex).__name__}"
+            )
+        try:
+            return re.compile(file_name_regex)
+        except re.error as exc:
+            raise ValueError(
+                f"file_name_regex is not a valid regular expression: {file_name_regex}"
+            ) from exc
+
+    def _validate_scraper_params(
+        self, limit=None, files_types=None, store_id=None, file_name_regex=None
+    ):
         if limit and limit <= 0:
             raise ValueError(f"limit must be greater than 0, nor {limit}")
         if files_types and files_types == []:
@@ -530,6 +565,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             )
         if store_id and store_id <= 0:
             raise ValueError(f"store_id must be greater than 1, not {store_id}")
+        self._compile_file_name_regex(file_name_regex)
 
     async def scrape(  # pylint: disable=too-many-locals
         self,
@@ -538,7 +574,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         files_types=None,
         store_id=None,
         when_date=None,
-        files_names_to_scrape=None,
+        file_name_regex=None,
         filter_null=False,
         filter_zero=False,
         min_size=None,
@@ -550,13 +586,16 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             limit=limit,
             files_types=files_types,
             store_id=store_id,
-            files_names_to_scrape=files_names_to_scrape,
+            file_name_regex=file_name_regex,
             when_date=when_date,
             filter_null=filter_null,
             filter_zero=filter_zero,
         )
         self._validate_scraper_params(
-            limit=limit, files_types=files_types, store_id=store_id
+            limit=limit,
+            files_types=files_types,
+            store_id=store_id,
+            file_name_regex=file_name_regex,
         )
         self.storage_path.make_sure_accassible()
         completed_successfully = True
@@ -570,7 +609,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 files_types=files_types,
                 store_id=store_id,
                 when_date=when_date,
-                files_names_to_scrape=files_names_to_scrape,
+                file_name_regex=file_name_regex,
                 filter_null=filter_null,
                 filter_zero=filter_zero,
                 min_size=min_size,
@@ -597,7 +636,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         files_types=None,
         store_id=None,
         when_date=None,
-        files_names_to_scrape=None,
+        file_name_regex=None,
         filter_null=False,
         filter_zero=False,
         min_size=None,
@@ -635,7 +674,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         files_types=None,
         store_id=None,
         when_date=None,
-        files_names_to_scrape=None,
+        file_name_regex=None,
         filter_null=False,
         filter_zero=False,
         min_size=None,
@@ -672,7 +711,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             when_date=when_date,
             filter_null=filter_null,
             filter_zero=filter_zero,
-            files_names_to_scrape=files_names_to_scrape,
+            file_name_regex=file_name_regex,
             min_size=min_size,
             max_size=max_size,
             random_selection=random_selection,
