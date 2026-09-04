@@ -125,9 +125,57 @@ class MultiPageWeb(WebBase):
             results.append(entry)
         return results
 
-    async def _stream_page_queue(  # pylint: disable=too-many-locals
+    async def _iter_page_requests(
+        self, files_types=None, store_id=None, when_date=None
+    ):
+        """Yield page requests as each listing root's page count is known."""
+        roots = self.get_request_url(
+            files_types=files_types, store_id=store_id, when_date=when_date
+        )
+        flight = {"pending": set()}
+        max_in_flight = max(1, self.max_threads)
+        exhausted = False
+
+        async def resolve_root(main_page_request):
+            main_page_response = await self.session_with_cookies_by_chain(
+                **main_page_request
+            )
+            total_pages = self.get_number_of_pages(main_page_response)
+            Logger.info(f"Found {total_pages} pages")
+            return self._pages_to_scrape(main_page_request, total_pages)
+
+        async def schedule_roots():
+            nonlocal exhausted
+            pending = flight["pending"]
+            while len(pending) < max_in_flight and not exhausted:
+                try:
+                    main_page_request = await anext(roots)
+                except StopAsyncIteration:
+                    exhausted = True
+                    break
+                pending.add(asyncio.create_task(resolve_root(main_page_request)))
+
+        try:
+            await schedule_roots()
+            while flight["pending"]:
+                done, flight["pending"] = await asyncio.wait(
+                    flight["pending"], return_when=asyncio.FIRST_COMPLETED
+                )
+                await schedule_roots()
+                for task in done:
+                    for page_req in task.result():
+                        yield page_req
+        finally:
+            await roots.aclose()
+            pending = flight["pending"]
+            for task in pending:
+                task.cancel()
+            if pending:
+                await asyncio.gather(*pending, return_exceptions=True)
+
+    async def _stream_page_queue(  # pylint: disable=too-many-locals,too-many-branches
         self,
-        page_queue,
+        page_source,
         state,
         limit=None,
         files_types=None,
@@ -138,45 +186,69 @@ class MultiPageWeb(WebBase):
         """Yield page results with bounded in-flight fetches."""
         # Bound in-flight page fetches, yield as each page finishes so
         # Engine._scrape can start downloads while later pages load.
-        # aclose() clears the queue and cancels in-flight work after limit.
-        flight = {"pending": set()}
+        # aclose() cancels in-flight work after limit.
+        pending = set()
         max_in_flight = max(1, self.max_threads)
+        source_exhausted = False
+        listing_done = object()
+        listing_task = None
 
-        def schedule_pages():
-            pending = flight["pending"]
-            while len(pending) < max_in_flight and page_queue:
-                req = page_queue.pop(0)
-                pending.add(
-                    asyncio.create_task(
-                        self._process_single_page(
-                            req,
-                            state,
-                            limit=limit,
-                            files_types=files_types,
-                            store_id=store_id,
-                            when_date=when_date,
-                            random_selection=random_selection,
-                        )
-                    )
+        async def next_page_request():
+            try:
+                return await anext(page_source)
+            except StopAsyncIteration:
+                return listing_done
+
+        def start_page(req):
+            return asyncio.create_task(
+                self._process_single_page(
+                    req,
+                    state,
+                    limit=limit,
+                    files_types=files_types,
+                    store_id=store_id,
+                    when_date=when_date,
+                    random_selection=random_selection,
                 )
+            )
 
-        schedule_pages()
         try:
-            while flight["pending"]:
-                done, flight["pending"] = await asyncio.wait(
-                    flight["pending"], return_when=asyncio.FIRST_COMPLETED
+            while True:
+                if (
+                    not source_exhausted
+                    and listing_task is None
+                    and len(pending) < max_in_flight
+                ):
+                    listing_task = asyncio.create_task(next_page_request())
+
+                wait_for = set(pending)
+                if listing_task is not None:
+                    wait_for.add(listing_task)
+                if not wait_for:
+                    break
+
+                done, _pending = await asyncio.wait(
+                    wait_for, return_when=asyncio.FIRST_COMPLETED
                 )
-                completed_entries = []
+
+                if listing_task is not None and listing_task in done:
+                    req = listing_task.result()
+                    listing_task = None
+                    if req is listing_done:
+                        source_exhausted = True
+                    else:
+                        pending.add(start_page(req))
+
                 for task in done:
-                    completed_entries.extend(task.result())
-                # Refill slots before yielding so listing stays ahead of
-                # downloads while the consumer is busy.
-                schedule_pages()
-                for entry in completed_entries:
-                    yield entry
+                    if task not in pending:
+                        continue
+                    pending.remove(task)
+                    for entry in task.result():
+                        yield entry
         finally:
-            page_queue.clear()
-            pending = flight["pending"]
+            if listing_task is not None:
+                listing_task.cancel()
+                await asyncio.gather(listing_task, return_exceptions=True)
             for task in pending:
                 task.cancel()
             if pending:
@@ -192,22 +264,12 @@ class MultiPageWeb(WebBase):
     ) -> AsyncGenerator[FileEntry, None]:
         """generate all files from the site"""
 
-        async for main_page_request in self.get_request_url(
+        pages = self._iter_page_requests(
             files_types=files_types, store_id=store_id, when_date=when_date
-        ):
-
-            main_page_response = await self.session_with_cookies_by_chain(
-                **main_page_request
-            )
-
-            total_pages = self.get_number_of_pages(main_page_response)
-            Logger.info(f"Found {total_pages} pages")
-
-            # Shared filter state across pages (limit is applied later in
-            # collect_files_details_from_site to avoid per-page races).
-            page_queue = self._pages_to_scrape(main_page_request, total_pages)
+        )
+        try:
             async for entry in self._stream_page_queue(
-                page_queue,
+                pages,
                 FilterState(),
                 limit=limit,
                 files_types=files_types,
@@ -216,6 +278,8 @@ class MultiPageWeb(WebBase):
                 random_selection=random_selection,
             ):
                 yield entry
+        finally:
+            await pages.aclose()
 
     async def collect_files_details_from_site(  # pylint: disable=too-many-locals
         self,

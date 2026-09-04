@@ -626,7 +626,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             return file_details[1]
         return "unknown"
 
-    async def _scrape(  # pylint: disable=too-many-locals
+    async def _scrape(  # pylint: disable=too-many-locals,too-many-branches
         self,
         state: FilterState,
         limit=None,
@@ -676,65 +676,76 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             random_selection=random_selection,
         )
 
-        # Set to track pending tasks (task -> file_details mapping)
+        listing_done = object()
+
+        async def next_listing_item():
+            try:
+                return await anext(files_generator)  # pylint: disable=undefined-variable
+            except StopAsyncIteration:
+                return listing_done
+
+        # Downloads start as soon as the first link arrives. Further listing
+        # is fetched concurrently with in-flight downloads instead of waiting
+        # to prefetch max_threads links first.
         pending_tasks = {}
         generator_exhausted = False
+        listing_task = None
 
         try:
             while True:
-                # Add new tasks from generator up to max_threads limit
-                while not generator_exhausted and len(pending_tasks) < self.max_threads:
-                    try:
-                        file_details = (
-                            await anext(  # pylint: disable=undefined-variable
-                                files_generator
-                            )
-                        )
+                if (
+                    not generator_exhausted
+                    and listing_task is None
+                    and len(pending_tasks) < self.max_threads
+                ):
+                    listing_task = asyncio.create_task(next_listing_item())
+
+                wait_for = set(pending_tasks)
+                if listing_task is not None:
+                    wait_for.add(listing_task)
+                if not wait_for:
+                    break
+
+                done, _pending = await asyncio.wait(
+                    wait_for, return_when=asyncio.FIRST_COMPLETED
+                )
+
+                if listing_task is not None and listing_task in done:
+                    file_details = listing_task.result()
+                    listing_task = None
+                    if file_details is listing_done:
+                        generator_exhausted = True
+                    else:
                         task = asyncio.create_task(
                             process_file_with_semaphore(file_details)
                         )
                         pending_tasks[task] = file_details
-                    except StopAsyncIteration:
-                        generator_exhausted = True
-                        break
 
-                # If no pending tasks and generator is exhausted, we're done
-                if not pending_tasks and generator_exhausted:
-                    break
-
-                # Wait for at least one task to complete
-                if pending_tasks:
-                    done, _pending = await asyncio.wait(
-                        pending_tasks.keys(), return_when=asyncio.FIRST_COMPLETED
-                    )
-
-                    # Process completed tasks
-                    for task in done:
-                        file_details = pending_tasks.pop(task)
-                        try:
-                            result = await task
-                            yield result
-                        except Exception as e:  # pylint: disable=broad-except
-                            Logger.error(f"Error processing task: {e}")
-                            file_name = self._extract_file_name(file_details)
-                            yield ScrapingResult(
-                                file_name=file_name,
-                                downloaded=False,
-                                extract_succefully=False,
-                                error=str(e),
-                                restart_and_retry=False,
-                            )
-                else:
-                    # No pending tasks but generator might still have items
-                    # This shouldn't happen, but break to be safe
-                    break
+                for task in done:
+                    if task not in pending_tasks:
+                        continue
+                    file_details = pending_tasks.pop(task)
+                    try:
+                        result = await task
+                        yield result
+                    except Exception as e:  # pylint: disable=broad-except
+                        Logger.error(f"Error processing task: {e}")
+                        file_name = self._extract_file_name(file_details)
+                        yield ScrapingResult(
+                            file_name=file_name,
+                            downloaded=False,
+                            extract_succefully=False,
+                            error=str(e),
+                            restart_and_retry=False,
+                        )
         finally:
-            # Clean up any remaining tasks
+            if listing_task is not None:
+                listing_task.cancel()
+                await asyncio.gather(listing_task, return_exceptions=True)
             await files_generator.aclose()
             if pending_tasks:
                 for task in pending_tasks:
                     task.cancel()
-                # Wait for cancellations to complete
                 await asyncio.gather(*pending_tasks, return_exceptions=True)
 
     def get_chain_id(self):

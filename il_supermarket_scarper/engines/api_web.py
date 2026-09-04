@@ -117,60 +117,73 @@ class ApiWebEngine(WebBase):
             except (AttributeError, KeyError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")
 
-    async def _collect_request_infos(
-        self, files_types=None, store_id=None, when_date=None
-    ):
-        """Materialize listing request infos from get_request_url."""
-        request_infos = []
-        requests_to_make = self.get_request_url(
-            files_types=files_types, store_id=store_id, when_date=when_date
-        )
-        try:
-            async for request_info in requests_to_make:
-                if request_info:
-                    request_infos.append(request_info)
-        finally:
-            await requests_to_make.aclose()
-        return request_infos
-
-    async def _stream_api_file_entries(
+    async def _stream_api_file_entries(  # pylint: disable=too-many-locals,too-many-branches
         self, files_types=None, store_id=None, when_date=None
     ):
         """Yield FileEntry objects as each listing request completes."""
-        request_queue = await self._collect_request_infos(
+        requests_to_make = self.get_request_url(
             files_types=files_types, store_id=store_id, when_date=when_date
         )
-        flight = {"pending": set()}
+        pending = set()
         max_in_flight = max(1, self.max_threads)
         seen_names = set()
+        request_exhausted = False
+        listing_done = object()
+        listing_task = None
 
-        def schedule_requests():
-            pending = flight["pending"]
-            while len(pending) < max_in_flight and request_queue:
-                request_info = request_queue.pop(0)
-                pending.add(
-                    asyncio.create_task(
-                        asyncio.to_thread(self._fetch_entries_for_request, request_info)
-                    )
-                )
+        async def next_request():
+            try:
+                return await anext(requests_to_make)
+            except StopAsyncIteration:
+                return listing_done
 
-        schedule_requests()
         try:
-            while flight["pending"]:
-                done, flight["pending"] = await asyncio.wait(
-                    flight["pending"], return_when=asyncio.FIRST_COMPLETED
+            while True:
+                if (
+                    not request_exhausted
+                    and listing_task is None
+                    and len(pending) < max_in_flight
+                ):
+                    listing_task = asyncio.create_task(next_request())
+
+                wait_for = set(pending)
+                if listing_task is not None:
+                    wait_for.add(listing_task)
+                if not wait_for:
+                    break
+
+                done, _pending = await asyncio.wait(
+                    wait_for, return_when=asyncio.FIRST_COMPLETED
                 )
-                completed_batches = [task.result() for task in done]
-                schedule_requests()
-                for entries in completed_batches:
+
+                if listing_task is not None and listing_task in done:
+                    request_info = listing_task.result()
+                    listing_task = None
+                    if request_info is listing_done:
+                        request_exhausted = True
+                    elif request_info:
+                        pending.add(
+                            asyncio.create_task(
+                                asyncio.to_thread(
+                                    self._fetch_entries_for_request, request_info
+                                )
+                            )
+                        )
+
+                for task in done:
+                    if task not in pending:
+                        continue
+                    pending.remove(task)
                     entries = self._filter_streamed_entries(
-                        entries, files_types, seen_names
+                        task.result(), files_types, seen_names
                     )
                     async for file_entry in self.extract_task_from_entry(entries):
                         yield file_entry
         finally:
-            request_queue.clear()
-            pending = flight["pending"]
+            if listing_task is not None:
+                listing_task.cancel()
+                await asyncio.gather(listing_task, return_exceptions=True)
+            await requests_to_make.aclose()
             for task in pending:
                 task.cancel()
             if pending:
