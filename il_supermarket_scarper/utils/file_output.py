@@ -3,7 +3,7 @@
 import asyncio
 import multiprocessing
 from abc import ABC, abstractmethod
-from typing import Any, Dict, AsyncGenerator
+from typing import Any, Dict, AsyncGenerator, Optional, Tuple
 import os
 from .logger import Logger
 from .gzip_utils import extract_xml_from_gz_in_memory, is_compressed_content
@@ -35,7 +35,7 @@ class FileOutput(ABC):
 
     async def _extract_if_compressed(
         self, file_content: bytes, file_name: str, extract_gz: bool = True
-    ) -> tuple[bytes, str, bool]:
+    ) -> Tuple[bytes, str, bool, Optional[str]]:
         """
         Extract compressed content if needed.
 
@@ -44,10 +44,10 @@ class FileOutput(ABC):
         content under filenames without .gz extension.
 
         Returns:
-            (content, filename, extraction_success)
+            (content, filename, extraction_success, error)
         """
         if not extract_gz or not is_compressed_content(file_content):
-            return file_content, file_name, True
+            return file_content, file_name, True, None
 
         try:
             extracted = await asyncio.to_thread(
@@ -55,10 +55,10 @@ class FileOutput(ABC):
             )
             base_name = file_name[:-3] if file_name.endswith(".gz") else file_name
             new_name = os.path.splitext(base_name)[0] + ".xml"
-            return extracted, new_name, True
+            return extracted, new_name, True, None
         except Exception as e:  # pylint: disable=broad-except
             Logger.error(f"Failed to extract {file_name}: {e}")
-            return file_content, file_name, False
+            return file_content, file_name, False, str(e)
 
     @abstractmethod
     def make_sure_accassible(self):
@@ -109,11 +109,13 @@ class DiskFileOutput(FileOutput):
 
         try:
             # Extract if it's compressed
-            file_content, file_name, extract_successfully = (
+            file_content, file_name, extract_successfully, extract_error = (
                 await self._extract_if_compressed(
                     file_content, file_name, self.extract_gz
                 )
             )
+            if not extract_successfully:
+                error = extract_error
 
             # Write file content to disk
             file_save_path = os.path.join(self.storage_path, file_name)
@@ -193,11 +195,13 @@ class QueueFileOutput(FileOutput):
 
         try:
             # Extract if it's compressed (detected by magic bytes)
-            file_content, file_name, extract_successfully = (
+            file_content, file_name, extract_successfully, extract_error = (
                 await self._extract_if_compressed(
                     file_content, file_name, self.extract_gz
                 )
             )
+            if not extract_successfully:
+                error = extract_error
             # Send file to queue
             if extract_successfully:
                 message = {

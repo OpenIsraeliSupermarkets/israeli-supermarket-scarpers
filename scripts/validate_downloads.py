@@ -78,15 +78,19 @@ class ExtractAndDropFileOutput(FileOutput):
     ) -> Dict[str, Any]:
         """Decompress in memory; do not persist the artifact."""
         del file_link
-        _content, file_name, extract_successfully = await self._extract_if_compressed(
-            file_content, file_name
+        _content, file_name, extract_successfully, extract_error = (
+            await self._extract_if_compressed(file_content, file_name)
         )
         del _content
         return {
             "file_name": file_name,
             "saved": extract_successfully,
             "extract_successfully": extract_successfully,
-            "error": None if extract_successfully else "extract failed",
+            "error": (
+                None
+                if extract_successfully
+                else (extract_error or "extract failed")
+            ),
             "metadata": metadata or {},
         }
 
