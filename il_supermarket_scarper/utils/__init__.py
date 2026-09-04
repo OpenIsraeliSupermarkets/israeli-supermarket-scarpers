@@ -1,4 +1,13 @@
-from .gzip_utils import extract_xml_from_gz_in_memory, is_compressed_content
+from .gzip_utils import (
+    extract_xml_from_gz_in_memory,
+    is_compressed_content,
+    validate_gzip_integrity,
+    GzipIntegrity,
+    GZIP_OK,
+    GZIP_TRUNCATED,
+    GZIP_CRC_MISMATCH,
+    GZIP_NOT_GZIP,
+)
 from .logger import Logger
 from .status import (
     get_output_folder,

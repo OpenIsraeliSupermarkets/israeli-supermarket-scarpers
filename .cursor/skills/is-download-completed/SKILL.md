@@ -68,6 +68,6 @@ python scripts/validate_downloads.py --all-listed --output scripts/validation_do
 |---|---|
 | `wget: not found` / SAS `&amp;` in URL | Download path (`requests` / wget fallback) |
 | First file fails, rest not tried | Expected — fail-fast |
-| `skipped_corrupt` / `source corrupt after N downloads` | Remote truncated gzip; not a scraper bug |
+| `skipped_corrupt` / `source corrupt after N downloads` | Remote truncated/CRC-bad gzip (`gzip truncated` / `gzip crc_mismatch`); not a scraper bug |
 | `no files downloaded` | Empty listing or filters; confirm with listing skill |
 | PASS here, quality `saw>0 downloaded=0` | Prior `verified_downloads` skip — not a fetch bug |

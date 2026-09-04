@@ -1,11 +1,44 @@
 import gzip
-import shutil
 import io
+import shutil
 import zipfile
+from dataclasses import dataclass
+from typing import Optional
+
 from .exceptions import RestartSessionError
 
 GZIP_MAGIC_BYTES = b"\x1f\x8b"
 ZIP_MAGIC_BYTES = b"PK"
+
+GZIP_OK = "ok"
+GZIP_TRUNCATED = "truncated"
+GZIP_CRC_MISMATCH = "crc_mismatch"
+GZIP_NOT_GZIP = "not_gzip"
+
+
+@dataclass(frozen=True)
+class GzipIntegrity:
+    """gzip member completeness + footer check.
+
+    ``status`` is one of: ok, truncated, crc_mismatch, not_gzip.
+    ``uncompressed`` is set only when status is ok.
+    """
+
+    status: str
+    detail: str = ""
+    uncompressed: Optional[bytes] = None
+
+    @property
+    def ok(self) -> bool:
+        """True when the gzip member fully decoded and CRC/ISIZE matched."""
+        return self.status == GZIP_OK
+
+    def __repr__(self) -> str:
+        length = len(self.uncompressed) if self.uncompressed is not None else None
+        return (
+            f"GzipIntegrity(status={self.status!r}, detail={self.detail!r}, "
+            f"uncompressed_len={length})"
+        )
 
 
 def is_compressed_content(data: bytes) -> bool:
@@ -27,6 +60,42 @@ def is_compressed_content(data: bytes) -> bool:
     return data[:2] in (GZIP_MAGIC_BYTES, ZIP_MAGIC_BYTES)
 
 
+def validate_gzip_integrity(data: bytes) -> GzipIntegrity:
+    """Classify gzip bytes without relying on a generic extract exception.
+
+    Distinguishes a complete valid member from a truncated stream, a CRC/ISIZE
+    footer mismatch, and non-gzip content.
+    """
+    if not data or data[:2] != GZIP_MAGIC_BYTES:
+        magic = data[:2].hex() if data else ""
+        return GzipIntegrity(
+            status=GZIP_NOT_GZIP,
+            detail=f"magic bytes: {magic or 'empty'}",
+        )
+
+    try:
+        uncompressed = gzip.decompress(data)
+    except EOFError as exc:
+        return GzipIntegrity(status=GZIP_TRUNCATED, detail=str(exc))
+    except gzip.BadGzipFile as exc:
+        return _classify_gzip_error(str(exc))
+    except OSError as exc:
+        # gzip may wrap zlib CRC/stream errors as OSError.
+        return _classify_gzip_error(str(exc))
+
+    return GzipIntegrity(status=GZIP_OK, uncompressed=uncompressed)
+
+
+def _classify_gzip_error(message: str) -> GzipIntegrity:
+    """Map gzip/zlib error text onto truncated / crc_mismatch / not_gzip."""
+    lowered = message.lower()
+    if "crc" in lowered or "incorrect length" in lowered or "data check" in lowered:
+        return GzipIntegrity(status=GZIP_CRC_MISMATCH, detail=message)
+    if "not a gzipped file" in lowered or "incorrect header" in lowered:
+        return GzipIntegrity(status=GZIP_NOT_GZIP, detail=message)
+    return GzipIntegrity(status=GZIP_TRUNCATED, detail=message)
+
+
 def extract_xml_from_gz_in_memory(source_file, file_name):
     """Extract xml from gz file or stream"""
 
@@ -36,12 +105,19 @@ def extract_xml_from_gz_in_memory(source_file, file_name):
     magic_bytes = source_buffer.read(2)
     source_buffer.seek(0)
 
-    try:
-        if magic_bytes == GZIP_MAGIC_BYTES:
-            with gzip.open(source_buffer, "rb") as infile:
-                shutil.copyfileobj(infile, output_buffer)
+    if magic_bytes == GZIP_MAGIC_BYTES:
+        integrity = validate_gzip_integrity(source_file)
+        if not integrity.ok:
+            raise ValueError(
+                f"gzip {integrity.status}: {file_name}: {integrity.detail} "
+                f"(buffer size: {len(source_file)} bytes)"
+            )
+        output_buffer.write(integrity.uncompressed)
+        output_buffer.seek(0)
+        return output_buffer.getvalue()
 
-        elif magic_bytes == ZIP_MAGIC_BYTES:
+    try:
+        if magic_bytes == ZIP_MAGIC_BYTES:
             with zipfile.ZipFile(source_buffer) as the_zip:
                 with the_zip.open(the_zip.infolist()[0]) as the_file:
                     shutil.copyfileobj(the_file, output_buffer)

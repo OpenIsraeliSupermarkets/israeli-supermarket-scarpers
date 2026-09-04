@@ -318,6 +318,25 @@ class TestFileOutput:
 
         asyncio.run(run_test())
 
+    def test_disk_output_reports_gzip_truncated(self):
+        """Extract failure surfaces gzip truncated instead of a blank error."""
+
+        async def run_test():
+            with tempfile.TemporaryDirectory() as tmpdir:
+                output = DiskFileOutput(tmpdir, extract_gz=True)
+                truncated = gzip.compress(b"<xml>test content</xml>")[:-20]
+                result = await output.save_file(
+                    file_link="http://example.com/test.xml.gz",
+                    file_name="test.xml.gz",
+                    file_content=truncated,
+                    metadata={"chain": "test"},
+                )
+                assert result["extract_successfully"] is False
+                assert result["error"]
+                assert "gzip truncated" in result["error"]
+
+        asyncio.run(run_test())
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
