@@ -173,3 +173,127 @@ class TestMultiPageStreaming(unittest.IsolatedAsyncioTestCase):
 
             self.assertEqual(len(results), 1)
             self.assertLessEqual(len(fetched_pages), 2)
+
+    async def test_second_listing_root_does_not_block_first(self):
+        """Files from a fast listing root must yield while another root is still loading."""
+
+        class _TwoRootDummy(_DummyMultiPage):
+            def build_params(self, files_types=None, store_id=None, when_date=None):
+                return ["?cat=1", "?cat=2"]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            scraper = _TwoRootDummy(tmp)
+            slow_root_started = asyncio.Event()
+            release_slow_root = asyncio.Event()
+
+            async def fake_session(**request):
+                if "cat=2" in request["url"]:
+                    slow_root_started.set()
+                    await release_slow_root.wait()
+                return MagicMock(content=b"<html></html>")
+
+            scraper.session_with_cookies_by_chain = fake_session
+            scraper.get_number_of_pages = MagicMock(return_value=None)
+
+            async def fake_process_links(  # pylint: disable=unused-argument
+                state,
+                request,
+                limit=None,
+                files_types=None,
+                store_id=None,
+                when_date=None,
+                random_selection=False,
+            ):
+                cat = "2" if "cat=2" in request["url"] else "1"
+                yield FileEntry(
+                    name=f"cat-{cat}.xml", url=f"http://x/{cat}", size=1
+                )
+
+            scraper.process_links_before_download = fake_process_links
+
+            gen = scraper.generate_all_files()
+            try:
+                first = await asyncio.wait_for(anext(gen), timeout=1)
+                self.assertEqual(first.name, "cat-1.xml")
+                await asyncio.wait_for(slow_root_started.wait(), timeout=1)
+                release_slow_root.set()
+                rest = [entry.name async for entry in gen]
+            finally:
+                await gen.aclose()
+
+            self.assertEqual(set(rest), {"cat-2.xml"})
+
+    async def test_failed_page_does_not_drop_other_pages(self):
+        """One page fetch error must not hide files already listed on another page."""
+        with tempfile.TemporaryDirectory() as tmp:
+            scraper = _DummyMultiPage(tmp)
+            scraper.session_with_cookies_by_chain = AsyncMock(
+                return_value=MagicMock(content=b"<html></html>")
+            )
+            scraper.get_number_of_pages = MagicMock(return_value=2)
+
+            async def fake_process_links(  # pylint: disable=unused-argument
+                state,
+                request,
+                limit=None,
+                files_types=None,
+                store_id=None,
+                when_date=None,
+                random_selection=False,
+            ):
+                if "page=2" in request["url"]:
+                    raise ConnectionError("page 2 down")
+                yield FileEntry(name="page1.xml", url="http://x/1", size=1)
+
+            scraper.process_links_before_download = fake_process_links
+
+            names = []
+            gen = scraper.generate_all_files()
+            try:
+                async for entry in gen:
+                    names.append(entry.name)
+            finally:
+                await gen.aclose()
+
+            self.assertEqual(names, ["page1.xml"])
+
+    async def test_failed_listing_root_does_not_drop_other_root(self):
+        """One listing-root error must not hide files from another root."""
+
+        class _TwoRootDummy(_DummyMultiPage):
+            def build_params(self, files_types=None, store_id=None, when_date=None):
+                return ["?cat=1", "?cat=2"]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            scraper = _TwoRootDummy(tmp)
+
+            async def fake_session(**request):
+                if "cat=2" in request["url"]:
+                    raise ConnectionError("root 2 down")
+                return MagicMock(content=b"<html></html>")
+
+            scraper.session_with_cookies_by_chain = fake_session
+            scraper.get_number_of_pages = MagicMock(return_value=None)
+
+            async def fake_process_links(  # pylint: disable=unused-argument
+                state,
+                request,
+                limit=None,
+                files_types=None,
+                store_id=None,
+                when_date=None,
+                random_selection=False,
+            ):
+                yield FileEntry(name="cat-1.xml", url="http://x/1", size=1)
+
+            scraper.process_links_before_download = fake_process_links
+
+            names = []
+            gen = scraper.generate_all_files()
+            try:
+                async for entry in gen:
+                    names.append(entry.name)
+            finally:
+                await gen.aclose()
+
+            self.assertEqual(names, ["cat-1.xml"])

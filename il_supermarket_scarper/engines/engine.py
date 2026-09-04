@@ -25,6 +25,7 @@ from il_supermarket_scarper.utils import (
 )
 from il_supermarket_scarper.utils.state import FilterState
 from il_supermarket_scarper.utils.databases import AbstractDataBase
+from il_supermarket_scarper.utils.async_work import stream_as_completed
 
 
 @dataclass(frozen=True)
@@ -321,8 +322,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             are considered for selection.
         """
 
-        # Collect all input files first (needed for unique, latest,
-        # random_selection)
+        # Stream one file at a time; unique() and date filters are online.
         async def stream_to_list(
             state: FilterState, intreable: AsyncGenerator[FileEntry, None]
         ) -> AsyncGenerator[FileEntry, None]:
@@ -678,66 +678,14 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             random_selection=random_selection,
         )
 
-        # Set to track pending tasks (task -> file_details mapping)
-        pending_tasks = {}
-        generator_exhausted = False
-
-        try:
-            while True:
-                # Add new tasks from generator up to max_threads limit
-                while not generator_exhausted and len(pending_tasks) < self.max_threads:
-                    try:
-                        file_details = (
-                            await anext(  # pylint: disable=undefined-variable
-                                files_generator
-                            )
-                        )
-                        task = asyncio.create_task(
-                            process_file_with_semaphore(file_details)
-                        )
-                        pending_tasks[task] = file_details
-                    except StopAsyncIteration:
-                        generator_exhausted = True
-                        break
-
-                # If no pending tasks and generator is exhausted, we're done
-                if not pending_tasks and generator_exhausted:
-                    break
-
-                # Wait for at least one task to complete
-                if pending_tasks:
-                    done, _pending = await asyncio.wait(
-                        pending_tasks.keys(), return_when=asyncio.FIRST_COMPLETED
-                    )
-
-                    # Process completed tasks
-                    for task in done:
-                        file_details = pending_tasks.pop(task)
-                        try:
-                            result = await task
-                            yield result
-                        except Exception as e:  # pylint: disable=broad-except
-                            Logger.error(f"Error processing task: {e}")
-                            file_name = self._extract_file_name(file_details)
-                            yield ScrapingResult(
-                                file_name=file_name,
-                                downloaded=False,
-                                extract_succefully=False,
-                                error=str(e),
-                                restart_and_retry=False,
-                            )
-                else:
-                    # No pending tasks but generator might still have items
-                    # This shouldn't happen, but break to be safe
-                    break
-        finally:
-            # Clean up any remaining tasks
-            await files_generator.aclose()
-            if pending_tasks:
-                for task in pending_tasks:
-                    task.cancel()
-                # Wait for cancellations to complete
-                await asyncio.gather(*pending_tasks, return_exceptions=True)
+        async for result in stream_as_completed(
+            files_generator,
+            process_file_with_semaphore,
+            self.max_threads,
+            source_error_prefix="Error collecting file details",
+            work_error_prefix="Error processing download",
+        ):
+            yield result
 
     def get_chain_id(self):
         """get the chain id as list"""

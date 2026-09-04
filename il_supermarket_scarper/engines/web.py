@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 from il_supermarket_scarper.utils import FileEntry, Logger
 from il_supermarket_scarper.utils import convert_nl_size_to_bytes, UnitSize
 from il_supermarket_scarper.utils.state import FilterState
+from il_supermarket_scarper.utils.async_work import stream_as_completed
 from .engine import Engine
 
 
@@ -112,19 +113,28 @@ class WebBase(Engine):
         ):
             yield item
 
+    async def _fetch_files_from_request(self, request_info):
+        """Fetch one listing URL and return its FileEntry objects."""
+        req_res = await self.session_with_cookies_by_chain(**request_info)
+        current_trs = self.get_data_from_page(req_res)
+        entries = []
+        async for file_entry in self.extract_task_from_entry(current_trs):
+            entries.append(file_entry)
+        return entries
+
     async def generate_all_files(self, files_types=None, store_id=None, when_date=None):
-        """Generate all files from the web site."""
+        """Generate files from every listing URL; yield as each site responds."""
         gen = self.get_request_url(
             files_types=files_types, store_id=store_id, when_date=when_date
         )
-        try:
-            async for url in gen:
-                req_res = await self.session_with_cookies_by_chain(**url)
-                current_trs = self.get_data_from_page(req_res)
-                async for file_entry in self.extract_task_from_entry(current_trs):
-                    yield file_entry
-        finally:
-            await gen.aclose()
+        async for file_entry in stream_as_completed(
+            gen,
+            self._fetch_files_from_request,
+            max(1, self.max_threads),
+            source_error_prefix="Error getting listing URL",
+            work_error_prefix="Error listing files from URL",
+        ):
+            yield file_entry
 
     async def collect_files_details_from_site(  # pylint: disable=too-many-locals
         self,

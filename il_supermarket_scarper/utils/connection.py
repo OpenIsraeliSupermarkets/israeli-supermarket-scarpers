@@ -9,6 +9,7 @@ import pickle
 import random
 import asyncio
 import fnmatch
+import threading
 from html import unescape
 from ftplib import FTP_TLS, error_perm
 
@@ -32,6 +33,7 @@ from .logger import Logger
 from .file_entry import FileEntry
 from .retry import retry
 from .file_cache import file_cache
+from .lock_utils import lock_manager
 
 
 exceptions = (
@@ -287,17 +289,17 @@ def session_with_cookies(
 
     session = requests.Session()
     if chain_cookie_name:
-
-        try:
-            with open(chain_cookie_name, "rb") as f:
-                session.cookies.update(pickle.load(f))
-            # session.cookies.load()
-        except FileNotFoundError:
-            Logger.debug("Didn't find cookie file")
-        except Exception as e:
-            # There was an issue with reading the file.
-            os.remove(chain_cookie_name)
-            raise e
+        cookie_lock = lock_manager.get_lock(chain_cookie_name)
+        with cookie_lock:
+            try:
+                with open(chain_cookie_name, "rb") as f:
+                    session.cookies.update(pickle.load(f))
+            except FileNotFoundError:
+                Logger.debug("Didn't find cookie file")
+            except Exception as e:
+                # There was an issue with reading the file.
+                os.remove(chain_cookie_name)
+                raise e
 
     Logger.debug(
         f"On a new Session requesting url: method={method}, url={url}, body={body}"
@@ -320,9 +322,12 @@ def session_with_cookies(
             f" {response_content.status_code}"
         )
 
-    if chain_cookie_name and not os.path.exists(chain_cookie_name):
-        with open(chain_cookie_name, "wb") as f:
-            pickle.dump(session.cookies.get_dict(), f)
+    if chain_cookie_name:
+        cookie_lock = lock_manager.get_lock(chain_cookie_name)
+        with cookie_lock:
+            if not os.path.exists(chain_cookie_name):
+                with open(chain_cookie_name, "wb") as f:
+                    pickle.dump(session.cookies.get_dict(), f)
 
     return response_content
 
@@ -606,76 +611,142 @@ def url_retrieve_to_memory(url, timeout=30, chunk_size=8192):
     return file_buffer.getvalue()  # Return bytes
 
 
-async def collect_from_ftp(
-    ftp_host, ftp_username, ftp_password, ftp_path, arg=None, timeout=60 * 5
+def _ftp_mlsd_size(facts):
+    """Parse MLSD size fact to int bytes, or None."""
+    size_str = facts.get("size")
+    try:
+        return int(size_str) if size_str else None
+    except (ValueError, TypeError):
+        return None
+
+
+def _include_ftp_mlsd_entry(name, facts, arg):
+    """Whether an MLSD entry should be yielded as a downloadable file."""
+    if facts.get("type") in ("dir", "cdir", "pdir"):
+        return False
+    return arg is None or fnmatch.fnmatch(name.lower(), arg.lower())
+
+
+async def collect_from_ftp(  # pylint: disable=too-many-locals,too-many-statements
+    ftp_host,
+    ftp_username,
+    ftp_password,
+    ftp_path,
+    arg=None,
+    timeout=60 * 5,
+    fetch_size=False,
 ):
-    """Async generator: yields (filename, size) tuples from the FTP server"""
+    """Yield FileEntry objects as the FTP directory listing arrives.
+
+    Listing runs in a worker thread and pushes names as MLSD/NLST lines
+    are read so Engine._scrape can start downloads before the directory
+    scan finishes. NLST fallback streams names immediately. SIZE is only
+    issued after the NLST data connection closes, and only when
+    ``fetch_size`` is true (needed for min/max size filters).
+    """
     Logger.info(
         f"Open async connection to FTP server with {ftp_host} "
         f", username: {ftp_username} , password: {ftp_password}"
     )
 
-    def _sync_ftp_list():  # pylint: disable=too-many-branches
-        """Synchronous FTP listing using FTP_TLS - returns a list"""
-        ftp = FTP_TLS(ftp_host, ftp_username, ftp_password, timeout=timeout)
-        ftp.trust_server_pasv_ipv4_address = True
+    loop = asyncio.get_running_loop()
+    results = asyncio.Queue()
+    sentinel = object()
+    cancelled = threading.Event()
+    ftp_box = {"ftp": None}
+
+    def emit(name, size):
+        if cancelled.is_set():
+            return
         try:
+            loop.call_soon_threadsafe(results.put_nowait, (name, size))
+        except RuntimeError:
+            # Event loop closed while the listing thread was still running.
+            pass
+
+    def _sync_ftp_list():  # pylint: disable=too-many-branches
+        """Push listing entries onto the async queue as they arrive."""
+        ftp = None
+        try:
+            ftp = FTP_TLS(ftp_host, ftp_username, ftp_password, timeout=timeout)
+            ftp.trust_server_pasv_ipv4_address = True
+            ftp_box["ftp"] = ftp
             ftp.cwd(ftp_path)
-
-            # Use MLSD for detailed file info if available, fall back to NLST + SIZE
-            files_with_sizes = []
             try:
-                # MLSD provides detailed info including size
-                all_entries = list(ftp.mlsd())
-
-                for name, facts in all_entries:
-                    if facts.get("type") == "file":
-                        size_str = facts.get("size")
-                        try:
-                            size = int(size_str) if size_str else None
-                        except (ValueError, TypeError):
-                            size = None
-
-                        # Apply glob filter if arg is provided (case-insensitive)
-                        if arg is None or fnmatch.fnmatch(name.lower(), arg.lower()):
-                            files_with_sizes.append((name, size))
-                    elif facts.get("type") in ["dir", "cdir", "pdir"]:
-                        # Skip directories
-                        pass
-                    else:
-                        # Unknown type - include if matches filter (case-insensitive)
-                        if arg is None or fnmatch.fnmatch(name.lower(), arg.lower()):
-                            files_with_sizes.append((name, None))
+                for name, facts in ftp.mlsd():
+                    if cancelled.is_set():
+                        return
+                    if _include_ftp_mlsd_entry(name, facts, arg):
+                        emit(name, _ftp_mlsd_size(facts))
             except error_perm:
-                # MLSD not supported, fall back to NLST
-                if arg:
-                    file_list = ftp.nlst(arg)
-                else:
-                    file_list = ftp.nlst()
+                # MLSD not supported. SIZE cannot run while the NLST data
+                # connection is open, so either emit names immediately or
+                # SIZE them after the listing finishes.
+                nlst_names = []
 
-                # Get size for each file
-                for filename in file_list:
-                    try:
-                        ftp.voidcmd("TYPE I")  # Set binary mode
-                        size = ftp.size(filename)
-                    except error_perm:
+                def on_nlst_line(line):
+                    if cancelled.is_set():
+                        raise error_perm("listing cancelled")
+                    name = line.strip()
+                    if not name:
+                        return
+                    if fetch_size:
+                        nlst_names.append(name)
+                    else:
+                        emit(name, None)
+
+                try:
+                    if arg:
+                        ftp.retrlines(f"NLST {arg}", on_nlst_line)
+                    else:
+                        ftp.retrlines("NLST", on_nlst_line)
+                except error_perm:
+                    if not cancelled.is_set():
+                        raise
+                if fetch_size:
+                    for name in nlst_names:
+                        if cancelled.is_set():
+                            return
                         size = None
-                    files_with_sizes.append((filename, size))
-
-            return files_with_sizes
+                        try:
+                            ftp.voidcmd("TYPE I")
+                            size = ftp.size(name)
+                        except error_perm:
+                            size = None
+                        emit(name, size)
         finally:
             try:
-                ftp.quit()
-            except Exception:  # pylint: disable=broad-exception-caught
+                loop.call_soon_threadsafe(results.put_nowait, sentinel)
+            except RuntimeError:
+                pass
+            if ftp is not None:
+                try:
+                    ftp.quit()
+                except Exception:  # pylint: disable=broad-exception-caught
+                    try:
+                        ftp.close()
+                    except Exception:  # pylint: disable=broad-exception-caught
+                        pass
+
+    producer = asyncio.create_task(asyncio.to_thread(_sync_ftp_list))
+    try:
+        while True:
+            item = await results.get()
+            if item is sentinel:
+                break
+            filename, size = item
+            yield FileEntry(name=filename, url=None, size=size)
+        await producer
+    finally:
+        cancelled.set()
+        ftp = ftp_box.get("ftp")
+        if ftp is not None:
+            try:
                 ftp.close()
-
-    # Run synchronous FTP operations in a thread pool and get the list
-    files_list = await asyncio.to_thread(_sync_ftp_list)
-
-    # Yield each file as an async generator
-
-    for filename, size in files_list:
-        yield FileEntry(name=filename, url=None, size=size)
+            except Exception:  # pylint: disable=broad-exception-caught
+                pass
+        if not producer.done():
+            await asyncio.gather(producer, return_exceptions=True)
 
 
 def _sync_ftp_download_to_memory(

@@ -4,6 +4,7 @@ import requests
 from il_supermarket_scarper.utils import Logger
 from il_supermarket_scarper.utils import FileEntry
 from il_supermarket_scarper.utils.state import FilterState
+from il_supermarket_scarper.utils.async_work import stream_as_completed
 from .web import WebBase
 
 
@@ -117,64 +118,33 @@ class ApiWebEngine(WebBase):
             except (AttributeError, KeyError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")
 
-    async def _collect_request_infos(
-        self, files_types=None, store_id=None, when_date=None
-    ):
-        """Materialize listing request infos from get_request_url."""
-        request_infos = []
-        requests_to_make = self.get_request_url(
-            files_types=files_types, store_id=store_id, when_date=when_date
-        )
-        try:
-            async for request_info in requests_to_make:
-                if request_info:
-                    request_infos.append(request_info)
-        finally:
-            await requests_to_make.aclose()
-        return request_infos
-
     async def _stream_api_file_entries(
         self, files_types=None, store_id=None, when_date=None
     ):
         """Yield FileEntry objects as each listing request completes."""
-        request_queue = await self._collect_request_infos(
+        requests_to_make = self.get_request_url(
             files_types=files_types, store_id=store_id, when_date=when_date
         )
-        flight = {"pending": set()}
-        max_in_flight = max(1, self.max_threads)
         seen_names = set()
 
-        def schedule_requests():
-            pending = flight["pending"]
-            while len(pending) < max_in_flight and request_queue:
-                request_info = request_queue.pop(0)
-                pending.add(
-                    asyncio.create_task(
-                        asyncio.to_thread(self._fetch_entries_for_request, request_info)
-                    )
-                )
+        async def fetch_files(request_info):
+            raw = await asyncio.to_thread(
+                self._fetch_entries_for_request, request_info
+            )
+            entries = self._filter_streamed_entries(raw, files_types, seen_names)
+            extracted = []
+            async for file_entry in self.extract_task_from_entry(entries):
+                extracted.append(file_entry)
+            return extracted
 
-        schedule_requests()
-        try:
-            while flight["pending"]:
-                done, flight["pending"] = await asyncio.wait(
-                    flight["pending"], return_when=asyncio.FIRST_COMPLETED
-                )
-                completed_batches = [task.result() for task in done]
-                schedule_requests()
-                for entries in completed_batches:
-                    entries = self._filter_streamed_entries(
-                        entries, files_types, seen_names
-                    )
-                    async for file_entry in self.extract_task_from_entry(entries):
-                        yield file_entry
-        finally:
-            request_queue.clear()
-            pending = flight["pending"]
-            for task in pending:
-                task.cancel()
-            if pending:
-                await asyncio.gather(*pending, return_exceptions=True)
+        async for file_entry in stream_as_completed(
+            requests_to_make,
+            fetch_files,
+            max(1, self.max_threads),
+            source_error_prefix="Error getting API listing URL",
+            work_error_prefix="Error listing files from API",
+        ):
+            yield file_entry
 
     async def collect_files_details_from_site(  # pylint: disable=too-many-locals
         self,
