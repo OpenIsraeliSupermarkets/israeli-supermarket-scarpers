@@ -142,6 +142,7 @@ class Cerberus(Engine):
                 self.ftp_password,
                 self.ftp_path,
                 filter_arg,
+                fetch_size=min_size is not None or max_size is not None,
             )
             files_generator = self.register_all_saw_files_on_site(files_generator)
 

@@ -160,3 +160,93 @@ class TestFtpStreaming(unittest.IsolatedAsyncioTestCase):
                     await asyncio.wait_for(anext(gen), timeout=1)
             finally:
                 await gen.aclose()
+
+    async def test_mlsd_glob_skips_non_matching_names(self):
+        """Client-side glob should drop MLSD names that do not match."""
+
+        class GlobMlsd(_FakeMlsdFtp):
+            """MLSD with mixed filenames."""
+
+            def mlsd(self):
+                yield ("keep.xml", {"type": "file", "size": "1"})
+                yield ("skip.txt", {"type": "file", "size": "2"})
+                yield ("also.xml.gz", {"type": "file", "size": "3"})
+
+        with patch(
+            "il_supermarket_scarper.utils.connection.FTP_TLS", GlobMlsd
+        ):
+            gen = collect_from_ftp("ftp.example", "user", "", "/", arg="*.xml")
+            try:
+                names = [entry.name async for entry in gen]
+            finally:
+                await gen.aclose()
+
+        self.assertEqual(names, ["keep.xml"])
+
+    async def test_nlst_fetch_size_runs_after_listing(self):
+        """When fetch_size is set, NLST names get SIZE after the data connection."""
+        size_called = []
+        retrlines_done = threading.Event()
+
+        class NlstSized(_FakeMlsdFtp):
+            """NLST fallback that records SIZE calls."""
+
+            def mlsd(self):
+                raise error_perm("MLSD not supported")
+
+            def retrlines(self, cmd, callback):  # pylint: disable=unused-argument
+                callback("a.xml")
+                callback("b.xml")
+                retrlines_done.set()
+
+            def voidcmd(self, cmd):  # pylint: disable=unused-argument
+                return None
+
+            def size(self, name):
+                if not retrlines_done.is_set():
+                    raise AssertionError("SIZE ran before NLST finished")
+                size_called.append(name)
+                return 10
+
+        with patch(
+            "il_supermarket_scarper.utils.connection.FTP_TLS", NlstSized
+        ):
+            gen = collect_from_ftp(
+                "ftp.example", "user", "", "/", fetch_size=True
+            )
+            try:
+                entries = [entry async for entry in gen]
+            finally:
+                await gen.aclose()
+
+        self.assertEqual([entry.name for entry in entries], ["a.xml", "b.xml"])
+        self.assertEqual([entry.size for entry in entries], [10, 10])
+        self.assertEqual(size_called, ["a.xml", "b.xml"])
+
+    async def test_nlst_passes_glob_to_server(self):
+        """NLST fallback should send the glob on the listing command."""
+        cmds = []
+
+        class NlstGlob(_FakeMlsdFtp):
+            """NLST that records the command and returns one name."""
+
+            def mlsd(self):
+                raise error_perm("MLSD not supported")
+
+            def retrlines(self, cmd, callback):
+                cmds.append(cmd)
+                callback("keep.xml")
+
+        with patch(
+            "il_supermarket_scarper.utils.connection.FTP_TLS", NlstGlob
+        ):
+            gen = collect_from_ftp(
+                "ftp.example", "user", "", "/", arg="*.xml"
+            )
+            try:
+                names = [entry.name async for entry in gen]
+            finally:
+                await gen.aclose()
+
+        self.assertEqual(cmds, ["NLST *.xml"])
+        self.assertEqual(names, ["keep.xml"])

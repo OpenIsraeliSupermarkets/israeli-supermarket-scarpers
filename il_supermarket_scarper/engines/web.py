@@ -1,10 +1,10 @@
-import asyncio
 import re
 from urllib.parse import parse_qs, urljoin, urlparse
 from bs4 import BeautifulSoup
 from il_supermarket_scarper.utils import FileEntry, Logger
 from il_supermarket_scarper.utils import convert_nl_size_to_bytes, UnitSize
 from il_supermarket_scarper.utils.state import FilterState
+from il_supermarket_scarper.utils.async_work import stream_as_completed
 from .engine import Engine
 
 
@@ -122,71 +122,19 @@ class WebBase(Engine):
             entries.append(file_entry)
         return entries
 
-    async def generate_all_files(  # pylint: disable=too-many-locals,too-many-branches
-        self, files_types=None, store_id=None, when_date=None
-    ):
+    async def generate_all_files(self, files_types=None, store_id=None, when_date=None):
         """Generate files from every listing URL; yield as each site responds."""
         gen = self.get_request_url(
             files_types=files_types, store_id=store_id, when_date=when_date
         )
-        pending = set()
-        max_in_flight = max(1, self.max_threads)
-        request_exhausted = False
-        listing_done = object()
-        listing_task = None
-
-        async def next_request():
-            try:
-                return await anext(gen)
-            except StopAsyncIteration:
-                return listing_done
-
-        try:
-            while True:
-                if (
-                    not request_exhausted
-                    and listing_task is None
-                    and len(pending) < max_in_flight
-                ):
-                    listing_task = asyncio.create_task(next_request())
-
-                wait_for = set(pending)
-                if listing_task is not None:
-                    wait_for.add(listing_task)
-                if not wait_for:
-                    break
-
-                done, _pending = await asyncio.wait(
-                    wait_for, return_when=asyncio.FIRST_COMPLETED
-                )
-
-                if listing_task is not None and listing_task in done:
-                    request_info = listing_task.result()
-                    listing_task = None
-                    if request_info is listing_done:
-                        request_exhausted = True
-                    elif request_info:
-                        pending.add(
-                            asyncio.create_task(
-                                self._fetch_files_from_request(request_info)
-                            )
-                        )
-
-                for task in done:
-                    if task not in pending:
-                        continue
-                    pending.remove(task)
-                    for file_entry in task.result():
-                        yield file_entry
-        finally:
-            if listing_task is not None:
-                listing_task.cancel()
-                await asyncio.gather(listing_task, return_exceptions=True)
-            await gen.aclose()
-            for task in pending:
-                task.cancel()
-            if pending:
-                await asyncio.gather(*pending, return_exceptions=True)
+        async for file_entry in stream_as_completed(
+            gen,
+            self._fetch_files_from_request,
+            max(1, self.max_threads),
+            source_error_prefix="Error getting listing URL",
+            work_error_prefix="Error listing files from URL",
+        ):
+            yield file_entry
 
     async def collect_files_details_from_site(  # pylint: disable=too-many-locals
         self,

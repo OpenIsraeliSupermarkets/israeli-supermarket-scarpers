@@ -7,12 +7,14 @@ class LockManager:
 
     def __init__(self):
         self.locks = {}
+        self._guard = Lock()
 
     def get_lock(self, key):
         """Get or create a lock based on the string key."""
-        if key not in self.locks:
-            self.locks[key] = Lock()
-        return self.locks[key]
+        with self._guard:
+            if key not in self.locks:
+                self.locks[key] = Lock()
+            return self.locks[key]
 
 
 lock_manager = LockManager()

@@ -68,3 +68,36 @@ class TestWebStreaming(unittest.IsolatedAsyncioTestCase):
                 await gen.aclose()
 
             self.assertEqual(rest, ["slow.xml"])
+
+    async def test_failed_site_does_not_drop_other_site(self):
+        """One listing URL error must not hide files already fetched from another."""
+        with tempfile.TemporaryDirectory() as tmp:
+            scraper = _DummyWeb(tmp)
+
+            async def fake_session(**request):
+                if "slow" in request["url"]:
+                    raise ConnectionError("slow site down")
+                response = MagicMock()
+                response.site = "fast"
+                return response
+
+            scraper.session_with_cookies_by_chain = fake_session
+            scraper.get_data_from_page = lambda req_res: [req_res.site]
+
+            async def fake_extract(all_trs):
+                for site in all_trs:
+                    yield FileEntry(
+                        name=f"{site}.xml", url=f"http://x/{site}", size=1
+                    )
+
+            scraper.extract_task_from_entry = fake_extract
+
+            names = []
+            gen = scraper.generate_all_files()
+            try:
+                async for entry in gen:
+                    names.append(entry.name)
+            finally:
+                await gen.aclose()
+
+            self.assertEqual(names, ["fast.xml"])

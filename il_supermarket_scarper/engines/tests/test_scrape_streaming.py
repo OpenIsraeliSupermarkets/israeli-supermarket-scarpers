@@ -70,3 +70,79 @@ class TestScrapeStreaming(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(second.file_name, "slow.xml")
             finally:
                 await gen.aclose()
+
+    async def test_listing_error_still_yields_started_download(self):
+        """A listing failure after the first link must not cancel that download."""
+
+        class _FailAfterFirst(_DummyEngine):
+            async def collect_files_details_from_site(  # pylint: disable=too-many-arguments
+                self,
+                state,  # pylint: disable=unused-argument
+                limit=None,
+                files_types=None,
+                store_id=None,
+                when_date=None,
+                files_names_to_scrape=None,
+                filter_null=False,
+                filter_zero=False,
+                min_size=None,
+                max_size=None,
+                random_selection=False,
+            ):  # pylint: disable=unused-argument
+                yield ("http://x/1", "fast.xml")
+                raise RuntimeError("listing died")
+
+            async def process_file(self, file_details):
+                await asyncio.sleep(0.05)
+                return await super().process_file(file_details)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            scraper = _FailAfterFirst(tmp, asyncio.Event())
+            state = FilterState()
+            gen = scraper._scrape(state)  # pylint: disable=protected-access
+            try:
+                first = await asyncio.wait_for(anext(gen), timeout=1)
+                self.assertEqual(first.file_name, "fast.xml")
+                with self.assertRaises(StopAsyncIteration):
+                    await anext(gen)
+            finally:
+                await gen.aclose()
+
+    async def test_failed_download_does_not_drop_sibling(self):
+        """One process_file error must still yield other completed downloads."""
+
+        class _FailOne(_DummyEngine):
+            async def collect_files_details_from_site(  # pylint: disable=too-many-arguments
+                self,
+                state,  # pylint: disable=unused-argument
+                limit=None,
+                files_types=None,
+                store_id=None,
+                when_date=None,
+                files_names_to_scrape=None,
+                filter_null=False,
+                filter_zero=False,
+                min_size=None,
+                max_size=None,
+                random_selection=False,
+            ):  # pylint: disable=unused-argument
+                yield ("http://x/1", "good.xml")
+                yield ("http://x/2", "bad.xml")
+
+            async def process_file(self, file_details):
+                if file_details[1] == "bad.xml":
+                    raise RuntimeError("download failed")
+                return await super().process_file(file_details)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            scraper = _FailOne(tmp, asyncio.Event())
+            gen = scraper._scrape(FilterState())  # pylint: disable=protected-access
+            try:
+                results = [result async for result in gen]
+            finally:
+                await gen.aclose()
+
+        by_name = {result.file_name: result for result in results}
+        self.assertEqual(set(by_name), {"good.xml", "bad.xml"})
+        self.assertTrue(by_name["good.xml"].downloaded)
+        self.assertFalse(by_name["bad.xml"].downloaded)
