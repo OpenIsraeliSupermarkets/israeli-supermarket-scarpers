@@ -22,7 +22,7 @@ class MahsaniAShukNewSource(_LaibcatalogApiScraper):
     def __init__(self, file_output=None, status_database=None):
         super().__init__(
             chain=DumpFolderNames.MAHSANI_ASHUK_NEW_SOURCE,
-            chain_id=["7290661400001"],
+            chain_id=["7290661400001", "7290633800006"],
             file_output=file_output,
             status_database=status_database,
         )
