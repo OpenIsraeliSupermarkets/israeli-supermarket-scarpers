@@ -126,11 +126,11 @@ class NetivHased(FullyStable):
 class MahsaniAshukNewSource(FullyStable):
     """laibcatalog mshuk getfiles returns [] on Saturday (same as the UI).
 
-    Evidence:
-    - 2026-09-04 evening CI collected Mahsani files (not in the failed list)
-    - 2026-09-05: getfiles?edi=7290661400001 returns []; mshuk UI uses that
-      DEFAULT_EDI and shows no files. Victory/Het Cohen on the same host
-      still publish Saturday files. CPFTA still lists מחסני השוק → mshuk.
+    Evidence 2026-09-04: evening CI collected Mahsani files (not in the
+    failed list). Evidence 2026-09-05: getfiles?edi=7290661400001 returns
+    []; mshuk UI uses that DEFAULT_EDI and shows no files. Victory/Het
+    Cohen on the same host still publish Saturday files. CPFTA still
+    lists מחסני השוק (mshuk).
     """
 
     @classmethod
