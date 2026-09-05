@@ -1,5 +1,6 @@
 import datetime
 import os
+import re
 from il_supermarket_scarper import ScarpingTask, ScraperFactory, FileTypesFilters
 
 
@@ -38,6 +39,16 @@ def load_configuration():  # pylint: disable=too-many-branches
             raise ValueError(f"ENABLED_FILE_TYPES contains invalid {not_valid}")
 
         kwargs["files_types"] = enabled_file_types
+
+    file_name_regex = os.getenv("FILE_NAME_REGEX", None)
+    if file_name_regex:
+        try:
+            re.compile(file_name_regex)
+        except re.error as exc:
+            raise ValueError(
+                f"FILE_NAME_REGEX must be a valid regular expression, got {file_name_regex}"
+            ) from exc
+        kwargs["file_name_regex"] = file_name_regex
 
     # validate number of processes
     number_of_processes = os.getenv("NUMBER_OF_PROCESSES", None)

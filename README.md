@@ -135,6 +135,7 @@ Then running it using:
     docker run  -v "./dumps:/usr/src/app/dumps" \
                 -e ENABLED_SCRAPERS="BAREKET,YAYNO_BITAN" \   # see: il_supermarket_scarper/scrappers_factory.py
                 -e ENABLED_FILE_TYPES="STORE_FILE" \          # see: il_supermarket_scarper/utils/file_types.py
+                -e FILE_NAME_REGEX="PriceFull.*" \            # optional regex matched against file names
                 -e LIMIT=1 \                                  # number of files you would like to download (remove for unlimited)
                 -e TODAY="2024-10-23 14:35" \                 # the date to download data from
                 -e OUTPUT_MODE="disk" \                       # 'disk' (default) or 'queue' - where to save scraped files
@@ -164,6 +165,7 @@ The following environment variables can be used to configure the scraper:
 - `ENABLED_SCRAPERS`: Comma-separated list of scrapers to enable. See `il_supermarket_scarper/scrappers_factory.py` for all available scrapers. Current options include:
   `BAREKET`, `YAYNO_BITAN_AND_CARREFOUR`, `COFIX`, `CITY_MARKET_KIRYATGAT`, `CITY_MARKET_SHOPS`, `DOR_ALON`, `GOOD_PHARM`, `HAZI_HINAM`, `HET_COHEN`, `KESHET`, `KING_STORE`, `MAAYAN_2000`, `MAHSANI_ASHUK`, `MAHSANI_ASHUK_NEW_SOURCE`, `NETIV_HASED`, `MESHMAT_YOSEF_1`, `MESHMAT_YOSEF_2`, `OSHER_AD`, `POLIZER`, `RAMI_LEVY`, `SALACH_DABACH`, `SHEFA_BARCART_ASHEM`, `SHUFERSAL`, `SHUK_AHIR`, `STOP_MARKET`, `SUPER_PHARM`, `SUPER_YUDA`, `SUPER_SAPIR`, `FRESH_MARKET_AND_SUPER_DOSH`, `QUIK`, `TIV_TAAM`, `VICTORY`, `VICTORY_NEW_SOURCE`, `YELLOW`, `YOHANANOF`, `ZOL_VEBEGADOL`, `WOLT`
 - `ENABLED_FILE_TYPES`: Comma-separated list of file types to download (e.g., "STORE_FILE,PRICE_FILE"). See `il_supermarket_scarper/utils/file_types.py` for all available types.
+- `FILE_NAME_REGEX`: Regular expression matched against file names with `re.search`. If unset, all discovered files are eligible.
 - `LIMIT`: Maximum number of files to download (optional, no limit if not specified).
 - `NUMBER_OF_PROCESSES`: Number of parallel processes to use (default: 5).
 - `TODAY`: Date to download data from, in format "YYYY-MM-DD HH:MM" (e.g., "2024-10-23 14:35").

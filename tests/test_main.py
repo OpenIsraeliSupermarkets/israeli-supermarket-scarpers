@@ -2,10 +2,12 @@ import os
 import time
 import tempfile
 import asyncio
+from unittest.mock import patch
 
 from il_supermarket_scarper.main import ScarpingTask
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
 from il_supermarket_scarper.utils.file_output import QueueFileOutput
+from main import load_configuration
 
 
 def test_queue_outputs_exist_before_start():
@@ -105,3 +107,41 @@ def test_main_to_memory_queue():
             )
 
     asyncio.run(run_test())
+
+
+def test_file_name_regex_forwarded_to_runner():
+    """ScarpingTask.start() must pass file_name_regex into runner.run()."""
+    pattern = r"PriceFull.*"
+    scraper = ScarpingTask(
+        enabled_scrapers=[ScraperFactory.BAREKET.name],
+        file_name_regex=pattern,
+        output_configuration={
+            "output_mode": "queue",
+            "queue_type": "memory",
+        },
+    )
+    with patch.object(scraper.runner, "run") as mock_run:
+        scraper.start(limit=1, single_pass=True)
+        scraper.join()
+
+    mock_run.assert_called_once()
+    assert mock_run.call_args.kwargs["file_name_regex"] == pattern
+
+
+def test_load_configuration_file_name_regex(monkeypatch):
+    """FILE_NAME_REGEX env var is passed through as a regex string."""
+    monkeypatch.setenv("FILE_NAME_REGEX", r"PriceFull.*")
+    monkeypatch.delenv("ENABLED_SCRAPERS", raising=False)
+    monkeypatch.delenv("ENABLED_FILE_TYPES", raising=False)
+    kwargs = load_configuration()
+    assert kwargs["file_name_regex"] == r"PriceFull.*"
+
+
+def test_load_configuration_invalid_file_name_regex(monkeypatch):
+    """Invalid FILE_NAME_REGEX is rejected during configuration load."""
+    monkeypatch.setenv("FILE_NAME_REGEX", "[unterminated")
+    try:
+        load_configuration()
+        assert False, "expected ValueError for invalid regex"
+    except ValueError as exc:
+        assert "FILE_NAME_REGEX" in str(exc)

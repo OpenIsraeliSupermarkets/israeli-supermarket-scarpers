@@ -18,6 +18,8 @@ class ScarpingTask:  # pylint: disable=too-many-instance-attributes
             If None, all available scrapers are enabled. Defaults to None.
         files_types (FileTypesFilters, optional): File types to download.
             Defaults to all file types.
+        file_name_regex (str, optional): Regex matched against file names
+            with ``re.search``. If None, all discovered files are eligible.
         multiprocessing (int, optional): Number of parallel processes to use.
             Defaults to 5.
         min_size (int, optional): Minimum file size in bytes. Files smaller
@@ -48,7 +50,8 @@ class ScarpingTask:  # pylint: disable=too-many-instance-attributes
             scraper = ScarpingTask(
                 enabled_scrapers=[ScraperFactory.WOLT],
                 min_size=1000,
-                max_size=10_000_000
+                max_size=10_000_000,
+                file_name_regex=r"PriceFull.*",
             )
             scraper.start(limit=10)
             scraper.join()
@@ -68,6 +71,7 @@ class ScarpingTask:  # pylint: disable=too-many-instance-attributes
         self,
         enabled_scrapers=None,
         files_types=FileTypesFilters.all_types(),
+        file_name_regex=None,
         multiprocessing=5,
         min_size=None,
         max_size=None,
@@ -81,6 +85,7 @@ class ScarpingTask:  # pylint: disable=too-many-instance-attributes
         Args:
             enabled_scrapers: List of scraper names to enable, or None for all.
             files_types: File types to download.
+            file_name_regex: Regex matched against file names, or None for all.
             multiprocessing: Number of parallel processes.
             min_size: Minimum file size in bytes.
             max_size: Maximum file size in bytes.
@@ -96,6 +101,7 @@ class ScarpingTask:  # pylint: disable=too-many-instance-attributes
             status_configuration=status_configuration,
         )
         self.files_types = files_types
+        self.file_name_regex = file_name_regex
         self.min_size = min_size
         self.max_size = max_size
         self._thread = None
@@ -133,6 +139,7 @@ class ScarpingTask:  # pylint: disable=too-many-instance-attributes
                 single_pass=single_pass,
                 limit=limit,
                 files_types=self.files_types,
+                file_name_regex=self.file_name_regex,
                 when_date=when_date,
                 min_size=self.min_size,
                 max_size=self.max_size,

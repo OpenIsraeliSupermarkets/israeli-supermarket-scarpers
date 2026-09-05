@@ -1,5 +1,6 @@
 import logging
 import random
+import re
 import time
 import inspect
 
@@ -208,7 +209,7 @@ def retry_call(
     )
 
 
-def retry_files(num_of_retrys=2, arg_name="files_names_to_scrape"):
+def retry_files(num_of_retrys=2, arg_name="file_name_regex"):
     """retry only ceritin files"""
 
     @decorator
@@ -234,12 +235,15 @@ def __retry_files(
         logger.info(f"File Retry: Itreation #{i},retry_list={retry_list}")
 
         if retry_list:
-            # replace the value of 'files_names_to_scrape'
+            # retry only the failed file names via an exact-name regex
             args_names = inspect.getfullargspec(func).args
             assert arg_name in args_names, f"{arg_name} wasn't found in {args_names}."
 
+            retry_pattern = "^(?:" + "|".join(
+                re.escape(name) for name in retry_list
+            ) + ")$"
             arg_list = list(args)
-            arg_list[args_names.index(arg_name)] = retry_list
+            arg_list[args_names.index(arg_name)] = retry_pattern
             args = tuple(arg_list)
 
         results = func(*args, **kwargs)
