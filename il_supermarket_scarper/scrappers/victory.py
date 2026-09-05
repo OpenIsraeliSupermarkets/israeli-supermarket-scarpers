@@ -48,6 +48,12 @@ class _LaibcatalogApiScraper(ApiWebEngine):
         for chain_id in self.get_chain_id():
             url = f"{self.url.rstrip('/')}/webapi/api/getfiles?edi={chain_id}"
             branch_num = None
+            branches = self.get_branches(chain_id)
+            if not branches:
+                Logger.debug(
+                    f"No branches for chain {chain_id}; skipping getfiles"
+                )
+                continue
             if store_id is not None:
                 branch_num = store_id
                 url += f"&branchNumber={store_id}"
@@ -55,12 +61,6 @@ class _LaibcatalogApiScraper(ApiWebEngine):
                     f"Listing files for chain {chain_id} store {store_id}"
                 )
             else:
-                branches = self.get_branches(chain_id)
-                if not branches:
-                    Logger.debug(
-                        f"No branches for chain {chain_id}; skipping getfiles"
-                    )
-                    continue
                 Logger.debug(
                     f"Found {len(branches)} branches for chain {chain_id}; "
                     "listing files once for the whole chain"

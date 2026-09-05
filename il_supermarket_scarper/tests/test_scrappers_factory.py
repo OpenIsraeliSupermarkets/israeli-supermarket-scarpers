@@ -1,7 +1,11 @@
 import tempfile
+import unittest
+from datetime import date
+from unittest.mock import patch
 
 from il_supermarket_scarper import ScraperStability, ScraperFactory, datetime_in_tlv
 from il_supermarket_scarper.scraper_stability import ScraperKind
+from il_supermarket_scarper.scrappers.nativ_hashed import NetivHased
 from il_supermarket_scarper.utils.deprecated_scrapers import DeprecatedScrapers
 from il_supermarket_scarper.utils.folders_name import DumpFolderNames
 from il_supermarket_scarper.utils.status import get_cpfta_retailer_hosts, href_host
@@ -96,6 +100,63 @@ def _login_details_for(name):
     with tempfile.TemporaryDirectory() as tmp:
         instance = scraper_cls(file_output=DiskFileOutput(storage_path=tmp))
         return instance.get_login_details()
+
+
+def test_saturday_empty_listings_are_valid_for_netiv_and_mahsani():
+    """Saturday publication gaps are known edge cases, not always-failing."""
+    saturday = datetime_in_tlv(2026, 9, 5, 22, 0, 0)
+    thursday = datetime_in_tlv(2026, 9, 3, 22, 0, 0)
+
+    assert ScraperStability.is_validate_scraper_found_no_files(
+        "NETIV_HASED", when_date=saturday
+    )
+    assert not ScraperStability.is_validate_scraper_found_no_files(
+        "NETIV_HASED", when_date=thursday
+    )
+
+    assert ScraperStability.is_validate_scraper_found_no_files(
+        "MAHSANI_ASHUK_NEW_SOURCE", when_date=saturday
+    )
+    assert not ScraperStability.is_validate_scraper_found_no_files(
+        "MAHSANI_ASHUK_NEW_SOURCE", when_date=thursday
+    )
+    with patch(
+        "il_supermarket_scarper.scraper_stability._is_saturday_in_israel",
+        return_value=True,
+    ):
+        assert ScraperStability.is_validate_scraper_found_no_files(
+            "MAHSANI_ASHUK_NEW_SOURCE"
+        )
+    with patch(
+        "il_supermarket_scarper.scraper_stability._is_saturday_in_israel",
+        return_value=False,
+    ):
+        assert not ScraperStability.is_validate_scraper_found_no_files(
+            "MAHSANI_ASHUK_NEW_SOURCE"
+        )
+
+
+class TestNetivListing(unittest.IsolatedAsyncioTestCase):
+    """Netiv listing follows the UI Date filter."""
+
+    async def test_netiv_lists_recent_date_pages(self):
+        """The site Date filter defaults to today; also open the prior UI days."""
+        with tempfile.TemporaryDirectory() as tmp:
+            scraper = NetivHased(file_output=DiskFileOutput(storage_path=tmp))
+            urls = []
+            async for request in scraper.get_request_url():
+                urls.append(request["url"])
+
+        self.assertEqual(len(urls), 3)
+        self.assertTrue(all("Date=" in url for url in urls))
+
+        saturday = date(2026, 9, 5)
+        with tempfile.TemporaryDirectory() as tmp:
+            scraper = NetivHased(file_output=DiskFileOutput(storage_path=tmp))
+            urls = []
+            async for request in scraper.get_request_url(when_date=saturday):
+                urls.append(request["url"])
+        self.assertEqual(urls, ["https://app.netiv-hesed.com/?Date=2026-09-05"])
 
 
 def test_login_details_include_credentials_when_set():
