@@ -1,9 +1,11 @@
 """Unit tests for download helpers."""
 
 import asyncio
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from il_supermarket_scarper.utils.connection import (
+    DEFAULT_BROWSER_USER_AGENT,
+    session_with_cookies,
     url_retrieve_to_memory,
     wget_file_to_memory,
 )
@@ -66,3 +68,20 @@ def test_wget_missing_does_not_shell_out():
             subprocess_shell.assert_not_called()
 
     asyncio.run(run())
+
+
+def test_session_with_cookies_sends_browser_user_agent():
+    """Cloudflare blocks listing requests that omit a browser User-Agent."""
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_session = MagicMock()
+    mock_session.get.return_value = mock_resp
+
+    with patch(
+        "il_supermarket_scarper.utils.connection.requests.Session",
+        return_value=mock_session,
+    ):
+        session_with_cookies("https://example.com/")
+
+    headers = mock_session.get.call_args.kwargs["headers"]
+    assert headers["User-Agent"] == DEFAULT_BROWSER_USER_AGENT

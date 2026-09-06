@@ -5,6 +5,7 @@ from enum import Enum
 from il_supermarket_scarper.utils import (
     _now,
     _testing_now,
+    _is_saturday_in_israel,
     datetime_in_tlv,
     FileTypesFilters,
     hour_files_expected_to_be_accassible,
@@ -103,8 +104,49 @@ class SuperFlaky(FullyStable):
         return True
 
 
-class NetivHased(AlwaysFailing):
-    """Was always-failing on the old IP; app.netiv-hesed.com recovered 2026-08-30."""
+class NetivHased(FullyStable):
+    """app.netiv-hesed.com Date filter lists 0 files on Saturday.
+
+    Evidence 2026-09-05: UI shows 0 files for 2026-09-05, last update
+    2026-09-04 16:20, and 367 files for 2026-09-04. Cloudflare blocks
+    requests without a browser User-Agent. Still listed on CPFTA.
+    """
+
+    @classmethod
+    def failire_valid(
+        cls, when_date=None, files_types=None, utilize_date_param=True, **_
+    ):
+        return super(cls, NetivHased).failire_valid(
+            when_date=when_date,
+            files_types=files_types,
+            utilize_date_param=utilize_date_param,
+        ) or (when_date is not None and _is_saturday_in_israel(when_date))
+
+
+class MahsaniAshukNewSource(FullyStable):
+    """laibcatalog mshuk getfiles returns [] on Saturday (same as the UI).
+
+    Evidence 2026-09-04: evening CI collected Mahsani files (not in the
+    failed list). Evidence 2026-09-05: getfiles?edi=7290661400001 returns
+    []; mshuk UI uses that DEFAULT_EDI and shows no files. Victory/Het
+    Cohen on the same host still publish Saturday files. CPFTA still
+    lists מחסני השוק (mshuk).
+    """
+
+    @classmethod
+    def failire_valid(
+        cls, when_date=None, files_types=None, utilize_date_param=True, **_
+    ):
+        saturday_gap = (
+            _is_saturday_in_israel(when_date)
+            if when_date is not None
+            else _is_saturday_in_israel()
+        )
+        return super(cls, MahsaniAshukNewSource).failire_valid(
+            when_date=when_date,
+            files_types=files_types,
+            utilize_date_param=utilize_date_param,
+        ) or saturday_gap
 
 
 class CityMarketGivataim(FullyStable):
@@ -323,7 +365,8 @@ class ScraperStability(Enum):
     """tracker for the stablity of the scraper"""
 
     # COFIX = DoNotPublishStores
-    # NETIV_HASED = NetivHased  # recovered 2026-08-30: https://app.netiv-hesed.com/ lists files
+    NETIV_HASED = NetivHased
+    MAHSANI_ASHUK_NEW_SOURCE = MahsaniAshukNewSource
     QUIK = QuikSiteIsDown
     SUPER_YUDA = SuperYuda
     YELLOW = Yellow

@@ -1,0 +1,21 @@
+---
+description: Keep historical chain_id values on the same scraper class
+globs: il_supermarket_scarper/scrappers/**/*.py
+alwaysApply: false
+---
+
+# Historical chain IDs
+
+Do not drop a `chain_id` from an existing scraper because the live portal or API no longer uses it.
+
+- Keep the full historical list on that class (filenames, status, and filters still match old IDs).
+- Skip dead IDs at request time (empty branches, HTTP 400, missing root) instead of removing them.
+- Remove an ID only when it **moves to a different scraper class** (legacy vs `_NEW_SOURCE`, split chain, etc.).
+
+```python
+# BAD — drop a dead EDI from the class
+chain_id=["7290661400001"]
+
+# GOOD — keep history; listing already skips chains with no branches
+chain_id=["7290661400001", "7290633800006"]
+```

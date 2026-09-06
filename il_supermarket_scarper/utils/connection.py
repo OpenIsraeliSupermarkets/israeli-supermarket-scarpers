@@ -240,6 +240,14 @@ def disable_when_outside_israel(function):
     return _decorator
 
 
+# Cloudflare (and similar WAFs) 403 requests that omit a browser User-Agent.
+DEFAULT_BROWSER_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/124.0.0.0 Safari/537.36"
+)
+
+
 def get_random_user_agent():
     """get random user agent"""
     user_agents = [
@@ -301,16 +309,22 @@ def session_with_cookies(
                 os.remove(chain_cookie_name)
                 raise e
 
+    request_headers = {"User-Agent": DEFAULT_BROWSER_USER_AGENT}
+    if headers:
+        request_headers.update(headers)
+
     Logger.debug(
         f"On a new Session requesting url: method={method}, url={url}, body={body}"
     )
 
     if method == "POST":
         response_content = session.post(
-            url, data=body, timeout=timeout, headers=headers
+            url, data=body, timeout=timeout, headers=request_headers
         )
     else:
-        response_content = session.get(url, timeout=timeout, headers=headers)
+        response_content = session.get(
+            url, timeout=timeout, headers=request_headers
+        )
 
     if response_content.status_code != 200:
         Logger.debug(
