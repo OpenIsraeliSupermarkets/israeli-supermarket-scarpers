@@ -361,6 +361,21 @@ class TestFileOutput:
                 assert second["save_decision"] == SaveDecision.REWROTE_SAME
                 assert first["content_sha256"] == content_sha256(payload)
                 assert os.listdir(tmpdir) == ["PromoFull7290-001.xml"]
+                writes = {"n": 0}
+                original_write = output._write_file  # pylint: disable=protected-access
+
+                def counted_write(file_path, content):
+                    writes["n"] += 1
+                    original_write(file_path, content)
+
+                output._write_file = counted_write  # pylint: disable=protected-access
+                third = await output.save_file(
+                    file_link="http://example.com/a.xml",
+                    file_name="PromoFull7290-001.xml",
+                    file_content=payload,
+                )
+                assert third["save_decision"] == SaveDecision.REWROTE_SAME
+                assert writes["n"] == 0
 
         asyncio.run(run_test())
 
@@ -416,6 +431,10 @@ class TestFileOutput:
             assert second["save_decision"] == SaveDecision.REWROTE_SAME
             assert first["file_name"] == second["file_name"] == "PromoFull7290-001.xml"
             await handler.close()
+            names = []
+            async for message in handler.get_all_messages():
+                names.append(message["file_name"])
+            assert names == ["PromoFull7290-001.xml"]
 
         asyncio.run(run_test())
 

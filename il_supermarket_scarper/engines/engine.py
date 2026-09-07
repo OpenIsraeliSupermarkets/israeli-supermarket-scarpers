@@ -306,9 +306,11 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         Apply filtering and limiting to a stream of files.
 
         This is a streaming version that processes files one at a time,
-        applying various filters (already downloaded, unique, store ID,
+        applying various filters (already downloaded, store ID,
         file name, file types, date) and enforcing the limit last so the
-        quota is not spent on files later filters would drop.
+        quota is not spent on files later filters would drop. Duplicate
+        listing names are kept; FileOutput decides same-hash rewrite vs
+        hash-suffix save.
 
         Args:
             state (FilterState): State object tracking filter statistics.
@@ -335,7 +337,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             are considered for selection.
         """
 
-        # Stream one file at a time; unique() and date filters are online.
+        # Stream one file at a time; date filters are online.
         async def stream_to_list(
             state: FilterState, intreable: AsyncGenerator[FileEntry, None]
         ) -> AsyncGenerator[FileEntry, None]:
@@ -358,9 +360,6 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             files_list,
             by_function=by_function,
         )
-
-        # filter unique links
-        intreable_ = self.unique(state, intreable_, by_function=by_function)
 
         # filter by store id
         if store_id:
@@ -489,15 +488,6 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 continue
 
         return groups_value
-
-    @classmethod
-    async def unique(cls, state: FilterState, iterable, by_function=lambda x: x):
-        """Returns the type of the file."""
-        async for item in iterable:
-            k = by_function(item)
-            if k not in state.unique_seen:
-                state.unique_seen.add(k)
-                yield item
 
     async def session_with_cookies_by_chain(
         self, url, method="GET", body=None, timeout=15, headers=None

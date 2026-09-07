@@ -159,8 +159,9 @@ class ScraperStatusOutput(BaseModel):
         Build per-file status flags and event counts.
 
         Listing sites can emit the same FileNm more than once; that is a
-        real saw, not a contract failure. ``saw`` may appear more than
-        once. collect / download / fail / verified should not.
+        real listing, not a contract failure. ``saw``, ``collected``,
+        ``downloaded``, and ``verified`` may appear more than once for
+        that name. ``failed`` should not.
 
         Returns:
             Maps file name to status flags, counts, and whether a
@@ -242,11 +243,8 @@ class ScraperStatusOutput(BaseModel):
 
     @staticmethod
     def _has_duplicate_attempt_events(status: dict) -> bool:
-        """collect / download / fail / verified must appear at most once."""
-        for kind in ("collected", "downloaded", "failed", "verified"):
-            if status["counts"][kind] > 1:
-                return True
-        return False
+        """A file may be collected/downloaded twice; it must not fail twice."""
+        return status["counts"]["failed"] > 1
 
     def validate_file_status(self) -> bool:
         """
@@ -257,9 +255,11 @@ class ScraperStatusOutput(BaseModel):
 
         - Lifecycle: saw -> collected -> (downloaded or failed) ->
           (verified if extract succeeded)
-        - Duplicate ``saw`` is allowed (listing listed the same dump twice)
-        - Duplicate collected / downloaded / failed / verified is not
-        - If a started ``limit`` is set, downloaded files must not exceed it
+        - Duplicate ``saw`` / collected / downloaded / verified is allowed
+          (listing listed the same dump twice)
+        - Duplicate ``failed`` is not
+        - If a started ``limit`` is set, downloaded file names must not
+          exceed it
 
         Note: Files that were only saw/collected but never attempted (e.g., due to limit
         constraints) are not validated, as they were never intended to be downloaded.

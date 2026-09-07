@@ -1,4 +1,4 @@
-"""Status-contract validation: duplicate saw is ok; duplicate attempts are not."""
+"""Status-contract validation: duplicate listing events are ok; two fails are not."""
 
 import unittest
 from datetime import datetime
@@ -56,19 +56,30 @@ class TestScraperStatusContract(unittest.TestCase):
         )
         self.assertTrue(status.validate_file_status())
 
-    def test_duplicate_download_is_invalid(self):
-        """Two downloads of the same name is a real contract break."""
+    def test_duplicate_download_of_same_listing_is_valid(self):
+        """Same FileNm downloaded twice (same or different hash) is valid."""
         status = ScraperStatusOutput(
-            events=[_saw(), _collected(), _downloaded(), _downloaded()],
-            verified_downloads=[_verified()],
+            events=[
+                _saw(),
+                _saw(),
+                _collected(),
+                _collected(),
+                _downloaded(),
+                _downloaded(),
+            ],
+            verified_downloads=[_verified(), _verified()],
         )
-        self.assertFalse(status.validate_file_status())
+        self.assertTrue(status.validate_file_status())
 
-    def test_duplicate_collected_is_invalid(self):
-        """Two collected events for one file name are invalid."""
+    def test_duplicate_failed_is_invalid(self):
+        """Two failed events for one file name are a contract break."""
         status = ScraperStatusOutput(
-            events=[_saw(), _collected(), _collected(), _downloaded()],
-            verified_downloads=[_verified()],
+            events=[
+                _saw(),
+                _collected(),
+                FailedStatus(task_id=TASK, file_name=FILE, download_url=LINK),
+                FailedStatus(task_id=TASK, file_name=FILE, download_url=LINK),
+            ],
         )
         self.assertFalse(status.validate_file_status())
 

@@ -145,3 +145,27 @@ class TestApplyLimitAfterFilters(unittest.IsolatedAsyncioTestCase):
                 ],
             )
             self.assertEqual(state.file_pass_limit, 3)
+
+    async def test_duplicate_listing_names_are_kept(self):
+        """The same FileNm listed twice must both pass apply_limit."""
+        with tempfile.TemporaryDirectory() as tmp:
+            scraper = Wolt(file_output=DiskFileOutput(storage_path=tmp))
+            name = "PromoFull7290058249350-000-004-20260907-000001"
+
+            async def listed():
+                yield FileEntry(name=name, url="http://example.test/a", size=1)
+                yield FileEntry(name=name, url="http://example.test/b", size=1)
+
+            state = FilterState()
+            kept = []
+            async for entry in scraper.apply_limit(state, listed(), limit=2):
+                kept.append((entry.name, entry.url))
+
+            self.assertEqual(
+                kept,
+                [
+                    (name, "http://example.test/a"),
+                    (name, "http://example.test/b"),
+                ],
+            )
+            self.assertEqual(state.file_pass_limit, 2)

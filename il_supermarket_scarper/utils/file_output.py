@@ -24,60 +24,54 @@ def content_sha256(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
 
 
-def path_sha256(file_path: str) -> str:
-    """Hex digest of a file on disk, hashed in chunks."""
-    digest = hashlib.sha256()
-    with open(file_path, "rb") as existing:
-        for chunk in iter(lambda: existing.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
 class FileOutput(ABC):
     """Abstract base class for file output handlers."""
 
     def __init__(self):
         self._saved_digests: Dict[str, str] = {}
+        self._save_locks: Dict[str, asyncio.Lock] = {}
+        self._save_locks_guard = asyncio.Lock()
 
-    def _existing_digest(self, file_name: str) -> Optional[str]:
-        """Return sha256 already stored under ``file_name``, if the backend has it."""
-        return self._saved_digests.get(file_name)
+    async def _lock_for_name(self, file_name: str) -> asyncio.Lock:
+        """Serialize saves that share an extracted file name."""
+        async with self._save_locks_guard:
+            lock = self._save_locks.get(file_name)
+            if lock is None:
+                lock = asyncio.Lock()
+                self._save_locks[file_name] = lock
+            return lock
 
     def resolve_save_name(
         self, file_name: str, content: bytes
-    ) -> Tuple[str, SaveDecision]:
+    ) -> Tuple[str, SaveDecision, str]:
         """Pick a file name that will not replace a different hash.
 
-        Same name + same sha256 is a rewrite. Same name + different sha256
-        becomes ``{stem}-{sha256[:8]}{ext}``. Disk backends hash files
-        already on disk; queue backends use this scrape's memory.
+        Compares against this scrape's in-memory map only (no disk read).
+        Same name + same sha256 is a no-op rewrite. Same name + different
+        sha256 becomes ``{stem}-{sha256[:8]}{ext}``. Digest is recorded
+        only after the backend write/send succeeds.
         """
         digest = content_sha256(content)
         known = self._saved_digests.get(file_name)
         if known is None:
-            known = self._existing_digest(file_name)
-            if known is None:
-                self._saved_digests[file_name] = digest
-                return file_name, SaveDecision.CREATED
-            self._saved_digests[file_name] = known
+            return file_name, SaveDecision.CREATED, digest
         if known == digest:
-            return file_name, SaveDecision.REWROTE_SAME
+            return file_name, SaveDecision.REWROTE_SAME, digest
 
         root, ext = os.path.splitext(file_name)
         alt_name = f"{root}-{digest[:8]}{ext}"
         alt_known = self._saved_digests.get(alt_name)
-        if alt_known is None:
-            alt_known = self._existing_digest(alt_name)
-            if alt_known is not None:
-                self._saved_digests[alt_name] = alt_known
         if alt_known is not None and alt_known != digest:
             alt_name = f"{root}-{digest}{ext}"
-        self._saved_digests[alt_name] = digest
         Logger.warning(
             f"{file_name} already exists with a different sha256; "
             f"saving as {alt_name}"
         )
-        return alt_name, SaveDecision.RENAMED_CONFLICT
+        return alt_name, SaveDecision.RENAMED_CONFLICT, digest
+
+    def _remember_digest(self, file_name: str, digest: str) -> None:
+        """Record sha256 after a successful write or queue send."""
+        self._saved_digests[file_name] = digest
 
     @abstractmethod
     async def save_file(
@@ -163,12 +157,6 @@ class DiskFileOutput(FileOutput):
         os.makedirs(storage_path, exist_ok=True)
         super().__init__()
 
-    def _existing_digest(self, file_name: str) -> Optional[str]:
-        dest = os.path.join(self.storage_path, file_name)
-        if not os.path.isfile(dest):
-            return None
-        return path_sha256(dest)
-
     async def save_file(
         self,
         file_link: str,
@@ -193,12 +181,21 @@ class DiskFileOutput(FileOutput):
             if not extract_successfully:
                 error = extract_error
 
-            file_name, save_decision = self.resolve_save_name(file_name, file_content)
-            file_save_path = os.path.join(self.storage_path, file_name)
-            await asyncio.to_thread(self._write_file, file_save_path, file_content)
+            lock = await self._lock_for_name(file_name)
+            async with lock:
+                file_name, save_decision, digest = self.resolve_save_name(
+                    file_name, file_content
+                )
+                if save_decision != SaveDecision.REWROTE_SAME:
+                    file_save_path = os.path.join(self.storage_path, file_name)
+                    await asyncio.to_thread(
+                        self._write_file, file_save_path, file_content
+                    )
+                    self._remember_digest(file_name, digest)
+                else:
+                    file_save_path = os.path.join(self.storage_path, file_name)
 
             saved = True
-            digest = content_sha256(file_content)
             Logger.debug(
                 f"Saved {file_link} to {file_save_path} sha256={digest} "
                 f"save_decision={save_decision}"
@@ -290,23 +287,25 @@ class QueueFileOutput(FileOutput):
             if not extract_successfully:
                 error = extract_error
             if extract_successfully:
-                file_name, save_decision = self.resolve_save_name(
-                    file_name, file_content
-                )
-                digest = content_sha256(file_content)
-                message = {
-                    "file_name": file_name,
-                    "file_link": file_link,
-                    "file_content": file_content,
-                    "content_sha256": digest,
-                    "save_decision": save_decision,
-                    "metadata": metadata or {},
-                }
-
-                await self.queue_handler.send(message)
+                lock = await self._lock_for_name(file_name)
+                async with lock:
+                    file_name, save_decision, digest = self.resolve_save_name(
+                        file_name, file_content
+                    )
+                    if save_decision != SaveDecision.REWROTE_SAME:
+                        message = {
+                            "file_name": file_name,
+                            "file_link": file_link,
+                            "file_content": file_content,
+                            "content_sha256": digest,
+                            "save_decision": save_decision,
+                            "metadata": metadata or {},
+                        }
+                        await self.queue_handler.send(message)
+                        self._remember_digest(file_name, digest)
                 saved = True
                 Logger.debug(
-                    f"Sent {file_name} to queue sha256={digest} "
+                    f"Queue {file_name} sha256={digest} "
                     f"save_decision={save_decision}"
                 )
 
