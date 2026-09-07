@@ -156,15 +156,15 @@ class ScraperStatusOutput(BaseModel):
 
     def _build_per_file_status_data(self):
         """
-        Build per-file status flags.
+        Build per-file status flags and event counts.
 
         Listing sites can emit the same FileNm more than once; that is a
-        real saw, not a contract failure. Flags are therefore boolean
-        presence, not event counts.
+        real saw, not a contract failure. ``saw`` may appear more than
+        once. collect / download / fail / verified should not.
 
         Returns:
-            Maps file name to status flags (saw, collected, downloaded,
-            failed, verified).
+            Maps file name to status flags, counts, and whether a
+            download extracted successfully.
         """
 
         per_file = defaultdict(
@@ -174,23 +174,39 @@ class ScraperStatusOutput(BaseModel):
                 "downloaded": False,
                 "failed": False,
                 "verified": False,
+                "extracted_successfully": False,
+                "counts": defaultdict(int),
             }
         )
 
         for event in self.events:
             if isinstance(event, SawStatus):
                 per_file[event.file_name]["saw"] = True
+                per_file[event.file_name]["counts"]["saw"] += 1
             elif isinstance(event, CollectedStatus):
                 per_file[event.file_name]["collected"] = True
+                per_file[event.file_name]["counts"]["collected"] += 1
             elif isinstance(event, DownloadedStatus):
                 per_file[event.file_name]["downloaded"] = True
+                per_file[event.file_name]["counts"]["downloaded"] += 1
+                if event.extracted_successfully:
+                    per_file[event.file_name]["extracted_successfully"] = True
             elif isinstance(event, FailedStatus):
                 per_file[event.file_name]["failed"] = True
+                per_file[event.file_name]["counts"]["failed"] += 1
 
         for vd in self.verified_downloads:
             per_file[vd.file_name]["verified"] = True
+            per_file[vd.file_name]["counts"]["verified"] += 1
 
         return per_file
+
+    def _started_limit(self):
+        """Return the scrape limit from started status, or None."""
+        for event in self.global_status:
+            if isinstance(event, StartedStatus):
+                return event.limit
+        return None
 
     @staticmethod
     def _validate_file_lifecycle(status: dict) -> bool:
@@ -219,27 +235,41 @@ class ScraperStatusOutput(BaseModel):
         if status["verified"]:
             if not status["downloaded"]:
                 return False
+        # A successful extract must be recorded as verified.
+        if status["extracted_successfully"] and not status["verified"]:
+            return False
         return True
+
+    @staticmethod
+    def _has_duplicate_attempt_events(status: dict) -> bool:
+        """collect / download / fail / verified must appear at most once."""
+        for kind in ("collected", "downloaded", "failed", "verified"):
+            if status["counts"][kind] > 1:
+                return True
+        return False
 
     def validate_file_status(self) -> bool:
         """
         Validate that the status file is valid.
 
-        Ensures that for every file name that was actually attempted (downloaded,
-        failed, or verified), there is a reasonable 'story' for that file: saw ->
-        collected -> (downloaded or failed) -> (verified if downloaded)
+        For every file name that was actually attempted (downloaded, failed,
+        or verified):
 
-        Duplicate events for the same name (e.g. two listing rows) are
-        allowed. Only the lifecycle flags are checked.
+        - Lifecycle: saw -> collected -> (downloaded or failed) ->
+          (verified if extract succeeded)
+        - Duplicate ``saw`` is allowed (listing listed the same dump twice)
+        - Duplicate collected / downloaded / failed / verified is not
+        - If a started ``limit`` is set, downloaded files must not exceed it
 
         Note: Files that were only saw/collected but never attempted (e.g., due to limit
         constraints) are not validated, as they were never intended to be downloaded.
         """
         per_file = self._build_per_file_status_data()
+        downloaded_count = 0
 
-        # Only validate files that were actually attempted (downloaded, failed, or verified)
-        # Files that were only saw/collected but never attempted shouldn't be validated
         for status in per_file.values():
+            if status["downloaded"]:
+                downloaded_count += 1
             if (status["saw"] or status["collected"]) and not (
                 status["downloaded"] or status["failed"] or status["verified"]
             ):
@@ -247,5 +277,11 @@ class ScraperStatusOutput(BaseModel):
 
             if not self._validate_file_lifecycle(status):
                 return False
+            if self._has_duplicate_attempt_events(status):
+                return False
+
+        limit = self._started_limit()
+        if limit is not None and downloaded_count > limit:
+            return False
 
         return True

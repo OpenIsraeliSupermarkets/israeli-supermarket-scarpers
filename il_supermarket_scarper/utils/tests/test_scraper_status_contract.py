@@ -1,0 +1,120 @@
+"""Status-contract validation: duplicate saw is ok; duplicate attempts are not."""
+
+import unittest
+from datetime import datetime
+
+from il_supermarket_scarper.utils.scraper_status_contract import (
+    CollectedStatus,
+    DownloadedStatus,
+    FailedStatus,
+    SawStatus,
+    ScraperStatusOutput,
+    StartedStatus,
+    VerifiedDownload,
+)
+
+FILE = "PromoFull7290058156016-019-502-20260907-054854"
+TASK = "task-1"
+NOW = datetime(2026, 9, 7, 12, 0, 0)
+LINK = "http://supersapir.binaprojects.com/Download.aspx?FileNm=" + FILE
+
+
+def _saw(**kwargs):
+    return SawStatus(task_id=TASK, file_name=FILE, link=LINK, **kwargs)
+
+
+def _collected():
+    return CollectedStatus(task_id=TASK, file_name=FILE, link_collected=LINK)
+
+
+def _downloaded(extracted=True):
+    return DownloadedStatus(
+        task_id=TASK,
+        file_name=FILE,
+        downloaded_successfully=True,
+        extracted_successfully=extracted,
+    )
+
+
+def _verified():
+    return VerifiedDownload(task_id=TASK, file_name=FILE, system_timestamp=NOW)
+
+
+def _started(limit=None):
+    return StartedStatus(task_id=TASK, limit=limit)
+
+
+class TestScraperStatusContract(unittest.TestCase):
+    """validate_file_status extra rules."""
+
+    def test_duplicate_saw_of_same_dump_is_valid(self):
+        """SuperSapir lists the same FileNm twice; one download is still valid."""
+        status = ScraperStatusOutput(
+            global_status=[_started(limit=1)],
+            events=[_saw(), _saw(), _collected(), _downloaded()],
+            verified_downloads=[_verified()],
+        )
+        self.assertTrue(status.validate_file_status())
+
+    def test_duplicate_download_is_invalid(self):
+        """Two downloads of the same name is a real contract break."""
+        status = ScraperStatusOutput(
+            events=[_saw(), _collected(), _downloaded(), _downloaded()],
+            verified_downloads=[_verified()],
+        )
+        self.assertFalse(status.validate_file_status())
+
+    def test_duplicate_collected_is_invalid(self):
+        status = ScraperStatusOutput(
+            events=[_saw(), _collected(), _collected(), _downloaded()],
+            verified_downloads=[_verified()],
+        )
+        self.assertFalse(status.validate_file_status())
+
+    def test_successful_extract_without_verified_is_invalid(self):
+        status = ScraperStatusOutput(
+            events=[_saw(), _collected(), _downloaded(extracted=True)],
+            verified_downloads=[],
+        )
+        self.assertFalse(status.validate_file_status())
+
+    def test_failed_extract_without_verified_is_valid(self):
+        status = ScraperStatusOutput(
+            events=[_saw(), _collected(), _downloaded(extracted=False)],
+        )
+        self.assertTrue(status.validate_file_status())
+
+    def test_limit_not_exceeded(self):
+        other = "PromoFull7290058156016-024-399-20260907-000001"
+        status = ScraperStatusOutput(
+            global_status=[_started(limit=1)],
+            events=[
+                _saw(),
+                _collected(),
+                _downloaded(),
+                SawStatus(task_id=TASK, file_name=other, link=LINK),
+                CollectedStatus(task_id=TASK, file_name=other, link_collected=LINK),
+                DownloadedStatus(
+                    task_id=TASK,
+                    file_name=other,
+                    downloaded_successfully=True,
+                    extracted_successfully=True,
+                ),
+            ],
+            verified_downloads=[
+                _verified(),
+                VerifiedDownload(
+                    task_id=TASK, file_name=other, system_timestamp=NOW
+                ),
+            ],
+        )
+        self.assertFalse(status.validate_file_status())
+
+    def test_failed_file_needs_collected(self):
+        status = ScraperStatusOutput(
+            events=[
+                _saw(),
+                FailedStatus(task_id=TASK, file_name=FILE, download_url=None),
+            ],
+        )
+        self.assertFalse(status.validate_file_status())
