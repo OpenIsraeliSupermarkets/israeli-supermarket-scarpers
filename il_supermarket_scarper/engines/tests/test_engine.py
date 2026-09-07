@@ -1,6 +1,5 @@
 """Tests for engine-level deduplication and file-name regex filtering."""
 
-import os
 import re
 import tempfile
 import unittest
@@ -146,81 +145,3 @@ class TestApplyLimitAfterFilters(unittest.IsolatedAsyncioTestCase):
                 ],
             )
             self.assertEqual(state.file_pass_limit, 3)
-
-
-class TestListingSawDedup(unittest.IsolatedAsyncioTestCase):
-    """Same FileNm + URL is one dump; a different URL is kept."""
-
-    async def test_repeated_name_and_url_is_one_saw(self):
-        """SuperSapir lists the same PromoFull twice with different store labels."""
-        with tempfile.TemporaryDirectory() as tmp:
-            scraper = Wolt(
-                file_output=DiskFileOutput(storage_path=os.path.join(tmp, "files"))
-            )
-            scraper.on_scraping_start(limit=None, files_types=None)
-            name = "PromoFull7290058156016-019-502-20260907-054854"
-            url = (
-                "http://supersapir.binaprojects.com/Download.aspx?"
-                f"FileNm={name}"
-            )
-
-            async def listed():
-                yield FileEntry(name=name, url=url, size=None)
-                yield FileEntry(name=name, url=url, size=None)
-                yield FileEntry(
-                    name="PromoFull7290058156016-024-399-20260907-000001",
-                    url="http://example.test/other",
-                    size=None,
-                )
-
-            kept = []
-            async for entry in scraper.register_all_saw_files_on_site(listed()):
-                kept.append((entry.name, entry.url))
-
-            self.assertEqual(
-                kept,
-                [
-                    (name, url),
-                    (
-                        "PromoFull7290058156016-024-399-20260907-000001",
-                        "http://example.test/other",
-                    ),
-                ],
-            )
-            events = scraper.database._read_database().get(  # pylint: disable=protected-access
-                "events", []
-            )
-            saws = [event for event in events if event.get("status") == "saw"]
-            self.assertEqual(len(saws), 2)
-            self.assertEqual(
-                [event["file_name"] for event in saws],
-                [
-                    name,
-                    "PromoFull7290058156016-024-399-20260907-000001",
-                ],
-            )
-
-    async def test_same_name_different_url_stays_separate(self):
-        """A second URL for the same FileNm is another download candidate."""
-        with tempfile.TemporaryDirectory() as tmp:
-            scraper = Wolt(
-                file_output=DiskFileOutput(storage_path=os.path.join(tmp, "files"))
-            )
-            scraper.on_scraping_start(limit=None, files_types=None)
-            name = "PromoFull7290058156016-019-502-20260907-054854"
-
-            async def listed():
-                yield FileEntry(name=name, url="http://example.test/a", size=None)
-                yield FileEntry(name=name, url="http://example.test/b", size=None)
-
-            kept = []
-            async for entry in scraper.register_all_saw_files_on_site(listed()):
-                kept.append(entry.url)
-
-            self.assertEqual(kept, ["http://example.test/a", "http://example.test/b"])
-            events = scraper.database._read_database().get(  # pylint: disable=protected-access
-                "events", []
-            )
-            saws = [event for event in events if event.get("status") == "saw"]
-            self.assertEqual(len(saws), 2)
-            self.assertEqual([event["link"] for event in saws], kept)

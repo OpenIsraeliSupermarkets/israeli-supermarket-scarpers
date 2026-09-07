@@ -10,6 +10,12 @@ from .logger import Logger
 from .gzip_utils import extract_xml_from_gz_in_memory, is_compressed_content
 
 
+# Decisions returned by disk_path_without_overwrite / DiskFileOutput.save_file
+SAVE_CREATED = "created"  # no file at the requested name
+SAVE_REWROTE_SAME = "rewrote_same"  # same path, identical bytes
+SAVE_RENAMED_CONFLICT = "renamed_conflict"  # different bytes kept under hash suffix
+
+
 def content_sha256(content: bytes) -> str:
     """Hex digest of file bytes."""
     return hashlib.sha256(content).hexdigest()
@@ -17,22 +23,24 @@ def content_sha256(content: bytes) -> str:
 
 def disk_path_without_overwrite(
     storage_path: str, file_name: str, content: bytes
-) -> Tuple[str, str, bool]:
+) -> Tuple[str, str, str]:
     """Pick a disk path that will not replace different bytes.
 
     Same path + same bytes is a rewrite. Same path + different bytes
     becomes ``{stem}-{sha256[:8]}{ext}`` so both dumps stay on disk.
 
     Returns:
-        (absolute_path, file_name, renamed)
+        (absolute_path, file_name, save_decision)
+        save_decision is one of SAVE_CREATED, SAVE_REWROTE_SAME,
+        SAVE_RENAMED_CONFLICT.
     """
     dest = os.path.join(storage_path, file_name)
     if not os.path.isfile(dest):
-        return dest, file_name, False
+        return dest, file_name, SAVE_CREATED
 
     with open(dest, "rb") as existing:
         if existing.read() == content:
-            return dest, file_name, False
+            return dest, file_name, SAVE_REWROTE_SAME
 
     digest = content_sha256(content)
     root, ext = os.path.splitext(file_name)
@@ -46,7 +54,7 @@ def disk_path_without_overwrite(
     Logger.warning(
         f"{file_name} already exists with different content; saving as {alt_name}"
     )
-    return alt_path, alt_name, True
+    return alt_path, alt_name, SAVE_RENAMED_CONFLICT
 
 
 class FileOutput(ABC):
@@ -147,6 +155,7 @@ class DiskFileOutput(FileOutput):
         extract_successfully = False
         error = None
         digest = None
+        save_decision = None
 
         try:
             # Extract if it's compressed
@@ -158,7 +167,7 @@ class DiskFileOutput(FileOutput):
             if not extract_successfully:
                 error = extract_error
 
-            file_save_path, file_name, renamed = disk_path_without_overwrite(
+            file_save_path, file_name, save_decision = disk_path_without_overwrite(
                 self.storage_path, file_name, file_content
             )
             await asyncio.to_thread(self._write_file, file_save_path, file_content)
@@ -166,8 +175,8 @@ class DiskFileOutput(FileOutput):
             saved = True
             digest = content_sha256(file_content)
             Logger.debug(
-                f"Saved {file_link} to {file_save_path} sha256={digest}"
-                + (" (renamed to avoid overwrite)" if renamed else "")
+                f"Saved {file_link} to {file_save_path} sha256={digest} "
+                f"save_decision={save_decision}"
             )
 
         except Exception as exception:  # pylint: disable=broad-except
@@ -175,6 +184,7 @@ class DiskFileOutput(FileOutput):
             Logger.error_execption(exception)
             error = str(exception)
             digest = None
+            save_decision = None
 
         return {
             "file_name": file_name,
@@ -182,6 +192,8 @@ class DiskFileOutput(FileOutput):
             "extract_successfully": extract_successfully,
             "error": error,
             "content_sha256": digest,
+            # created | rewrote_same | renamed_conflict (None if save failed)
+            "save_decision": save_decision,
             "metadata": metadata or {},
         }
 

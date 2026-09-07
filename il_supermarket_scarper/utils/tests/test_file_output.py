@@ -13,7 +13,12 @@ from il_supermarket_scarper.utils import (
     InMemoryQueueHandler,
     ScraperConfig,
 )
-from il_supermarket_scarper.utils.file_output import content_sha256
+from il_supermarket_scarper.utils.file_output import (
+    SAVE_CREATED,
+    SAVE_RENAMED_CONFLICT,
+    SAVE_REWROTE_SAME,
+    content_sha256,
+)
 
 
 class TestFileOutput:
@@ -357,6 +362,8 @@ class TestFileOutput:
                 )
                 assert first["file_name"] == "PromoFull7290-001.xml"
                 assert second["file_name"] == "PromoFull7290-001.xml"
+                assert first["save_decision"] == SAVE_CREATED
+                assert second["save_decision"] == SAVE_REWROTE_SAME
                 assert first["content_sha256"] == content_sha256(payload)
                 assert os.listdir(tmpdir) == ["PromoFull7290-001.xml"]
 
@@ -382,7 +389,9 @@ class TestFileOutput:
                 )
                 alt = f"PromoFull7290-001-{content_sha256(second_bytes)[:8]}.xml"
                 assert first["file_name"] == "PromoFull7290-001.xml"
+                assert first["save_decision"] == SAVE_CREATED
                 assert second["file_name"] == alt
+                assert second["save_decision"] == SAVE_RENAMED_CONFLICT
                 assert second["content_sha256"] == content_sha256(second_bytes)
                 with open(os.path.join(tmpdir, "PromoFull7290-001.xml"), "rb") as f:
                     assert f.read() == first_bytes
