@@ -41,7 +41,7 @@ class FileOutput(ABC):
 
     def _existing_digest(self, file_name: str) -> Optional[str]:
         """Return sha256 already stored under ``file_name``, if the backend has it."""
-        return None
+        return self._saved_digests.get(file_name)
 
     def resolve_save_name(
         self, file_name: str, content: bytes

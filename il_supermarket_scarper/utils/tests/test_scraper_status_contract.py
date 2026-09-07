@@ -65,6 +65,7 @@ class TestScraperStatusContract(unittest.TestCase):
         self.assertFalse(status.validate_file_status())
 
     def test_duplicate_collected_is_invalid(self):
+        """Two collected events for one file name are invalid."""
         status = ScraperStatusOutput(
             events=[_saw(), _collected(), _collected(), _downloaded()],
             verified_downloads=[_verified()],
@@ -72,6 +73,7 @@ class TestScraperStatusContract(unittest.TestCase):
         self.assertFalse(status.validate_file_status())
 
     def test_successful_extract_without_verified_is_invalid(self):
+        """A successful extract must also be recorded as verified."""
         status = ScraperStatusOutput(
             events=[_saw(), _collected(), _downloaded(extracted=True)],
             verified_downloads=[],
@@ -79,12 +81,14 @@ class TestScraperStatusContract(unittest.TestCase):
         self.assertFalse(status.validate_file_status())
 
     def test_failed_extract_without_verified_is_valid(self):
+        """Failed extract can remain downloaded-only."""
         status = ScraperStatusOutput(
             events=[_saw(), _collected(), _downloaded(extracted=False)],
         )
         self.assertTrue(status.validate_file_status())
 
     def test_limit_not_exceeded(self):
+        """Started limit must not be exceeded by downloaded files."""
         other = "PromoFull7290058156016-024-399-20260907-000001"
         status = ScraperStatusOutput(
             global_status=[_started(limit=1)],
@@ -111,6 +115,7 @@ class TestScraperStatusContract(unittest.TestCase):
         self.assertFalse(status.validate_file_status())
 
     def test_failed_file_needs_collected(self):
+        """A failed download still needs a collected event."""
         status = ScraperStatusOutput(
             events=[
                 _saw(),
