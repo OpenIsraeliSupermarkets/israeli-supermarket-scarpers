@@ -1,0 +1,26 @@
+---
+description: Apply download limit only after every listing filter
+globs: il_supermarket_scarper/engines/**/*.py
+alwaysApply: false
+---
+
+# Limit after all filters
+
+In `apply_limit`, never count `file_pass_limit` or stop at `limit` until **every** listing filter has run.
+
+Filters that must run first: already downloaded, unique, store id, file-name regex, file types, `when_date`.
+
+- `filter_file_types` matches types only. It must not increment the quota or `break` at `limit`.
+- `get_by_date` / `when_date` must run before the quota. Wolt lists many days in parallel; older names will otherwise burn `limit` and download nothing.
+- Apply `limit` in one place at the end of `apply_limit`, then aclose upstream listing.
+
+```python
+# BAD — quota inside type filter, date runs after
+intreable_ = self.filter_file_types(state, files, limit, files_types, ...)
+intreable_ = self.get_by_date(when_date, ...)
+
+# GOOD — type and date first; limit last
+intreable_ = self.filter_file_types(files, files_types, ...)
+intreable_ = self.get_by_date(when_date, ...)
+# then increment file_pass_limit / break at limit
+```
