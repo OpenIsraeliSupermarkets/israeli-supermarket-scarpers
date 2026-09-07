@@ -4,16 +4,19 @@ import asyncio
 import hashlib
 import multiprocessing
 from abc import ABC, abstractmethod
+from enum import Enum
 from typing import Any, Dict, AsyncGenerator, Optional, Tuple
 import os
 from .logger import Logger
 from .gzip_utils import extract_xml_from_gz_in_memory, is_compressed_content
 
 
-# Decisions returned by disk_path_without_overwrite / DiskFileOutput.save_file
-SAVE_CREATED = "created"  # no file at the requested name
-SAVE_REWROTE_SAME = "rewrote_same"  # same path, identical bytes
-SAVE_RENAMED_CONFLICT = "renamed_conflict"  # different bytes kept under hash suffix
+class SaveDecision(str, Enum):
+    """How FileOutput resolved a repeated file name."""
+
+    CREATED = "created"  # first time this name is stored
+    REWROTE_SAME = "rewrote_same"  # same name, same sha256
+    RENAMED_CONFLICT = "renamed_conflict"  # different sha256 kept under hash suffix
 
 
 def content_sha256(content: bytes) -> str:
@@ -21,44 +24,60 @@ def content_sha256(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
 
 
-def disk_path_without_overwrite(
-    storage_path: str, file_name: str, content: bytes
-) -> Tuple[str, str, str]:
-    """Pick a disk path that will not replace different bytes.
-
-    Same path + same bytes is a rewrite. Same path + different bytes
-    becomes ``{stem}-{sha256[:8]}{ext}`` so both dumps stay on disk.
-
-    Returns:
-        (absolute_path, file_name, save_decision)
-        save_decision is one of SAVE_CREATED, SAVE_REWROTE_SAME,
-        SAVE_RENAMED_CONFLICT.
-    """
-    dest = os.path.join(storage_path, file_name)
-    if not os.path.isfile(dest):
-        return dest, file_name, SAVE_CREATED
-
-    with open(dest, "rb") as existing:
-        if existing.read() == content:
-            return dest, file_name, SAVE_REWROTE_SAME
-
-    digest = content_sha256(content)
-    root, ext = os.path.splitext(file_name)
-    alt_name = f"{root}-{digest[:8]}{ext}"
-    alt_path = os.path.join(storage_path, alt_name)
-    if os.path.isfile(alt_path):
-        with open(alt_path, "rb") as existing:
-            if existing.read() != content:
-                alt_name = f"{root}-{digest}{ext}"
-                alt_path = os.path.join(storage_path, alt_name)
-    Logger.warning(
-        f"{file_name} already exists with different content; saving as {alt_name}"
-    )
-    return alt_path, alt_name, SAVE_RENAMED_CONFLICT
+def path_sha256(file_path: str) -> str:
+    """Hex digest of a file on disk, hashed in chunks."""
+    digest = hashlib.sha256()
+    with open(file_path, "rb") as existing:
+        for chunk in iter(lambda: existing.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 class FileOutput(ABC):
     """Abstract base class for file output handlers."""
+
+    def __init__(self):
+        self._saved_digests: Dict[str, str] = {}
+
+    def _existing_digest(self, file_name: str) -> Optional[str]:
+        """Return sha256 already stored under ``file_name``, if the backend has it."""
+        return None
+
+    def resolve_save_name(
+        self, file_name: str, content: bytes
+    ) -> Tuple[str, SaveDecision]:
+        """Pick a file name that will not replace a different hash.
+
+        Same name + same sha256 is a rewrite. Same name + different sha256
+        becomes ``{stem}-{sha256[:8]}{ext}``. Disk backends hash files
+        already on disk; queue backends use this scrape's memory.
+        """
+        digest = content_sha256(content)
+        known = self._saved_digests.get(file_name)
+        if known is None:
+            known = self._existing_digest(file_name)
+            if known is None:
+                self._saved_digests[file_name] = digest
+                return file_name, SaveDecision.CREATED
+            self._saved_digests[file_name] = known
+        if known == digest:
+            return file_name, SaveDecision.REWROTE_SAME
+
+        root, ext = os.path.splitext(file_name)
+        alt_name = f"{root}-{digest[:8]}{ext}"
+        alt_known = self._saved_digests.get(alt_name)
+        if alt_known is None:
+            alt_known = self._existing_digest(alt_name)
+            if alt_known is not None:
+                self._saved_digests[alt_name] = alt_known
+        if alt_known is not None and alt_known != digest:
+            alt_name = f"{root}-{digest}{ext}"
+        self._saved_digests[alt_name] = digest
+        Logger.warning(
+            f"{file_name} already exists with a different sha256; "
+            f"saving as {alt_name}"
+        )
+        return alt_name, SaveDecision.RENAMED_CONFLICT
 
     @abstractmethod
     async def save_file(
@@ -142,6 +161,13 @@ class DiskFileOutput(FileOutput):
         self.storage_path = storage_path
         self.extract_gz = extract_gz
         os.makedirs(storage_path, exist_ok=True)
+        super().__init__()
+
+    def _existing_digest(self, file_name: str) -> Optional[str]:
+        dest = os.path.join(self.storage_path, file_name)
+        if not os.path.isfile(dest):
+            return None
+        return path_sha256(dest)
 
     async def save_file(
         self,
@@ -167,9 +193,8 @@ class DiskFileOutput(FileOutput):
             if not extract_successfully:
                 error = extract_error
 
-            file_save_path, file_name, save_decision = disk_path_without_overwrite(
-                self.storage_path, file_name, file_content
-            )
+            file_name, save_decision = self.resolve_save_name(file_name, file_content)
+            file_save_path = os.path.join(self.storage_path, file_name)
             await asyncio.to_thread(self._write_file, file_save_path, file_content)
 
             saved = True
@@ -192,7 +217,6 @@ class DiskFileOutput(FileOutput):
             "extract_successfully": extract_successfully,
             "error": error,
             "content_sha256": digest,
-            # created | rewrote_same | renamed_conflict (None if save failed)
             "save_decision": save_decision,
             "metadata": metadata or {},
         }
@@ -240,6 +264,7 @@ class QueueFileOutput(FileOutput):
         self.storage_path = storage_path
         self.extract_gz = extract_gz
         os.makedirs(storage_path, exist_ok=True)
+        super().__init__()
 
     async def save_file(
         self,
@@ -252,6 +277,8 @@ class QueueFileOutput(FileOutput):
         saved = False
         extract_successfully = False
         error = None
+        digest = None
+        save_decision = None
 
         try:
             # Extract if it's compressed (detected by magic bytes)
@@ -262,29 +289,41 @@ class QueueFileOutput(FileOutput):
             )
             if not extract_successfully:
                 error = extract_error
-            # Send file to queue
             if extract_successfully:
+                file_name, save_decision = self.resolve_save_name(
+                    file_name, file_content
+                )
+                digest = content_sha256(file_content)
                 message = {
                     "file_name": file_name,
                     "file_link": file_link,
                     "file_content": file_content,
+                    "content_sha256": digest,
+                    "save_decision": save_decision,
                     "metadata": metadata or {},
                 }
 
                 await self.queue_handler.send(message)
                 saved = True
-                Logger.debug(f"Sent {file_name} to queue")
+                Logger.debug(
+                    f"Sent {file_name} to queue sha256={digest} "
+                    f"save_decision={save_decision}"
+                )
 
         except Exception as exception:  # pylint: disable=broad-except
             Logger.error(f"Error sending {file_link} to queue: {exception}")
             Logger.error_execption(exception)
             error = str(exception)
+            digest = None
+            save_decision = None
 
         return {
             "file_name": file_name,
             "saved": saved,
             "extract_successfully": extract_successfully,
             "error": error,
+            "content_sha256": digest,
+            "save_decision": save_decision,
             "metadata": metadata or {},
         }
 
