@@ -307,7 +307,8 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
 
         This is a streaming version that processes files one at a time,
         applying various filters (already downloaded, unique, store ID,
-        file types, date) and enforcing the limit.
+        file name, file types, date) and enforcing the limit last so the
+        quota is not spent on files later filters would drop.
 
         Args:
             state (FilterState): State object tracking filter statistics.
@@ -372,15 +373,12 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 intreable_, file_name_regex, by_function=by_function
             )
 
-        # filter by file type
+        # filter by file type (no limit — date and other filters still need to run)
         if files_types:
             intreable_ = self.filter_file_types(
-                state,
                 intreable_,
-                limit,
                 files_types,
                 by_function,
-                random_selection=random_selection,
             )
 
         # Warning and filtering for random_selection
@@ -396,20 +394,16 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 f"when_date should be datetime or 'latest', got {when_date}"
             )
 
-        # If filter by limit without type
-        if limit and not files_types:
+        if limit is not None:
             assert limit > 0, "Limit must be greater than 0"
-            async for file in intreable_:
-                if state.file_pass_limit < limit:
-                    state.file_pass_limit += 1
-                    yield file
-                else:
-                    # Stop consuming; caller should aclose upstream listing gens
-                    # so parallel page/branch fetches can cancel.
-                    break
-        else:
-            async for file in intreable_:
-                yield file
+
+        async for file in intreable_:
+            if limit is not None and state.file_pass_limit >= limit:
+                # Stop consuming; caller should aclose upstream listing gens
+                # so parallel page/branch fetches can cancel.
+                break
+            state.file_pass_limit += 1
+            yield file
 
         # raise error if there was nothing to download.
         if state.file_pass_limit == 0:
@@ -420,31 +414,19 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
 
     async def filter_file_types(
         self,
-        state: FilterState,
         intreable: AsyncGenerator[FileEntry, None],
-        limit,
         files_types,
         by_function,
-        random_selection=False,  # pylint: disable=unused-argument
     ) -> AsyncGenerator[FileEntry, None]:
-        """filter the file types requested"""
+        """Yield files matching the requested types. Does not apply limit."""
 
         async for type_ in intreable:
-            # Check if the file matches any of the requested file types
             filename = by_function(type_)
-            matches = any(
+            if any(
                 FileTypesFilters.is_file_from_type(filename, file_type)
                 for file_type in files_types
-            )
-            if matches:
-                if limit is None:
-                    yield type_
-                elif state.file_pass_limit < limit:
-                    state.file_pass_limit += 1
-                    yield type_
-                else:
-                    break
-            # If file doesn't match the requested types, skip it (don't yield)
+            ):
+                yield type_
 
     def get_only_latest(self, by_function, intreable_):
         """get only the last version of the files"""

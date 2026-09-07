@@ -3,17 +3,21 @@
 import re
 import tempfile
 import unittest
+from datetime import datetime
 
 from il_supermarket_scarper.engines.engine import Engine
+from il_supermarket_scarper.scrappers.wolt import Wolt
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
 from il_supermarket_scarper.utils import (
     DiskFileOutput,
     DumpFolderNames,
     FileEntry,
+    FileTypesFilters,
     QueueFileOutput,
     InMemoryQueueHandler,
     get_output_folder,
 )
+from il_supermarket_scarper.utils.state import FilterState
 
 
 class TestEngineDeduplication(unittest.IsolatedAsyncioTestCase):
@@ -99,3 +103,45 @@ class TestEngineDeduplication(unittest.IsolatedAsyncioTestCase):
                 0,
                 f"{first_file} should not be downloaded again but got {second_results}",
             )
+
+
+class TestApplyLimitAfterFilters(unittest.IsolatedAsyncioTestCase):
+    """Limit must run after type/date filters, not before."""
+
+    async def test_limit_does_not_consume_quota_on_wrong_date(self):
+        """Older type-matching files must not burn limit before when_date."""
+        with tempfile.TemporaryDirectory() as tmp:
+            scraper = Wolt(file_output=DiskFileOutput(storage_path=tmp))
+
+            async def listed():
+                for name in (
+                    "PromoFull7290058249350-000-001-20260904-000001",
+                    "PromoFull7290058249350-000-002-20260905-000001",
+                    "PromoFull7290058249350-000-003-20260906-000001",
+                    "PromoFull7290058249350-000-004-20260907-000001",
+                    "PromoFull7290058249350-000-005-20260907-000002",
+                    "PromoFull7290058249350-000-006-20260907-000003",
+                    "Price7290058249350-000-007-20260907-000001",
+                ):
+                    yield FileEntry(name=name, url=f"http://example.test/{name}", size=1)
+
+            state = FilterState()
+            names = []
+            async for entry in scraper.apply_limit(
+                state,
+                listed(),
+                limit=3,
+                files_types=[FileTypesFilters.PROMO_FULL_FILE.name],
+                when_date=datetime(2026, 9, 7),
+            ):
+                names.append(entry.name)
+
+            self.assertEqual(
+                names,
+                [
+                    "PromoFull7290058249350-000-004-20260907-000001",
+                    "PromoFull7290058249350-000-005-20260907-000002",
+                    "PromoFull7290058249350-000-006-20260907-000003",
+                ],
+            )
+            self.assertEqual(state.file_pass_limit, 3)
