@@ -215,8 +215,21 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         self,
         files: AsyncGenerator[FileEntry, None],
     ) -> AsyncGenerator[FileEntry, None]:
-        """register the file as saw on site"""
+        """Saw each listing dump once.
+
+        Sites (Bina/SuperSapir) can repeat the same ``FileNm`` + URL with
+        different store labels. Those are one download. Same name with a
+        different URL is a separate dump and is kept.
+        """
+        seen = set()
         async for file in files:
+            key = (file.name, file.url)
+            if key in seen:
+                Logger.debug(
+                    f"Listing repeated {file.name} at {file.url}; one saw only"
+                )
+                continue
+            seen.add(key)
             self.register_saw_file(
                 file_name=file.name,
                 link=file.url,

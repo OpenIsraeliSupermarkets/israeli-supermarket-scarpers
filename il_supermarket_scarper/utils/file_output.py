@@ -1,12 +1,52 @@
 """Abstract file output interface for saving scraped files."""
 
 import asyncio
+import hashlib
 import multiprocessing
 from abc import ABC, abstractmethod
 from typing import Any, Dict, AsyncGenerator, Optional, Tuple
 import os
 from .logger import Logger
 from .gzip_utils import extract_xml_from_gz_in_memory, is_compressed_content
+
+
+def content_sha256(content: bytes) -> str:
+    """Hex digest of file bytes."""
+    return hashlib.sha256(content).hexdigest()
+
+
+def disk_path_without_overwrite(
+    storage_path: str, file_name: str, content: bytes
+) -> Tuple[str, str, bool]:
+    """Pick a disk path that will not replace different bytes.
+
+    Same path + same bytes is a rewrite. Same path + different bytes
+    becomes ``{stem}-{sha256[:8]}{ext}`` so both dumps stay on disk.
+
+    Returns:
+        (absolute_path, file_name, renamed)
+    """
+    dest = os.path.join(storage_path, file_name)
+    if not os.path.isfile(dest):
+        return dest, file_name, False
+
+    with open(dest, "rb") as existing:
+        if existing.read() == content:
+            return dest, file_name, False
+
+    digest = content_sha256(content)
+    root, ext = os.path.splitext(file_name)
+    alt_name = f"{root}-{digest[:8]}{ext}"
+    alt_path = os.path.join(storage_path, alt_name)
+    if os.path.isfile(alt_path):
+        with open(alt_path, "rb") as existing:
+            if existing.read() != content:
+                alt_name = f"{root}-{digest}{ext}"
+                alt_path = os.path.join(storage_path, alt_name)
+    Logger.warning(
+        f"{file_name} already exists with different content; saving as {alt_name}"
+    )
+    return alt_path, alt_name, True
 
 
 class FileOutput(ABC):
@@ -106,6 +146,7 @@ class DiskFileOutput(FileOutput):
         saved = False
         extract_successfully = False
         error = None
+        digest = None
 
         try:
             # Extract if it's compressed
@@ -117,23 +158,30 @@ class DiskFileOutput(FileOutput):
             if not extract_successfully:
                 error = extract_error
 
-            # Write file content to disk
-            file_save_path = os.path.join(self.storage_path, file_name)
+            file_save_path, file_name, renamed = disk_path_without_overwrite(
+                self.storage_path, file_name, file_content
+            )
             await asyncio.to_thread(self._write_file, file_save_path, file_content)
 
             saved = True
-            Logger.debug(f"Saved {file_link} to {file_save_path}")
+            digest = content_sha256(file_content)
+            Logger.debug(
+                f"Saved {file_link} to {file_save_path} sha256={digest}"
+                + (" (renamed to avoid overwrite)" if renamed else "")
+            )
 
         except Exception as exception:  # pylint: disable=broad-except
             Logger.error(f"Error saving {file_link} to disk: {exception}")
             Logger.error_execption(exception)
             error = str(exception)
+            digest = None
 
         return {
             "file_name": file_name,
             "saved": saved,
             "extract_successfully": extract_successfully,
             "error": error,
+            "content_sha256": digest,
             "metadata": metadata or {},
         }
 
