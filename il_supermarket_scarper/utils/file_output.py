@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import multiprocessing
 from abc import ABC, abstractmethod
+from contextlib import asynccontextmanager
 from enum import Enum
 from typing import Any, Dict, AsyncGenerator, Optional, Tuple
 import os
@@ -12,11 +13,15 @@ from .gzip_utils import extract_xml_from_gz_in_memory, is_compressed_content
 
 
 class SaveDecision(str, Enum):
-    """How FileOutput resolved a repeated file name."""
+    """How FileOutput resolved a repeated file name.
+
+    Parsers split ``FileNm`` for type, chain, store, and date. Never suffix
+    or rename; keep the original name and overwrite or re-queue in place.
+    """
 
     CREATED = "created"  # first time this name is stored
-    REWROTE_SAME = "rewrote_same"  # same name, same sha256; no write
-    HASH_MISMATCH = "hash_mismatch"  # same name, different sha256; keep file, status records hash
+    REWROTE_SAME = "rewrote_same"  # same name, same sha256; skip write/send
+    HASH_MISMATCH = "hash_mismatch"  # same name, different sha256; overwrite / re-queue
 
 
 def content_sha256(content: bytes) -> str:
@@ -41,14 +46,21 @@ class FileOutput(ABC):
                 self._save_locks[file_name] = lock
             return lock
 
+    @asynccontextmanager
+    async def _locked_save_decision(self, file_name: str, file_content: bytes):
+        """Hold the per-name lock and yield (name, decision, digest)."""
+        lock = await self._lock_for_name(file_name)
+        async with lock:
+            yield self.resolve_save_name(file_name, file_content)
+
     def resolve_save_name(
         self, file_name: str, content: bytes
     ) -> Tuple[str, SaveDecision, str]:
         """Keep ``file_name``. Compare sha256 against this scrape's memory.
 
-        Same hash is a no-op. Different hash keeps the existing file and
-        returns ``HASH_MISMATCH`` so status can record the new digest.
-        Digest is stored only after a successful first write/send.
+        Same hash is a no-op. Different hash is ``HASH_MISMATCH``: callers
+        overwrite the disk file or push the queue again, then remember the
+        new digest. Digest is stored only after a successful write/send.
         """
         digest = content_sha256(content)
         known = self._saved_digests.get(file_name)
@@ -56,11 +68,15 @@ class FileOutput(ABC):
             return file_name, SaveDecision.CREATED, digest
         if known == digest:
             return file_name, SaveDecision.REWROTE_SAME, digest
-        Logger.warning(
+        Logger.info(
             f"{file_name} already stored with sha256={known}; "
-            f"downloaded sha256={digest}; keeping existing file"
+            f"downloaded sha256={digest}; overwriting / re-queueing"
         )
         return file_name, SaveDecision.HASH_MISMATCH, digest
+
+    def _should_persist(self, save_decision: SaveDecision) -> bool:
+        """True when bytes should be written or sent (not a same-hash no-op)."""
+        return save_decision != SaveDecision.REWROTE_SAME
 
     def _remember_digest(self, file_name: str, digest: str) -> None:
         """Record sha256 after a successful write or queue send."""
@@ -174,13 +190,11 @@ class DiskFileOutput(FileOutput):
             if not extract_successfully:
                 error = extract_error
 
-            lock = await self._lock_for_name(file_name)
-            async with lock:
-                file_name, save_decision, digest = self.resolve_save_name(
-                    file_name, file_content
-                )
+            async with self._locked_save_decision(
+                file_name, file_content
+            ) as (file_name, save_decision, digest):
                 file_save_path = os.path.join(self.storage_path, file_name)
-                if save_decision == SaveDecision.CREATED:
+                if self._should_persist(save_decision):
                     await asyncio.to_thread(
                         self._write_file, file_save_path, file_content
                     )
@@ -278,12 +292,10 @@ class QueueFileOutput(FileOutput):
             if not extract_successfully:
                 error = extract_error
             if extract_successfully:
-                lock = await self._lock_for_name(file_name)
-                async with lock:
-                    file_name, save_decision, digest = self.resolve_save_name(
-                        file_name, file_content
-                    )
-                    if save_decision == SaveDecision.CREATED:
+                async with self._locked_save_decision(
+                    file_name, file_content
+                ) as (file_name, save_decision, digest):
+                    if self._should_persist(save_decision):
                         message = {
                             "file_name": file_name,
                             "file_link": file_link,

@@ -79,10 +79,18 @@ class ExtractAndDropFileOutput(FileOutput):
     ) -> Dict[str, Any]:
         """Decompress in memory; do not persist the artifact."""
         del file_link
-        _content, file_name, extract_successfully, extract_error = (
+        file_content, file_name, extract_successfully, extract_error = (
             await self._extract_if_compressed(file_content, file_name)
         )
-        del _content
+        digest = None
+        save_decision = None
+        if extract_successfully:
+            async with self._locked_save_decision(
+                file_name, file_content
+            ) as (file_name, save_decision, digest):
+                if self._should_persist(save_decision):
+                    self._remember_digest(file_name, digest)
+        del file_content
         return {
             "file_name": file_name,
             "saved": extract_successfully,
@@ -92,6 +100,8 @@ class ExtractAndDropFileOutput(FileOutput):
                 if extract_successfully
                 else (extract_error or "extract failed")
             ),
+            "content_sha256": digest,
+            "save_decision": save_decision,
             "metadata": metadata or {},
         }
 

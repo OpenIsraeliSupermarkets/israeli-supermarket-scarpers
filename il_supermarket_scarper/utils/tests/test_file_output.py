@@ -379,8 +379,8 @@ class TestFileOutput:
 
         asyncio.run(run_test())
 
-    def test_disk_output_keeps_different_bytes_under_same_name(self):
-        """Different content keeps the first file; status records the new hash."""
+    def test_disk_output_overwrites_different_bytes_under_same_name(self):
+        """Different content overwrites the file; parsers keep the original name."""
 
         async def run_test():
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -403,7 +403,7 @@ class TestFileOutput:
                 assert second["content_sha256"] == content_sha256(second_bytes)
                 assert os.listdir(tmpdir) == ["PromoFull7290-001.xml"]
                 with open(os.path.join(tmpdir, "PromoFull7290-001.xml"), "rb") as f:
-                    assert f.read() == first_bytes
+                    assert f.read() == second_bytes
 
         asyncio.run(run_test())
 
@@ -435,8 +435,8 @@ class TestFileOutput:
 
         asyncio.run(run_test())
 
-    def test_queue_output_keeps_different_bytes_under_same_name(self):
-        """Different content does not enqueue a second name; status records the hash."""
+    def test_queue_output_pushes_different_bytes_under_same_name(self):
+        """Different content is queued again under the original file name."""
 
         async def run_test():
             handler = InMemoryQueueHandler("conflict")
@@ -458,10 +458,13 @@ class TestFileOutput:
             assert second["save_decision"] == SaveDecision.HASH_MISMATCH
             assert second["content_sha256"] == content_sha256(second_bytes)
             await output.close()
-            names = []
+            payloads = []
             async for message in handler.get_all_messages():
-                names.append(message["file_name"])
-            assert names == ["PromoFull7290-001.xml"]
+                payloads.append((message["file_name"], message["file_content"]))
+            assert payloads == [
+                ("PromoFull7290-001.xml", first_bytes),
+                ("PromoFull7290-001.xml", second_bytes),
+            ]
 
         asyncio.run(run_test())
 
