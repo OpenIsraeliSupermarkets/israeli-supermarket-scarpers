@@ -306,11 +306,12 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         Apply filtering and limiting to a stream of files.
 
         This is a streaming version that processes files one at a time,
-        applying various filters (already downloaded, store ID,
-        file name, file types, date) and enforcing the limit last so the
-        quota is not spent on files later filters would drop. Duplicate
-        listing names are kept; FileOutput keeps the same path and
-        records a hash mismatch on status when sha256 differs.
+        applying various filters (already downloaded, identical listing
+        hash, store ID, file name, file types, date) and enforcing the
+        limit last so the quota is not spent on files later filters would
+        drop. Duplicate FileNm values are kept when listing hash differs;
+        FileOutput overwrites the disk file or re-queues under the same
+        name. Identical listing hashes are dropped before download.
 
         Args:
             state (FilterState): State object tracking filter statistics.
@@ -355,9 +356,12 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
 
         files_list = stream_to_list(state, intreable)
 
+        # one download per listing identity in this scrape (not per FileNm)
+        intreable_ = self.unique_listings(state, files_list)
+
         # filter files already downloaded
         intreable_: AsyncGenerator[FileEntry, None] = self.filter_already_downloaded(
-            files_list,
+            intreable_,
             by_function=by_function,
         )
 
@@ -410,6 +414,19 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 f"No files to download for file files_types={files_types},"
                 f"limit={limit},store_id={store_id},when_date={when_date}"
             )
+
+    @staticmethod
+    async def unique_listings(state: FilterState, iterable):
+        """Keep the first FileEntry per listing hash in this scrape.
+
+        Same FileNm with a different url or size is a different listing and
+        is kept. Identical listings are not downloaded twice.
+        """
+        async for item in iterable:
+            listing_hash = item.listing_hash()
+            if listing_hash not in state.unique_seen:
+                state.unique_seen.add(listing_hash)
+                yield item
 
     async def filter_file_types(
         self,

@@ -94,13 +94,27 @@ class ScraperStatus:
         self._insert_event(ScraperStatus.DOWNLOADED, **event_data)
         self._add_downloaded_files_to_list(results)
 
+    def _is_verified_listing(self, file) -> bool:
+        """True if this listing was already stored.
+
+        Prefer ``listing_hash``. Legacy verified rows have only ``file_name``;
+        skip those by name so the first run after this field was added does
+        not re-download every dump.
+        """
+        if self.database.already_downloaded(
+            self.VERIFIED_DOWNLOADS, {"listing_hash": file.listing_hash()}
+        ):
+            return True
+        doc = self.database.find_document(
+            self.VERIFIED_DOWNLOADS, {"file_name": file.name}
+        )
+        return doc is not None and not doc.get("listing_hash")
+
     async def filter_already_downloaded(self, filelist, by_function=lambda x: x):
-        """Skip listings whose FileEntry hash is already verified."""
+        """Skip listings already verified by hash, or by name for legacy rows."""
         del by_function
         async for file in filelist:
-            if not self.database.already_downloaded(
-                self.VERIFIED_DOWNLOADS, {"listing_hash": file.listing_hash()}
-            ):
+            if not self._is_verified_listing(file):
                 yield file
 
     def _add_downloaded_files_to_list(self, results: ScrapingResult):

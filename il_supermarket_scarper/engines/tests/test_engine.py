@@ -234,3 +234,49 @@ class TestApplyLimitAfterFilters(unittest.IsolatedAsyncioTestCase):
                 kept.append(item)
 
             self.assertEqual(kept, [])
+
+    async def test_identical_listings_in_one_scrape_are_deduped(self):
+        """Same name+url+size is listed once; a second copy is not downloaded."""
+        with tempfile.TemporaryDirectory() as tmp:
+            scraper = self._wolt(tmp)
+            entry = FileEntry(
+                name="PromoFull7290058249350-000-004-20260907-000001",
+                url="http://example.test/a",
+                size=1,
+            )
+
+            async def listed():
+                yield entry
+                yield entry
+
+            state = FilterState()
+            kept = []
+            async for item in scraper.apply_limit(state, listed(), limit=2):
+                kept.append(item)
+
+            self.assertEqual(kept, [entry])
+            self.assertEqual(state.file_pass_limit, 1)
+
+    async def test_legacy_verified_name_is_skipped(self):
+        """Verified rows without listing_hash still skip by file name."""
+        with tempfile.TemporaryDirectory() as tmp:
+            scraper = self._wolt(tmp)
+            name = "PromoFull7290058249350-000-004-20260907-000001"
+            scraper.database.insert_document(
+                ScraperStatus.VERIFIED_DOWNLOADS,
+                {
+                    "file_name": name,
+                    "task_id": "previous",
+                },
+            )
+
+            async def listed():
+                yield FileEntry(name=name, url="http://example.test/a", size=1)
+                yield FileEntry(name=name, url="http://example.test/b", size=2)
+
+            state = FilterState()
+            kept = []
+            async for item in scraper.apply_limit(state, listed(), limit=2):
+                kept.append(item)
+
+            self.assertEqual(kept, [])
