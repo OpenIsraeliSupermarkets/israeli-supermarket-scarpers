@@ -266,7 +266,7 @@ class MultiPageWeb(WebBase):
             )
 
             async for entry in limited_files:
-                yield entry.url, entry.name
+                yield entry
         finally:
             await listing.aclose()
 

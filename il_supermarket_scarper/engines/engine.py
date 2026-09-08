@@ -309,8 +309,8 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         applying various filters (already downloaded, store ID,
         file name, file types, date) and enforcing the limit last so the
         quota is not spent on files later filters would drop. Duplicate
-        listing names are kept; FileOutput decides same-hash rewrite vs
-        hash-suffix save.
+        listing names are kept; FileOutput keeps the same path and
+        records a hash mismatch on status when sha256 differs.
 
         Args:
             state (FilterState): State object tracking filter statistics.
@@ -633,6 +633,8 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
 
     def _extract_file_name(self, file_details):
         """Extract file name from file details for error reporting."""
+        if isinstance(file_details, FileEntry):
+            return file_details.name
         if isinstance(file_details, str):
             return file_details
         if isinstance(file_details, tuple) and len(file_details) > 1:
@@ -668,8 +670,9 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                     file_name = self._extract_file_name(file_details)
                     self.register_download_fail(e, file_name)
                     return ScrapingResult(
-                        file_name=file_name,
+                        file_entry=file_details,
                         downloaded=False,
+                        save_decision=None,
                         extract_succefully=False,
                         error=str(e),
                         restart_and_retry=False,
@@ -765,14 +768,16 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 raise
             return await self._wget_file_to_memory(file_link, timeout)
 
-    async def save_and_extract(self, arg):  # pylint: disable=too-many-locals
+    async def save_and_extract(  # pylint: disable=too-many-locals
+        self, entry: FileEntry
+    ):
         """download file and extract it (in-memory)
 
         Re-downloads a few times on extract failure. If extract still fails
         after full downloads, mark ``source_corrupt`` (remote file is bad).
         """
 
-        file_link, file_name = arg
+        file_link, file_name = entry.url, entry.name
         Logger.debug(f"Processing {file_link} (in-memory)")
 
         downloaded = False
@@ -781,6 +786,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         source_corrupt = False
         extract_succefully = False
         max_attempts = 3
+        result = None
 
         try:
             # Determine file name with extension (case-insensitive check)
@@ -815,9 +821,11 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 error = result.get("error")
                 if extract_succefully:
                     return ScrapingResult(
-                        file_name=file_name,
+                        file_entry=entry,
                         downloaded=downloaded,
+                        save_decision=result["save_decision"],
                         extract_succefully=True,
+                        content_sha256=result["content_sha256"],
                         error=None,
                         restart_and_retry=False,
                         source_corrupt=False,
@@ -836,9 +844,11 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                     Logger.error(error)
 
             return ScrapingResult(
-                file_name=file_name,
+                file_entry=entry,
                 downloaded=downloaded,
+                save_decision=result["save_decision"],
                 extract_succefully=False,
+                content_sha256=result["content_sha256"],
                 error=error,
                 restart_and_retry=False,
                 source_corrupt=source_corrupt,
@@ -855,9 +865,11 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             error = str(exception)
 
         return ScrapingResult(
-            file_name=file_name,
+            file_entry=entry,
             downloaded=downloaded,
+            save_decision=None if result is None else result["save_decision"],
             extract_succefully=False,
+            content_sha256=None if result is None else result["content_sha256"],
             error=error,
             restart_and_retry=restart_and_retry,
             source_corrupt=source_corrupt,

@@ -186,18 +186,15 @@ class WebBase(Engine):
             file_name_regex=file_name_regex,
             random_selection=random_selection,
         ):
-            yield entry.url, entry.name
+            yield entry
 
     async def process_file(self, file_details):
-        """Process a single file from WebBase. file_details is (download_url, file_name) tuple."""
-        download_url, file_name = file_details
+        """Process a single listing FileEntry from WebBase."""
+        entry = file_details
 
-        # Register that we've collected this file's details
         self.register_collected_file(
-            file_name_collected_from_site=file_name,
-            link_collected_from_site=download_url,
+            file_name_collected_from_site=entry.name,
+            link_collected_from_site=entry.url,
         )
 
-        # Download and extract the file
-        result = await self.save_and_extract((download_url, file_name))
-        return result
+        return await self.save_and_extract(entry)

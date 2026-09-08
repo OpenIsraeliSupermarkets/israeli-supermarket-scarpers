@@ -100,6 +100,8 @@ class DownloadedStatus(BaseModel):
     extracted_successfully: bool
     error_message: Optional[str] = None
     restart_and_retry: bool = False
+    content_sha256: Optional[str] = None
+    save_decision: Optional[str] = None
 
 
 class FailedStatus(BaseModel):
@@ -133,6 +135,9 @@ class VerifiedDownload(BaseModel):
     task_id: str
     file_name: FileName
     system_timestamp: datetime
+    content_sha256: Optional[str] = None
+    save_decision: Optional[str] = None
+    listing_hash: Optional[str] = None
 
 
 # Union type for all possible status events

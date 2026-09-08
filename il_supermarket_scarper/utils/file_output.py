@@ -15,8 +15,8 @@ class SaveDecision(str, Enum):
     """How FileOutput resolved a repeated file name."""
 
     CREATED = "created"  # first time this name is stored
-    REWROTE_SAME = "rewrote_same"  # same name, same sha256
-    RENAMED_CONFLICT = "renamed_conflict"  # different sha256 kept under hash suffix
+    REWROTE_SAME = "rewrote_same"  # same name, same sha256; no write
+    HASH_MISMATCH = "hash_mismatch"  # same name, different sha256; keep file, status records hash
 
 
 def content_sha256(content: bytes) -> str:
@@ -44,12 +44,11 @@ class FileOutput(ABC):
     def resolve_save_name(
         self, file_name: str, content: bytes
     ) -> Tuple[str, SaveDecision, str]:
-        """Pick a file name that will not replace a different hash.
+        """Keep ``file_name``. Compare sha256 against this scrape's memory.
 
-        Compares against this scrape's in-memory map only (no disk read).
-        Same name + same sha256 is a no-op rewrite. Same name + different
-        sha256 becomes ``{stem}-{sha256[:8]}{ext}``. Digest is recorded
-        only after the backend write/send succeeds.
+        Same hash is a no-op. Different hash keeps the existing file and
+        returns ``HASH_MISMATCH`` so status can record the new digest.
+        Digest is stored only after a successful first write/send.
         """
         digest = content_sha256(content)
         known = self._saved_digests.get(file_name)
@@ -57,17 +56,11 @@ class FileOutput(ABC):
             return file_name, SaveDecision.CREATED, digest
         if known == digest:
             return file_name, SaveDecision.REWROTE_SAME, digest
-
-        root, ext = os.path.splitext(file_name)
-        alt_name = f"{root}-{digest[:8]}{ext}"
-        alt_known = self._saved_digests.get(alt_name)
-        if alt_known is not None and alt_known != digest:
-            alt_name = f"{root}-{digest}{ext}"
         Logger.warning(
-            f"{file_name} already exists with a different sha256; "
-            f"saving as {alt_name}"
+            f"{file_name} already stored with sha256={known}; "
+            f"downloaded sha256={digest}; keeping existing file"
         )
-        return alt_name, SaveDecision.RENAMED_CONFLICT, digest
+        return file_name, SaveDecision.HASH_MISMATCH, digest
 
     def _remember_digest(self, file_name: str, digest: str) -> None:
         """Record sha256 after a successful write or queue send."""
@@ -186,14 +179,12 @@ class DiskFileOutput(FileOutput):
                 file_name, save_decision, digest = self.resolve_save_name(
                     file_name, file_content
                 )
-                if save_decision != SaveDecision.REWROTE_SAME:
-                    file_save_path = os.path.join(self.storage_path, file_name)
+                file_save_path = os.path.join(self.storage_path, file_name)
+                if save_decision == SaveDecision.CREATED:
                     await asyncio.to_thread(
                         self._write_file, file_save_path, file_content
                     )
                     self._remember_digest(file_name, digest)
-                else:
-                    file_save_path = os.path.join(self.storage_path, file_name)
 
             saved = True
             Logger.debug(
@@ -292,7 +283,7 @@ class QueueFileOutput(FileOutput):
                     file_name, save_decision, digest = self.resolve_save_name(
                         file_name, file_content
                     )
-                    if save_decision != SaveDecision.REWROTE_SAME:
+                    if save_decision == SaveDecision.CREATED:
                         message = {
                             "file_name": file_name,
                             "file_link": file_link,

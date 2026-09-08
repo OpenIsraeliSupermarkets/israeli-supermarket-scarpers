@@ -36,6 +36,10 @@ class MongoDataBase(AbstractDataBase):
 
     def already_downloaded(self, collection_name, query):
         """Find a document in a MongoDB collection."""
+        return self.find_document(collection_name, query) is not None
+
+    def find_document(self, collection_name, query):
+        """Return the first matching document, or None."""
         if self.store_db is None:
             self.create_connection()
         return self.store_db[collection_name].find_one(query)

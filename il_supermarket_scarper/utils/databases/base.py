@@ -19,6 +19,10 @@ class AbstractDataBase(ABC):
     def already_downloaded(self, collection_name, query):
         """Check if a document is already downloaded based on a query."""
 
+    def find_document(self, collection_name, query):
+        """Return the first matching document, or None."""
+        return None
+
     @abstractmethod
     def get_last_modified(self):
         """Get the last modified timestamp when scraper last wrote to this database."""

@@ -1,5 +1,6 @@
 """Data type for file entries flowing through the scraper pipeline."""
 
+import hashlib
 from typing import NamedTuple, Optional
 
 
@@ -14,3 +15,9 @@ class FileEntry(NamedTuple):
     name: str
     url: str
     size: Optional[int]
+
+    def listing_hash(self) -> str:
+        """Stable sha256 of listing identity (name, url, size)."""
+        size = "" if self.size is None else str(self.size)
+        payload = f"{self.name}\n{self.url}\n{size}".encode("utf-8")
+        return hashlib.sha256(payload).hexdigest()

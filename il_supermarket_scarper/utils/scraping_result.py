@@ -1,5 +1,8 @@
 from typing import Optional
 
+from .file_entry import FileEntry
+from .file_output import SaveDecision
+
 
 class ScrapingResult:
     """
@@ -9,27 +12,36 @@ class ScrapingResult:
     Example::
 
         ScrapingResult(
-            file_name='Price7290875100001-009-202601121522',
+            file_entry=FileEntry(
+                name='Price7290875100001-009-202601121522',
+                url='http://example.test/file',
+                size=1,
+            ),
             downloaded=True,
+            save_decision=SaveDecision.CREATED,
             extract_succefully=True,
-            error=None,
-            restart_and_retry=False,
-            source_corrupt=False,
+            content_sha256='abc',
         )
     """
 
     def __init__(
         self,
-        file_name: str,
+        file_entry: FileEntry,
         downloaded: bool,
+        save_decision: Optional[SaveDecision],
         extract_succefully: bool,
+        content_sha256: Optional[str] = None,
         error: Optional[str] = None,
         restart_and_retry: bool = False,
         source_corrupt: bool = False,
     ):
-        self.file_name = file_name
+        self.file_entry = file_entry
+        self.file_name = file_entry.name
         self.downloaded = downloaded
+        self.save_decision = getattr(save_decision, "value", save_decision)
         self.extract_succefully = extract_succefully
+        # Only set if the file was downloaded and extracted successfully
+        self.content_sha256 = content_sha256
         self.error = error
         self.restart_and_retry = restart_and_retry
         # True when the remote file itself is truncated/corrupt (download size

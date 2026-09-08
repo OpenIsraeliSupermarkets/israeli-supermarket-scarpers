@@ -380,7 +380,7 @@ class TestFileOutput:
         asyncio.run(run_test())
 
     def test_disk_output_keeps_different_bytes_under_same_name(self):
-        """Different content must not overwrite the first dump."""
+        """Different content keeps the first file; status records the new hash."""
 
         async def run_test():
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -397,16 +397,13 @@ class TestFileOutput:
                     file_name="PromoFull7290-001.xml",
                     file_content=second_bytes,
                 )
-                alt = f"PromoFull7290-001-{content_sha256(second_bytes)[:8]}.xml"
-                assert first["file_name"] == "PromoFull7290-001.xml"
+                assert first["file_name"] == second["file_name"] == "PromoFull7290-001.xml"
                 assert first["save_decision"] == SaveDecision.CREATED
-                assert second["file_name"] == alt
-                assert second["save_decision"] == SaveDecision.RENAMED_CONFLICT
+                assert second["save_decision"] == SaveDecision.HASH_MISMATCH
                 assert second["content_sha256"] == content_sha256(second_bytes)
+                assert os.listdir(tmpdir) == ["PromoFull7290-001.xml"]
                 with open(os.path.join(tmpdir, "PromoFull7290-001.xml"), "rb") as f:
                     assert f.read() == first_bytes
-                with open(os.path.join(tmpdir, alt), "rb") as f:
-                    assert f.read() == second_bytes
 
         asyncio.run(run_test())
 
@@ -439,7 +436,7 @@ class TestFileOutput:
         asyncio.run(run_test())
 
     def test_queue_output_keeps_different_bytes_under_same_name(self):
-        """Different content must not reuse the same queue file name."""
+        """Different content does not enqueue a second name; status records the hash."""
 
         async def run_test():
             handler = InMemoryQueueHandler("conflict")
@@ -456,15 +453,15 @@ class TestFileOutput:
                 file_name="PromoFull7290-001.xml",
                 file_content=second_bytes,
             )
-            alt = f"PromoFull7290-001-{content_sha256(second_bytes)[:8]}.xml"
+            assert first["file_name"] == second["file_name"] == "PromoFull7290-001.xml"
             assert first["save_decision"] == SaveDecision.CREATED
-            assert second["save_decision"] == SaveDecision.RENAMED_CONFLICT
-            assert second["file_name"] == alt
+            assert second["save_decision"] == SaveDecision.HASH_MISMATCH
+            assert second["content_sha256"] == content_sha256(second_bytes)
             await output.close()
             names = []
             async for message in handler.get_all_messages():
                 names.append(message["file_name"])
-            assert names == ["PromoFull7290-001.xml", alt]
+            assert names == ["PromoFull7290-001.xml"]
 
         asyncio.run(run_test())
 

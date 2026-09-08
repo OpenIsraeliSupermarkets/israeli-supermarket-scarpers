@@ -45,23 +45,21 @@ class Cerberus(Engine):
         self.ftp_session = False
 
     async def process_file(self, file_details):
-        """Process a single file from Cerberus. file_details is file_name string."""
-        file_name = file_details
+        """Process a single listing FileEntry from Cerberus."""
+        entry = file_details
 
-        # Register that we've collected this file's details
         self.register_collected_file(
-            file_name_collected_from_site=file_name[0],
+            file_name_collected_from_site=entry.name,
             link_collected_from_site=None,
         )
 
-        # Process file from FTP - persist_from_ftp yields a ScrapingResult
-        async for result in self.persist_from_ftp(file_name[0]):
+        async for result in self.persist_from_ftp(entry):
             return result
 
-        # Should not reach here, but return error result if we do
         return ScrapingResult(
-            file_name=file_name[0],
+            file_entry=entry,
             downloaded=False,
+            save_decision=None,
             extract_succefully=False,
             error="No result from persist_from_ftp",
             restart_and_retry=False,
@@ -172,20 +170,22 @@ class Cerberus(Engine):
                 file_name_regex=file_name_regex,
                 by_function=lambda x: x.name,
             ):
-                yield entry.name, entry.url
+                yield entry
 
-    async def persist_from_ftp(self, file_name):
+    async def persist_from_ftp(self, entry):
         """download file to memory and extract it.
 
         Re-downloads a few times on extract failure (truncated transfer). If the
         FTP SIZE matched and extract still fails, mark ``source_corrupt`` —
         the remote file itself is bad, not our fetch path.
         """
+        file_name = entry.name
         downloaded = False
         extract_succefully = False
         restart_and_retry = False
         source_corrupt = False
         error = None
+        result = None
         max_attempts = 3
         try:
             ext = file_name.split(".")[-1] if "." in file_name else ""
@@ -247,9 +247,11 @@ class Cerberus(Engine):
             restart_and_retry = True
 
         yield ScrapingResult(
-            file_name=file_name,
+            file_entry=entry,
             downloaded=downloaded,
+            save_decision=None if result is None else result["save_decision"],
             extract_succefully=extract_succefully,
+            content_sha256=None if result is None else result["content_sha256"],
             restart_and_retry=restart_and_retry,
             error=error,
             source_corrupt=source_corrupt,

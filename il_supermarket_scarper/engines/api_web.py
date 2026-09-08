@@ -166,6 +166,6 @@ class ApiWebEngine(WebBase):
                 file_name_regex=file_name_regex,
                 random_selection=random_selection,
             ):
-                yield entry.url, entry.name
+                yield entry
         finally:
             await listing.aclose()

@@ -2,7 +2,7 @@
 
 import unittest
 
-from il_supermarket_scarper.utils import ScrapingResult
+from il_supermarket_scarper.utils import FileEntry, ScrapingResult
 
 from scripts.validate_downloads import (
     consume_until_failure,
@@ -11,18 +11,24 @@ from scripts.validate_downloads import (
 )
 
 
+def _entry(name: str) -> FileEntry:
+    return FileEntry(name=name, url=f"http://example.test/{name}", size=1)
+
+
 def _ok(name: str) -> ScrapingResult:
     return ScrapingResult(
-        file_name=name,
+        file_entry=_entry(name),
         downloaded=True,
+        save_decision=None,
         extract_succefully=True,
     )
 
 
 def _fail(name: str, error: str) -> ScrapingResult:
     return ScrapingResult(
-        file_name=name,
+        file_entry=_entry(name),
         downloaded=False,
+        save_decision=None,
         extract_succefully=False,
         error=error,
     )
@@ -30,8 +36,9 @@ def _fail(name: str, error: str) -> ScrapingResult:
 
 def _corrupt(name: str) -> ScrapingResult:
     return ScrapingResult(
-        file_name=name,
+        file_entry=_entry(name),
         downloaded=True,
+        save_decision=None,
         extract_succefully=False,
         error="source corrupt after 3 downloads: extract failed",
         source_corrupt=True,
@@ -47,8 +54,9 @@ class TestDownloadHelpers(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(
             is_download_ok(
                 ScrapingResult(
-                    file_name="a",
+                    file_entry=_entry("a"),
                     downloaded=True,
+                    save_decision=None,
                     extract_succefully=False,
                     error="extract failed",
                 )

@@ -27,12 +27,13 @@ def _collected():
     return CollectedStatus(task_id=TASK, file_name=FILE, link_collected=LINK)
 
 
-def _downloaded(extracted=True):
+def _downloaded(extracted=True, **kwargs):
     return DownloadedStatus(
         task_id=TASK,
         file_name=FILE,
         downloaded_successfully=True,
         extracted_successfully=extracted,
+        **kwargs,
     )
 
 
@@ -64,10 +65,31 @@ class TestScraperStatusContract(unittest.TestCase):
                 _saw(),
                 _collected(),
                 _collected(),
-                _downloaded(),
-                _downloaded(),
+                _downloaded(
+                    content_sha256="aa",
+                    save_decision="created",
+                ),
+                _downloaded(
+                    content_sha256="bb",
+                    save_decision="hash_mismatch",
+                ),
             ],
-            verified_downloads=[_verified(), _verified()],
+            verified_downloads=[
+                VerifiedDownload(
+                    task_id=TASK,
+                    file_name=FILE,
+                    system_timestamp=NOW,
+                    content_sha256="aa",
+                    save_decision="created",
+                ),
+                VerifiedDownload(
+                    task_id=TASK,
+                    file_name=FILE,
+                    system_timestamp=NOW,
+                    content_sha256="bb",
+                    save_decision="hash_mismatch",
+                ),
+            ],
         )
         self.assertTrue(status.validate_file_status())
 
