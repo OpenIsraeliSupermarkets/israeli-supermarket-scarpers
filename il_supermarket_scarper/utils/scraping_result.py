@@ -4,7 +4,7 @@ from .file_entry import FileEntry
 from .file_output import SaveDecision
 
 
-class ScrapingResult:
+class ScrapingResult:  # pylint: disable=too-many-instance-attributes
     """
     Represents the result of a scraping operation.
     Holds metadata, status, error information, and supports len().

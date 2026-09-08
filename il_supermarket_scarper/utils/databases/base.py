@@ -19,7 +19,7 @@ class AbstractDataBase(ABC):
     def already_downloaded(self, collection_name, query):
         """Check if a document is already downloaded based on a query."""
 
-    def find_document(self, collection_name, query):
+    def find_document(self, collection_name, query):  # pylint: disable=unused-argument
         """Return the first matching document, or None."""
         return None
 
