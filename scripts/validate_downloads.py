@@ -66,6 +66,7 @@ class ExtractAndDropFileOutput(FileOutput):
     """Extract to prove the download, then drop bytes so a full scrape fits on disk."""
 
     def __init__(self, storage_path: str):
+        super().__init__()
         self.storage_path = storage_path
         os.makedirs(storage_path, exist_ok=True)
 

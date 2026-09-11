@@ -17,6 +17,8 @@ from il_supermarket_scarper.utils import (
     InMemoryQueueHandler,
     get_output_folder,
 )
+from il_supermarket_scarper.utils.databases import JsonDataBase
+from il_supermarket_scarper.utils.scraper_status import ScraperStatus
 from il_supermarket_scarper.utils.state import FilterState
 
 
@@ -108,10 +110,17 @@ class TestEngineDeduplication(unittest.IsolatedAsyncioTestCase):
 class TestApplyLimitAfterFilters(unittest.IsolatedAsyncioTestCase):
     """Limit must run after type/date filters, not before."""
 
+    def _wolt(self, tmp):
+        """Wolt with status DB inside ``tmp`` so tests do not share verified names."""
+        return Wolt(
+            file_output=DiskFileOutput(storage_path=tmp),
+            status_database=JsonDataBase("wolt_apply_limit", tmp),
+        )
+
     async def test_limit_does_not_consume_quota_on_wrong_date(self):
         """Older type-matching files must not burn limit before when_date."""
         with tempfile.TemporaryDirectory() as tmp:
-            scraper = Wolt(file_output=DiskFileOutput(storage_path=tmp))
+            scraper = self._wolt(tmp)
 
             async def listed():
                 for name in (
@@ -145,3 +154,83 @@ class TestApplyLimitAfterFilters(unittest.IsolatedAsyncioTestCase):
                 ],
             )
             self.assertEqual(state.file_pass_limit, 3)
+
+    async def test_duplicate_listing_names_are_kept(self):
+        """The same FileNm listed twice must both pass apply_limit."""
+        with tempfile.TemporaryDirectory() as tmp:
+            scraper = self._wolt(tmp)
+            name = "PromoFull7290058249350-000-004-20260907-000001"
+
+            async def listed():
+                yield FileEntry(name=name, url="http://example.test/a", size=1)
+                yield FileEntry(name=name, url="http://example.test/b", size=1)
+
+            state = FilterState()
+            kept = []
+            async for entry in scraper.apply_limit(state, listed(), limit=2):
+                kept.append((entry.name, entry.url))
+
+            self.assertEqual(
+                kept,
+                [
+                    (name, "http://example.test/a"),
+                    (name, "http://example.test/b"),
+                ],
+            )
+            self.assertEqual(state.file_pass_limit, 2)
+
+    async def test_verified_listing_hash_skips_only_that_listing(self):
+        """Same FileNm with a different url/size still downloads."""
+        with tempfile.TemporaryDirectory() as tmp:
+            scraper = self._wolt(tmp)
+            name = "PromoFull7290058249350-000-004-20260907-000001"
+            first = FileEntry(name=name, url="http://example.test/a", size=1)
+            second = FileEntry(name=name, url="http://example.test/b", size=1)
+            scraper.database.insert_document(
+                ScraperStatus.VERIFIED_DOWNLOADS,
+                {
+                    "file_name": name,
+                    "listing_hash": first.listing_hash(),
+                    "task_id": "previous",
+                },
+            )
+
+            async def listed():
+                yield first
+                yield second
+
+            state = FilterState()
+            kept = []
+            async for entry in scraper.apply_limit(state, listed(), limit=2):
+                kept.append((entry.name, entry.url))
+
+            self.assertEqual(kept, [(name, "http://example.test/b")])
+
+    async def test_identical_verified_listing_is_skipped(self):
+        """The same FileEntry hash is not downloaded again."""
+        with tempfile.TemporaryDirectory() as tmp:
+            scraper = self._wolt(tmp)
+            entry = FileEntry(
+                name="PromoFull7290058249350-000-004-20260907-000001",
+                url="http://example.test/a",
+                size=1,
+            )
+            scraper.database.insert_document(
+                ScraperStatus.VERIFIED_DOWNLOADS,
+                {
+                    "file_name": entry.name,
+                    "listing_hash": entry.listing_hash(),
+                    "task_id": "previous",
+                },
+            )
+
+            async def listed():
+                yield entry
+                yield entry
+
+            state = FilterState()
+            kept = []
+            async for item in scraper.apply_limit(state, listed(), limit=2):
+                kept.append(item)
+
+            self.assertEqual(kept, [])

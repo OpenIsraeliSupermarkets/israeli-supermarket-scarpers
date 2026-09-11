@@ -13,6 +13,7 @@ from il_supermarket_scarper.utils import (
     InMemoryQueueHandler,
     ScraperConfig,
 )
+from il_supermarket_scarper.utils.file_output import SaveDecision, content_sha256
 
 
 class TestFileOutput:
@@ -334,6 +335,133 @@ class TestFileOutput:
                 assert result["extract_successfully"] is False
                 assert result["error"]
                 assert "gzip truncated" in result["error"]
+
+        asyncio.run(run_test())
+
+    def test_disk_output_rewrites_same_bytes(self):
+        """Identical content may reuse the same path."""
+
+        async def run_test():
+            with tempfile.TemporaryDirectory() as tmpdir:
+                output = DiskFileOutput(tmpdir, extract_gz=False)
+                payload = b"<xml>same</xml>"
+                first = await output.save_file(
+                    file_link="http://example.com/a.xml",
+                    file_name="PromoFull7290-001.xml",
+                    file_content=payload,
+                )
+                second = await output.save_file(
+                    file_link="http://example.com/a.xml",
+                    file_name="PromoFull7290-001.xml",
+                    file_content=payload,
+                )
+                assert first["file_name"] == "PromoFull7290-001.xml"
+                assert second["file_name"] == "PromoFull7290-001.xml"
+                assert first["save_decision"] == SaveDecision.CREATED
+                assert second["save_decision"] == SaveDecision.REWROTE_SAME
+                assert first["content_sha256"] == content_sha256(payload)
+                assert os.listdir(tmpdir) == ["PromoFull7290-001.xml"]
+                writes = {"n": 0}
+                original_write = output._write_file  # pylint: disable=protected-access
+
+                def counted_write(file_path, content):
+                    writes["n"] += 1
+                    original_write(file_path, content)
+
+                output._write_file = counted_write  # pylint: disable=protected-access
+                third = await output.save_file(
+                    file_link="http://example.com/a.xml",
+                    file_name="PromoFull7290-001.xml",
+                    file_content=payload,
+                )
+                assert third["save_decision"] == SaveDecision.REWROTE_SAME
+                assert writes["n"] == 0
+
+        asyncio.run(run_test())
+
+    def test_disk_output_keeps_different_bytes_under_same_name(self):
+        """Different content keeps the first file; status records the new hash."""
+
+        async def run_test():
+            with tempfile.TemporaryDirectory() as tmpdir:
+                output = DiskFileOutput(tmpdir, extract_gz=False)
+                first_bytes = b"<xml>one</xml>"
+                second_bytes = b"<xml>two</xml>"
+                first = await output.save_file(
+                    file_link="http://example.com/a.xml",
+                    file_name="PromoFull7290-001.xml",
+                    file_content=first_bytes,
+                )
+                second = await output.save_file(
+                    file_link="http://example.com/b.xml",
+                    file_name="PromoFull7290-001.xml",
+                    file_content=second_bytes,
+                )
+                assert first["file_name"] == second["file_name"] == "PromoFull7290-001.xml"
+                assert first["save_decision"] == SaveDecision.CREATED
+                assert second["save_decision"] == SaveDecision.HASH_MISMATCH
+                assert second["content_sha256"] == content_sha256(second_bytes)
+                assert os.listdir(tmpdir) == ["PromoFull7290-001.xml"]
+                with open(os.path.join(tmpdir, "PromoFull7290-001.xml"), "rb") as f:
+                    assert f.read() == first_bytes
+
+        asyncio.run(run_test())
+
+    def test_queue_output_rewrites_same_bytes(self):
+        """Identical content may reuse the same queue file name."""
+
+        async def run_test():
+            handler = InMemoryQueueHandler("same_bytes")
+            output = QueueFileOutput(handler, extract_gz=False)
+            payload = b"<xml>same</xml>"
+            first = await output.save_file(
+                file_link="http://example.com/a.xml",
+                file_name="PromoFull7290-001.xml",
+                file_content=payload,
+            )
+            second = await output.save_file(
+                file_link="http://example.com/a.xml",
+                file_name="PromoFull7290-001.xml",
+                file_content=payload,
+            )
+            assert first["save_decision"] == SaveDecision.CREATED
+            assert second["save_decision"] == SaveDecision.REWROTE_SAME
+            assert first["file_name"] == second["file_name"] == "PromoFull7290-001.xml"
+            await handler.close()
+            names = []
+            async for message in handler.get_all_messages():
+                names.append(message["file_name"])
+            assert names == ["PromoFull7290-001.xml"]
+
+        asyncio.run(run_test())
+
+    def test_queue_output_keeps_different_bytes_under_same_name(self):
+        """Different content does not enqueue a second name; status records the hash."""
+
+        async def run_test():
+            handler = InMemoryQueueHandler("conflict")
+            output = QueueFileOutput(handler, extract_gz=False)
+            first_bytes = b"<xml>one</xml>"
+            second_bytes = b"<xml>two</xml>"
+            first = await output.save_file(
+                file_link="http://example.com/a.xml",
+                file_name="PromoFull7290-001.xml",
+                file_content=first_bytes,
+            )
+            second = await output.save_file(
+                file_link="http://example.com/b.xml",
+                file_name="PromoFull7290-001.xml",
+                file_content=second_bytes,
+            )
+            assert first["file_name"] == second["file_name"] == "PromoFull7290-001.xml"
+            assert first["save_decision"] == SaveDecision.CREATED
+            assert second["save_decision"] == SaveDecision.HASH_MISMATCH
+            assert second["content_sha256"] == content_sha256(second_bytes)
+            await output.close()
+            names = []
+            async for message in handler.get_all_messages():
+                names.append(message["file_name"])
+            assert names == ["PromoFull7290-001.xml"]
 
         asyncio.run(run_test())
 
