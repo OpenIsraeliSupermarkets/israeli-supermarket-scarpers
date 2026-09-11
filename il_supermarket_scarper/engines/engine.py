@@ -831,6 +831,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                         "chain": self.chain.value,
                         "chain_id": self.chain_id,
                         "original_filename": file_name,
+                        "published_at": entry.published_at,
                     },
                 )
 

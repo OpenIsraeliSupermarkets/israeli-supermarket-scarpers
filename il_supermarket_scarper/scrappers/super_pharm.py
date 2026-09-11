@@ -4,12 +4,15 @@ import datetime
 from il_supermarket_scarper.engines import MultiPageWeb
 from il_supermarket_scarper.utils import (
     DumpFolderNames,
+    FileEntry,
     FileTypesFilters,
 )
 
 
 class SuperPharm(MultiPageWeb):
     """scraper for super pharm"""
+
+    listing_date_format = "%m/%d/%Y %H:%M:%S"
 
     def __init__(self, file_output=None, status_database=None):
         super().__init__(
@@ -27,6 +30,7 @@ class SuperPharm(MultiPageWeb):
         links = []
         filenames = []
         file_sizes = []
+        published_ats = []
         for element in html.xpath("//tbody/tr"):  # skip header
             tds = element.xpath("./td")
             if len(tds) < 6:
@@ -38,11 +42,16 @@ class SuperPharm(MultiPageWeb):
             name_text = name_el[0].text if name_el else None
             if not name_text:
                 continue
+            date_el = element.xpath("./td[3]")
+            date_text = date_el[0].text.strip() if date_el and date_el[0].text else ""
             # Listing already exposes direct Download/*.gz links.
             links.append(self.url + hrefs[0])
             filenames.append(name_text)
             file_sizes.append(None)  # Super Pharm don't support file size in the entry
-        return links, filenames, file_sizes
+            published_ats.append(
+                FileEntry.parse_published_at(date_text, self.listing_date_format)
+            )
+        return links, filenames, file_sizes, published_ats
 
     def get_file_types_id(self, files_types=None):
         """get the file type id"""

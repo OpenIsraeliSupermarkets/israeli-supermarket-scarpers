@@ -11,6 +11,8 @@ from il_supermarket_scarper.utils import FileEntry
 class MeshnatYosef1(WebBase):
     """scraper for meshnat yoosef"""
 
+    listing_date_format = "%Y-%m-%d %H:%M:%S"
+
     def __init__(self, file_output=None, status_database=None):
         super().__init__(
             DumpFolderNames.MESHMAT_YOSEF_1,
@@ -38,7 +40,12 @@ class MeshnatYosef1(WebBase):
         for x in all_trs:
             try:
                 yield FileEntry(
-                    name=x["name"], url=x["url"], size=self.get_file_size_from_entry(x)
+                    name=x["name"],
+                    url=x["url"],
+                    size=self.get_file_size_from_entry(x),
+                    published_at=FileEntry.parse_published_at(
+                        x.get("date"), self.listing_date_format
+                    ),
                 )
             except (AttributeError, KeyError, IndexError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")

@@ -3,6 +3,7 @@ import datetime
 from il_supermarket_scarper.engines import Bina, MultiPageWeb
 from il_supermarket_scarper.utils import (
     DumpFolderNames,
+    FileEntry,
     FileTypesFilters,
     UnitSize,
 )
@@ -53,6 +54,8 @@ class CityMarketKiryatGat(Bina):
 class CityMarketShops(MultiPageWeb):
     """scraper for city market givatayim"""
 
+    listing_date_format = "%d-%m-%Y %H:%M"
+
     def __init__(self, file_output=None, status_database=None):
         super().__init__(
             chain=DumpFolderNames.CITY_MARKET_SHOPS,
@@ -71,9 +74,11 @@ class CityMarketShops(MultiPageWeb):
         links = []
         filenames = []
         file_sizes = []
+        published_ats = []
         for link in html.xpath("//table/tbody/tr"):
+            name = link.xpath("td[3]")[0].text.strip() + ".xml.gz"
             links.append(self.url + link.xpath("td[7]/a/@href")[0])
-            filenames.append(link.xpath("td[3]")[0].text.strip() + ".xml.gz")
+            filenames.append(name)
             file_sizes.append(
                 convert_unit(
                     string_to_float(link.xpath("td[6]")[0].text.strip()),
@@ -81,7 +86,11 @@ class CityMarketShops(MultiPageWeb):
                     UnitSize.BYTES,
                 )
             )
-        return links, filenames, file_sizes
+            date_text = link.xpath("td[1]")[0].text.strip()
+            published_ats.append(
+                FileEntry.parse_published_at(date_text, self.listing_date_format)
+            )
+        return links, filenames, file_sizes, published_ats
 
     def get_file_types_id(self, files_types=None):
         """get the file type id"""

@@ -137,7 +137,8 @@ class VerifiedDownload(BaseModel):
     system_timestamp: datetime
     content_sha256: Optional[str] = None
     save_decision: Optional[str] = None
-    listing_hash: Optional[str] = None
+    listing_hash: str
+    published_at: Optional[str] = None
 
 
 # Union type for all possible status events
