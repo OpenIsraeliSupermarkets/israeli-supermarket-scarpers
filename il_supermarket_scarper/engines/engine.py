@@ -787,7 +787,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 raise
             return await self._wget_file_to_memory(file_link, timeout)
 
-    async def save_and_extract(  # pylint: disable=too-many-locals
+    async def save_and_extract(  # pylint: disable=too-many-locals,too-many-statements
         self, entry: FileEntry
     ):
         """download file and extract it (in-memory)
@@ -858,15 +858,19 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                     "published_at": entry.published_at,
                 }
                 box = {"result": None}
+                captured = (
+                    file_link,
+                    file_content,
+                    extracted_name,
+                    metadata,
+                    digest,
+                    box,
+                )
 
-                async def _persist(
-                    content=file_content,
-                    name=extracted_name,
-                    meta=metadata,
-                    dig=digest,
-                ):
-                    box["result"] = await self.storage_path.save_file(
-                        file_link=file_link,
+                async def _persist(cap=captured):
+                    link, content, name, meta, dig, result_box = cap
+                    result_box["result"] = await self.storage_path.save_file(
+                        file_link=link,
                         file_name=name,
                         file_content=content,
                         metadata=meta,
@@ -941,4 +945,3 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             source_corrupt=source_corrupt,
             saved_file_name=saved_file_name,
         )
-

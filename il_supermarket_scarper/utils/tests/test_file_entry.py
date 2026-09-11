@@ -85,6 +85,7 @@ class TestParsePublishedAt(unittest.TestCase):
         )
 
     def test_victory_file_date(self):
+        """Victory API listing timestamps are ``YYYY-MM-DD HH:MM:SS``."""
         self.assertEqual(
             FileEntry.parse_published_at(
                 "2026-09-11 22:30:37", VictoryNewSource.listing_date_format
@@ -93,6 +94,7 @@ class TestParsePublishedAt(unittest.TestCase):
         )
 
     def test_matrix_td_date(self):
+        """Matrix listing timestamps are ``DD/MM/YYYY HH:MM:SS``."""
         self.assertEqual(
             FileEntry.parse_published_at(
                 "11/09/2026 06:27:02", Matrix.listing_date_format
@@ -101,6 +103,7 @@ class TestParsePublishedAt(unittest.TestCase):
         )
 
     def test_netiv_file_date(self):
+        """Netiv listing timestamps are ``DD/MM/YYYY HH:MM``."""
         self.assertEqual(
             FileEntry.parse_published_at(
                 "11/09/2026 14:23", NetivHased.listing_date_format
@@ -109,6 +112,7 @@ class TestParsePublishedAt(unittest.TestCase):
         )
 
     def test_ftp_mlsd_modify(self):
+        """FTP MLSD modify facts are ``YYYYMMDDHHMMSS``."""
         self.assertEqual(
             _ftp_mlsd_published_at({"modify": "20260911143037"}),
             "2026-09-11T14:30:37",

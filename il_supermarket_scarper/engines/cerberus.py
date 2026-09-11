@@ -174,7 +174,7 @@ class Cerberus(Engine):
             ):
                 yield entry
 
-    async def persist_from_ftp(self, entry):
+    async def persist_from_ftp(self, entry):  # pylint: disable=too-many-locals
         """download file to memory and extract it.
 
         Re-downloads a few times on extract failure (truncated transfer). If the
@@ -245,14 +245,11 @@ class Cerberus(Engine):
                     "published_at": entry.published_at,
                 }
                 box = {"result": None}
+                captured = (file_content, extracted_name, metadata, digest, box)
 
-                async def _persist(
-                    content=file_content,
-                    name=extracted_name,
-                    meta=metadata,
-                    dig=digest,
-                ):
-                    box["result"] = await self.storage_path.save_file(
+                async def _persist(cap=captured):
+                    content, name, meta, dig, result_box = cap
+                    result_box["result"] = await self.storage_path.save_file(
                         file_link="",
                         file_name=name,
                         file_content=content,

@@ -19,6 +19,7 @@ class TestScraperStatusIndexes(unittest.IsolatedAsyncioTestCase):
         return ScraperStatus("status_idx", status_database=db, file_output=output), db
 
     def test_hydrate_listing_hash_skip(self):
+        """A verified listing_hash is skipped after hydrate."""
         with tempfile.TemporaryDirectory() as tmp:
             status, db = self._status(tmp)
             entry = FileEntry(name="PromoFull7290-001", url="http://x/a", size=1)
@@ -37,6 +38,7 @@ class TestScraperStatusIndexes(unittest.IsolatedAsyncioTestCase):
             )
 
     def test_resolve_rewrote_same_across_hydrate(self):
+        """Same content hash after hydrate is REWROTE_SAME."""
         with tempfile.TemporaryDirectory() as tmp:
             status, db = self._status(tmp)
             payload = b"<xml>same</xml>"
@@ -58,6 +60,7 @@ class TestScraperStatusIndexes(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(decision, SaveDecision.REWROTE_SAME)
 
     def test_resolve_stale_older_across_hydrate(self):
+        """An older published_at after hydrate is STALE_OLDER."""
         with tempfile.TemporaryDirectory() as tmp:
             status, db = self._status(tmp)
             db.insert_document(
@@ -79,6 +82,7 @@ class TestScraperStatusIndexes(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(decision, SaveDecision.STALE_OLDER)
 
     def test_resolve_hash_mismatch_when_newer(self):
+        """A newer published_at with a different hash is HASH_MISMATCH."""
         with tempfile.TemporaryDirectory() as tmp:
             status, db = self._status(tmp)
             db.insert_document(
@@ -100,6 +104,7 @@ class TestScraperStatusIndexes(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(decision, SaveDecision.HASH_MISMATCH)
 
     def test_resolve_hash_mismatch_without_dates(self):
+        """Different hash and no dates is HASH_MISMATCH."""
         with tempfile.TemporaryDirectory() as tmp:
             status, db = self._status(tmp)
             db.insert_document(
@@ -118,6 +123,7 @@ class TestScraperStatusIndexes(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(decision, SaveDecision.HASH_MISMATCH)
 
     async def test_decide_and_persist_skips_write_on_same_hash(self):
+        """Second same-hash persist does not write again."""
         with tempfile.TemporaryDirectory() as tmp:
             status, _db = self._status(tmp)
             status.on_scraping_start(limit=None, files_types=None)
@@ -139,6 +145,7 @@ class TestScraperStatusIndexes(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(writes["n"], 1)
 
     async def test_filter_already_downloaded_uses_set(self):
+        """Hydrated listing hashes drop only that listing from the stream."""
         with tempfile.TemporaryDirectory() as tmp:
             status, db = self._status(tmp)
             entry = FileEntry(name="PromoFull7290-001", url="http://x/a", size=1)
@@ -163,6 +170,7 @@ class TestScraperStatusIndexes(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(kept, [other])
 
     def test_verified_row_uses_saved_file_name(self):
+        """Verified rows store the on-disk name, not the listing dump name."""
         with tempfile.TemporaryDirectory() as tmp:
             status, db = self._status(tmp)
             status.on_scraping_start(limit=None, files_types=None)
