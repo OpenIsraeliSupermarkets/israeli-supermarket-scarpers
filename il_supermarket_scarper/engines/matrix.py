@@ -8,6 +8,7 @@ class Matrix(Aspx):
     (support adveanced search: follow the instrucation the page)"""
 
     utilize_date_param = False
+    listing_date_format = "%d/%m/%Y %H:%M:%S"
 
     def __init__(
         self,

@@ -22,6 +22,8 @@ from il_supermarket_scarper.utils import (
     DiskFileOutput,
     ScrapingResult,
     async_url_connection_retry,
+    content_sha256,
+    SaveDecision,
 )
 from il_supermarket_scarper.utils.state import FilterState
 from il_supermarket_scarper.utils.databases import AbstractDataBase
@@ -801,9 +803,9 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         error = None
         restart_and_retry = False
         source_corrupt = False
-        extract_succefully = False
         max_attempts = 3
         result = None
+        saved_file_name = None
 
         try:
             # Determine file name with extension (case-insensitive check)
@@ -823,53 +825,99 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 if file_name_with_ext.endswith(".gz"):
                     Logger.debug(f"File size is {len(file_content)} bytes.")
 
-                result = await self.storage_path.save_file(
-                    file_link=file_link,
-                    file_name=file_name_with_ext,
-                    file_content=file_content,
-                    metadata={
-                        "chain": self.chain.value,
-                        "chain_id": self.chain_id,
-                        "original_filename": file_name,
-                        "published_at": entry.published_at,
-                    },
+                (
+                    file_content,
+                    extracted_name,
+                    extract_ok,
+                    extract_error,
+                ) = await self.storage_path.extract_if_compressed(
+                    file_content,
+                    file_name_with_ext,
+                    getattr(self.storage_path, "extract_gz", True),
                 )
+                error = extract_error
+                if not extract_ok:
+                    Logger.warning(
+                        f"Extract failed for {file_name} "
+                        f"(attempt {attempt}/{max_attempts}): {error}"
+                    )
+                    if attempt == max_attempts:
+                        source_corrupt = True
+                        error = (
+                            f"source corrupt after {max_attempts} downloads: "
+                            f"{error or 'extract failed'}"
+                        )
+                        Logger.error(error)
+                    continue
 
-                extract_succefully = result.get("extract_successfully", False)
-                error = result.get("error")
-                if extract_succefully:
-                    return ScrapingResult(
-                        file_entry=entry,
-                        downloaded=downloaded,
-                        save_decision=result["save_decision"],
-                        extract_succefully=True,
-                        content_sha256=result["content_sha256"],
-                        error=None,
-                        restart_and_retry=False,
-                        source_corrupt=False,
+                digest = content_sha256(file_content)
+                metadata = {
+                    "chain": self.chain.value,
+                    "chain_id": self.chain_id,
+                    "original_filename": file_name,
+                    "published_at": entry.published_at,
+                }
+                box = {"result": None}
+
+                async def _persist(
+                    content=file_content,
+                    name=extracted_name,
+                    meta=metadata,
+                    dig=digest,
+                ):
+                    box["result"] = await self.storage_path.save_file(
+                        file_link=file_link,
+                        file_name=name,
+                        file_content=content,
+                        metadata=meta,
+                        save_decision=SaveDecision.CREATED,
+                        content_digest=dig,
                     )
 
-                Logger.warning(
-                    f"Extract failed for {file_name} "
-                    f"(attempt {attempt}/{max_attempts}): {error}"
+                save_decision = await self.decide_and_persist(
+                    extracted_name,
+                    digest,
+                    entry.published_at,
+                    _persist,
+                    listing_hash=entry.listing_hash(),
                 )
-                if attempt == max_attempts:
-                    source_corrupt = True
-                    error = (
-                        f"source corrupt after {max_attempts} downloads: "
-                        f"{error or 'extract failed'}"
-                    )
-                    Logger.error(error)
+                if box["result"] is not None:
+                    result = box["result"]
+                    result["save_decision"] = save_decision
+                else:
+                    result = {
+                        "file_name": extracted_name,
+                        "saved": True,
+                        "extract_successfully": True,
+                        "error": None,
+                        "content_sha256": digest,
+                        "save_decision": save_decision,
+                        "metadata": metadata,
+                    }
+
+                saved_file_name = extracted_name
+                return ScrapingResult(
+                    file_entry=entry,
+                    downloaded=downloaded,
+                    save_decision=result["save_decision"],
+                    extract_succefully=True,
+                    content_sha256=result["content_sha256"],
+                    error=None,
+                    restart_and_retry=False,
+                    source_corrupt=False,
+                    saved_file_name=saved_file_name,
+                )
 
             return ScrapingResult(
                 file_entry=entry,
                 downloaded=downloaded,
-                save_decision=result["save_decision"],
+                save_decision=None if result is None else result["save_decision"],
                 extract_succefully=False,
-                content_sha256=result["content_sha256"],
+                content_sha256=None if result is None else result["content_sha256"],
                 error=error,
                 restart_and_retry=False,
                 source_corrupt=source_corrupt,
+                saved_file_name=saved_file_name,
             )
 
         except RestartSessionError as exception:
@@ -891,4 +939,6 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             error=error,
             restart_and_retry=restart_and_retry,
             source_corrupt=source_corrupt,
+            saved_file_name=saved_file_name,
         )
+

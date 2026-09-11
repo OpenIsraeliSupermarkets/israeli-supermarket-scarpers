@@ -1,10 +1,12 @@
+import asyncio
 import os
 import traceback
-from typing import Optional
+from typing import Dict, Optional
 import uuid
 from .status import log_folder_details, _now
 from .databases import JsonDataBase, AbstractDataBase
-from .file_output import FileOutput
+from .file_output import FileOutput, SaveDecision, should_persist
+from .logger import Logger
 from .scraping_result import ScrapingResult
 
 
@@ -35,10 +37,15 @@ class ScraperStatus:
         else:
             self.database = status_database
         self.task_id = None
+        self._verified_listing_hashes: set = set()
+        self._saved_by_name: Dict[str, Dict[str, Optional[str]]] = {}
+        self._save_locks: Dict[str, asyncio.Lock] = {}
+        self._save_locks_guard = asyncio.Lock()
 
     def on_scraping_start(self, limit, files_types, **additional_info):
         """Report that scraping has started."""
         self.task_id = str(uuid.uuid4())
+        self._hydrate_verified_indexes()
 
         self._insert_global_status(
             ScraperStatus.STARTED,
@@ -46,6 +53,36 @@ class ScraperStatus:
             files_requested=files_types,
             **additional_info,
         )
+
+    def _hydrate_verified_indexes(self) -> None:
+        """Load verified_downloads once into O(1) listing/hash indexes."""
+        self._verified_listing_hashes = set()
+        self._saved_by_name = {}
+        for doc in self.database.list_documents(self.VERIFIED_DOWNLOADS):
+            listing_hash = doc.get("listing_hash")
+            if listing_hash:
+                self._verified_listing_hashes.add(listing_hash)
+            file_name = doc.get("file_name")
+            if not file_name:
+                continue
+            digest = doc.get("content_sha256")
+            published_at = doc.get("published_at")
+            known = self._saved_by_name.get(file_name)
+            if known is None:
+                self._saved_by_name[file_name] = {
+                    "content_sha256": digest,
+                    "published_at": published_at,
+                }
+                continue
+            stored_published = known.get("published_at")
+            if published_at and (
+                stored_published is None or published_at >= stored_published
+            ):
+                known["published_at"] = published_at
+                if digest:
+                    known["content_sha256"] = digest
+            elif known.get("content_sha256") is None and digest:
+                known["content_sha256"] = digest
 
     def register_saw_file(
         self,
@@ -101,9 +138,7 @@ class ScraperStatus:
         size is a new listing and must download. Rows without listing_hash
         (pre-clean DBs) do not skip.
         """
-        return self.database.already_downloaded(
-            self.VERIFIED_DOWNLOADS, {"listing_hash": file.listing_hash()}
-        )
+        return file.listing_hash() in self._verified_listing_hashes
 
     async def filter_already_downloaded(self, filelist, by_function=lambda x: x):
         """Skip listings already verified by listing_hash."""
@@ -112,10 +147,119 @@ class ScraperStatus:
             if not self._is_verified_listing(file):
                 yield file
 
+    async def _lock_for_name(self, file_name: str) -> asyncio.Lock:
+        """Serialize save decisions that share an extracted file name."""
+        async with self._save_locks_guard:
+            lock = self._save_locks.get(file_name)
+            if lock is None:
+                lock = asyncio.Lock()
+                self._save_locks[file_name] = lock
+            return lock
+
+    def resolve_save_decision(
+        self,
+        file_name: str,
+        digest: str,
+        published_at: Optional[str] = None,
+    ) -> SaveDecision:
+        """Decide whether to persist bytes for ``file_name``.
+
+        Unknown name → CREATED. Older published_at → STALE_OLDER.
+        Same digest → REWROTE_SAME. Else → HASH_MISMATCH.
+        Missing dates allow overwrite when digests differ.
+        """
+        known = self._saved_by_name.get(file_name)
+        if known is None:
+            return SaveDecision.CREATED
+        stored_published = known.get("published_at")
+        if (
+            published_at
+            and stored_published
+            and published_at < stored_published
+        ):
+            Logger.info(
+                f"{file_name} listed at {published_at} is older than "
+                f"already stored {stored_published}; keeping the newer file"
+            )
+            return SaveDecision.STALE_OLDER
+        known_digest = known.get("content_sha256")
+        if known_digest is not None and known_digest == digest:
+            return SaveDecision.REWROTE_SAME
+        Logger.info(
+            f"{file_name} already stored with sha256={known_digest}; "
+            f"downloaded sha256={digest}; overwriting / re-queueing"
+        )
+        return SaveDecision.HASH_MISMATCH
+
+    def _remember_save(
+        self,
+        file_name: str,
+        digest: str,
+        published_at: Optional[str],
+        save_decision: SaveDecision,
+        listing_hash: Optional[str] = None,
+    ) -> None:
+        """Update in-memory indexes after a successful extract."""
+        if listing_hash:
+            self._verified_listing_hashes.add(listing_hash)
+        if save_decision == SaveDecision.STALE_OLDER:
+            return
+        entry = self._saved_by_name.setdefault(
+            file_name, {"content_sha256": None, "published_at": None}
+        )
+        if should_persist(save_decision) or entry.get("content_sha256") is None:
+            entry["content_sha256"] = digest
+        if published_at:
+            known = entry.get("published_at")
+            if known is None or published_at >= known:
+                entry["published_at"] = published_at
+
+    async def decide_and_persist(
+        self,
+        file_name: str,
+        digest: str,
+        published_at: Optional[str],
+        persist,
+        listing_hash: Optional[str] = None,
+    ) -> SaveDecision:
+        """Lock by name, decide, optionally persist, then update indexes.
+
+        ``persist`` is only awaited when bytes must be written/sent; it need
+        not receive the decision (caller already gated).
+        """
+        lock = await self._lock_for_name(file_name)
+        async with lock:
+            save_decision = self.resolve_save_decision(
+                file_name, digest, published_at
+            )
+            if should_persist(save_decision):
+                await persist()
+            self._remember_save(
+                file_name,
+                digest,
+                published_at,
+                save_decision,
+                listing_hash=listing_hash,
+            )
+            return save_decision
+
     def _add_downloaded_files_to_list(self, results: ScrapingResult):
         """Add downloaded files to the database collection."""
         if not results.extract_succefully:
             return
+        listing_hash = results.file_entry.listing_hash()
+        decision = (
+            SaveDecision(results.save_decision)
+            if results.save_decision
+            else SaveDecision.CREATED
+        )
+        self._remember_save(
+            results.file_name,
+            results.content_sha256,
+            results.file_entry.published_at,
+            decision,
+            listing_hash=listing_hash,
+        )
         self.database.insert_document(
             self.VERIFIED_DOWNLOADS,
             {
@@ -124,7 +268,7 @@ class ScraperStatus:
                 "task_id": self.task_id,
                 "content_sha256": results.content_sha256,
                 "save_decision": results.save_decision,
-                "listing_hash": results.file_entry.listing_hash(),
+                "listing_hash": listing_hash,
                 "published_at": results.file_entry.published_at,
             },
         )

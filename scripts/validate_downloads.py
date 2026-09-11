@@ -66,9 +66,9 @@ class ExtractAndDropFileOutput(FileOutput):
     """Extract to prove the download, then drop bytes so a full scrape fits on disk."""
 
     def __init__(self, storage_path: str):
-        super().__init__()
         self.storage_path = storage_path
         os.makedirs(storage_path, exist_ok=True)
+        self.extract_gz = True
 
     async def save_file(
         self,
@@ -76,34 +76,23 @@ class ExtractAndDropFileOutput(FileOutput):
         file_name: str,
         file_content: bytes,
         metadata: Dict[str, Any] = None,
+        save_decision=None,
+        content_digest=None,
     ) -> Dict[str, Any]:
-        """Decompress in memory; do not persist the artifact."""
-        del file_link
-        file_content, file_name, extract_successfully, extract_error = (
-            await self._extract_if_compressed(file_content, file_name)
+        """Persist is a no-op; bytes were already extracted by the engine."""
+        del file_link, file_content
+        from il_supermarket_scarper.utils.file_output import (  # pylint: disable=import-outside-toplevel
+            SaveDecision,
         )
-        digest = None
-        save_decision = None
-        if extract_successfully:
-            published_at = (metadata or {}).get("published_at")
-            async with self._locked_save_decision(
-                file_name, file_content, published_at
-            ) as (file_name, save_decision, digest):
-                self._remember_digest(
-                    file_name, digest, published_at, save_decision
-                )
-        del file_content
+
+        decision = save_decision or SaveDecision.CREATED
         return {
             "file_name": file_name,
-            "saved": extract_successfully,
-            "extract_successfully": extract_successfully,
-            "error": (
-                None
-                if extract_successfully
-                else (extract_error or "extract failed")
-            ),
-            "content_sha256": digest,
-            "save_decision": save_decision,
+            "saved": True,
+            "extract_successfully": True,
+            "error": None,
+            "content_sha256": content_digest,
+            "save_decision": decision,
             "metadata": metadata or {},
         }
 

@@ -43,6 +43,14 @@ class Aspx(WebBase, ABC):
                     published_at = FileEntry.parse_published_at(
                         x.get(self.listing_date_key), self.listing_date_format
                     )
+                elif self.listing_date_format and hasattr(x, "find_all"):
+                    # Matrix HTML rows: date is td[7] (1-based) under תאריך.
+                    cells = x.find_all("td")
+                    if len(cells) >= 7:
+                        published_at = FileEntry.parse_published_at(
+                            cells[6].get_text(strip=True),
+                            self.listing_date_format,
+                        )
                 yield FileEntry(
                     name=file_name,
                     url=download_url,

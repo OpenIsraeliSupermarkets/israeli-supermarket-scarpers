@@ -21,6 +21,7 @@ class ScrapingResult:  # pylint: disable=too-many-instance-attributes
             save_decision=SaveDecision.CREATED,
             extract_succefully=True,
             content_sha256='abc',
+            saved_file_name='Price7290875100001-009-202601121522.xml',
         )
     """
 
@@ -34,9 +35,11 @@ class ScrapingResult:  # pylint: disable=too-many-instance-attributes
         error: Optional[str] = None,
         restart_and_retry: bool = False,
         source_corrupt: bool = False,
+        saved_file_name: Optional[str] = None,
     ):
         self.file_entry = file_entry
-        self.file_name = file_entry.name
+        # Prefer post-extract name so verified digests match FileOutput keys.
+        self.file_name = saved_file_name or file_entry.name
         self.downloaded = downloaded
         self.save_decision = getattr(save_decision, "value", save_decision)
         self.extract_succefully = extract_succefully

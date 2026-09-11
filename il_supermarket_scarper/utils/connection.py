@@ -634,6 +634,11 @@ def _ftp_mlsd_size(facts):
         return None
 
 
+def _ftp_mlsd_published_at(facts):
+    """Parse MLSD modify fact (YYYYMMDDHHMMSS) to ISO published_at."""
+    return FileEntry.parse_published_at(facts.get("modify"), "%Y%m%d%H%M%S")
+
+
 def _include_ftp_mlsd_entry(name, facts, arg):
     """Whether an MLSD entry should be yielded as a downloadable file."""
     if facts.get("type") in ("dir", "cdir", "pdir"):
@@ -669,11 +674,13 @@ async def collect_from_ftp(  # pylint: disable=too-many-locals,too-many-statemen
     cancelled = threading.Event()
     ftp_box = {"ftp": None}
 
-    def emit(name, size):
+    def emit(name, size, published_at=None):
         if cancelled.is_set():
             return
         try:
-            loop.call_soon_threadsafe(results.put_nowait, (name, size))
+            loop.call_soon_threadsafe(
+                results.put_nowait, (name, size, published_at)
+            )
         except RuntimeError:
             # Event loop closed while the listing thread was still running.
             pass
@@ -691,7 +698,11 @@ async def collect_from_ftp(  # pylint: disable=too-many-locals,too-many-statemen
                     if cancelled.is_set():
                         return
                     if _include_ftp_mlsd_entry(name, facts, arg):
-                        emit(name, _ftp_mlsd_size(facts))
+                        emit(
+                            name,
+                            _ftp_mlsd_size(facts),
+                            _ftp_mlsd_published_at(facts),
+                        )
             except error_perm:
                 # MLSD not supported. SIZE cannot run while the NLST data
                 # connection is open, so either emit names immediately or
@@ -748,8 +759,10 @@ async def collect_from_ftp(  # pylint: disable=too-many-locals,too-many-statemen
             item = await results.get()
             if item is sentinel:
                 break
-            filename, size = item
-            yield FileEntry(name=filename, url=None, size=size)
+            filename, size, published_at = item
+            yield FileEntry(
+                name=filename, url=None, size=size, published_at=published_at
+            )
         await producer
     finally:
         cancelled.set()
