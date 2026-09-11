@@ -217,6 +217,7 @@ class Cerberus(Engine):
                         "chain_id": self.chain_id,
                         "original_filename": file_name,
                         "source": "ftp",
+                        "published_at": entry.published_at,
                     },
                 )
 

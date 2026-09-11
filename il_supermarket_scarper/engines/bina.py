@@ -16,6 +16,9 @@ class Bina(Aspx):
     this class don't support downloading them.
     """
 
+    listing_date_key = "DateFile"
+    listing_date_format = "%H:%M %d/%m/%Y"
+
     def __init__(
         self,
         chain,

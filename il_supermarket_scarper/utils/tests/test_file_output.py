@@ -407,6 +407,31 @@ class TestFileOutput:
 
         asyncio.run(run_test())
 
+    def test_disk_output_keeps_newer_published_at(self):
+        """An older listing must not overwrite a newer file of the same name."""
+
+        async def run_test():
+            with tempfile.TemporaryDirectory() as tmpdir:
+                output = DiskFileOutput(tmpdir, extract_gz=False)
+                newer = await output.save_file(
+                    file_link="http://example.com/new.xml",
+                    file_name="PromoFull7290-001.xml",
+                    file_content=b"<xml>new</xml>",
+                    metadata={"published_at": "2026-09-08T14:18:00"},
+                )
+                older = await output.save_file(
+                    file_link="http://example.com/old.xml",
+                    file_name="PromoFull7290-001.xml",
+                    file_content=b"<xml>old</xml>",
+                    metadata={"published_at": "2026-09-08T10:00:00"},
+                )
+                assert newer["save_decision"] == SaveDecision.CREATED
+                assert older["save_decision"] == SaveDecision.STALE_OLDER
+                with open(os.path.join(tmpdir, "PromoFull7290-001.xml"), "rb") as f:
+                    assert f.read() == b"<xml>new</xml>"
+
+        asyncio.run(run_test())
+
     def test_queue_output_rewrites_same_bytes(self):
         """Identical content may reuse the same queue file name."""
 
