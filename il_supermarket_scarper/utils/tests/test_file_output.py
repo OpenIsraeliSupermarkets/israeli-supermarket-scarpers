@@ -85,11 +85,15 @@ class TestFileOutput:
 
             xml_content = b"<xml>test content</xml>"
             gzip_content = gzip.compress(xml_content)
-
+            content, name, ok, err = await output.extract_if_compressed(
+                gzip_content, "Stores7290058108879-000", extract_gz=True
+            )
+            assert ok is True
+            assert err is None
             result = await output.save_file(
                 file_link="http://example.com/Stores7290058108879-000",
-                file_name="Stores7290058108879-000",
-                file_content=gzip_content,
+                file_name=name,
+                file_content=content,
                 metadata={"chain": "KingStore"},
             )
 
@@ -212,11 +216,14 @@ class TestFileOutput:
 
                 xml_content = b"<xml>test content</xml>"
                 gzip_content = gzip.compress(xml_content)
-
+                content, name, ok, err = await output.extract_if_compressed(
+                    gzip_content, "test.xml.gz", extract_gz=True
+                )
+                assert ok is True and err is None
                 result = await output.save_file(
                     file_link="http://example.com/test.xml.gz",
-                    file_name="test.xml.gz",
-                    file_content=gzip_content,
+                    file_name=name,
+                    file_content=content,
                     metadata={"chain": "test"},
                 )
 
@@ -244,11 +251,14 @@ class TestFileOutput:
 
                 xml_content = b"<xml>test content</xml>"
                 gzip_content = gzip.compress(xml_content)
-
+                content, name, ok, err = await output.extract_if_compressed(
+                    gzip_content, "Stores7290058108879-000", extract_gz=True
+                )
+                assert ok is True and err is None
                 result = await output.save_file(
                     file_link="http://example.com/Stores7290058108879-000",
-                    file_name="Stores7290058108879-000",
-                    file_content=gzip_content,
+                    file_name=name,
+                    file_content=content,
                     metadata={"chain": "KingStore"},
                 )
 
@@ -326,20 +336,17 @@ class TestFileOutput:
             with tempfile.TemporaryDirectory() as tmpdir:
                 output = DiskFileOutput(tmpdir, extract_gz=True)
                 truncated = gzip.compress(b"<xml>test content</xml>")[:-20]
-                result = await output.save_file(
-                    file_link="http://example.com/test.xml.gz",
-                    file_name="test.xml.gz",
-                    file_content=truncated,
-                    metadata={"chain": "test"},
+                _content, _name, ok, err = await output.extract_if_compressed(
+                    truncated, "test.xml.gz", extract_gz=True
                 )
-                assert result["extract_successfully"] is False
-                assert result["error"]
-                assert "gzip truncated" in result["error"]
+                assert ok is False
+                assert err
+                assert "gzip truncated" in err
 
         asyncio.run(run_test())
 
-    def test_disk_output_rewrites_same_bytes(self):
-        """Identical content may reuse the same path."""
+    def test_disk_output_skips_write_on_rewrote_same(self):
+        """Caller can pass REWROTE_SAME so DiskFileOutput does not rewrite."""
 
         async def run_test():
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -349,18 +356,8 @@ class TestFileOutput:
                     file_link="http://example.com/a.xml",
                     file_name="PromoFull7290-001.xml",
                     file_content=payload,
+                    save_decision=SaveDecision.CREATED,
                 )
-                second = await output.save_file(
-                    file_link="http://example.com/a.xml",
-                    file_name="PromoFull7290-001.xml",
-                    file_content=payload,
-                )
-                assert first["file_name"] == "PromoFull7290-001.xml"
-                assert second["file_name"] == "PromoFull7290-001.xml"
-                assert first["save_decision"] == SaveDecision.CREATED
-                assert second["save_decision"] == SaveDecision.REWROTE_SAME
-                assert first["content_sha256"] == content_sha256(payload)
-                assert os.listdir(tmpdir) == ["PromoFull7290-001.xml"]
                 writes = {"n": 0}
                 original_write = output._write_file  # pylint: disable=protected-access
 
@@ -369,18 +366,21 @@ class TestFileOutput:
                     original_write(file_path, content)
 
                 output._write_file = counted_write  # pylint: disable=protected-access
-                third = await output.save_file(
+                second = await output.save_file(
                     file_link="http://example.com/a.xml",
                     file_name="PromoFull7290-001.xml",
                     file_content=payload,
+                    save_decision=SaveDecision.REWROTE_SAME,
                 )
-                assert third["save_decision"] == SaveDecision.REWROTE_SAME
+                assert first["save_decision"] == SaveDecision.CREATED
+                assert second["save_decision"] == SaveDecision.REWROTE_SAME
                 assert writes["n"] == 0
+                assert os.listdir(tmpdir) == ["PromoFull7290-001.xml"]
 
         asyncio.run(run_test())
 
-    def test_disk_output_overwrites_different_bytes_under_same_name(self):
-        """Different content overwrites the file; parsers keep the original name."""
+    def test_disk_output_overwrites_on_hash_mismatch(self):
+        """HASH_MISMATCH overwrites the file under the original name."""
 
         async def run_test():
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -391,11 +391,13 @@ class TestFileOutput:
                     file_link="http://example.com/a.xml",
                     file_name="PromoFull7290-001.xml",
                     file_content=first_bytes,
+                    save_decision=SaveDecision.CREATED,
                 )
                 second = await output.save_file(
                     file_link="http://example.com/b.xml",
                     file_name="PromoFull7290-001.xml",
                     file_content=second_bytes,
+                    save_decision=SaveDecision.HASH_MISMATCH,
                 )
                 assert first["file_name"] == second["file_name"] == "PromoFull7290-001.xml"
                 assert first["save_decision"] == SaveDecision.CREATED
@@ -407,33 +409,32 @@ class TestFileOutput:
 
         asyncio.run(run_test())
 
-    def test_disk_output_keeps_newer_published_at(self):
-        """An older listing must not overwrite a newer file of the same name."""
+    def test_disk_output_skips_write_on_stale_older(self):
+        """STALE_OLDER keeps the on-disk bytes."""
 
         async def run_test():
             with tempfile.TemporaryDirectory() as tmpdir:
                 output = DiskFileOutput(tmpdir, extract_gz=False)
-                newer = await output.save_file(
+                await output.save_file(
                     file_link="http://example.com/new.xml",
                     file_name="PromoFull7290-001.xml",
                     file_content=b"<xml>new</xml>",
-                    metadata={"published_at": "2026-09-08T14:18:00"},
+                    save_decision=SaveDecision.CREATED,
                 )
                 older = await output.save_file(
                     file_link="http://example.com/old.xml",
                     file_name="PromoFull7290-001.xml",
                     file_content=b"<xml>old</xml>",
-                    metadata={"published_at": "2026-09-08T10:00:00"},
+                    save_decision=SaveDecision.STALE_OLDER,
                 )
-                assert newer["save_decision"] == SaveDecision.CREATED
                 assert older["save_decision"] == SaveDecision.STALE_OLDER
                 with open(os.path.join(tmpdir, "PromoFull7290-001.xml"), "rb") as f:
                     assert f.read() == b"<xml>new</xml>"
 
         asyncio.run(run_test())
 
-    def test_queue_output_rewrites_same_bytes(self):
-        """Identical content may reuse the same queue file name."""
+    def test_queue_output_skips_send_on_rewrote_same(self):
+        """Identical content may skip a second queue send."""
 
         async def run_test():
             handler = InMemoryQueueHandler("same_bytes")
@@ -443,11 +444,13 @@ class TestFileOutput:
                 file_link="http://example.com/a.xml",
                 file_name="PromoFull7290-001.xml",
                 file_content=payload,
+                save_decision=SaveDecision.CREATED,
             )
             second = await output.save_file(
                 file_link="http://example.com/a.xml",
                 file_name="PromoFull7290-001.xml",
                 file_content=payload,
+                save_decision=SaveDecision.REWROTE_SAME,
             )
             assert first["save_decision"] == SaveDecision.CREATED
             assert second["save_decision"] == SaveDecision.REWROTE_SAME
@@ -472,11 +475,13 @@ class TestFileOutput:
                 file_link="http://example.com/a.xml",
                 file_name="PromoFull7290-001.xml",
                 file_content=first_bytes,
+                save_decision=SaveDecision.CREATED,
             )
             second = await output.save_file(
                 file_link="http://example.com/b.xml",
                 file_name="PromoFull7290-001.xml",
                 file_content=second_bytes,
+                save_decision=SaveDecision.HASH_MISMATCH,
             )
             assert first["file_name"] == second["file_name"] == "PromoFull7290-001.xml"
             assert first["save_decision"] == SaveDecision.CREATED
