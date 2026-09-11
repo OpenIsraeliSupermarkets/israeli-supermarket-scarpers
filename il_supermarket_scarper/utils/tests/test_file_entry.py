@@ -17,6 +17,7 @@ class TestParsePublishedAt(unittest.TestCase):
     """Each scraper supplies one format; samples from live UIs on 2026-09-09."""
 
     def test_bina_datefile(self):
+        """Bina listing timestamps are ``HH:MM DD/MM/YYYY``."""
         self.assertEqual(
             FileEntry.parse_published_at(
                 "14:18 08/09/2026", Bina.listing_date_format
@@ -25,6 +26,7 @@ class TestParsePublishedAt(unittest.TestCase):
         )
 
     def test_shufersal_update_time(self):
+        """Shufersal uses MultiPageWeb's ``M/D/YYYY h:mm:ss AM/PM`` format."""
         self.assertEqual(Shufersal.listing_date_format, MultiPageWeb.listing_date_format)
         self.assertEqual(
             FileEntry.parse_published_at(
@@ -34,6 +36,7 @@ class TestParsePublishedAt(unittest.TestCase):
         )
 
     def test_super_pharm_mdy(self):
+        """Super Pharm listing timestamps are ``MM/DD/YYYY HH:MM:SS``."""
         self.assertEqual(
             FileEntry.parse_published_at(
                 "09/08/2026 19:40:10", SuperPharm.listing_date_format
@@ -42,6 +45,7 @@ class TestParsePublishedAt(unittest.TestCase):
         )
 
     def test_hazi_hinam_and_city_market(self):
+        """Hazi Hinam and City Market Shops share ``DD-MM-YYYY HH:MM``."""
         self.assertEqual(
             HaziHinam.listing_date_format, CityMarketShops.listing_date_format
         )
@@ -59,6 +63,7 @@ class TestParsePublishedAt(unittest.TestCase):
         )
 
     def test_publishprice_modified(self):
+        """PublishPrice listing timestamps are ``HH:MM DD-MM-YYYY``."""
         self.assertEqual(
             FileEntry.parse_published_at(
                 "00:01 09-09-2026", PublishPrice.listing_date_format
@@ -67,6 +72,7 @@ class TestParsePublishedAt(unittest.TestCase):
         )
 
     def test_meshnat_iso_date(self):
+        """Meshmat Yosef listing timestamps are ``YYYY-MM-DD HH:MM:SS``."""
         self.assertEqual(
             FileEntry.parse_published_at(
                 "2026-09-09 00:00:00", MeshnatYosef1.listing_date_format
