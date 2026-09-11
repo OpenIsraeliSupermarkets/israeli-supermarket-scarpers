@@ -44,6 +44,12 @@ class MongoDataBase(AbstractDataBase):
             self.create_connection()
         return self.store_db[collection_name].find_one(query)
 
+    def list_documents(self, collection_name):
+        """Return all documents in a collection (empty list if missing)."""
+        if self.store_db is None:
+            self.create_connection()
+        return list(self.store_db[collection_name].find({}))
+
     def _update_last_modified(self):
         """Update the last modified timestamp to current time."""
         if self.store_db is None:

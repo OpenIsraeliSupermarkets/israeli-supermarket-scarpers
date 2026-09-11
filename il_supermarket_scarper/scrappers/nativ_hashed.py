@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from il_supermarket_scarper.engines.web import WebBase
-from il_supermarket_scarper.utils import DumpFolderNames, _now
+from il_supermarket_scarper.utils import DumpFolderNames, FileEntry, Logger, _now
 
 
 # Listed on gov.il as https://app.netiv-hesed.com/
@@ -9,6 +9,7 @@ class NetivHased(WebBase):
     """scraper for nativ Hased"""
 
     utilize_date_param = False
+    listing_date_format = "%d/%m/%Y %H:%M"
     # The site Date filter defaults to today; the UI can open prior days.
     _LISTING_LOOKBACK_DAYS = 3
 
@@ -44,3 +45,22 @@ class NetivHased(WebBase):
                 "url": f"{self.url}?{query}",
                 "method": "GET",
             }
+
+    async def extract_task_from_entry(self, all_trs):
+        """Extract download links; date is td[5] תאריך קובץ."""
+        for row in all_trs:
+            try:
+                href = row.a.attrs["href"]
+                name = self._file_name_from_href(href)
+                url = self._absolute_download_url(href)
+                size = self.get_file_size_from_entry(row)
+                cells = row.find_all("td")
+                date_text = cells[4].get_text(strip=True) if len(cells) >= 5 else ""
+                published_at = FileEntry.parse_published_at(
+                    date_text, self.listing_date_format
+                )
+                yield FileEntry(
+                    name=name, url=url, size=size, published_at=published_at
+                )
+            except (AttributeError, KeyError, IndexError, TypeError) as e:
+                Logger.warning(f"Error extracting task from entry: {e}")
