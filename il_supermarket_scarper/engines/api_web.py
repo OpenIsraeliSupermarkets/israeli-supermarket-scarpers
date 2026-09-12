@@ -72,34 +72,10 @@ class ApiWebEngine(WebBase):
             Logger.error(f"Failed to get data from {request_info['url']}: {e}")
             return []
 
-    @staticmethod
-    def _entry_filename(entry):
-        """Best-effort filename key for streaming dedupe."""
-        if not isinstance(entry, dict):
-            return None
-        return entry.get("fileName") or entry.get("filename") or entry.get("name")
-
-    def _dedupe_streaming_entries(self, entries, seen_names):
-        """Drop duplicate API filenames; keep non-dict entries as-is."""
-        deduped = []
-        for entry in entries:
-            filename = self._entry_filename(entry)
-            if not filename:
-                if not isinstance(entry, dict):
-                    deduped.append(entry)
-                continue
-            if filename in seen_names:
-                continue
-            seen_names.add(filename)
-            deduped.append(entry)
-        return deduped
-
-    def _filter_streamed_entries(self, entries, files_types, seen_names):
-        """Apply optional type filter and streaming dedupe to one batch."""
+    def _filter_streamed_entries(self, entries, files_types):
+        """Apply optional type filter to one listing batch."""
         if hasattr(self, "apply_filter_by_type"):
             entries = self.apply_filter_by_type(entries, files_types)
-        if hasattr(self, "dedupe_api_entries"):
-            entries = self._dedupe_streaming_entries(entries, seen_names)
         return entries
 
     async def extract_task_from_entry(self, all_trs):
@@ -125,13 +101,11 @@ class ApiWebEngine(WebBase):
         requests_to_make = self.get_request_url(
             files_types=files_types, store_id=store_id, when_date=when_date
         )
-        seen_names = set()
-
         async def fetch_files(request_info):
             raw = await asyncio.to_thread(
                 self._fetch_entries_for_request, request_info
             )
-            entries = self._filter_streamed_entries(raw, files_types, seen_names)
+            entries = self._filter_streamed_entries(raw, files_types)
             extracted = []
             async for file_entry in self.extract_task_from_entry(entries):
                 extracted.append(file_entry)
@@ -192,6 +166,6 @@ class ApiWebEngine(WebBase):
                 file_name_regex=file_name_regex,
                 random_selection=random_selection,
             ):
-                yield entry.url, entry.name
+                yield entry
         finally:
             await listing.aclose()

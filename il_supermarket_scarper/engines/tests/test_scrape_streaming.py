@@ -5,7 +5,12 @@ import tempfile
 import unittest
 
 from il_supermarket_scarper.engines.engine import Engine
-from il_supermarket_scarper.utils import DiskFileOutput, DumpFolderNames, ScrapingResult
+from il_supermarket_scarper.utils import (
+    DiskFileOutput,
+    DumpFolderNames,
+    FileEntry,
+    ScrapingResult,
+)
 from il_supermarket_scarper.utils.state import FilterState
 
 
@@ -36,15 +41,16 @@ class _DummyEngine(Engine):
         max_size=None,
         random_selection=False,
     ):  # pylint: disable=unused-argument
-        yield ("http://x/1", "fast.xml")
+        yield FileEntry(name="fast.xml", url="http://x/1", size=1)
         await self.release_listing.wait()
-        yield ("http://x/2", "slow.xml")
+        yield FileEntry(name="slow.xml", url="http://x/2", size=1)
 
     async def process_file(self, file_details):
-        self.downloads_started.append(file_details[1])
+        self.downloads_started.append(file_details.name)
         return ScrapingResult(
-            file_name=file_details[1],
+            file_entry=file_details,
             downloaded=True,
+            save_decision=None,
             extract_succefully=True,
         )
 
@@ -89,7 +95,7 @@ class TestScrapeStreaming(unittest.IsolatedAsyncioTestCase):
                 max_size=None,
                 random_selection=False,
             ):  # pylint: disable=unused-argument
-                yield ("http://x/1", "fast.xml")
+                yield FileEntry(name="fast.xml", url="http://x/1", size=1)
                 raise RuntimeError("listing died")
 
             async def process_file(self, file_details):
@@ -126,11 +132,11 @@ class TestScrapeStreaming(unittest.IsolatedAsyncioTestCase):
                 max_size=None,
                 random_selection=False,
             ):  # pylint: disable=unused-argument
-                yield ("http://x/1", "good.xml")
-                yield ("http://x/2", "bad.xml")
+                yield FileEntry(name="good.xml", url="http://x/1", size=1)
+                yield FileEntry(name="bad.xml", url="http://x/2", size=1)
 
             async def process_file(self, file_details):
-                if file_details[1] == "bad.xml":
+                if file_details.name == "bad.xml":
                     raise RuntimeError("download failed")
                 return await super().process_file(file_details)
 

@@ -95,13 +95,15 @@ def norm_name(name: Optional[str]) -> str:
     return value
 
 
-def pick_filename(first: Any, second: Any) -> Optional[str]:
-    """Normalize collect_files_details yield order.
+def pick_filename(*parts: Any) -> Optional[str]:
+    """Normalize collect_files_details yield to a filename.
 
-    Web engines yield ``(url, name)``; Cerberus yields ``(name, url)``.
+    Engines yield ``FileEntry``. Older tuple orders are still accepted.
     """
+    if len(parts) == 1 and hasattr(parts[0], "name"):
+        return parts[0].name
     candidates = []
-    for item in (first, second):
+    for item in parts:
         if isinstance(item, str) and item.strip():
             candidates.append(item.strip())
     if not candidates:
@@ -391,10 +393,10 @@ async def list_scraper_names(enum_name: str) -> Tuple[Set[str], Dict[str, Any]]:
                 meta["ui_landing"] = ui_listing_url(scraper, ui_path)
             meta["ui_clicks"] = list(ui_path.clicks)
         names: Set[str] = set()
-        async for first, second in scraper.collect_files_details_from_site(
+        async for item in scraper.collect_files_details_from_site(
             FilterState(), limit=None
         ):
-            filename = pick_filename(first, second)
+            filename = pick_filename(item)
             if filename:
                 names.add(norm_name(filename))
     return names, meta

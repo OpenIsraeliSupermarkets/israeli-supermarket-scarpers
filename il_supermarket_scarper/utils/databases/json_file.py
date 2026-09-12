@@ -89,6 +89,10 @@ class JsonDataBase(AbstractDataBase):
 
     def already_downloaded(self, collection_name, query):
         """Find a document in a collection based on a query."""
+        return self.find_document(collection_name, query) is not None
+
+    def find_document(self, collection_name, query):
+        """Return the first matching document, or None."""
         file_path = self._get_database_file_path()
 
         if os.path.exists(file_path):
@@ -96,15 +100,13 @@ class JsonDataBase(AbstractDataBase):
                 try:
                     data = json.load(file)
 
-                    # Check if the collection exists
                     if collection_name in data:
-                        # Filter the documents in the collection based on the query
                         for document in data[collection_name]:
                             if all(item in document.items() for item in query.items()):
-                                return True
+                                return document
                 except json.JSONDecodeError:
                     Logger.warning(f"File {file_path} is corrupted.")
-        return False
+        return None
 
     def _update_last_modified(self):
         """Update the last modified timestamp to current time."""

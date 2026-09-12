@@ -88,30 +88,36 @@ class ScraperStatus:
             "extracted_successfully": results.extract_succefully,
             "error_message": results.error,
             "restart_and_retry": results.restart_and_retry,
+            "content_sha256": results.content_sha256,
+            "save_decision": results.save_decision,
         }
         self._insert_event(ScraperStatus.DOWNLOADED, **event_data)
         self._add_downloaded_files_to_list(results)
 
     async def filter_already_downloaded(self, filelist, by_function=lambda x: x):
-        """Filter files already existing in long-term memory or previously downloaded."""
+        """Skip listings whose FileEntry hash is already verified."""
+        del by_function
         async for file in filelist:
-            already_downloaded = self.database.already_downloaded(
-                self.VERIFIED_DOWNLOADS, {"file_name": by_function(file)}
-            )
-            if not already_downloaded:
+            if not self.database.already_downloaded(
+                self.VERIFIED_DOWNLOADS, {"listing_hash": file.listing_hash()}
+            ):
                 yield file
 
     def _add_downloaded_files_to_list(self, results: ScrapingResult):
         """Add downloaded files to the database collection."""
-        if results.extract_succefully:
-            self.database.insert_document(
-                self.VERIFIED_DOWNLOADS,
-                {
-                    "file_name": results.file_name,
-                    "system_timestamp": _now(),
-                    "task_id": self.task_id,
-                },
-            )
+        if not results.extract_succefully:
+            return
+        self.database.insert_document(
+            self.VERIFIED_DOWNLOADS,
+            {
+                "file_name": results.file_name,
+                "system_timestamp": _now(),
+                "task_id": self.task_id,
+                "content_sha256": results.content_sha256,
+                "save_decision": results.save_decision,
+                "listing_hash": results.file_entry.listing_hash(),
+            },
+        )
 
     def on_scrape_completed(
         self, folder_name: str, completed_successfully: bool = True
