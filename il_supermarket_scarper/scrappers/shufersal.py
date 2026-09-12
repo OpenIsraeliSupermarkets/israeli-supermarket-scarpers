@@ -12,7 +12,6 @@ class Shufersal(MultiPageWeb):
     """scaper for shufersal"""
 
     utilize_date_param = False
-    listing_date_format = "%m/%d/%Y %I:%M:%S %p"
 
     def __init__(self, file_output=None, status_database=None):
         super().__init__(

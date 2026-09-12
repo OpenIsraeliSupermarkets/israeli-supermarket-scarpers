@@ -38,12 +38,7 @@ def _downloaded(extracted=True, **kwargs):
 
 
 def _verified():
-    return VerifiedDownload(
-        task_id=TASK,
-        file_name=FILE,
-        system_timestamp=NOW,
-        listing_hash="abc",
-    )
+    return VerifiedDownload(task_id=TASK, file_name=FILE, system_timestamp=NOW)
 
 
 def _started(limit=None):
@@ -86,7 +81,6 @@ class TestScraperStatusContract(unittest.TestCase):
                     system_timestamp=NOW,
                     content_sha256="aa",
                     save_decision="created",
-                    listing_hash="hash-a",
                 ),
                 VerifiedDownload(
                     task_id=TASK,
@@ -94,7 +88,6 @@ class TestScraperStatusContract(unittest.TestCase):
                     system_timestamp=NOW,
                     content_sha256="bb",
                     save_decision="hash_mismatch",
-                    listing_hash="hash-b",
                 ),
             ],
         )
@@ -148,7 +141,7 @@ class TestScraperStatusContract(unittest.TestCase):
             verified_downloads=[
                 _verified(),
                 VerifiedDownload(
-                    task_id=TASK, file_name=other, system_timestamp=NOW, listing_hash="other"
+                    task_id=TASK, file_name=other, system_timestamp=NOW
                 ),
             ],
         )

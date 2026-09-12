@@ -13,8 +13,6 @@ class PublishPrice(WebBase):
     but this is not implemented.
     """
 
-    listing_date_format = "%H:%M %d-%m-%Y"
-
     def __init__(
         self,
         chain,
@@ -81,14 +79,6 @@ class PublishPrice(WebBase):
                 else:
                     href = f"{base_url}/{x['name']}"
                 file_size = x.get("size_formatted", x.get("size", 0))
-                published_at = FileEntry.parse_published_at(
-                    x.get("modified"), self.listing_date_format
-                )
-                yield FileEntry(
-                    name=x["name"],
-                    url=href,
-                    size=file_size,
-                    published_at=published_at,
-                )
+                yield FileEntry(name=x["name"], url=href, size=file_size)
             except (AttributeError, KeyError, IndexError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")

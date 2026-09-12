@@ -85,13 +85,11 @@ class ExtractAndDropFileOutput(FileOutput):
         digest = None
         save_decision = None
         if extract_successfully:
-            published_at = (metadata or {}).get("published_at")
             async with self._locked_save_decision(
-                file_name, file_content, published_at
+                file_name, file_content
             ) as (file_name, save_decision, digest):
-                self._remember_digest(
-                    file_name, digest, published_at, save_decision
-                )
+                if self._should_persist(save_decision):
+                    self._remember_digest(file_name, digest)
         del file_content
         return {
             "file_name": file_name,
