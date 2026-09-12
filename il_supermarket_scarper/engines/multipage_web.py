@@ -6,8 +6,6 @@ from typing import AsyncGenerator
 from lxml import html as lxml_html
 
 from il_supermarket_scarper.utils import FileEntry
-
-
 from il_supermarket_scarper.utils import (
     Logger,
     convert_nl_size_to_bytes,
@@ -23,6 +21,8 @@ class MultiPageWeb(WebBase):
 
     target_file_extension = ".xml"
     results_in_page = 20
+    # Default grid is Shufersal: td[2] update time.
+    listing_date_format = "%m/%d/%Y %I:%M:%S %p"
 
     def __init__(
         self,
@@ -300,11 +300,12 @@ class MultiPageWeb(WebBase):
             Logger.debug(f"Error extracting file size from entry: {e}")
         return None
 
-    def collect_files_details_from_page(self, html):
+    def collect_files_details_from_page(self, html):  # pylint: disable=too-many-locals
         """collect the details deom one page"""
         links = []
         filenames = []
         file_sizes = []
+        published_ats = []
         # Select all rows from the table
         rows = html.xpath('//*[@id="gridContainer"]/table/tbody/tr')
         for row in rows:
@@ -325,11 +326,19 @@ class MultiPageWeb(WebBase):
                 if size_text
                 else None
             )
+            name = ntpath.basename(urlsplit(link).path)
+            date_elements = row.xpath("./td[2]")
+            date_text = (
+                date_elements[0].text_content().strip() if date_elements else ""
+            )
 
             links.append(link)
-            filenames.append(ntpath.basename(urlsplit(link).path))
+            filenames.append(name)
             file_sizes.append(size_bytes)
-        return links, filenames, file_sizes
+            published_ats.append(
+                FileEntry.parse_published_at(date_text, self.listing_date_format)
+            )
+        return links, filenames, file_sizes, published_ats
 
     async def process_links_before_download(  # pylint: disable=too-many-locals
         self,
@@ -347,13 +356,19 @@ class MultiPageWeb(WebBase):
 
         html = lxml_html.fromstring(response.text)
 
-        file_links, filenames, file_sizes = self.collect_files_details_from_page(html)
+        file_links, filenames, file_sizes, published_ats = (
+            self.collect_files_details_from_page(html)
+        )
         Logger.info(f"Page {request}: Found {len(file_links)} files")
 
         # Create an async generator from the three lists
         async def generate_from_lists():
-            for url, name, size in zip(file_links, filenames, file_sizes):
-                yield FileEntry(name=name, url=url, size=size)
+            for url, name, size, published_at in zip(
+                file_links, filenames, file_sizes, published_ats
+            ):
+                yield FileEntry(
+                    name=name, url=url, size=size, published_at=published_at
+                )
 
         # Apply filters but NOT the limit here to avoid race conditions when
         # processing pages in parallel. Limit is applied once in
