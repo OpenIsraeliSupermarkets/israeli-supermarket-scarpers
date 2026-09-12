@@ -13,8 +13,6 @@ class PublishPrice(WebBase):
     but this is not implemented.
     """
 
-    listing_date_format = "%H:%M %d-%m-%Y"
-
     def __init__(
         self,
         chain,
@@ -24,6 +22,8 @@ class PublishPrice(WebBase):
         max_threads=5,
         file_output=None,
         status_database=None,
+        listing_date_format="%H:%M %d-%m-%Y",
+        listing_date_key=None,
     ):
         super().__init__(
             chain,
@@ -32,6 +32,8 @@ class PublishPrice(WebBase):
             max_threads=max_threads,
             file_output=file_output,
             status_database=status_database,
+            listing_date_format=listing_date_format,
+            listing_date_key=listing_date_key,
         )
         self.folder = None
 

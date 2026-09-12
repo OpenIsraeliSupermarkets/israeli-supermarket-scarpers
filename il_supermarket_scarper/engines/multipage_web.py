@@ -21,8 +21,6 @@ class MultiPageWeb(WebBase):
 
     target_file_extension = ".xml"
     results_in_page = 20
-    # Default grid is Shufersal: td[2] update time.
-    listing_date_format = "%m/%d/%Y %I:%M:%S %p"
 
     def __init__(
         self,
@@ -36,6 +34,9 @@ class MultiPageWeb(WebBase):
         max_threads=5,
         file_output=None,
         status_database=None,
+        # Default grid is Shufersal: td[2] update time.
+        listing_date_format="%m/%d/%Y %I:%M:%S %p",
+        listing_date_key=None,
     ):
         super().__init__(
             chain,
@@ -44,6 +45,8 @@ class MultiPageWeb(WebBase):
             max_threads=max_threads,
             file_output=file_output,
             status_database=status_database,
+            listing_date_format=listing_date_format,
+            listing_date_key=listing_date_key,
         )
         self.total_page_xpath = total_page_xpath
         self.total_pages_pattern = total_pages_pattern

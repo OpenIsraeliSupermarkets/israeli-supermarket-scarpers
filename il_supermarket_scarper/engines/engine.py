@@ -96,6 +96,8 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         max_threads=10,
         file_output: Optional[FileOutput] = None,
         status_database: Optional[AbstractDataBase] = None,
+        listing_date_format=None,
+        listing_date_key=None,
     ):
         """
         Initialize scraper engine.
@@ -111,6 +113,10 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             status_database (AbstractDataBase, optional): Custom status database
                 handler for tracking download status. If None, defaults to a
                 status subdirectory in the file output path. Defaults to None.
+            listing_date_format (str, optional): strptime format for listing
+                published-at timestamps. Defaults to None.
+            listing_date_key (str, optional): JSON/dict key for listing date
+                fields (e.g. Bina DateFile). Defaults to None.
 
         Note:
             If file_output is provided, it takes precedence.
@@ -125,6 +131,8 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         self.chain = chain
         self.chain_id = chain_id
         self.max_threads = max_threads
+        self.listing_date_format = listing_date_format
+        self.listing_date_key = listing_date_key
 
         # Determine storage path
         if file_output is None:

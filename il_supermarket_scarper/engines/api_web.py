@@ -19,6 +19,8 @@ class ApiWebEngine(WebBase):
         file_output=None,
         status_database=None,
         max_threads=5,
+        listing_date_format=None,
+        listing_date_key=None,
     ):
         super().__init__(
             chain,
@@ -27,6 +29,8 @@ class ApiWebEngine(WebBase):
             max_threads=max_threads,
             file_output=file_output,
             status_database=status_database,
+            listing_date_format=listing_date_format,
+            listing_date_key=listing_date_key,
         )
         self.session = requests.Session()
 

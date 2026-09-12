@@ -9,7 +9,6 @@ class NetivHased(WebBase):
     """scraper for nativ Hased"""
 
     utilize_date_param = False
-    listing_date_format = "%d/%m/%Y %H:%M"
     # The site Date filter defaults to today; the UI can open prior days.
     _LISTING_LOOKBACK_DAYS = 3
 
@@ -20,6 +19,7 @@ class NetivHased(WebBase):
             url="https://app.netiv-hesed.com/",
             file_output=file_output,
             status_database=status_database,
+            listing_date_format="%d/%m/%Y %H:%M",
         )
 
     def _listing_dates(self, when_date):

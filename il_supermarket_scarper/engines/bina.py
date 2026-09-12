@@ -16,9 +16,6 @@ class Bina(Aspx):
     this class don't support downloading them.
     """
 
-    listing_date_key = "DateFile"
-    listing_date_format = "%H:%M %d/%m/%Y"
-
     def __init__(
         self,
         chain,
@@ -28,6 +25,8 @@ class Bina(Aspx):
         domain="binaprojects.com/",
         file_output=None,
         status_database=None,
+        listing_date_format="%H:%M %d/%m/%Y",
+        listing_date_key="DateFile",
     ):
         super().__init__(
             chain,
@@ -36,6 +35,8 @@ class Bina(Aspx):
             aspx_page="MainIO_Hok.aspx",
             file_output=file_output,
             status_database=status_database,
+            listing_date_format=listing_date_format,
+            listing_date_key=listing_date_key,
         )
         self.download_postfix = download_postfix
 
