@@ -10,9 +10,11 @@ from pydantic import BaseModel, Field
 from pydantic_core import core_schema
 
 from il_supermarket_scarper.utils.files.file_types import FileTypesFilters
+from il_supermarket_scarper.utils.files.save_policy import SaveDecision
 
 
 FILENAME_REGEX = re.compile(r"^[a-zA-Z0-9._-]+$")
+ALLOWED_SAVE_DECISIONS = {decision.value for decision in SaveDecision}
 
 
 class FileName(str):
@@ -34,6 +36,10 @@ class FileName(str):
             raise ValueError("Filename cannot be empty")
 
         value = value.replace("NULL", "")
+        if "/" in value or "\\" in value:
+            raise ValueError("Filename must not contain path separators")
+        if not FILENAME_REGEX.match(value):
+            raise ValueError("Filename contains invalid characters")
         if FileTypesFilters.get_type_from_file(value) is None:
             raise ValueError(f"File {value} is not a valid filename")
 
@@ -173,6 +179,12 @@ class ScraperStatusOutput(BaseModel):
             return f"id:{entry_id}"
         return f"name:{event.file_name}"
 
+    @staticmethod
+    def _append_timestamp(status: dict, kind: str, when) -> None:
+        """Record an event timestamp when present."""
+        if when is not None:
+            status["timestamps"][kind].append(when)
+
     def _build_per_file_status_data(self):
         """
         Build per-story status flags and event counts.
@@ -181,15 +193,13 @@ class ScraperStatusOutput(BaseModel):
         separate download stories. Fall back to file name for older status
         rows that lack ``entry_id``.
 
-        Listing sites can emit the same FileNm more than once; that is a
-        real listing, not a contract failure. ``saw``, ``collected``,
-        ``downloaded``, and ``verified`` may appear more than once for
-        that name when keyed only by name. ``failed`` should not repeat
-        for the same story key.
+        For ``id:`` stories, each event kind may appear at most once.
+        For ``name:`` stories, duplicate ``saw`` / collected / downloaded /
+        verified is allowed (legacy duplicate listings); ``failed`` is not.
 
         Returns:
-            Maps story key to status flags, counts, and whether a
-            download extracted successfully.
+            Maps story key to status flags, counts, timestamps, and download
+            / verified rows used by extra checks.
         """
 
         per_file = defaultdict(
@@ -200,31 +210,49 @@ class ScraperStatusOutput(BaseModel):
                 "failed": False,
                 "verified": False,
                 "extracted_successfully": False,
+                "keyed_by_entry_id": False,
+                "file_name": None,
                 "counts": defaultdict(int),
+                "timestamps": defaultdict(list),
+                "downloads": [],
+                "verified_rows": [],
             }
         )
 
         for event in self.events:
             key = self._story_key(event)
+            bucket = per_file[key]
+            bucket["keyed_by_entry_id"] = key.startswith("id:")
+            bucket["file_name"] = event.file_name
             if isinstance(event, SawStatus):
-                per_file[key]["saw"] = True
-                per_file[key]["counts"]["saw"] += 1
+                bucket["saw"] = True
+                bucket["counts"]["saw"] += 1
+                self._append_timestamp(bucket, "saw", event.system_timestamp)
             elif isinstance(event, CollectedStatus):
-                per_file[key]["collected"] = True
-                per_file[key]["counts"]["collected"] += 1
+                bucket["collected"] = True
+                bucket["counts"]["collected"] += 1
+                self._append_timestamp(bucket, "collected", event.system_timestamp)
             elif isinstance(event, DownloadedStatus):
-                per_file[key]["downloaded"] = True
-                per_file[key]["counts"]["downloaded"] += 1
+                bucket["downloaded"] = True
+                bucket["counts"]["downloaded"] += 1
+                bucket["downloads"].append(event)
+                self._append_timestamp(bucket, "downloaded", event.system_timestamp)
                 if event.extracted_successfully:
-                    per_file[key]["extracted_successfully"] = True
+                    bucket["extracted_successfully"] = True
             elif isinstance(event, FailedStatus):
-                per_file[key]["failed"] = True
-                per_file[key]["counts"]["failed"] += 1
+                bucket["failed"] = True
+                bucket["counts"]["failed"] += 1
+                self._append_timestamp(bucket, "failed", event.system_timestamp)
 
         for vd in self.verified_downloads:
             key = self._story_key(vd)
-            per_file[key]["verified"] = True
-            per_file[key]["counts"]["verified"] += 1
+            bucket = per_file[key]
+            bucket["keyed_by_entry_id"] = key.startswith("id:")
+            bucket["file_name"] = vd.file_name
+            bucket["verified"] = True
+            bucket["counts"]["verified"] += 1
+            bucket["verified_rows"].append(vd)
+            self._append_timestamp(bucket, "verified", vd.system_timestamp)
 
         return per_file
 
@@ -234,6 +262,10 @@ class ScraperStatusOutput(BaseModel):
             if isinstance(event, StartedStatus):
                 return event.limit
         return None
+
+    def _has_started(self) -> bool:
+        """True when at least one started global status exists."""
+        return any(isinstance(event, StartedStatus) for event in self.global_status)
 
     @staticmethod
     def _validate_file_lifecycle(status: dict) -> bool:
@@ -246,31 +278,121 @@ class ScraperStatusOutput(BaseModel):
         - If 'downloaded' or 'failed' exists, must also have 'collected'
         - If 'verified' exists, must also have 'downloaded'
         """
-        # Must be saw
         if not status["saw"]:
             return False
 
-        if status["collected"]:
-            if not status["saw"]:
-                return False
-        # If collected is True, must also be saw (already checked above)
-        # If downloaded or failed exists, must also be collected
+        if status["collected"] and not status["saw"]:
+            return False
         if status["downloaded"] or status["failed"]:
             if not status["collected"]:
                 return False
-        # If verified exists, must also have downloaded
-        if status["verified"]:
-            if not status["downloaded"]:
-                return False
-        # A successful extract must be recorded as verified.
+        if status["verified"] and not status["downloaded"]:
+            return False
         if status["extracted_successfully"] and not status["verified"]:
             return False
         return True
 
     @staticmethod
     def _has_duplicate_attempt_events(status: dict) -> bool:
-        """A file may be collected/downloaded twice; it must not fail twice."""
+        """
+        Detect duplicate events for one story.
+
+        ``id:`` stories: every kind at most once.
+        ``name:`` stories: only ``failed`` must be unique (legacy listings).
+        """
+        if status["keyed_by_entry_id"]:
+            for kind in ("saw", "collected", "downloaded", "failed", "verified"):
+                if status["counts"][kind] > 1:
+                    return True
+            return False
         return status["counts"]["failed"] > 1
+
+    @staticmethod
+    def _validate_event_order(status: dict) -> bool:
+        """For ``id:`` stories, timestamps must follow saw→collected→attempt→verified."""
+        if not status["keyed_by_entry_id"]:
+            return True
+
+        stamps = status["timestamps"]
+
+        def _max_of(kind):
+            values = stamps.get(kind) or []
+            return max(values) if values else None
+
+        def _min_of(kind):
+            values = stamps.get(kind) or []
+            return min(values) if values else None
+
+        stages = []
+        for kind in ("saw", "collected"):
+            when = _max_of(kind)
+            if when is not None:
+                stages.append(when)
+
+        attempt_times = []
+        for kind in ("downloaded", "failed"):
+            when = _min_of(kind)
+            if when is not None:
+                attempt_times.append(when)
+        if attempt_times:
+            stages.append(min(attempt_times))
+
+        verified_when = _min_of("verified")
+        if verified_when is not None:
+            stages.append(verified_when)
+
+        return all(left <= right for left, right in zip(stages, stages[1:]))
+
+    @staticmethod
+    def _validate_save_decision(value: Optional[str]) -> bool:
+        """Allow missing save_decision; otherwise require a known enum value."""
+        if value is None:
+            return True
+        return value in ALLOWED_SAVE_DECISIONS
+
+    @staticmethod
+    def _validate_download_outcomes(status: dict) -> bool:
+        """Failed downloads need an error; save_decision must be known."""
+        for download in status["downloads"]:
+            if not download.downloaded_successfully and not download.error_message:
+                return False
+            if not ScraperStatusOutput._validate_save_decision(download.save_decision):
+                return False
+        return True
+
+    @staticmethod
+    def _validate_verified_rows(status: dict) -> bool:
+        """Verified rows need a listing_hash and a known save_decision when set."""
+        download_has_digest = any(
+            download.content_sha256 for download in status["downloads"]
+        )
+        for row in status["verified_rows"]:
+            if not row.listing_hash:
+                return False
+            if not ScraperStatusOutput._validate_save_decision(row.save_decision):
+                return False
+            if (
+                status["keyed_by_entry_id"]
+                and status["extracted_successfully"]
+                and download_has_digest
+                and not row.content_sha256
+            ):
+                return False
+        return True
+
+    def _validate_key_hygiene(self, per_file: dict) -> bool:
+        """Do not mix entry_id and name-only events for the same FileNm."""
+        names_with_id = set()
+        names_without_id = set()
+        for key, status in per_file.items():
+            file_name = status["file_name"]
+            if not file_name:
+                continue
+            if key.startswith("id:"):
+                names_with_id.add(file_name)
+            else:
+                names_without_id.add(file_name)
+        return names_with_id.isdisjoint(names_without_id)
 
     def validate_file_status(self) -> bool:
         """
@@ -282,17 +404,24 @@ class ScraperStatusOutput(BaseModel):
 
         - Lifecycle: saw -> collected -> (downloaded or failed) ->
           (verified if extract succeeded)
-        - Duplicate ``saw`` / collected / downloaded / verified is allowed
-          for the same file name when stories lack ``entry_id`` (listing
-          listed the same dump twice)
-        - Duplicate ``failed`` for the same story key is not
-        - If a started ``limit`` is set, downloaded stories must not
-          exceed it
+        - ``id:`` stories: each event kind at most once; timestamps ordered
+        - ``name:`` stories: duplicate saw/collected/downloaded/verified ok;
+          duplicate failed is not
+        - Download outcomes / save_decision / verified listing_hash checks
+        - No mixing of entry_id and name-only keys for the same FileNm
+        - Any events or verified rows require a started global status
+        - If a started ``limit`` is set, downloaded stories must not exceed it
 
         Note: Stories that were only saw/collected but never attempted (e.g., due to limit
         constraints) are not validated, as they were never intended to be downloaded.
         """
+        if (self.events or self.verified_downloads) and not self._has_started():
+            return False
+
         per_file = self._build_per_file_status_data()
+        if not self._validate_key_hygiene(per_file):
+            return False
+
         downloaded_count = 0
 
         for status in per_file.values():
@@ -306,6 +435,12 @@ class ScraperStatusOutput(BaseModel):
             if not self._validate_file_lifecycle(status):
                 return False
             if self._has_duplicate_attempt_events(status):
+                return False
+            if not self._validate_event_order(status):
+                return False
+            if not self._validate_download_outcomes(status):
+                return False
+            if not self._validate_verified_rows(status):
                 return False
 
         limit = self._started_limit()
