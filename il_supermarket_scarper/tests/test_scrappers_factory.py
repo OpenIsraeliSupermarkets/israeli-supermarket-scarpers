@@ -1,12 +1,13 @@
 import tempfile
 import unittest
-from datetime import date
+from datetime import date, datetime
 from unittest.mock import patch
 
 from il_supermarket_scarper import ScraperStability, ScraperFactory, datetime_in_tlv
 from il_supermarket_scarper.scraper_stability import ScraperKind
 from il_supermarket_scarper.scrappers.nativ_hashed import NetivHased
 from il_supermarket_scarper.utils.deprecated_scrapers import DeprecatedScrapers
+from il_supermarket_scarper.utils.file_types import FileTypesFilters
 from il_supermarket_scarper.utils.folders_name import DumpFolderNames
 from il_supermarket_scarper.utils.status import get_cpfta_retailer_hosts, href_host
 from il_supermarket_scarper.utils.file_output import DiskFileOutput
@@ -134,6 +135,24 @@ def test_saturday_empty_listings_are_valid_for_netiv_and_mahsani():
         assert not ScraperStability.is_validate_scraper_found_no_files(
             "MAHSANI_ASHUK_NEW_SOURCE"
         )
+
+
+def test_city_market_shops_store_empty_before_noon():
+    """Store dumps publish around 11:00 IL; empty listings before noon are valid."""
+    store = FileTypesFilters.only_store()
+    morning = datetime(2026, 9, 8, 10, 59)
+    afternoon = datetime(2026, 9, 8, 13, 0)
+    with patch("il_supermarket_scarper.scraper_stability._now", return_value=morning):
+        assert ScraperStability.is_validate_scraper_found_no_files(
+            "CITY_MARKET_SHOPS", files_types=store
+        )
+    with patch("il_supermarket_scarper.scraper_stability._now", return_value=afternoon):
+        assert not ScraperStability.is_validate_scraper_found_no_files(
+            "CITY_MARKET_SHOPS", files_types=store
+        )
+    assert not ScraperStability.is_validate_scraper_found_no_files(
+        "CITY_MARKET_SHOPS", files_types=FileTypesFilters.only_price()
+    )
 
 
 class TestNetivListing(unittest.IsolatedAsyncioTestCase):

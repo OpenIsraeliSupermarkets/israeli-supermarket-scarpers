@@ -229,6 +229,33 @@ class DoNotPublishStores(FullyStable):
         ) or cls.searching_for_store_full(files_types=files_types)
 
 
+class CityMarketShopsStores(FullyStable):
+    """City Market Shops store dumps publish around 11:00 IL.
+
+    Evidence 2026-09-08: CI at 10:59 IL listed 0 store files; the day's
+    ``StoresFull7290000000003`` dump is timestamped 11:00. Price/promo
+    scrapes on the same run succeeded. After noon IL the store file is listed.
+    """
+
+    @classmethod
+    def searching_for_store_before_noon(cls, files_types=None, **_):
+        """Store-only scrapes before the usual publish window may be empty."""
+        if files_types != [FileTypesFilters.STORE_FILE.name]:
+            return False
+        return _now().hour < hour_files_expected_to_be_accassible()
+
+    @classmethod
+    def failire_valid(
+        cls, when_date=None, files_types=None, utilize_date_param=True, **_
+    ):
+        """return true if the parser is stble"""
+        return super(cls, CityMarketShopsStores).failire_valid(
+            when_date=when_date,
+            files_types=files_types,
+            utilize_date_param=utilize_date_param,
+        ) or cls.searching_for_store_before_noon(files_types=files_types)
+
+
 class SuperYuda(FullyStable):
     """Super Yuda is stablity"""
 
@@ -375,6 +402,7 @@ class ScraperStability(Enum):
     # # CITY_MARKET_GIVATAYIM = CityMarketGivataim
     # CITY_MARKET_KIRYATONO = CityMarketKiratOno
     # CITY_MARKET_KIRYATGAT = CityMarketKiratGat  # recovered 2026-08-30: bina portal lists files
+    CITY_MARKET_SHOPS = CityMarketShopsStores
     MESHMAT_YOSEF_1 = DoNotPublishPromo
     VICTORY = VictoryMovedToNewSource
     # YOHANANOF = DoNotPublishStores
