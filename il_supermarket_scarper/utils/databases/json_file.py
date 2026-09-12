@@ -93,20 +93,26 @@ class JsonDataBase(AbstractDataBase):
 
     def find_document(self, collection_name, query):
         """Return the first matching document, or None."""
-        file_path = self._get_database_file_path()
-
-        if os.path.exists(file_path):
-            with open(file_path, "r", encoding="utf-8") as file:
-                try:
-                    data = json.load(file)
-
-                    if collection_name in data:
-                        for document in data[collection_name]:
-                            if all(item in document.items() for item in query.items()):
-                                return document
-                except json.JSONDecodeError:
-                    Logger.warning(f"File {file_path} is corrupted.")
+        for document in self.list_documents(collection_name):
+            if all(item in document.items() for item in query.items()):
+                return document
         return None
+
+    def list_documents(self, collection_name):
+        """Return all documents in a collection (empty list if missing)."""
+        file_path = self._get_database_file_path()
+        if not os.path.exists(file_path):
+            return []
+        with open(file_path, "r", encoding="utf-8") as file:
+            try:
+                data = json.load(file)
+            except json.JSONDecodeError:
+                Logger.warning(f"File {file_path} is corrupted.")
+                return []
+        docs = data.get(collection_name, [])
+        if not isinstance(docs, list):
+            return []
+        return docs
 
     def _update_last_modified(self):
         """Update the last modified timestamp to current time."""
