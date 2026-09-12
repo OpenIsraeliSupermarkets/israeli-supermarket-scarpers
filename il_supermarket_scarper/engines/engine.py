@@ -24,12 +24,12 @@ from il_supermarket_scarper.utils import (
     async_url_connection_retry,
     content_sha256,
 )
-from il_supermarket_scarper.utils.state import FilterState
+from il_supermarket_scarper.utils.scraping.state import FilterState
 from il_supermarket_scarper.utils.databases import AbstractDataBase
-from il_supermarket_scarper.utils.async_work import stream_as_completed
-from il_supermarket_scarper.utils.gzip_utils import extract_if_compressed
-from il_supermarket_scarper.utils.save_policy import SavePolicy
-from il_supermarket_scarper.utils.verified_downloads import VerifiedDownloads
+from il_supermarket_scarper.utils.core.async_work import stream_as_completed
+from il_supermarket_scarper.utils.files.gzip_utils import extract_if_compressed
+from il_supermarket_scarper.utils.files.save_policy import SavePolicy
+from il_supermarket_scarper.utils.files.verified_downloads import VerifiedDownloads
 
 
 @dataclass(frozen=True)

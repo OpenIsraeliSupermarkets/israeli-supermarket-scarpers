@@ -8,8 +8,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional, Tuple
 
-from .exceptions import RestartSessionError
-from .logger import Logger
+from il_supermarket_scarper.utils.core.exceptions import RestartSessionError
+from il_supermarket_scarper.utils.core.logger import Logger
 
 GZIP_MAGIC_BYTES = b"\x1f\x8b"
 ZIP_MAGIC_BYTES = b"PK"

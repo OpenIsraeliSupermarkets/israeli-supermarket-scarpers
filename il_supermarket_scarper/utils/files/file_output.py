@@ -6,7 +6,7 @@ import multiprocessing
 from abc import ABC, abstractmethod
 from typing import Any, Dict, AsyncGenerator, Optional
 import os
-from .logger import Logger
+from il_supermarket_scarper.utils.core.logger import Logger
 
 
 def content_sha256(content: bytes) -> str:

@@ -11,7 +11,7 @@ from collections import defaultdict
 
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
 from il_supermarket_scarper.utils import DiskFileOutput, Logger
-from il_supermarket_scarper.utils.status import _now
+from il_supermarket_scarper.utils.scraping.status import _now
 from il_supermarket_scarper.utils.databases import AbstractDataBase
 
 

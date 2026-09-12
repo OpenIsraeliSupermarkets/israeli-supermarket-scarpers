@@ -7,7 +7,7 @@ from il_supermarket_scarper.utils import (
     FileTypesFilters,
     UnitSize,
 )
-from il_supermarket_scarper.utils.status import convert_unit, string_to_float
+from il_supermarket_scarper.utils.scraping.status import convert_unit, string_to_float
 
 
 # removed on 28.02.2025

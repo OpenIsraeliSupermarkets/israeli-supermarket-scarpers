@@ -3,8 +3,8 @@ from urllib.parse import parse_qs, urljoin, urlparse
 from bs4 import BeautifulSoup
 from il_supermarket_scarper.utils import FileEntry, Logger
 from il_supermarket_scarper.utils import convert_nl_size_to_bytes, UnitSize
-from il_supermarket_scarper.utils.state import FilterState
-from il_supermarket_scarper.utils.async_work import stream_as_completed
+from il_supermarket_scarper.utils.scraping.state import FilterState
+from il_supermarket_scarper.utils.core.async_work import stream_as_completed
 from .engine import Engine
 
 

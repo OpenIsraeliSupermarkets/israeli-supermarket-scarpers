@@ -13,10 +13,10 @@ from il_supermarket_scarper.utils import (
     InMemoryQueueHandler,
     ScraperConfig,
 )
-from il_supermarket_scarper.utils.file_output import content_sha256
-from il_supermarket_scarper.utils.gzip_utils import extract_if_compressed
-from il_supermarket_scarper.utils.save_policy import SaveDecision, SavePolicy
-from il_supermarket_scarper.utils.verified_downloads import VerifiedDownloads
+from il_supermarket_scarper.utils.files.file_output import content_sha256
+from il_supermarket_scarper.utils.files.gzip_utils import extract_if_compressed
+from il_supermarket_scarper.utils.files.save_policy import SaveDecision, SavePolicy
+from il_supermarket_scarper.utils.files.verified_downloads import VerifiedDownloads
 from il_supermarket_scarper.utils.databases import JsonDataBase
 
 

@@ -5,7 +5,7 @@ import io
 
 import pytest
 
-from il_supermarket_scarper.utils.gzip_utils import (
+from il_supermarket_scarper.utils.files.gzip_utils import (
     extract_xml_from_gz_in_memory,
     is_compressed_content,
     validate_gzip_integrity,

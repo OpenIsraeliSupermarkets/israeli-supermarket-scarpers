@@ -13,7 +13,7 @@ from il_supermarket_scarper.scrappers.shufersal import Shufersal
 from il_supermarket_scarper.scrappers.super_pharm import SuperPharm
 from il_supermarket_scarper.scrappers.victory import Victory, VictoryNewSource
 from il_supermarket_scarper.utils import DiskFileOutput, FileEntry
-from il_supermarket_scarper.utils.connection import _ftp_mlsd_published_at
+from il_supermarket_scarper.utils.network.connection import _ftp_mlsd_published_at
 
 
 class TestParsePublishedAt(unittest.TestCase):

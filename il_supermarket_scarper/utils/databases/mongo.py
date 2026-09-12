@@ -1,4 +1,4 @@
-from ..status import _now
+from il_supermarket_scarper.utils.scraping.status import _now
 from .base import AbstractDataBase
 
 

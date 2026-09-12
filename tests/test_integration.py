@@ -1,5 +1,5 @@
 import datetime
-from il_supermarket_scarper.utils.status import (
+from il_supermarket_scarper.utils.scraping.status import (
     get_status,
     get_status_date,
 )

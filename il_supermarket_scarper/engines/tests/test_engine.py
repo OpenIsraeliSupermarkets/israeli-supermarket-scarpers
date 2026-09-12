@@ -18,8 +18,8 @@ from il_supermarket_scarper.utils import (
     get_output_folder,
 )
 from il_supermarket_scarper.utils.databases import JsonDataBase
-from il_supermarket_scarper.utils.state import FilterState
-from il_supermarket_scarper.utils.verified_downloads import VerifiedDownloads
+from il_supermarket_scarper.utils.scraping.state import FilterState
+from il_supermarket_scarper.utils.files.verified_downloads import VerifiedDownloads
 
 
 class TestEngineDeduplication(unittest.IsolatedAsyncioTestCase):

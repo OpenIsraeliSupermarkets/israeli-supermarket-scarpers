@@ -3,8 +3,8 @@ import traceback
 from typing import Optional
 import uuid
 from .status import log_folder_details, _now
-from .databases import JsonDataBase, AbstractDataBase
-from .file_output import FileOutput
+from il_supermarket_scarper.utils.databases import JsonDataBase, AbstractDataBase
+from il_supermarket_scarper.utils.files.file_output import FileOutput
 from .scraping_result import ScrapingResult
 
 

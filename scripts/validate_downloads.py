@@ -27,7 +27,7 @@ from typing import Any, AsyncGenerator, Dict, List, Optional
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
 from il_supermarket_scarper.utils import Logger, ScrapingResult, _now
 from il_supermarket_scarper.utils.databases import AbstractDataBase
-from il_supermarket_scarper.utils.file_output import FileOutput
+from il_supermarket_scarper.utils.files.file_output import FileOutput
 
 
 class NoOpStatusDatabase(AbstractDataBase):

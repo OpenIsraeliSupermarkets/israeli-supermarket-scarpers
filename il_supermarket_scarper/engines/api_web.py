@@ -3,8 +3,8 @@ import json
 import requests
 from il_supermarket_scarper.utils import Logger
 from il_supermarket_scarper.utils import FileEntry
-from il_supermarket_scarper.utils.state import FilterState
-from il_supermarket_scarper.utils.async_work import stream_as_completed
+from il_supermarket_scarper.utils.scraping.state import FilterState
+from il_supermarket_scarper.utils.core.async_work import stream_as_completed
 from .web import WebBase
 
 

@@ -9,7 +9,7 @@ from pydantic.networks import AnyUrl
 from pydantic import BaseModel, Field
 from pydantic_core import core_schema
 
-from il_supermarket_scarper.utils.file_types import FileTypesFilters
+from il_supermarket_scarper.utils.files.file_types import FileTypesFilters
 
 
 FILENAME_REGEX = re.compile(r"^[a-zA-Z0-9._-]+$")

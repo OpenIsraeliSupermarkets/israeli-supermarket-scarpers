@@ -12,7 +12,7 @@ from il_supermarket_scarper.utils import (
     UnitSize,
     FilterState,
 )
-from il_supermarket_scarper.utils.async_work import stream_as_completed
+from il_supermarket_scarper.utils.core.async_work import stream_as_completed
 from .web import WebBase
 
 

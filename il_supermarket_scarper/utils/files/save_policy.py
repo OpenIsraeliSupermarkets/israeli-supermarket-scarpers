@@ -4,7 +4,7 @@ import asyncio
 from enum import Enum
 from typing import TYPE_CHECKING, Dict, Optional
 
-from .logger import Logger
+from il_supermarket_scarper.utils.core.logger import Logger
 
 if TYPE_CHECKING:
     from .verified_downloads import VerifiedDownloads

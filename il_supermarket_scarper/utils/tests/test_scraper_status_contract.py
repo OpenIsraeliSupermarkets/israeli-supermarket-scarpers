@@ -3,7 +3,7 @@
 import unittest
 from datetime import datetime
 
-from il_supermarket_scarper.utils.scraper_status_contract import (
+from il_supermarket_scarper.utils.scraping.scraper_status_contract import (
     CollectedStatus,
     DownloadedStatus,
     FailedStatus,

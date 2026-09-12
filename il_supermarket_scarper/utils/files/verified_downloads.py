@@ -2,10 +2,10 @@
 
 from typing import Dict, Optional, TYPE_CHECKING
 
-from .status import _now
+from il_supermarket_scarper.utils.scraping.status import _now
 
 if TYPE_CHECKING:
-    from .databases.base import AbstractDataBase
+    from il_supermarket_scarper.utils.databases.base import AbstractDataBase
     from .save_policy import SaveDecision
 
 

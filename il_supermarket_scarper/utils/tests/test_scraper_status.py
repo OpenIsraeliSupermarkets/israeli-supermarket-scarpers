@@ -5,9 +5,9 @@ import unittest
 
 from il_supermarket_scarper.utils import DiskFileOutput, FileEntry, content_sha256
 from il_supermarket_scarper.utils.databases import JsonDataBase
-from il_supermarket_scarper.utils.save_policy import SaveDecision, SavePolicy
-from il_supermarket_scarper.utils.scraper_status import ScraperStatus
-from il_supermarket_scarper.utils.verified_downloads import VerifiedDownloads
+from il_supermarket_scarper.utils.files.save_policy import SaveDecision, SavePolicy
+from il_supermarket_scarper.utils.scraping.scraper_status import ScraperStatus
+from il_supermarket_scarper.utils.files.verified_downloads import VerifiedDownloads
 
 
 class TestVerifiedDownloadsAndSavePolicy(unittest.IsolatedAsyncioTestCase):

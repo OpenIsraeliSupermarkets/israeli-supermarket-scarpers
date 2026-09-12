@@ -2,9 +2,9 @@ import os
 import json
 from datetime import datetime
 import pytz
-from ..lock_utils import lock_by_string
-from ..logger import Logger
-from ..status import _now
+from il_supermarket_scarper.utils.network.lock_utils import lock_by_string
+from il_supermarket_scarper.utils.core.logger import Logger
+from il_supermarket_scarper.utils.scraping.status import _now
 from .base import AbstractDataBase
 
 
