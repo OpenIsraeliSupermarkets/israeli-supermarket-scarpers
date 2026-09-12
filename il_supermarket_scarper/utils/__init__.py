@@ -60,6 +60,9 @@ from .file_output import (
     QueueFileOutput,
     AbstractQueueHandler,
     InMemoryQueueHandler,
+    SaveDecision,
+    content_sha256,
+    should_persist,
 )
 from .scraper_config import ScraperConfig
 from .databases import JsonDataBase, MongoDataBase

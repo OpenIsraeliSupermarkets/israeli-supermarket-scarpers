@@ -3,14 +3,18 @@
 import unittest
 
 from il_supermarket_scarper.engines.bina import Bina
+from il_supermarket_scarper.engines.matrix import Matrix
 from il_supermarket_scarper.engines.multipage_web import MultiPageWeb
 from il_supermarket_scarper.engines.publishprice import PublishPrice
 from il_supermarket_scarper.scrappers.city_market import CityMarketShops
 from il_supermarket_scarper.scrappers.hazihinam import HaziHinam
 from il_supermarket_scarper.scrappers.meshnat_yosef import MeshnatYosef1
+from il_supermarket_scarper.scrappers.nativ_hashed import NetivHased
 from il_supermarket_scarper.scrappers.shufersal import Shufersal
 from il_supermarket_scarper.scrappers.super_pharm import SuperPharm
+from il_supermarket_scarper.scrappers.victory import VictoryNewSource
 from il_supermarket_scarper.utils import FileEntry
+from il_supermarket_scarper.utils.connection import _ftp_mlsd_published_at
 
 
 class TestParsePublishedAt(unittest.TestCase):
@@ -79,6 +83,37 @@ class TestParsePublishedAt(unittest.TestCase):
             ),
             "2026-09-09T00:00:00",
         )
+
+    def test_victory_file_date(self):
+        self.assertEqual(
+            FileEntry.parse_published_at(
+                "2026-09-11 22:30:37", VictoryNewSource.listing_date_format
+            ),
+            "2026-09-11T22:30:37",
+        )
+
+    def test_matrix_td_date(self):
+        self.assertEqual(
+            FileEntry.parse_published_at(
+                "11/09/2026 06:27:02", Matrix.listing_date_format
+            ),
+            "2026-09-11T06:27:02",
+        )
+
+    def test_netiv_file_date(self):
+        self.assertEqual(
+            FileEntry.parse_published_at(
+                "11/09/2026 14:23", NetivHased.listing_date_format
+            ),
+            "2026-09-11T14:23:00",
+        )
+
+    def test_ftp_mlsd_modify(self):
+        self.assertEqual(
+            _ftp_mlsd_published_at({"modify": "20260911143037"}),
+            "2026-09-11T14:30:37",
+        )
+        self.assertIsNone(_ftp_mlsd_published_at({}))
 
     def test_wrong_format_is_none(self):
         """A scraper must not try every format; mismatch stays None."""

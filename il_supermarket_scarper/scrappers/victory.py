@@ -13,6 +13,7 @@ class _LaibcatalogApiScraper(ApiWebEngine):
     """Base scraper for laibcatalog.co.il API-based scrapers."""
 
     utilize_date_param = False
+    listing_date_format = "%Y-%m-%d %H:%M:%S"
 
     def __init__(self, chain, chain_id, file_output=None, status_database=None):
         super().__init__(
@@ -103,6 +104,9 @@ class _LaibcatalogApiScraper(ApiWebEngine):
                     name=base_name,
                     url=download_url,
                     size=file_size,
+                    published_at=FileEntry.parse_published_at(
+                        entry.get("fileDate"), self.listing_date_format
+                    ),
                 )
 
             except (AttributeError, KeyError, TypeError) as e:
