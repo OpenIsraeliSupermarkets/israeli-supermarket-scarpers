@@ -8,8 +8,8 @@ alwaysApply: false
 
 In `apply_limit`, never count `file_pass_limit` or stop at `limit` until **every** listing filter has run.
 
-Filters that must run first: already downloaded, store id, file-name regex, file types, `when_date`.
-Do not drop duplicate listing names in `apply_limit`. The same FileNm can appear twice; `FileOutput` keeps the original path and records a hash mismatch on status when sha256 differs.
+Filters that must run first: identical listing hash, already downloaded, store id, file-name regex, file types, `when_date`.
+Do not drop duplicate listing **names** in `apply_limit`. The same FileNm can appear twice when url/size differ; `FileOutput` keeps that name, overwrites the disk file or re-queues, and records `hash_mismatch`. Drop only identical `listing_hash` values (same name+url+size) so they do not download twice.
 
 - `filter_file_types` matches types only. It must not increment the quota or `break` at `limit`.
 - `get_by_date` / `when_date` must run before the quota. Wolt lists many days in parallel; older names will otherwise burn `limit` and download nothing.
