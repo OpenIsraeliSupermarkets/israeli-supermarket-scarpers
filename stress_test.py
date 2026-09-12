@@ -50,28 +50,22 @@ class NoOpStatusDatabase(AbstractDataBase):
         super().__init__(database_name)
         self._data = {}
 
-    def insert_document(self, collection_name, document):
+    def _do_insert_document(self, collection_name, document):
         """Store document in memory collection."""
         if collection_name not in self._data:
             self._data[collection_name] = []
         self._data[collection_name].append(document)
         self._update_last_modified()
 
-    def insert_documents(self, collection_name, document):
+    def _do_insert_documents(self, collection_name, documents):
         """Store multiple documents in memory collection."""
         if collection_name not in self._data:
             self._data[collection_name] = []
-        if isinstance(document, list):
-            self._data[collection_name].extend(document)
-        else:
-            self._data[collection_name].append(document)
+        self._data[collection_name].extend(documents)
         self._update_last_modified()
 
-    def already_downloaded(
-        self, collection_name, query
-    ):  # pylint: disable=unused-argument
-        """Always return False - assume nothing is downloaded."""
-        return False
+    def list_documents(self, collection_name):
+        return list(self._data.get(collection_name, []))
 
     def _update_last_modified(self):
         """Update the last modified timestamp to current time."""

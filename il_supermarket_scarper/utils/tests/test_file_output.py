@@ -14,6 +14,7 @@ from il_supermarket_scarper.utils import (
     ScraperConfig,
 )
 from il_supermarket_scarper.utils.file_output import SaveDecision, content_sha256
+from il_supermarket_scarper.utils.gzip_utils import extract_if_compressed
 
 
 class TestFileOutput:
@@ -85,7 +86,7 @@ class TestFileOutput:
 
             xml_content = b"<xml>test content</xml>"
             gzip_content = gzip.compress(xml_content)
-            content, name, ok, err = await output.extract_if_compressed(
+            content, name, ok, err = await extract_if_compressed(
                 gzip_content, "Stores7290058108879-000", extract_gz=True
             )
             assert ok is True
@@ -216,7 +217,7 @@ class TestFileOutput:
 
                 xml_content = b"<xml>test content</xml>"
                 gzip_content = gzip.compress(xml_content)
-                content, name, ok, err = await output.extract_if_compressed(
+                content, name, ok, err = await extract_if_compressed(
                     gzip_content, "test.xml.gz", extract_gz=True
                 )
                 assert ok is True and err is None
@@ -251,7 +252,7 @@ class TestFileOutput:
 
                 xml_content = b"<xml>test content</xml>"
                 gzip_content = gzip.compress(xml_content)
-                content, name, ok, err = await output.extract_if_compressed(
+                content, name, ok, err = await extract_if_compressed(
                     gzip_content, "Stores7290058108879-000", extract_gz=True
                 )
                 assert ok is True and err is None
@@ -336,7 +337,7 @@ class TestFileOutput:
             with tempfile.TemporaryDirectory() as tmpdir:
                 output = DiskFileOutput(tmpdir, extract_gz=True)
                 truncated = gzip.compress(b"<xml>test content</xml>")[:-20]
-                _content, _name, ok, err = await output.extract_if_compressed(
+                _content, _name, ok, err = await extract_if_compressed(
                     truncated, "test.xml.gz", extract_gz=True
                 )
                 assert ok is False

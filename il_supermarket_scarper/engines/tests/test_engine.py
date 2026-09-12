@@ -194,7 +194,6 @@ class TestApplyLimitAfterFilters(unittest.IsolatedAsyncioTestCase):
                     "task_id": "previous",
                 },
             )
-            scraper._hydrate_verified_indexes()  # pylint: disable=protected-access
 
             async def listed():
                 yield first
@@ -224,7 +223,6 @@ class TestApplyLimitAfterFilters(unittest.IsolatedAsyncioTestCase):
                     "task_id": "previous",
                 },
             )
-            scraper._hydrate_verified_indexes()  # pylint: disable=protected-access
 
             async def listed():
                 yield entry
@@ -271,7 +269,6 @@ class TestApplyLimitAfterFilters(unittest.IsolatedAsyncioTestCase):
                     "task_id": "previous",
                 },
             )
-            scraper._hydrate_verified_indexes()  # pylint: disable=protected-access
 
             async def listed():
                 yield FileEntry(name=name, url="http://example.test/a", size=1)

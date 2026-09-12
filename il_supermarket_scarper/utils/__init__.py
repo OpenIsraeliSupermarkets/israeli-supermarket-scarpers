@@ -1,8 +1,10 @@
 from .gzip_utils import (
     extract_xml_from_gz_in_memory,
+    extract_if_compressed,
     is_compressed_content,
     validate_gzip_integrity,
     GzipIntegrity,
+    GzipStatus,
     GZIP_OK,
     GZIP_TRUNCATED,
     GZIP_CRC_MISMATCH,
@@ -22,6 +24,7 @@ from .status import (
     hour_files_expected_to_be_accassible,
 )
 from .scraper_status import ScraperStatus
+from .save_policy import SavePolicy, SaveDecision, should_persist
 from .scraper_status_contract import (
     FileName,
     FolderSizeInfo,
@@ -60,9 +63,7 @@ from .file_output import (
     QueueFileOutput,
     AbstractQueueHandler,
     InMemoryQueueHandler,
-    SaveDecision,
     content_sha256,
-    should_persist,
 )
 from .scraper_config import ScraperConfig
 from .databases import JsonDataBase, MongoDataBase

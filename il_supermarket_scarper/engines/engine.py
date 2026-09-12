@@ -23,11 +23,12 @@ from il_supermarket_scarper.utils import (
     ScrapingResult,
     async_url_connection_retry,
     content_sha256,
-    SaveDecision,
 )
 from il_supermarket_scarper.utils.state import FilterState
 from il_supermarket_scarper.utils.databases import AbstractDataBase
 from il_supermarket_scarper.utils.async_work import stream_as_completed
+from il_supermarket_scarper.utils.gzip_utils import extract_if_compressed
+from il_supermarket_scarper.utils.save_policy import SavePolicy
 
 
 @dataclass(frozen=True)
@@ -39,7 +40,7 @@ class LoginDetails:
     password: Optional[str] = None
 
 
-class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
+class Engine(ABC):  # pylint: disable=too-many-public-methods
     """
     Base engine class for scraping Israeli supermarket data.
 
@@ -139,9 +140,11 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
             # Create storage path from folder_name and create DiskFileOutput
             file_output = DiskFileOutput(storage_path=DumpFolderNames[chain].value)
 
-        super().__init__(
+        self.status = ScraperStatus(
             chain.value, status_database=status_database, file_output=file_output
         )
+        self.save_policy = SavePolicy(self.status)
+        self.database = self.status.database
 
         self.assigned_cookie = f"{self.chain.name}_{uuid.uuid4()}_cookies.txt"
         self.storage_path: FileOutput = file_output
@@ -227,7 +230,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
     ) -> AsyncGenerator[FileEntry, None]:
         """register the file as saw on site"""
         async for file in files:
-            self.register_saw_file(
+            self.status.register_saw_file(
                 file_name=file.name,
                 link=file.url,
                 size=file.size,
@@ -370,9 +373,11 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         intreable_ = self.unique_listings(state, files_list)
 
         # filter files already downloaded
-        intreable_: AsyncGenerator[FileEntry, None] = self.filter_already_downloaded(
-            intreable_,
-            by_function=by_function,
+        intreable_: AsyncGenerator[FileEntry, None] = (
+            self.status.filter_already_downloaded(
+                intreable_,
+                by_function=by_function,
+            )
         )
 
         # filter by store id
@@ -581,7 +586,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
         random_selection=False,
     ):
         """run the scraping logic"""
-        self.on_scraping_start(
+        self.status.on_scraping_start(
             limit=limit,
             files_types=files_types,
             store_id=store_id,
@@ -615,14 +620,14 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 max_size=max_size,
                 random_selection=random_selection,
             ):
-                self.register_downloaded_file(result)
+                self.status.register_downloaded_file(result)
                 yield result
 
         except Exception as e:  # pylint: disable=broad-exception-caught
             Logger.error(f"Error scraping: {e}")
             completed_successfully = False
         finally:
-            self.on_scrape_completed(
+            self.status.on_scrape_completed(
                 self.get_storage_path(), completed_successfully=completed_successfully
             )
             await self._post_scraping()
@@ -695,7 +700,7 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 except Exception as e:  # pylint: disable=broad-except
                     Logger.error(f"Error in process_file: {e}")
                     file_name = self._extract_file_name(file_details)
-                    self.register_download_fail(e, file_name)
+                    self.status.register_download_fail(e, file_name)
                     return ScrapingResult(
                         file_entry=file_details,
                         downloaded=False,
@@ -795,6 +800,99 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 raise
             return await self._wget_file_to_memory(file_link, timeout)
 
+    async def _finalize_extracted_content(
+        self,
+        entry: FileEntry,
+        file_content: bytes,
+        file_name_with_ext: str,
+        file_link: str = "",
+        extra_metadata: Optional[dict] = None,
+    ) -> ScrapingResult:
+        """Extract compressed bytes, apply save policy, and persist."""
+        extract_gz = getattr(self.storage_path, "extract_gz", True)
+        (
+            file_content,
+            extracted_name,
+            extract_ok,
+            extract_error,
+        ) = await extract_if_compressed(
+            file_content,
+            file_name_with_ext,
+            extract_gz,
+        )
+        if not extract_ok:
+            return ScrapingResult(
+                file_entry=entry,
+                downloaded=True,
+                save_decision=None,
+                extract_succefully=False,
+                content_sha256=None,
+                error=extract_error,
+                restart_and_retry=False,
+                source_corrupt=False,
+                saved_file_name=None,
+            )
+
+        digest = content_sha256(file_content)
+        metadata = {
+            "chain": self.chain.value,
+            "chain_id": self.chain_id,
+            "original_filename": entry.name,
+            "published_at": entry.published_at,
+        }
+        if extra_metadata:
+            metadata.update(extra_metadata)
+        box = {"result": None}
+
+        async def _persist(
+            save_decision,
+            content=file_content,
+            name=extracted_name,
+            meta=metadata,
+            dig=digest,
+        ):
+            box["result"] = await self.storage_path.save_file(
+                file_link=file_link,
+                file_name=name,
+                file_content=content,
+                metadata=meta,
+                save_decision=save_decision,
+                content_digest=dig,
+            )
+
+        save_decision = await self.save_policy.decide_and_persist(
+            extracted_name,
+            digest,
+            entry.published_at,
+            _persist,
+            listing_hash=entry.listing_hash(),
+        )
+        if box["result"] is not None:
+            result = box["result"]
+            result["save_decision"] = save_decision
+        else:
+            result = {
+                "file_name": extracted_name,
+                "saved": True,
+                "extract_successfully": True,
+                "error": None,
+                "content_sha256": digest,
+                "save_decision": save_decision,
+                "metadata": metadata,
+            }
+
+        return ScrapingResult(
+            file_entry=entry,
+            downloaded=True,
+            save_decision=result["save_decision"],
+            extract_succefully=True,
+            content_sha256=result["content_sha256"],
+            error=None,
+            restart_and_retry=False,
+            source_corrupt=False,
+            saved_file_name=extracted_name,
+        )
+
     async def save_and_extract(  # pylint: disable=too-many-locals
         self, entry: FileEntry
     ):
@@ -833,88 +931,27 @@ class Engine(ScraperStatus, ABC):  # pylint: disable=too-many-public-methods
                 if file_name_with_ext.endswith(".gz"):
                     Logger.debug(f"File size is {len(file_content)} bytes.")
 
-                (
-                    file_content,
-                    extracted_name,
-                    extract_ok,
-                    extract_error,
-                ) = await self.storage_path.extract_if_compressed(
+                finalized = await self._finalize_extracted_content(
+                    entry,
                     file_content,
                     file_name_with_ext,
-                    getattr(self.storage_path, "extract_gz", True),
+                    file_link=file_link,
                 )
-                error = extract_error
-                if not extract_ok:
-                    Logger.warning(
-                        f"Extract failed for {file_name} "
-                        f"(attempt {attempt}/{max_attempts}): {error}"
+                if finalized.extract_succefully:
+                    return finalized
+
+                error = finalized.error
+                Logger.warning(
+                    f"Extract failed for {file_name} "
+                    f"(attempt {attempt}/{max_attempts}): {error}"
+                )
+                if attempt == max_attempts:
+                    source_corrupt = True
+                    error = (
+                        f"source corrupt after {max_attempts} downloads: "
+                        f"{error or 'extract failed'}"
                     )
-                    if attempt == max_attempts:
-                        source_corrupt = True
-                        error = (
-                            f"source corrupt after {max_attempts} downloads: "
-                            f"{error or 'extract failed'}"
-                        )
-                        Logger.error(error)
-                    continue
-
-                digest = content_sha256(file_content)
-                metadata = {
-                    "chain": self.chain.value,
-                    "chain_id": self.chain_id,
-                    "original_filename": file_name,
-                    "published_at": entry.published_at,
-                }
-                box = {"result": None}
-
-                async def _persist(
-                    content=file_content,
-                    name=extracted_name,
-                    meta=metadata,
-                    dig=digest,
-                ):
-                    box["result"] = await self.storage_path.save_file(
-                        file_link=file_link,
-                        file_name=name,
-                        file_content=content,
-                        metadata=meta,
-                        save_decision=SaveDecision.CREATED,
-                        content_digest=dig,
-                    )
-
-                save_decision = await self.decide_and_persist(
-                    extracted_name,
-                    digest,
-                    entry.published_at,
-                    _persist,
-                    listing_hash=entry.listing_hash(),
-                )
-                if box["result"] is not None:
-                    result = box["result"]
-                    result["save_decision"] = save_decision
-                else:
-                    result = {
-                        "file_name": extracted_name,
-                        "saved": True,
-                        "extract_successfully": True,
-                        "error": None,
-                        "content_sha256": digest,
-                        "save_decision": save_decision,
-                        "metadata": metadata,
-                    }
-
-                saved_file_name = extracted_name
-                return ScrapingResult(
-                    file_entry=entry,
-                    downloaded=downloaded,
-                    save_decision=result["save_decision"],
-                    extract_succefully=True,
-                    content_sha256=result["content_sha256"],
-                    error=None,
-                    restart_and_retry=False,
-                    source_corrupt=False,
-                    saved_file_name=saved_file_name,
-                )
+                    Logger.error(error)
 
             return ScrapingResult(
                 file_entry=entry,

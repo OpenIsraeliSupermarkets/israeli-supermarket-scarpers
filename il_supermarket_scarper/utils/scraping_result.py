@@ -1,7 +1,7 @@
 from typing import Optional
 
 from .file_entry import FileEntry
-from .file_output import SaveDecision
+from .save_policy import SaveDecision
 
 
 class ScrapingResult:  # pylint: disable=too-many-instance-attributes

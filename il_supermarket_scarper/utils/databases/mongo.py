@@ -27,16 +27,12 @@ class MongoDataBase(AbstractDataBase):
             )
             self.store_db = self.myclient[self.database_name]
 
-    def insert_document(self, collection_name, document):
-        """Insert a document into a MongoDB collection."""
+    def _do_insert_document(self, collection_name, document):
+        """Persist a single document in a MongoDB collection."""
         if self.store_db is None:
             self.create_connection()
         self.store_db[collection_name].insert_one(document)
         self._update_last_modified()
-
-    def already_downloaded(self, collection_name, query):
-        """Find a document in a MongoDB collection."""
-        return self.find_document(collection_name, query) is not None
 
     def find_document(self, collection_name, query):
         """Return the first matching document, or None."""

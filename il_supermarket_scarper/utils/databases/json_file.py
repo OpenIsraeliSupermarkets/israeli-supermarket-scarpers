@@ -57,39 +57,24 @@ class JsonDataBase(AbstractDataBase):
             json.dump(dict(sorted(data.items())), file, default=str, indent=4)
 
     @lock_by_string()
-    def insert_documents(self, collection_name, document):
-        """Insert a document into a collection inside the JSON database."""
-
+    def _do_insert_documents(self, collection_name, documents):
+        """Persist many documents in one JSON write."""
         data = self._read_database()
-        # Ensure the collection exists in the database
         if collection_name not in data:
             data[collection_name] = []
-
-        # Add the new document to the collection
-        data[collection_name].extend(document)
-
-        # Save the updated data back to the file
+        data[collection_name].extend(documents)
         self._write_database(data)
         self._update_last_modified()
 
     @lock_by_string()
-    def insert_document(self, collection_name, document):
-        """Insert a document into a collection inside the JSON database."""
+    def _do_insert_document(self, collection_name, document):
+        """Persist a single document in the JSON database."""
         data = self._read_database()
-        # Ensure the collection exists in the database
         if collection_name not in data:
             data[collection_name] = []
-
-        # Add the new document to the collection
         data[collection_name].append(document)
-
-        # Save the updated data back to the file
         self._write_database(data)
         self._update_last_modified()
-
-    def already_downloaded(self, collection_name, query):
-        """Find a document in a collection based on a query."""
-        return self.find_document(collection_name, query) is not None
 
     def find_document(self, collection_name, query):
         """Return the first matching document, or None."""

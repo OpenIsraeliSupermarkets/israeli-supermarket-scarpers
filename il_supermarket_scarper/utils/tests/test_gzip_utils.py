@@ -11,10 +11,7 @@ from il_supermarket_scarper.utils.gzip_utils import (
     validate_gzip_integrity,
     GZIP_MAGIC_BYTES,
     ZIP_MAGIC_BYTES,
-    GZIP_OK,
-    GZIP_TRUNCATED,
-    GZIP_CRC_MISMATCH,
-    GZIP_NOT_GZIP,
+    GzipStatus,
 )
 
 BAD_GZIP_FIXTURE = (
@@ -33,7 +30,7 @@ def test_unzip_bad_file():
         file_content = handle.read()
 
     integrity = validate_gzip_integrity(file_content)
-    assert integrity.status == GZIP_TRUNCATED
+    assert integrity.status == GzipStatus.TRUNCATED
     assert integrity.ok is False
 
     with pytest.raises(ValueError, match="gzip truncated"):
@@ -62,7 +59,7 @@ class TestValidateGzipIntegrity:
         """Complete gzip member is ok and returns uncompressed bytes."""
         compressed, payload = _good_gzip()
         result = validate_gzip_integrity(compressed)
-        assert result.status == GZIP_OK
+        assert result.status == GzipStatus.OK
         assert result.ok is True
         assert result.uncompressed == payload
 
@@ -70,7 +67,7 @@ class TestValidateGzipIntegrity:
         """Dropping the gzip footer is truncated, not ok."""
         compressed, _payload = _good_gzip()
         result = validate_gzip_integrity(compressed[:-20])
-        assert result.status == GZIP_TRUNCATED
+        assert result.status == GzipStatus.TRUNCATED
         assert result.ok is False
         assert result.uncompressed is None
 
@@ -80,24 +77,24 @@ class TestValidateGzipIntegrity:
         mutated = bytearray(compressed)
         mutated[-8] ^= 0xFF
         result = validate_gzip_integrity(bytes(mutated))
-        assert result.status == GZIP_CRC_MISMATCH
+        assert result.status == GzipStatus.CRC_MISMATCH
         assert "CRC" in result.detail or "crc" in result.detail.lower()
 
     def test_not_gzip_html(self):
         """HTML error pages are not_gzip."""
         result = validate_gzip_integrity(b"<html>link expired</html>")
-        assert result.status == GZIP_NOT_GZIP
+        assert result.status == GzipStatus.NOT_GZIP
 
     def test_not_gzip_empty(self):
         """Empty buffers are not_gzip."""
         result = validate_gzip_integrity(b"")
-        assert result.status == GZIP_NOT_GZIP
+        assert result.status == GzipStatus.NOT_GZIP
         assert "empty" in result.detail
 
     def test_not_gzip_plain_xml(self):
         """Uncompressed XML is not_gzip."""
         result = validate_gzip_integrity(b"<?xml version='1.0'?><root/>")
-        assert result.status == GZIP_NOT_GZIP
+        assert result.status == GzipStatus.NOT_GZIP
 
     def test_extract_crc_mismatch_message(self):
         """Extract error text includes gzip crc_mismatch."""

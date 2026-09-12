@@ -196,7 +196,7 @@ class WebBase(Engine):
         """Process a single listing FileEntry from WebBase."""
         entry = file_details
 
-        self.register_collected_file(
+        self.status.register_collected_file(
             file_name_collected_from_site=entry.name,
             link_collected_from_site=entry.url,
         )
