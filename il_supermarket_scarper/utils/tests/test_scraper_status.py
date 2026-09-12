@@ -1,4 +1,4 @@
-"""ScraperStatus verified indexes and save decisions."""
+"""ScraperStatus save-decision extraction (same-scrape indexes)."""
 
 import tempfile
 import unittest
@@ -10,67 +10,50 @@ from il_supermarket_scarper.utils.scraper_status import ScraperStatus
 from il_supermarket_scarper.utils.scraping_result import ScrapingResult
 
 
-class TestScraperStatusIndexes(unittest.IsolatedAsyncioTestCase):
-    """Hydrate once; decide from verified digests/published_at across scrapes."""
+class TestScraperStatusSaveDecision(unittest.IsolatedAsyncioTestCase):
+    """Decide/persist lives on ScraperStatus; indexes start empty each scrape."""
 
     def _status(self, tmp):
         output = DiskFileOutput(tmp)
         db = JsonDataBase("status_idx", tmp)
         return ScraperStatus("status_idx", status_database=db, file_output=output), db
 
-    def test_hydrate_listing_hash_skip(self):
+    def test_resolve_created_when_unknown(self):
         with tempfile.TemporaryDirectory() as tmp:
-            status, db = self._status(tmp)
-            entry = FileEntry(name="PromoFull7290-001", url="http://x/a", size=1)
-            db.insert_document(
-                ScraperStatus.VERIFIED_DOWNLOADS,
-                {
-                    "file_name": "PromoFull7290-001.xml",
-                    "listing_hash": entry.listing_hash(),
-                    "content_sha256": "abc",
-                    "task_id": "prev",
-                },
-            )
+            status, _db = self._status(tmp)
             status.on_scraping_start(limit=None, files_types=None)
-            self.assertTrue(
-                status._is_verified_listing(entry)  # pylint: disable=protected-access
+            decision = status.resolve_save_decision(
+                "PromoFull7290-001.xml", "digest", None
             )
+            self.assertEqual(decision, SaveDecision.CREATED)
 
-    def test_resolve_rewrote_same_across_hydrate(self):
+    def test_resolve_rewrote_same_within_scrape(self):
         with tempfile.TemporaryDirectory() as tmp:
-            status, db = self._status(tmp)
-            payload = b"<xml>same</xml>"
-            digest = content_sha256(payload)
-            db.insert_document(
-                ScraperStatus.VERIFIED_DOWNLOADS,
-                {
-                    "file_name": "PromoFull7290-001.xml",
-                    "listing_hash": "h1",
-                    "content_sha256": digest,
-                    "published_at": "2026-09-08T14:00:00",
-                    "task_id": "prev",
-                },
-            )
+            status, _db = self._status(tmp)
             status.on_scraping_start(limit=None, files_types=None)
+            digest = content_sha256(b"<xml>same</xml>")
+            status._remember_save(  # pylint: disable=protected-access
+                "PromoFull7290-001.xml",
+                digest,
+                "2026-09-08T14:00:00",
+                SaveDecision.CREATED,
+                listing_hash="h1",
+            )
             decision = status.resolve_save_decision(
                 "PromoFull7290-001.xml", digest, "2026-09-08T15:00:00"
             )
             self.assertEqual(decision, SaveDecision.REWROTE_SAME)
 
-    def test_resolve_stale_older_across_hydrate(self):
+    def test_resolve_stale_older_within_scrape(self):
         with tempfile.TemporaryDirectory() as tmp:
-            status, db = self._status(tmp)
-            db.insert_document(
-                ScraperStatus.VERIFIED_DOWNLOADS,
-                {
-                    "file_name": "PromoFull7290-001.xml",
-                    "listing_hash": "h1",
-                    "content_sha256": "olddigest",
-                    "published_at": "2026-09-08T14:00:00",
-                    "task_id": "prev",
-                },
-            )
+            status, _db = self._status(tmp)
             status.on_scraping_start(limit=None, files_types=None)
+            status._remember_save(  # pylint: disable=protected-access
+                "PromoFull7290-001.xml",
+                "olddigest",
+                "2026-09-08T14:00:00",
+                SaveDecision.CREATED,
+            )
             decision = status.resolve_save_decision(
                 "PromoFull7290-001.xml",
                 "newdigest",
@@ -80,18 +63,14 @@ class TestScraperStatusIndexes(unittest.IsolatedAsyncioTestCase):
 
     def test_resolve_hash_mismatch_when_newer(self):
         with tempfile.TemporaryDirectory() as tmp:
-            status, db = self._status(tmp)
-            db.insert_document(
-                ScraperStatus.VERIFIED_DOWNLOADS,
-                {
-                    "file_name": "PromoFull7290-001.xml",
-                    "listing_hash": "h1",
-                    "content_sha256": "olddigest",
-                    "published_at": "2026-09-08T10:00:00",
-                    "task_id": "prev",
-                },
-            )
+            status, _db = self._status(tmp)
             status.on_scraping_start(limit=None, files_types=None)
+            status._remember_save(  # pylint: disable=protected-access
+                "PromoFull7290-001.xml",
+                "olddigest",
+                "2026-09-08T10:00:00",
+                SaveDecision.CREATED,
+            )
             decision = status.resolve_save_decision(
                 "PromoFull7290-001.xml",
                 "newdigest",
@@ -101,17 +80,14 @@ class TestScraperStatusIndexes(unittest.IsolatedAsyncioTestCase):
 
     def test_resolve_hash_mismatch_without_dates(self):
         with tempfile.TemporaryDirectory() as tmp:
-            status, db = self._status(tmp)
-            db.insert_document(
-                ScraperStatus.VERIFIED_DOWNLOADS,
-                {
-                    "file_name": "PromoFull7290-001.xml",
-                    "listing_hash": "h1",
-                    "content_sha256": "olddigest",
-                    "task_id": "prev",
-                },
-            )
+            status, _db = self._status(tmp)
             status.on_scraping_start(limit=None, files_types=None)
+            status._remember_save(  # pylint: disable=protected-access
+                "PromoFull7290-001.xml",
+                "olddigest",
+                None,
+                SaveDecision.CREATED,
+            )
             decision = status.resolve_save_decision(
                 "PromoFull7290-001.xml", "newdigest", None
             )
@@ -138,7 +114,7 @@ class TestScraperStatusIndexes(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(second, SaveDecision.REWROTE_SAME)
             self.assertEqual(writes["n"], 1)
 
-    async def test_filter_already_downloaded_uses_set(self):
+    async def test_filter_already_downloaded_uses_db(self):
         with tempfile.TemporaryDirectory() as tmp:
             status, db = self._status(tmp)
             entry = FileEntry(name="PromoFull7290-001", url="http://x/a", size=1)
@@ -177,6 +153,13 @@ class TestScraperStatusIndexes(unittest.IsolatedAsyncioTestCase):
                     saved_file_name="PromoFull7290-001.xml",
                 )
             )
-            docs = db.list_documents(ScraperStatus.VERIFIED_DOWNLOADS)
-            self.assertEqual(docs[-1]["file_name"], "PromoFull7290-001.xml")
-            self.assertIn(entry.listing_hash(), status._verified_listing_hashes)  # pylint: disable=protected-access
+            doc = db.find_document(
+                ScraperStatus.VERIFIED_DOWNLOADS,
+                {"file_name": "PromoFull7290-001.xml"},
+            )
+            self.assertIsNotNone(doc)
+            self.assertEqual(doc["listing_hash"], entry.listing_hash())
+            self.assertIn(
+                entry.listing_hash(),
+                status._verified_listing_hashes,  # pylint: disable=protected-access
+            )

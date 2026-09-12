@@ -23,10 +23,6 @@ class AbstractDataBase(ABC):
         """Return the first matching document, or None."""
         return None
 
-    def list_documents(self, collection_name):  # pylint: disable=unused-argument
-        """Return all documents in a collection (empty list if missing)."""
-        return []
-
     @abstractmethod
     def get_last_modified(self):
         """Get the last modified timestamp when scraper last wrote to this database."""

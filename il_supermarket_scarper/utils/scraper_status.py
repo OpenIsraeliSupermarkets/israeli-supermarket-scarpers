@@ -45,7 +45,9 @@ class ScraperStatus:
     def on_scraping_start(self, limit, files_types, **additional_info):
         """Report that scraping has started."""
         self.task_id = str(uuid.uuid4())
-        self._hydrate_verified_indexes()
+        # Same-scrape indexes only; cross-scrape listing skip still hits the DB.
+        self._verified_listing_hashes = set()
+        self._saved_by_name = {}
 
         self._insert_global_status(
             ScraperStatus.STARTED,
@@ -53,36 +55,6 @@ class ScraperStatus:
             files_requested=files_types,
             **additional_info,
         )
-
-    def _hydrate_verified_indexes(self) -> None:
-        """Load verified_downloads once into O(1) listing/hash indexes."""
-        self._verified_listing_hashes = set()
-        self._saved_by_name = {}
-        for doc in self.database.list_documents(self.VERIFIED_DOWNLOADS):
-            listing_hash = doc.get("listing_hash")
-            if listing_hash:
-                self._verified_listing_hashes.add(listing_hash)
-            file_name = doc.get("file_name")
-            if not file_name:
-                continue
-            digest = doc.get("content_sha256")
-            published_at = doc.get("published_at")
-            known = self._saved_by_name.get(file_name)
-            if known is None:
-                self._saved_by_name[file_name] = {
-                    "content_sha256": digest,
-                    "published_at": published_at,
-                }
-                continue
-            stored_published = known.get("published_at")
-            if published_at and (
-                stored_published is None or published_at >= stored_published
-            ):
-                known["published_at"] = published_at
-                if digest:
-                    known["content_sha256"] = digest
-            elif known.get("content_sha256") is None and digest:
-                known["content_sha256"] = digest
 
     def register_saw_file(
         self,
@@ -136,9 +108,15 @@ class ScraperStatus:
 
         Skip only by ``listing_hash``. Same FileNm with a different url or
         size is a new listing and must download. Rows without listing_hash
-        (pre-clean DBs) do not skip.
+        (pre-clean DBs) do not skip. Same-scrape hits the in-memory set;
+        otherwise query the status DB.
         """
-        return file.listing_hash() in self._verified_listing_hashes
+        listing_hash = file.listing_hash()
+        if listing_hash in self._verified_listing_hashes:
+            return True
+        return self.database.already_downloaded(
+            self.VERIFIED_DOWNLOADS, {"listing_hash": listing_hash}
+        )
 
     async def filter_already_downloaded(self, filelist, by_function=lambda x: x):
         """Skip listings already verified by listing_hash."""
