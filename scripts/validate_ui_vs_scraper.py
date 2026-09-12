@@ -45,7 +45,7 @@ from testing_util.ui_engine import (
 
 
 class NoOpStatusDatabase(AbstractDataBase):
-    """In-memory status DB so prior downloads never shrink listings."""
+    """Fresh in-memory status DB (no prior verified_downloads to shrink listings)."""
 
     def __init__(self, database_name):
         super().__init__(database_name)
@@ -61,14 +61,6 @@ class NoOpStatusDatabase(AbstractDataBase):
 
     def list_documents(self, collection_name):
         return list(self._data.get(collection_name, []))
-
-    def has_verified_listing(self, listing_hash: str) -> bool:
-        del listing_hash
-        return False
-
-    def known_file(self, file_name: str):
-        del file_name
-        return None
 
     def _update_last_modified(self):
         self._data.setdefault("_metadata", {})["last_modified"] = _now()

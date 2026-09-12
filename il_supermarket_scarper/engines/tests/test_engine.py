@@ -18,8 +18,8 @@ from il_supermarket_scarper.utils import (
     get_output_folder,
 )
 from il_supermarket_scarper.utils.databases import JsonDataBase
-from il_supermarket_scarper.utils.scraper_status import ScraperStatus
 from il_supermarket_scarper.utils.state import FilterState
+from il_supermarket_scarper.utils.verified_downloads import VerifiedDownloads
 
 
 class TestEngineDeduplication(unittest.IsolatedAsyncioTestCase):
@@ -56,8 +56,8 @@ class TestEngineDeduplication(unittest.IsolatedAsyncioTestCase):
         """Scrape one file, request the same file again, verify it is not re-downloaded.
 
         Covers:
-        - engine.py: apply_limit → filter_already_downloaded(...)
-        - scraper_status.py: filter_already_downloaded checks VERIFIED_DOWNLOADS in DB
+        - engine.py: apply_limit → verified.filter_already_downloaded(...)
+        - verified_downloads.py: filter checks listing_hash in verified_downloads
         - scrapper_runner.py: file_name_regex is forwarded into scrape()
         """
         scraper_enum = ScraperFactory.BAREKET
@@ -186,8 +186,8 @@ class TestApplyLimitAfterFilters(unittest.IsolatedAsyncioTestCase):
             name = "PromoFull7290058249350-000-004-20260907-000001"
             first = FileEntry(name=name, url="http://example.test/a", size=1)
             second = FileEntry(name=name, url="http://example.test/b", size=1)
-            scraper.database.insert_document(
-                ScraperStatus.VERIFIED_DOWNLOADS,
+            scraper.status.database.insert_document(
+                VerifiedDownloads.COLLECTION,
                 {
                     "file_name": name,
                     "listing_hash": first.listing_hash(),
@@ -215,8 +215,8 @@ class TestApplyLimitAfterFilters(unittest.IsolatedAsyncioTestCase):
                 url="http://example.test/a",
                 size=1,
             )
-            scraper.database.insert_document(
-                ScraperStatus.VERIFIED_DOWNLOADS,
+            scraper.status.database.insert_document(
+                VerifiedDownloads.COLLECTION,
                 {
                     "file_name": entry.name,
                     "listing_hash": entry.listing_hash(),
@@ -262,8 +262,8 @@ class TestApplyLimitAfterFilters(unittest.IsolatedAsyncioTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             scraper = self._wolt(tmp)
             name = "PromoFull7290058249350-000-004-20260907-000001"
-            scraper.database.insert_document(
-                ScraperStatus.VERIFIED_DOWNLOADS,
+            scraper.status.database.insert_document(
+                VerifiedDownloads.COLLECTION,
                 {
                     "file_name": name,
                     "task_id": "previous",

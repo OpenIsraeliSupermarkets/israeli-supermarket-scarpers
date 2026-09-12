@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Dict, Optional
 from .logger import Logger
 
 if TYPE_CHECKING:
-    from .scraper_status import ScraperStatus
+    from .verified_downloads import VerifiedDownloads
 
 
 class SaveDecision(str, Enum):
@@ -29,10 +29,10 @@ def should_persist(save_decision: SaveDecision) -> bool:
 
 
 class SavePolicy:
-    """Decide whether to persist bytes; record verified rows via status."""
+    """Decide whether to persist bytes; record verified rows via registry."""
 
-    def __init__(self, status: "ScraperStatus") -> None:
-        self.status = status
+    def __init__(self, verified: "VerifiedDownloads") -> None:
+        self.verified = verified
         self._save_locks: Dict[str, asyncio.Lock] = {}
         self._save_locks_guard = asyncio.Lock()
 
@@ -57,7 +57,7 @@ class SavePolicy:
         Same digest → REWROTE_SAME. Else → HASH_MISMATCH.
         Missing dates allow overwrite when digests differ.
         """
-        known = self.status.database.known_file(file_name)
+        known = self.verified.known_file(file_name)
         if known is None:
             return SaveDecision.CREATED
         stored_published = known.get("published_at")
@@ -100,7 +100,7 @@ class SavePolicy:
             )
             if should_persist(save_decision):
                 await persist(save_decision)
-            self.status.insert_verified_download(
+            self.verified.record(
                 file_name,
                 digest,
                 published_at,

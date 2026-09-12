@@ -5,12 +5,11 @@ import uuid
 from .status import log_folder_details, _now
 from .databases import JsonDataBase, AbstractDataBase
 from .file_output import FileOutput
-from .save_policy import SaveDecision
 from .scraping_result import ScrapingResult
 
 
 class ScraperStatus:
-    """Journal status events and verified downloads via the database."""
+    """Journal status events (started/saw/collected/downloaded/failed)."""
 
     STARTED = "started"
     SAW = "saw"
@@ -18,7 +17,6 @@ class ScraperStatus:
     DOWNLOADED = "downloaded"
     FAILED = "failed"
     ESTIMATED_SIZE = "estimated_size"
-    VERIFIED_DOWNLOADS = "verified_downloads" 
 
     def __init__(
         self,
@@ -84,7 +82,7 @@ class ScraperStatus:
         )
 
     def register_downloaded_file(self, results: ScrapingResult):
-        """Report that the file has been downloaded."""
+        """Report that the file has been downloaded (event journal only)."""
         event_data = {
             "file_name": results.file_name,
             "downloaded_successfully": results.downloaded,
@@ -95,69 +93,6 @@ class ScraperStatus:
             "save_decision": results.save_decision,
         }
         self._insert_event(ScraperStatus.DOWNLOADED, **event_data)
-        self._add_downloaded_files_to_list(results)
-
-    def _is_verified_listing(self, file) -> bool:
-        """True if this listing hash was already stored.
-
-        Skip only by ``listing_hash``. Same FileNm with a different url or
-        size is a new listing and must download. Rows without listing_hash
-        (pre-clean DBs) do not skip.
-        """
-        return self.database.has_verified_listing(file.listing_hash())
-
-    async def filter_already_downloaded(self, filelist, by_function=lambda x: x):
-        """Skip listings already verified by listing_hash."""
-        del by_function
-        async for file in filelist:
-            if not self._is_verified_listing(file):
-                yield file
-
-    def insert_verified_download(
-        self,
-        file_name: str,
-        digest: Optional[str],
-        published_at: Optional[str],
-        save_decision: SaveDecision,
-        listing_hash: Optional[str] = None,
-    ) -> None:
-        """Persist a verified row (DB write-through updates indexes)."""
-        self.database.insert_document(
-            self.VERIFIED_DOWNLOADS,
-            {
-                "file_name": file_name,
-                "system_timestamp": _now(),
-                "task_id": self.task_id,
-                "content_sha256": digest,
-                "save_decision": (
-                    save_decision.value
-                    if isinstance(save_decision, SaveDecision)
-                    else save_decision
-                ),
-                "listing_hash": listing_hash,
-                "published_at": published_at,
-            },
-        )
-
-    def _add_downloaded_files_to_list(self, results: ScrapingResult):
-        """Add downloaded files if not already recorded by SavePolicy."""
-        if not results.extract_succefully:
-            return
-        listing_hash = results.file_entry.listing_hash()
-        if listing_hash and self.database.has_verified_listing(listing_hash):
-            return
-        decision = (
-            SaveDecision(results.save_decision)
-            if results.save_decision
-            else SaveDecision.CREATED
-        )
-        self.insert_verified_download(
-            results.file_name,
-            results.content_sha256,
-            results.file_entry.published_at,
-            decision,
-            listing_hash=listing_hash,
-        )
 
     def on_scrape_completed(
         self, folder_name: str, completed_successfully: bool = True

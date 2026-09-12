@@ -24,6 +24,7 @@ from .status import (
     hour_files_expected_to_be_accassible,
 )
 from .scraper_status import ScraperStatus
+from .verified_downloads import VerifiedDownloads
 from .save_policy import SavePolicy, SaveDecision, should_persist
 from .scraper_status_contract import (
     FileName,

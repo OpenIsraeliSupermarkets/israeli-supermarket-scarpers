@@ -31,7 +31,7 @@ from il_supermarket_scarper.utils.file_output import FileOutput
 
 
 class NoOpStatusDatabase(AbstractDataBase):
-    """In-memory status DB that never skips files as already downloaded."""
+    """Fresh in-memory status DB (no prior verified_downloads to skip)."""
 
     def __init__(self, database_name):
         super().__init__(database_name)
@@ -47,14 +47,6 @@ class NoOpStatusDatabase(AbstractDataBase):
 
     def list_documents(self, collection_name):
         return list(self._data.get(collection_name, []))
-
-    def has_verified_listing(self, listing_hash: str) -> bool:
-        del listing_hash
-        return False
-
-    def known_file(self, file_name: str):
-        del file_name
-        return None
 
     def _update_last_modified(self):
         self._data.setdefault("_metadata", {})["last_modified"] = _now()
@@ -77,23 +69,16 @@ class ExtractAndDropFileOutput(FileOutput):
         file_name: str,
         file_content: bytes,
         metadata: Dict[str, Any] = None,
-        save_decision=None,
         content_digest=None,
     ) -> Dict[str, Any]:
         """Persist is a no-op; bytes were already extracted by the engine."""
         del file_link, file_content
-        from il_supermarket_scarper.utils.file_output import (  # pylint: disable=import-outside-toplevel
-            SaveDecision,
-        )
-
-        decision = save_decision or SaveDecision.CREATED
         return {
             "file_name": file_name,
             "saved": True,
             "extract_successfully": True,
             "error": None,
             "content_sha256": content_digest,
-            "save_decision": decision,
             "metadata": metadata or {},
         }
 

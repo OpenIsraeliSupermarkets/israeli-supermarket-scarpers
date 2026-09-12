@@ -29,6 +29,7 @@ from il_supermarket_scarper.utils.databases import AbstractDataBase
 from il_supermarket_scarper.utils.async_work import stream_as_completed
 from il_supermarket_scarper.utils.gzip_utils import extract_if_compressed
 from il_supermarket_scarper.utils.save_policy import SavePolicy
+from il_supermarket_scarper.utils.verified_downloads import VerifiedDownloads
 
 
 @dataclass(frozen=True)
@@ -143,8 +144,8 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods
         self.status = ScraperStatus(
             chain.value, status_database=status_database, file_output=file_output
         )
-        self.save_policy = SavePolicy(self.status)
-        self.database = self.status.database
+        self.verified = VerifiedDownloads(self.status.database)
+        self.save_policy = SavePolicy(self.verified)
 
         self.assigned_cookie = f"{self.chain.name}_{uuid.uuid4()}_cookies.txt"
         self.storage_path: FileOutput = file_output
@@ -374,7 +375,7 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods
 
         # filter files already downloaded
         intreable_: AsyncGenerator[FileEntry, None] = (
-            self.status.filter_already_downloaded(
+            self.verified.filter_already_downloaded(
                 intreable_,
                 by_function=by_function,
             )
@@ -595,6 +596,7 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods
             filter_null=filter_null,
             filter_zero=filter_zero,
         )
+        self.verified.set_task_id(self.status.task_id)
         self._validate_scraper_params(
             limit=limit,
             files_types=files_types,
@@ -851,12 +853,15 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods
             meta=metadata,
             dig=digest,
         ):
+            persist_meta = dict(meta)
+            persist_meta["save_decision"] = getattr(
+                save_decision, "value", save_decision
+            )
             box["result"] = await self.storage_path.save_file(
                 file_link=file_link,
                 file_name=name,
                 file_content=content,
-                metadata=meta,
-                save_decision=save_decision,
+                metadata=persist_meta,
                 content_digest=dig,
             )
 
