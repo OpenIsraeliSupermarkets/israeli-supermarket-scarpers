@@ -51,6 +51,7 @@ class Cerberus(Engine):
         self.status.register_collected_file(
             file_name_collected_from_site=entry.name,
             link_collected_from_site=None,
+            entry_id=entry.entry_id,
         )
 
         async for result in self.persist_from_ftp(entry):

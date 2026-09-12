@@ -16,6 +16,28 @@ from il_supermarket_scarper.utils import DiskFileOutput, FileEntry
 from il_supermarket_scarper.utils.network.connection import _ftp_mlsd_published_at
 
 
+class TestFileEntryId(unittest.TestCase):
+    """Each FileEntry gets a stable unique id for one download story."""
+
+    def test_entry_id_auto_generated_and_unique(self):
+        a = FileEntry(name="a.xml", url="http://x/a", size=1)
+        b = FileEntry(name="a.xml", url="http://x/a", size=1)
+        self.assertTrue(a.entry_id)
+        self.assertTrue(b.entry_id)
+        self.assertNotEqual(a.entry_id, b.entry_id)
+
+    def test_entry_id_can_be_supplied(self):
+        entry = FileEntry(
+            name="a.xml", url="http://x/a", size=1, entry_id="story-1"
+        )
+        self.assertEqual(entry.entry_id, "story-1")
+
+    def test_listing_hash_ignores_entry_id(self):
+        a = FileEntry(name="a.xml", url="http://x/a", size=1, entry_id="one")
+        b = FileEntry(name="a.xml", url="http://x/a", size=1, entry_id="two")
+        self.assertEqual(a.listing_hash(), b.listing_hash())
+
+
 class TestParsePublishedAt(unittest.TestCase):
     """Each scraper supplies one format; samples from live UIs on 2026-09-09."""
 

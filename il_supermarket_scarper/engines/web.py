@@ -199,6 +199,7 @@ class WebBase(Engine):
         self.status.register_collected_file(
             file_name_collected_from_site=entry.name,
             link_collected_from_site=entry.url,
+            entry_id=entry.entry_id,
         )
 
         return await self.save_and_extract(entry)

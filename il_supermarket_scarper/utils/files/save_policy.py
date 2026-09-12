@@ -87,6 +87,7 @@ class SavePolicy:
         published_at: Optional[str],
         persist,
         listing_hash: Optional[str] = None,
+        entry_id: Optional[str] = None,
     ) -> SaveDecision:
         """Lock by name, decide, optionally persist, then record verified.
 
@@ -106,5 +107,6 @@ class SavePolicy:
                 published_at,
                 save_decision,
                 listing_hash=listing_hash,
+                entry_id=entry_id,
             )
             return save_decision

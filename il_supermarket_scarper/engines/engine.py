@@ -235,6 +235,7 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods
                 file_name=file.name,
                 link=file.url,
                 size=file.size,
+                entry_id=file.entry_id,
             )
             yield file
 
@@ -702,7 +703,14 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods
                 except Exception as e:  # pylint: disable=broad-except
                     Logger.error(f"Error in process_file: {e}")
                     file_name = self._extract_file_name(file_details)
-                    self.status.register_download_fail(e, file_name)
+                    entry_id = (
+                        file_details.entry_id
+                        if isinstance(file_details, FileEntry)
+                        else None
+                    )
+                    self.status.register_download_fail(
+                        e, file_name, entry_id=entry_id
+                    )
                     return ScrapingResult(
                         file_entry=file_details,
                         downloaded=False,
@@ -871,6 +879,7 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods
             entry.published_at,
             _persist,
             listing_hash=entry.listing_hash(),
+            entry_id=entry.entry_id,
         )
         if box["result"] is not None:
             result = box["result"]

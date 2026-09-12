@@ -87,6 +87,7 @@ class CollectedStatus(BaseModel):
     system_timestamp: Optional[datetime] = None
     file_name: FileName
     link_collected: Optional[AnyUrl]
+    entry_id: Optional[str] = None
 
 
 class DownloadedStatus(BaseModel):
@@ -102,6 +103,7 @@ class DownloadedStatus(BaseModel):
     restart_and_retry: bool = False
     content_sha256: Optional[str] = None
     save_decision: Optional[str] = None
+    entry_id: Optional[str] = None
 
 
 class FailedStatus(BaseModel):
@@ -114,6 +116,7 @@ class FailedStatus(BaseModel):
     traceback: str = ""
     download_url: Optional[AnyUrl]
     file_name: FileName
+    entry_id: Optional[str] = None
 
 
 class SawStatus(BaseModel):
@@ -127,6 +130,7 @@ class SawStatus(BaseModel):
     )
     link: Optional[Optional[AnyUrl]]
     size: Optional[Union[int, float]] = None
+    entry_id: Optional[str] = None
 
 
 class VerifiedDownload(BaseModel):
@@ -139,6 +143,7 @@ class VerifiedDownload(BaseModel):
     save_decision: Optional[str] = None
     listing_hash: str
     published_at: Optional[str] = None
+    entry_id: Optional[str] = None
 
 
 # Union type for all possible status events
@@ -160,17 +165,30 @@ class ScraperStatusOutput(BaseModel):
     )
     verified_downloads: List[VerifiedDownload] = Field(default_factory=list)
 
+    @staticmethod
+    def _story_key(event) -> str:
+        """Key one download story: prefer entry_id, else file name."""
+        entry_id = getattr(event, "entry_id", None)
+        if entry_id:
+            return f"id:{entry_id}"
+        return f"name:{event.file_name}"
+
     def _build_per_file_status_data(self):
         """
-        Build per-file status flags and event counts.
+        Build per-story status flags and event counts.
+
+        Prefer ``entry_id`` so the same FileNm listed twice is validated as
+        separate download stories. Fall back to file name for older status
+        rows that lack ``entry_id``.
 
         Listing sites can emit the same FileNm more than once; that is a
         real listing, not a contract failure. ``saw``, ``collected``,
         ``downloaded``, and ``verified`` may appear more than once for
-        that name. ``failed`` should not.
+        that name when keyed only by name. ``failed`` should not repeat
+        for the same story key.
 
         Returns:
-            Maps file name to status flags, counts, and whether a
+            Maps story key to status flags, counts, and whether a
             download extracted successfully.
         """
 
@@ -187,24 +205,26 @@ class ScraperStatusOutput(BaseModel):
         )
 
         for event in self.events:
+            key = self._story_key(event)
             if isinstance(event, SawStatus):
-                per_file[event.file_name]["saw"] = True
-                per_file[event.file_name]["counts"]["saw"] += 1
+                per_file[key]["saw"] = True
+                per_file[key]["counts"]["saw"] += 1
             elif isinstance(event, CollectedStatus):
-                per_file[event.file_name]["collected"] = True
-                per_file[event.file_name]["counts"]["collected"] += 1
+                per_file[key]["collected"] = True
+                per_file[key]["counts"]["collected"] += 1
             elif isinstance(event, DownloadedStatus):
-                per_file[event.file_name]["downloaded"] = True
-                per_file[event.file_name]["counts"]["downloaded"] += 1
+                per_file[key]["downloaded"] = True
+                per_file[key]["counts"]["downloaded"] += 1
                 if event.extracted_successfully:
-                    per_file[event.file_name]["extracted_successfully"] = True
+                    per_file[key]["extracted_successfully"] = True
             elif isinstance(event, FailedStatus):
-                per_file[event.file_name]["failed"] = True
-                per_file[event.file_name]["counts"]["failed"] += 1
+                per_file[key]["failed"] = True
+                per_file[key]["counts"]["failed"] += 1
 
         for vd in self.verified_downloads:
-            per_file[vd.file_name]["verified"] = True
-            per_file[vd.file_name]["counts"]["verified"] += 1
+            key = self._story_key(vd)
+            per_file[key]["verified"] = True
+            per_file[key]["counts"]["verified"] += 1
 
         return per_file
 
@@ -256,18 +276,20 @@ class ScraperStatusOutput(BaseModel):
         """
         Validate that the status file is valid.
 
-        For every file name that was actually attempted (downloaded, failed,
-        or verified):
+        For every download story that was actually attempted (downloaded,
+        failed, or verified), keyed by ``entry_id`` when present else
+        file name:
 
         - Lifecycle: saw -> collected -> (downloaded or failed) ->
           (verified if extract succeeded)
         - Duplicate ``saw`` / collected / downloaded / verified is allowed
-          (listing listed the same dump twice)
-        - Duplicate ``failed`` is not
-        - If a started ``limit`` is set, downloaded file names must not
+          for the same file name when stories lack ``entry_id`` (listing
+          listed the same dump twice)
+        - Duplicate ``failed`` for the same story key is not
+        - If a started ``limit`` is set, downloaded stories must not
           exceed it
 
-        Note: Files that were only saw/collected but never attempted (e.g., due to limit
+        Note: Stories that were only saw/collected but never attempted (e.g., due to limit
         constraints) are not validated, as they were never intended to be downloaded.
         """
         per_file = self._build_per_file_status_data()

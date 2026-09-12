@@ -180,3 +180,42 @@ class TestVerifiedDownloadsAndSavePolicy(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(
                 verified.has_verified_listing(docs[-1]["listing_hash"])
             )
+
+    async def test_entry_id_written_to_status_and_verified(self):
+        """Saw/collected/downloaded/verified rows share the FileEntry entry_id."""
+        with tempfile.TemporaryDirectory() as tmp:
+            status, verified, policy, db = self._fixtures(tmp)
+            status.on_scraping_start(limit=None, files_types=None)
+            verified.set_task_id(status.task_id)
+            entry = FileEntry(
+                name="PromoFull7290-001", url="http://x/a", size=1, entry_id="story-9"
+            )
+
+            status.register_saw_file(
+                file_name=entry.name,
+                link=entry.url,
+                size=entry.size,
+                entry_id=entry.entry_id,
+            )
+            status.register_collected_file(
+                file_name_collected_from_site=entry.name,
+                link_collected_from_site=entry.url,
+                entry_id=entry.entry_id,
+            )
+
+            async def persist(_decision):
+                return None
+
+            await policy.decide_and_persist(
+                "PromoFull7290-001.xml",
+                "abc",
+                None,
+                persist,
+                listing_hash=entry.listing_hash(),
+                entry_id=entry.entry_id,
+            )
+
+            events = db.list_documents("events")
+            self.assertTrue(all(e.get("entry_id") == "story-9" for e in events))
+            verified_docs = db.list_documents(VerifiedDownloads.COLLECTION)
+            self.assertEqual(verified_docs[-1]["entry_id"], "story-9")

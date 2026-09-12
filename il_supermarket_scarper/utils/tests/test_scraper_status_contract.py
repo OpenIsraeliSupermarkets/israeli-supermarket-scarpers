@@ -112,6 +112,46 @@ class TestScraperStatusContract(unittest.TestCase):
         )
         self.assertFalse(status.validate_file_status())
 
+    def test_failed_same_name_different_entry_ids_is_valid(self):
+        """Two fails for the same FileNm are ok when they are different stories."""
+        status = ScraperStatusOutput(
+            events=[
+                SawStatus(task_id=TASK, file_name=FILE, link=LINK, entry_id="e1"),
+                CollectedStatus(
+                    task_id=TASK, file_name=FILE, link_collected=LINK, entry_id="e1"
+                ),
+                FailedStatus(
+                    task_id=TASK, file_name=FILE, download_url=LINK, entry_id="e1"
+                ),
+                SawStatus(task_id=TASK, file_name=FILE, link=LINK, entry_id="e2"),
+                CollectedStatus(
+                    task_id=TASK, file_name=FILE, link_collected=LINK, entry_id="e2"
+                ),
+                FailedStatus(
+                    task_id=TASK, file_name=FILE, download_url=LINK, entry_id="e2"
+                ),
+            ],
+        )
+        self.assertTrue(status.validate_file_status())
+
+    def test_duplicate_failed_same_entry_id_is_invalid(self):
+        """Two fails for one entry_id are a contract break."""
+        status = ScraperStatusOutput(
+            events=[
+                SawStatus(task_id=TASK, file_name=FILE, link=LINK, entry_id="e1"),
+                CollectedStatus(
+                    task_id=TASK, file_name=FILE, link_collected=LINK, entry_id="e1"
+                ),
+                FailedStatus(
+                    task_id=TASK, file_name=FILE, download_url=LINK, entry_id="e1"
+                ),
+                FailedStatus(
+                    task_id=TASK, file_name=FILE, download_url=LINK, entry_id="e1"
+                ),
+            ],
+        )
+        self.assertFalse(status.validate_file_status())
+
     def test_successful_extract_without_verified_is_invalid(self):
         """A successful extract must also be recorded as verified."""
         status = ScraperStatusOutput(

@@ -55,6 +55,7 @@ class ScraperStatus:
         file_name,
         link,
         size,
+        entry_id=None,
         **additional_info,
     ):
         """Report that file details have been collected."""
@@ -63,6 +64,7 @@ class ScraperStatus:
             file_name=file_name,
             link=link,
             size=size,
+            entry_id=entry_id,
             **additional_info,
         )
 
@@ -70,6 +72,7 @@ class ScraperStatus:
         self,
         file_name_collected_from_site,
         link_collected_from_site=None,
+        entry_id=None,
         **additional_info,
     ):
         """Report that file details have been collected."""
@@ -78,6 +81,7 @@ class ScraperStatus:
             ScraperStatus.COLLECTED,
             file_name=file_name_collected_from_site,
             link_collected=link_collected_from_site,
+            entry_id=entry_id,
             **additional_info,
         )
 
@@ -85,6 +89,7 @@ class ScraperStatus:
         """Report that the file has been downloaded (event journal only)."""
         event_data = {
             "file_name": results.file_name,
+            "entry_id": results.file_entry.entry_id,
             "downloaded_successfully": results.downloaded,
             "extracted_successfully": results.extract_succefully,
             "error_message": results.error,
@@ -93,7 +98,6 @@ class ScraperStatus:
             "save_decision": results.save_decision,
         }
         self._insert_event(ScraperStatus.DOWNLOADED, **event_data)
-
     def on_scrape_completed(
         self, folder_name: str, completed_successfully: bool = True
     ):
@@ -104,13 +108,14 @@ class ScraperStatus:
             completed_successfully=completed_successfully,
         )
 
-    def register_download_fail(self, error, file_name: str):
+    def register_download_fail(self, error, file_name: str, entry_id=None):
         """report when the scraping in failed"""
         self._insert_event(
             ScraperStatus.FAILED,
             error_message=str(error),
             traceback=traceback.format_exc(),
             file_name=file_name,
+            entry_id=entry_id,
         )
 
     def _insert_global_status(self, status, **additional_info):

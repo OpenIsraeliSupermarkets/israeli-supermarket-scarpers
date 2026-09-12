@@ -89,6 +89,7 @@ class VerifiedDownloads:
         published_at: Optional[str],
         save_decision: "SaveDecision",
         listing_hash: Optional[str] = None,
+        entry_id: Optional[str] = None,
     ) -> None:
         """Persist a verified row and update indexes."""
         from .save_policy import SaveDecision  # pylint: disable=import-outside-toplevel
@@ -106,6 +107,7 @@ class VerifiedDownloads:
             "save_decision": decision_value,
             "listing_hash": listing_hash,
             "published_at": published_at,
+            "entry_id": entry_id,
         }
         self.database.insert_document(self.COLLECTION, document)
         self._on_insert(document)
