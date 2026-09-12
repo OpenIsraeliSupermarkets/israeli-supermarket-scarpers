@@ -99,7 +99,11 @@ class _LaibcatalogApiScraper(ApiWebEngine):
                 file_size_str = entry.get("fileSize", "0 B")
                 file_size = self._parse_file_size(file_size_str)
 
-                yield FileEntry(name=base_name, url=download_url, size=file_size)
+                yield FileEntry(
+                    name=base_name,
+                    url=download_url,
+                    size=file_size,
+                )
 
             except (AttributeError, KeyError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")

@@ -7,6 +7,9 @@ from .web import WebBase
 class Aspx(WebBase, ABC):
     """class for aspx scapers"""
 
+    listing_date_key = None
+    listing_date_format = None
+
     def __init__(
         self,
         chain,
@@ -35,7 +38,17 @@ class Aspx(WebBase, ABC):
                 download_url = self.url + self.get_href_from_entry(x)
                 file_name = self.get_file_name_no_ext_from_entry(download_url)
                 file_size = self.get_file_size_from_entry(x)
-                yield FileEntry(name=file_name, url=download_url, size=file_size)
+                published_at = None
+                if isinstance(x, dict) and self.listing_date_key:
+                    published_at = FileEntry.parse_published_at(
+                        x.get(self.listing_date_key), self.listing_date_format
+                    )
+                yield FileEntry(
+                    name=file_name,
+                    url=download_url,
+                    size=file_size,
+                    published_at=published_at,
+                )
             except (AttributeError, KeyError, IndexError, TypeError) as e:
                 Logger.warning(f"Error extracting task from entry: {e}")
 

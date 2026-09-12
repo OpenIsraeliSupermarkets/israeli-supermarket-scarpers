@@ -22,6 +22,7 @@ class SaveDecision(str, Enum):
     CREATED = "created"  # first time this name is stored
     REWROTE_SAME = "rewrote_same"  # same name, same sha256; skip write/send
     HASH_MISMATCH = "hash_mismatch"  # same name, different sha256; overwrite / re-queue
+    STALE_OLDER = "stale_older"  # same name, older published_at; keep the newer file
 
 
 def content_sha256(content: bytes) -> str:
@@ -34,6 +35,7 @@ class FileOutput(ABC):
 
     def __init__(self):
         self._saved_digests: Dict[str, str] = {}
+        self._saved_published_at: Dict[str, str] = {}
         self._save_locks: Dict[str, asyncio.Lock] = {}
         self._save_locks_guard = asyncio.Lock()
 
@@ -47,25 +49,45 @@ class FileOutput(ABC):
             return lock
 
     @asynccontextmanager
-    async def _locked_save_decision(self, file_name: str, file_content: bytes):
+    async def _locked_save_decision(
+        self,
+        file_name: str,
+        file_content: bytes,
+        published_at: Optional[str] = None,
+    ):
         """Hold the per-name lock and yield (name, decision, digest)."""
         lock = await self._lock_for_name(file_name)
         async with lock:
-            yield self.resolve_save_name(file_name, file_content)
+            yield self.resolve_save_name(file_name, file_content, published_at)
 
     def resolve_save_name(
-        self, file_name: str, content: bytes
+        self,
+        file_name: str,
+        content: bytes,
+        published_at: Optional[str] = None,
     ) -> Tuple[str, SaveDecision, str]:
         """Keep ``file_name``. Compare sha256 against this scrape's memory.
 
         Same hash is a no-op. Different hash is ``HASH_MISMATCH``: callers
         overwrite the disk file or push the queue again, then remember the
-        new digest. Digest is stored only after a successful write/send.
+        new digest. An older ``published_at`` does not replace a newer file.
+        Digest is stored only after a successful write/send.
         """
         digest = content_sha256(content)
         known = self._saved_digests.get(file_name)
         if known is None:
             return file_name, SaveDecision.CREATED, digest
+        stored_published = self._saved_published_at.get(file_name)
+        if (
+            published_at
+            and stored_published
+            and published_at < stored_published
+        ):
+            Logger.info(
+                f"{file_name} listed at {published_at} is older than "
+                f"already stored {stored_published}; keeping the newer file"
+            )
+            return file_name, SaveDecision.STALE_OLDER, digest
         if known == digest:
             return file_name, SaveDecision.REWROTE_SAME, digest
         Logger.info(
@@ -76,11 +98,24 @@ class FileOutput(ABC):
 
     def _should_persist(self, save_decision: SaveDecision) -> bool:
         """True when bytes should be written or sent (not a same-hash no-op)."""
-        return save_decision != SaveDecision.REWROTE_SAME
+        return save_decision in (SaveDecision.CREATED, SaveDecision.HASH_MISMATCH)
 
-    def _remember_digest(self, file_name: str, digest: str) -> None:
-        """Record sha256 after a successful write or queue send."""
-        self._saved_digests[file_name] = digest
+    def _remember_digest(
+        self,
+        file_name: str,
+        digest: str,
+        published_at: Optional[str] = None,
+        save_decision: Optional[SaveDecision] = None,
+    ) -> None:
+        """Record sha256 and publish time after a successful write or skip-same."""
+        if save_decision == SaveDecision.STALE_OLDER:
+            return
+        if self._should_persist(save_decision) or save_decision is None:
+            self._saved_digests[file_name] = digest
+        if published_at:
+            known = self._saved_published_at.get(file_name)
+            if known is None or published_at >= known:
+                self._saved_published_at[file_name] = published_at
 
     @abstractmethod
     async def save_file(
@@ -190,15 +225,18 @@ class DiskFileOutput(FileOutput):
             if not extract_successfully:
                 error = extract_error
 
+            published_at = (metadata or {}).get("published_at")
             async with self._locked_save_decision(
-                file_name, file_content
+                file_name, file_content, published_at
             ) as (file_name, save_decision, digest):
                 file_save_path = os.path.join(self.storage_path, file_name)
                 if self._should_persist(save_decision):
                     await asyncio.to_thread(
                         self._write_file, file_save_path, file_content
                     )
-                    self._remember_digest(file_name, digest)
+                self._remember_digest(
+                    file_name, digest, published_at, save_decision
+                )
 
             saved = True
             Logger.debug(
@@ -292,8 +330,9 @@ class QueueFileOutput(FileOutput):
             if not extract_successfully:
                 error = extract_error
             if extract_successfully:
+                published_at = (metadata or {}).get("published_at")
                 async with self._locked_save_decision(
-                    file_name, file_content
+                    file_name, file_content, published_at
                 ) as (file_name, save_decision, digest):
                     if self._should_persist(save_decision):
                         message = {
@@ -305,7 +344,9 @@ class QueueFileOutput(FileOutput):
                             "metadata": metadata or {},
                         }
                         await self.queue_handler.send(message)
-                        self._remember_digest(file_name, digest)
+                    self._remember_digest(
+                        file_name, digest, published_at, save_decision
+                    )
                 saved = True
                 Logger.debug(
                     f"Queue {file_name} sha256={digest} "

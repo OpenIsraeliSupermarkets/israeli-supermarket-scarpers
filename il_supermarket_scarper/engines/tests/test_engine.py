@@ -257,8 +257,8 @@ class TestApplyLimitAfterFilters(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(kept, [entry])
             self.assertEqual(state.file_pass_limit, 1)
 
-    async def test_legacy_verified_name_is_skipped(self):
-        """Verified rows without listing_hash still skip by file name."""
+    async def test_verified_without_listing_hash_does_not_skip(self):
+        """After a DB clean, name-only rows must not block a new listing hash."""
         with tempfile.TemporaryDirectory() as tmp:
             scraper = self._wolt(tmp)
             name = "PromoFull7290058249350-000-004-20260907-000001"
@@ -277,6 +277,12 @@ class TestApplyLimitAfterFilters(unittest.IsolatedAsyncioTestCase):
             state = FilterState()
             kept = []
             async for item in scraper.apply_limit(state, listed(), limit=2):
-                kept.append(item)
+                kept.append((item.name, item.url))
 
-            self.assertEqual(kept, [])
+            self.assertEqual(
+                kept,
+                [
+                    (name, "http://example.test/a"),
+                    (name, "http://example.test/b"),
+                ],
+            )
