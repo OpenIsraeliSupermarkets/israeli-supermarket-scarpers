@@ -14,6 +14,7 @@ class TestVerifiedDownloadsAndSavePolicy(unittest.IsolatedAsyncioTestCase):
     """Hydrate once; decide from verified digests/published_at across scrapes."""
 
     def _fixtures(self, tmp):
+        """Status + verified + save-policy wired to one temp JsonDataBase."""
         output = DiskFileOutput(tmp)
         db = JsonDataBase("status_idx", tmp)
         status = ScraperStatus("status_idx", status_database=db, file_output=output)
@@ -21,6 +22,7 @@ class TestVerifiedDownloadsAndSavePolicy(unittest.IsolatedAsyncioTestCase):
         return status, verified, SavePolicy(verified), db
 
     def test_hydrate_listing_hash_skip(self):
+        """Prior verified listing_hash skips the same listing."""
         with tempfile.TemporaryDirectory() as tmp:
             _status, verified, _policy, db = self._fixtures(tmp)
             entry = FileEntry(name="PromoFull7290-001", url="http://x/a", size=1)
@@ -36,6 +38,7 @@ class TestVerifiedDownloadsAndSavePolicy(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(verified.has_verified_listing(entry.listing_hash()))
 
     def test_resolve_rewrote_same_across_hydrate(self):
+        """Same digest after hydrate yields REWROTE_SAME."""
         with tempfile.TemporaryDirectory() as tmp:
             _status, _verified, policy, db = self._fixtures(tmp)
             payload = b"<xml>same</xml>"
@@ -56,6 +59,7 @@ class TestVerifiedDownloadsAndSavePolicy(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(decision, SaveDecision.REWROTE_SAME)
 
     def test_resolve_stale_older_across_hydrate(self):
+        """Older published_at yields STALE_OLDER."""
         with tempfile.TemporaryDirectory() as tmp:
             _status, _verified, policy, db = self._fixtures(tmp)
             db.insert_document(
@@ -76,6 +80,7 @@ class TestVerifiedDownloadsAndSavePolicy(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(decision, SaveDecision.STALE_OLDER)
 
     def test_resolve_hash_mismatch_when_newer(self):
+        """Newer published_at with new digest yields HASH_MISMATCH."""
         with tempfile.TemporaryDirectory() as tmp:
             _status, _verified, policy, db = self._fixtures(tmp)
             db.insert_document(
@@ -96,6 +101,7 @@ class TestVerifiedDownloadsAndSavePolicy(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(decision, SaveDecision.HASH_MISMATCH)
 
     def test_resolve_hash_mismatch_without_dates(self):
+        """Missing dates with new digest yield HASH_MISMATCH."""
         with tempfile.TemporaryDirectory() as tmp:
             _status, _verified, policy, db = self._fixtures(tmp)
             db.insert_document(
@@ -113,6 +119,7 @@ class TestVerifiedDownloadsAndSavePolicy(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(decision, SaveDecision.HASH_MISMATCH)
 
     async def test_decide_and_persist_skips_write_on_same_hash(self):
+        """Second same-hash persist does not rewrite bytes."""
         with tempfile.TemporaryDirectory() as tmp:
             status, verified, policy, _db = self._fixtures(tmp)
             status.on_scraping_start(limit=None, files_types=None)
@@ -135,6 +142,7 @@ class TestVerifiedDownloadsAndSavePolicy(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(writes["n"], 1)
 
     async def test_filter_already_downloaded_uses_set(self):
+        """filter_already_downloaded skips known listing hashes."""
         with tempfile.TemporaryDirectory() as tmp:
             _status, verified, _policy, db = self._fixtures(tmp)
             entry = FileEntry(name="PromoFull7290-001", url="http://x/a", size=1)
@@ -158,6 +166,7 @@ class TestVerifiedDownloadsAndSavePolicy(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(kept, [other])
 
     async def test_verified_row_uses_saved_file_name(self):
+        """Verified rows store the extracted on-disk file name."""
         with tempfile.TemporaryDirectory() as tmp:
             status, verified, policy, db = self._fixtures(tmp)
             status.on_scraping_start(limit=None, files_types=None)

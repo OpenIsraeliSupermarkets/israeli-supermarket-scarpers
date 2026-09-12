@@ -337,8 +337,7 @@ class TestFileOutput:
         """Extract failure surfaces gzip truncated instead of a blank error."""
 
         async def run_test():
-            with tempfile.TemporaryDirectory() as tmpdir:
-                output = DiskFileOutput(tmpdir, extract_gz=True)
+            with tempfile.TemporaryDirectory() as _tmpdir:
                 truncated = gzip.compress(b"<xml>test content</xml>")[:-20]
                 _content, _name, ok, err = await extract_if_compressed(
                     truncated, "test.xml.gz", extract_gz=True

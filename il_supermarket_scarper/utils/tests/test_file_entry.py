@@ -20,6 +20,7 @@ class TestFileEntryId(unittest.TestCase):
     """Each FileEntry gets a stable unique id for one download story."""
 
     def test_entry_id_auto_generated_and_unique(self):
+        """Auto ids differ even for identical listing fields."""
         a = FileEntry(name="a.xml", url="http://x/a", size=1)
         b = FileEntry(name="a.xml", url="http://x/a", size=1)
         self.assertTrue(a.entry_id)
@@ -27,12 +28,14 @@ class TestFileEntryId(unittest.TestCase):
         self.assertNotEqual(a.entry_id, b.entry_id)
 
     def test_entry_id_can_be_supplied(self):
+        """Caller-supplied entry_id is preserved."""
         entry = FileEntry(
             name="a.xml", url="http://x/a", size=1, entry_id="story-1"
         )
         self.assertEqual(entry.entry_id, "story-1")
 
     def test_listing_hash_ignores_entry_id(self):
+        """listing_hash is independent of entry_id."""
         a = FileEntry(name="a.xml", url="http://x/a", size=1, entry_id="one")
         b = FileEntry(name="a.xml", url="http://x/a", size=1, entry_id="two")
         self.assertEqual(a.listing_hash(), b.listing_hash())
@@ -43,7 +46,8 @@ class TestParsePublishedAt(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls._tmpdir = tempfile.TemporaryDirectory()
+        """Build scrapers against a shared temp DiskFileOutput."""
+        cls._tmpdir = tempfile.TemporaryDirectory()  # pylint: disable=consider-using-with
         fo = DiskFileOutput(cls._tmpdir.name)
         cls.bina = Bareket(file_output=fo)
         cls.shufersal = Shufersal(file_output=fo)
@@ -128,6 +132,7 @@ class TestParsePublishedAt(unittest.TestCase):
         )
 
     def test_victory_file_date(self):
+        """Victory NEW_SOURCE listing timestamps use ``YYYY-MM-DD HH:MM:SS``."""
         self.assertEqual(
             FileEntry.parse_published_at(
                 "2026-09-11 22:30:37", self.victory_new.listing_date_format
@@ -136,6 +141,7 @@ class TestParsePublishedAt(unittest.TestCase):
         )
 
     def test_matrix_td_date(self):
+        """Matrix UI table dates use ``DD/MM/YYYY HH:MM:SS``."""
         self.assertEqual(
             FileEntry.parse_published_at(
                 "11/09/2026 06:27:02", self.matrix.listing_date_format
@@ -144,6 +150,7 @@ class TestParsePublishedAt(unittest.TestCase):
         )
 
     def test_netiv_file_date(self):
+        """Netiv listing dates use ``DD/MM/YYYY HH:MM``."""
         self.assertEqual(
             FileEntry.parse_published_at(
                 "11/09/2026 14:23", self.netiv.listing_date_format
@@ -152,6 +159,7 @@ class TestParsePublishedAt(unittest.TestCase):
         )
 
     def test_ftp_mlsd_modify(self):
+        """FTP MLSD modify facts become ISO timestamps."""
         self.assertEqual(
             _ftp_mlsd_published_at({"modify": "20260911143037"}),
             "2026-09-11T14:30:37",

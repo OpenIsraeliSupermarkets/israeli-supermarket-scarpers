@@ -2,10 +2,12 @@ import os
 import traceback
 from typing import Optional
 import uuid
-from .status import log_folder_details, _now
-from il_supermarket_scarper.utils.databases import JsonDataBase, AbstractDataBase
+
+from il_supermarket_scarper.utils.databases import AbstractDataBase, JsonDataBase
 from il_supermarket_scarper.utils.files.file_output import FileOutput
+
 from .scraping_result import ScrapingResult
+from .status import _now, log_folder_details
 
 
 class ScraperStatus:
@@ -98,6 +100,7 @@ class ScraperStatus:
             "save_decision": results.save_decision,
         }
         self._insert_event(ScraperStatus.DOWNLOADED, **event_data)
+
     def on_scrape_completed(
         self, folder_name: str, completed_successfully: bool = True
     ):

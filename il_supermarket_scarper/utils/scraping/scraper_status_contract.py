@@ -309,7 +309,11 @@ class ScraperStatusOutput(BaseModel):
 
     @staticmethod
     def _validate_event_order(status: dict) -> bool:
-        """For ``id:`` stories, timestamps must follow saw→collected→attempt→verified."""
+        """For ``id:`` stories, timestamps must follow saw→collected→completion.
+
+        Completion is downloaded / failed / verified. Verified may be stamped
+        slightly before the downloaded journal event (SavePolicy records first).
+        """
         if not status["keyed_by_entry_id"]:
             return True
 
@@ -329,17 +333,13 @@ class ScraperStatusOutput(BaseModel):
             if when is not None:
                 stages.append(when)
 
-        attempt_times = []
-        for kind in ("downloaded", "failed"):
+        completion_times = []
+        for kind in ("downloaded", "failed", "verified"):
             when = _min_of(kind)
             if when is not None:
-                attempt_times.append(when)
-        if attempt_times:
-            stages.append(min(attempt_times))
-
-        verified_when = _min_of("verified")
-        if verified_when is not None:
-            stages.append(verified_when)
+                completion_times.append(when)
+        if completion_times:
+            stages.append(min(completion_times))
 
         return all(left <= right for left, right in zip(stages, stages[1:]))
 
@@ -394,6 +394,16 @@ class ScraperStatusOutput(BaseModel):
                 names_without_id.add(file_name)
         return names_with_id.isdisjoint(names_without_id)
 
+    def _story_attempt_is_valid(self, status: dict) -> bool:
+        """Lifecycle, uniqueness, order, and outcome checks for one story."""
+        return (
+            self._validate_file_lifecycle(status)
+            and not self._has_duplicate_attempt_events(status)
+            and self._validate_event_order(status)
+            and self._validate_download_outcomes(status)
+            and self._validate_verified_rows(status)
+        )
+
     def validate_file_status(self) -> bool:
         """
         Validate that the status file is valid.
@@ -405,6 +415,7 @@ class ScraperStatusOutput(BaseModel):
         - Lifecycle: saw -> collected -> (downloaded or failed) ->
           (verified if extract succeeded)
         - ``id:`` stories: each event kind at most once; timestamps ordered
+          as saw→collected→completion (downloaded/failed/verified unordered)
         - ``name:`` stories: duplicate saw/collected/downloaded/verified ok;
           duplicate failed is not
         - Download outcomes / save_decision / verified listing_hash checks
@@ -432,15 +443,7 @@ class ScraperStatusOutput(BaseModel):
             ):
                 continue
 
-            if not self._validate_file_lifecycle(status):
-                return False
-            if self._has_duplicate_attempt_events(status):
-                return False
-            if not self._validate_event_order(status):
-                return False
-            if not self._validate_download_outcomes(status):
-                return False
-            if not self._validate_verified_rows(status):
+            if not self._story_attempt_is_valid(status):
                 return False
 
         limit = self._started_limit()

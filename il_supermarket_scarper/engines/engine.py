@@ -31,7 +31,6 @@ from il_supermarket_scarper.utils.files.gzip_utils import extract_if_compressed
 from il_supermarket_scarper.utils.files.save_policy import SavePolicy
 from il_supermarket_scarper.utils.files.verified_downloads import VerifiedDownloads
 
-
 @dataclass(frozen=True)
 class LoginDetails:
     """Portal or FTP connection details for a scraper."""
@@ -40,8 +39,7 @@ class LoginDetails:
     username: Optional[str] = None
     password: Optional[str] = None
 
-
-class Engine(ABC):  # pylint: disable=too-many-public-methods
+class Engine(ABC):  # pylint: disable=too-many-public-methods,too-many-instance-attributes
     """
     Base engine class for scraping Israeli supermarket data.
 
@@ -810,7 +808,7 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods
                 raise
             return await self._wget_file_to_memory(file_link, timeout)
 
-    async def _finalize_extracted_content(
+    async def _finalize_extracted_content(  # pylint: disable=too-many-locals
         self,
         entry: FileEntry,
         file_content: bytes,
@@ -854,23 +852,17 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods
             metadata.update(extra_metadata)
         box = {"result": None}
 
-        async def _persist(
-            save_decision,
-            content=file_content,
-            name=extracted_name,
-            meta=metadata,
-            dig=digest,
-        ):
-            persist_meta = dict(meta)
+        async def _persist(save_decision):
+            persist_meta = dict(metadata)
             persist_meta["save_decision"] = getattr(
                 save_decision, "value", save_decision
             )
             box["result"] = await self.storage_path.save_file(
                 file_link=file_link,
-                file_name=name,
-                file_content=content,
+                file_name=extracted_name,
+                file_content=file_content,
                 metadata=persist_meta,
-                content_digest=dig,
+                content_digest=digest,
             )
 
         save_decision = await self.save_policy.decide_and_persist(
@@ -1000,4 +992,3 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods
             source_corrupt=source_corrupt,
             saved_file_name=saved_file_name,
         )
-

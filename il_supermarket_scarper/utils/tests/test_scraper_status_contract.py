@@ -261,6 +261,34 @@ class TestScraperStatusContract(unittest.TestCase):
         )
         self.assertFalse(status.validate_file_status())
 
+    def test_verified_before_downloaded_timestamp_is_valid(self):
+        """SavePolicy stamps verified before the downloaded journal event."""
+        early = NOW
+        late = NOW + timedelta(milliseconds=1)
+        status = ScraperStatusOutput(
+            global_status=[_started()],
+            events=[
+                _saw(entry_id="e1", system_timestamp=early),
+                _collected(entry_id="e1", system_timestamp=early),
+                _downloaded(
+                    entry_id="e1",
+                    extracted=True,
+                    system_timestamp=late,
+                    content_sha256="aa",
+                    save_decision="created",
+                ),
+            ],
+            verified_downloads=[
+                _verified(
+                    entry_id="e1",
+                    system_timestamp=early + timedelta(microseconds=500),
+                    content_sha256="aa",
+                    save_decision="created",
+                ),
+            ],
+        )
+        self.assertTrue(status.validate_file_status())
+
     def test_failed_download_without_error_is_invalid(self):
         """downloaded_successfully=False requires error_message."""
         status = ScraperStatusOutput(

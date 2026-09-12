@@ -1,9 +1,15 @@
 import os
+
+from il_supermarket_scarper.utils.files.file_output import (
+    DiskFileOutput,
+    InMemoryQueueHandler,
+    QueueFileOutput,
+)
+from il_supermarket_scarper.utils.scraping.folders_name import DumpFolderNames
+
 from .base import AbstractDataBase
 from .json_file import JsonDataBase
 from .mongo import MongoDataBase
-from il_supermarket_scarper.utils.scraping.folders_name import DumpFolderNames
-from il_supermarket_scarper.utils.files.file_output import DiskFileOutput, QueueFileOutput, InMemoryQueueHandler
 
 
 def create_status_database_for_scraper(scraper_name, config):
