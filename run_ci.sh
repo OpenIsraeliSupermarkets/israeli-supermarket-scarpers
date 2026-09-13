@@ -90,8 +90,11 @@ fi
 if $RUN_DOCS; then
     print_step "Docs (docs.yml)"
 
+    # Wipe generated API stubs first: sphinx-apidoc --force overwrites but does
+    # not remove orphans (e.g. deleted modules), which then fail autodoc under -W.
     if python -m pip install --quiet -r requirements-dev.txt && \
        python -m pip install --quiet -e . && \
+       rm -rf docs/source/api && \
        (cd docs && python -m sphinx.ext.apidoc -o source/api ../il_supermarket_scarper --separate --force) && \
        (cd docs && make html SPHINXOPTS="-W"); then
         pass "Docs"
