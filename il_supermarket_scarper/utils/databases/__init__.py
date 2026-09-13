@@ -72,5 +72,13 @@ def create_file_output_for_scraper(scraper_name, config):
         queue_type = config.get("queue_type", "memory")
 
         if queue_type == "memory":
-            return QueueFileOutput(InMemoryQueueHandler(queue_name=target_folder))
+            # Bounded queue: when full, send() blocks (backpressure) to cap memory
+            # with in-memory output. 0 = unbounded (legacy; high memory use).
+            default_max = 32
+            max_size = int(config.get("queue_max_size", default_max))
+            if max_size < 0:
+                raise ValueError("queue_max_size must be non-negative (0 = unbounded)")
+            return QueueFileOutput(
+                InMemoryQueueHandler(queue_name=target_folder, maxsize=max_size)
+            )
     return None
