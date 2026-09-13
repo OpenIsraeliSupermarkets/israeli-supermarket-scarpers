@@ -19,7 +19,7 @@ from typing import Any, Dict, List
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
 from il_supermarket_scarper.utils import DiskFileOutput, Logger
 from il_supermarket_scarper.utils.databases import AbstractDataBase
-from il_supermarket_scarper.utils.status import _now
+from il_supermarket_scarper.utils.scraping.status import _now
 
 
 def resolve_scrapers(spec: str) -> List[str]:
@@ -37,23 +37,16 @@ class NoOpStatusDatabase(AbstractDataBase):
         super().__init__(database_name)
         self._data: Dict[str, Any] = {}
 
-    def insert_document(self, collection_name, document):
+    def _do_insert_document(self, collection_name, document):
         self._data.setdefault(collection_name, []).append(document)
         self._update_last_modified()
 
-    def insert_documents(self, collection_name, document):
-        """Append one document or a list of documents into memory."""
-        bucket = self._data.setdefault(collection_name, [])
-        if isinstance(document, list):
-            bucket.extend(document)
-        else:
-            bucket.append(document)
+    def _do_insert_documents(self, collection_name, documents):
+        self._data.setdefault(collection_name, []).extend(documents)
         self._update_last_modified()
 
-    def already_downloaded(
-        self, collection_name, query
-    ):  # pylint: disable=unused-argument
-        return False
+    def list_documents(self, collection_name):
+        return list(self._data.get(collection_name, []))
 
     def _update_last_modified(self):
         """Stamp in-memory last-modified metadata."""

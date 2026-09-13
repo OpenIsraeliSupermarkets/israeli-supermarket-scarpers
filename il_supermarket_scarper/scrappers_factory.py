@@ -3,7 +3,7 @@ import os
 from enum import Enum
 import il_supermarket_scarper.scrappers as all_scrappers
 from il_supermarket_scarper.scraper_stability import ScraperStability
-from il_supermarket_scarper.utils.deprecated_scrapers import DeprecatedScrapers
+from il_supermarket_scarper.utils.scraping.deprecated_scrapers import DeprecatedScrapers
 
 
 class ScraperFactory(Enum):

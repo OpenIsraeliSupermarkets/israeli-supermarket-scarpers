@@ -27,33 +27,26 @@ from typing import Any, AsyncGenerator, Dict, List, Optional
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
 from il_supermarket_scarper.utils import Logger, ScrapingResult, _now
 from il_supermarket_scarper.utils.databases import AbstractDataBase
-from il_supermarket_scarper.utils.file_output import FileOutput
+from il_supermarket_scarper.utils.files.file_output import FileOutput
 
 
 class NoOpStatusDatabase(AbstractDataBase):
-    """In-memory status DB that never skips files as already downloaded."""
+    """Fresh in-memory status DB (no prior verified_downloads to skip)."""
 
     def __init__(self, database_name):
         super().__init__(database_name)
         self._data: Dict[str, Any] = {}
 
-    def insert_document(self, collection_name, document):
+    def _do_insert_document(self, collection_name, document):
         self._data.setdefault(collection_name, []).append(document)
         self._update_last_modified()
 
-    def insert_documents(self, collection_name, document):
-        """Append one document or a list of documents into memory."""
-        bucket = self._data.setdefault(collection_name, [])
-        if isinstance(document, list):
-            bucket.extend(document)
-        else:
-            bucket.append(document)
+    def _do_insert_documents(self, collection_name, documents):
+        self._data.setdefault(collection_name, []).extend(documents)
         self._update_last_modified()
 
-    def already_downloaded(
-        self, collection_name, query
-    ):  # pylint: disable=unused-argument
-        return False
+    def list_documents(self, collection_name):
+        return list(self._data.get(collection_name, []))
 
     def _update_last_modified(self):
         self._data.setdefault("_metadata", {})["last_modified"] = _now()
@@ -76,23 +69,16 @@ class ExtractAndDropFileOutput(FileOutput):
         file_name: str,
         file_content: bytes,
         metadata: Dict[str, Any] = None,
-        save_decision=None,
         content_digest=None,
     ) -> Dict[str, Any]:
         """Persist is a no-op; bytes were already extracted by the engine."""
         del file_link, file_content
-        from il_supermarket_scarper.utils.file_output import (  # pylint: disable=import-outside-toplevel
-            SaveDecision,
-        )
-
-        decision = save_decision or SaveDecision.CREATED
         return {
             "file_name": file_name,
             "saved": True,
             "extract_successfully": True,
             "error": None,
             "content_sha256": content_digest,
-            "save_decision": decision,
             "metadata": metadata or {},
         }
 

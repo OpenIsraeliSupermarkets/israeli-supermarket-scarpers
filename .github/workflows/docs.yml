@@ -31,6 +31,8 @@ jobs:
 
       - name: Generate API documentation
         run: |
+          # Wipe first: apidoc --force overwrites but does not remove orphans.
+          rm -rf docs/source/api
           cd docs
           sphinx-apidoc -o source/api ../il_supermarket_scarper --separate --force
 

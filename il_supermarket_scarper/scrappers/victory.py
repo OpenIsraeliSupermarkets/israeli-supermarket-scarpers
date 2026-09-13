@@ -13,7 +13,6 @@ class _LaibcatalogApiScraper(ApiWebEngine):
     """Base scraper for laibcatalog.co.il API-based scrapers."""
 
     utilize_date_param = False
-    listing_date_format = "%Y-%m-%d %H:%M:%S"
 
     def __init__(self, chain, chain_id, file_output=None, status_database=None):
         super().__init__(
@@ -22,6 +21,7 @@ class _LaibcatalogApiScraper(ApiWebEngine):
             url="https://laibcatalog.co.il",
             file_output=file_output,
             status_database=status_database,
+            listing_date_format="%Y-%m-%d %H:%M:%S",
         )
         self.chain_hebrew_name = None
 

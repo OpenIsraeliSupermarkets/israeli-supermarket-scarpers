@@ -6,8 +6,11 @@ from urllib.parse import urlparse
 import holidays
 import pytz
 from bs4 import BeautifulSoup
-from .logger import Logger
-from .connection import get_from_latast_webpage, get_from_webpage
+from il_supermarket_scarper.utils.core.logger import Logger
+from il_supermarket_scarper.utils.network.connection import (
+    get_from_latast_webpage,
+    get_from_webpage,
+)
 
 
 def get_statue_page(extraction_type, source="gov.il"):
@@ -28,6 +31,7 @@ def get_cached_page():
     with open(
         os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
+            "..",
             "tests",
             "cpfta_prices_regulations",
         ),

@@ -11,7 +11,7 @@ from il_supermarket_scarper.utils import (
     FileEntry,
     ScrapingResult,
 )
-from il_supermarket_scarper.utils.state import FilterState
+from il_supermarket_scarper.utils.scraping.state import FilterState
 
 
 class _DummyEngine(Engine):

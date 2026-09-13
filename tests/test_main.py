@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 from il_supermarket_scarper.main import ScarpingTask
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
-from il_supermarket_scarper.utils.file_output import QueueFileOutput
+from il_supermarket_scarper.utils.files.file_output import QueueFileOutput
 from main import load_configuration
 
 

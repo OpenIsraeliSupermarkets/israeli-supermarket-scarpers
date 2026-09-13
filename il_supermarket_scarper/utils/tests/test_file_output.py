@@ -13,7 +13,11 @@ from il_supermarket_scarper.utils import (
     InMemoryQueueHandler,
     ScraperConfig,
 )
-from il_supermarket_scarper.utils.file_output import SaveDecision, content_sha256
+from il_supermarket_scarper.utils.files.file_output import content_sha256
+from il_supermarket_scarper.utils.files.gzip_utils import extract_if_compressed
+from il_supermarket_scarper.utils.files.save_policy import SaveDecision, SavePolicy
+from il_supermarket_scarper.utils.files.verified_downloads import VerifiedDownloads
+from il_supermarket_scarper.utils.databases import JsonDataBase
 
 
 class TestFileOutput:
@@ -85,7 +89,7 @@ class TestFileOutput:
 
             xml_content = b"<xml>test content</xml>"
             gzip_content = gzip.compress(xml_content)
-            content, name, ok, err = await output.extract_if_compressed(
+            content, name, ok, err = await extract_if_compressed(
                 gzip_content, "Stores7290058108879-000", extract_gz=True
             )
             assert ok is True
@@ -216,7 +220,7 @@ class TestFileOutput:
 
                 xml_content = b"<xml>test content</xml>"
                 gzip_content = gzip.compress(xml_content)
-                content, name, ok, err = await output.extract_if_compressed(
+                content, name, ok, err = await extract_if_compressed(
                     gzip_content, "test.xml.gz", extract_gz=True
                 )
                 assert ok is True and err is None
@@ -251,7 +255,7 @@ class TestFileOutput:
 
                 xml_content = b"<xml>test content</xml>"
                 gzip_content = gzip.compress(xml_content)
-                content, name, ok, err = await output.extract_if_compressed(
+                content, name, ok, err = await extract_if_compressed(
                     gzip_content, "Stores7290058108879-000", extract_gz=True
                 )
                 assert ok is True and err is None
@@ -333,10 +337,9 @@ class TestFileOutput:
         """Extract failure surfaces gzip truncated instead of a blank error."""
 
         async def run_test():
-            with tempfile.TemporaryDirectory() as tmpdir:
-                output = DiskFileOutput(tmpdir, extract_gz=True)
+            with tempfile.TemporaryDirectory() as _tmpdir:
                 truncated = gzip.compress(b"<xml>test content</xml>")[:-20]
-                _content, _name, ok, err = await output.extract_if_compressed(
+                _content, _name, ok, err = await extract_if_compressed(
                     truncated, "test.xml.gz", extract_gz=True
                 )
                 assert ok is False
@@ -345,8 +348,8 @@ class TestFileOutput:
 
         asyncio.run(run_test())
 
-    def test_disk_output_skips_write_on_rewrote_same(self):
-        """Caller can pass REWROTE_SAME so DiskFileOutput does not rewrite."""
+    def test_disk_output_always_writes_when_called(self):
+        """FileOutput always persists; SavePolicy decides whether to call it."""
 
         async def run_test():
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -356,7 +359,6 @@ class TestFileOutput:
                     file_link="http://example.com/a.xml",
                     file_name="PromoFull7290-001.xml",
                     file_content=payload,
-                    save_decision=SaveDecision.CREATED,
                 )
                 writes = {"n": 0}
                 original_write = output._write_file  # pylint: disable=protected-access
@@ -370,17 +372,16 @@ class TestFileOutput:
                     file_link="http://example.com/a.xml",
                     file_name="PromoFull7290-001.xml",
                     file_content=payload,
-                    save_decision=SaveDecision.REWROTE_SAME,
                 )
-                assert first["save_decision"] == SaveDecision.CREATED
-                assert second["save_decision"] == SaveDecision.REWROTE_SAME
-                assert writes["n"] == 0
+                assert first["saved"] is True
+                assert second["saved"] is True
+                assert writes["n"] == 1
                 assert os.listdir(tmpdir) == ["PromoFull7290-001.xml"]
 
         asyncio.run(run_test())
 
-    def test_disk_output_overwrites_on_hash_mismatch(self):
-        """HASH_MISMATCH overwrites the file under the original name."""
+    def test_disk_output_overwrites_on_second_call(self):
+        """A second save_file call overwrites under the original name."""
 
         async def run_test():
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -391,17 +392,13 @@ class TestFileOutput:
                     file_link="http://example.com/a.xml",
                     file_name="PromoFull7290-001.xml",
                     file_content=first_bytes,
-                    save_decision=SaveDecision.CREATED,
                 )
                 second = await output.save_file(
                     file_link="http://example.com/b.xml",
                     file_name="PromoFull7290-001.xml",
                     file_content=second_bytes,
-                    save_decision=SaveDecision.HASH_MISMATCH,
                 )
                 assert first["file_name"] == second["file_name"] == "PromoFull7290-001.xml"
-                assert first["save_decision"] == SaveDecision.CREATED
-                assert second["save_decision"] == SaveDecision.HASH_MISMATCH
                 assert second["content_sha256"] == content_sha256(second_bytes)
                 assert os.listdir(tmpdir) == ["PromoFull7290-001.xml"]
                 with open(os.path.join(tmpdir, "PromoFull7290-001.xml"), "rb") as f:
@@ -409,32 +406,75 @@ class TestFileOutput:
 
         asyncio.run(run_test())
 
-    def test_disk_output_skips_write_on_stale_older(self):
-        """STALE_OLDER keeps the on-disk bytes."""
+    def test_save_policy_skips_persist_on_rewrote_same(self):
+        """SavePolicy gates writes; FileOutput is not called for same hash."""
 
         async def run_test():
             with tempfile.TemporaryDirectory() as tmpdir:
-                output = DiskFileOutput(tmpdir, extract_gz=False)
-                await output.save_file(
-                    file_link="http://example.com/new.xml",
-                    file_name="PromoFull7290-001.xml",
-                    file_content=b"<xml>new</xml>",
-                    save_decision=SaveDecision.CREATED,
+                db = JsonDataBase("fo_policy", tmpdir)
+                verified = VerifiedDownloads(db)
+                policy = SavePolicy(verified)
+                payload = b"<xml>same</xml>"
+                digest = content_sha256(payload)
+                calls = {"n": 0}
+
+                async def persist(_decision):
+                    calls["n"] += 1
+
+                first = await policy.decide_and_persist(
+                    "PromoFull7290-001.xml",
+                    digest,
+                    "2026-09-08T14:00:00",
+                    persist,
+                    listing_hash="lh1",
                 )
-                older = await output.save_file(
-                    file_link="http://example.com/old.xml",
-                    file_name="PromoFull7290-001.xml",
-                    file_content=b"<xml>old</xml>",
-                    save_decision=SaveDecision.STALE_OLDER,
+                second = await policy.decide_and_persist(
+                    "PromoFull7290-001.xml",
+                    digest,
+                    "2026-09-08T15:00:00",
+                    persist,
+                    listing_hash="lh2",
                 )
-                assert older["save_decision"] == SaveDecision.STALE_OLDER
-                with open(os.path.join(tmpdir, "PromoFull7290-001.xml"), "rb") as f:
-                    assert f.read() == b"<xml>new</xml>"
+                assert first == SaveDecision.CREATED
+                assert second == SaveDecision.REWROTE_SAME
+                assert calls["n"] == 1
 
         asyncio.run(run_test())
 
-    def test_queue_output_skips_send_on_rewrote_same(self):
-        """Identical content may skip a second queue send."""
+    def test_save_policy_skips_persist_on_stale_older(self):
+        """STALE_OLDER does not invoke the persist callback."""
+
+        async def run_test():
+            with tempfile.TemporaryDirectory() as tmpdir:
+                db = JsonDataBase("fo_stale", tmpdir)
+                verified = VerifiedDownloads(db)
+                policy = SavePolicy(verified)
+                calls = {"n": 0}
+
+                async def persist(_decision):
+                    calls["n"] += 1
+
+                await policy.decide_and_persist(
+                    "PromoFull7290-001.xml",
+                    "newdigest",
+                    "2026-09-08T14:00:00",
+                    persist,
+                    listing_hash="lh1",
+                )
+                older = await policy.decide_and_persist(
+                    "PromoFull7290-001.xml",
+                    "olddigest",
+                    "2026-09-08T10:00:00",
+                    persist,
+                    listing_hash="lh2",
+                )
+                assert older == SaveDecision.STALE_OLDER
+                assert calls["n"] == 1
+
+        asyncio.run(run_test())
+
+    def test_queue_output_always_sends_when_called(self):
+        """QueueFileOutput sends on every save_file call."""
 
         async def run_test():
             handler = InMemoryQueueHandler("same_bytes")
@@ -444,22 +484,20 @@ class TestFileOutput:
                 file_link="http://example.com/a.xml",
                 file_name="PromoFull7290-001.xml",
                 file_content=payload,
-                save_decision=SaveDecision.CREATED,
             )
             second = await output.save_file(
                 file_link="http://example.com/a.xml",
                 file_name="PromoFull7290-001.xml",
                 file_content=payload,
-                save_decision=SaveDecision.REWROTE_SAME,
             )
-            assert first["save_decision"] == SaveDecision.CREATED
-            assert second["save_decision"] == SaveDecision.REWROTE_SAME
+            assert first["saved"] is True
+            assert second["saved"] is True
             assert first["file_name"] == second["file_name"] == "PromoFull7290-001.xml"
             await handler.close()
             names = []
             async for message in handler.get_all_messages():
                 names.append(message["file_name"])
-            assert names == ["PromoFull7290-001.xml"]
+            assert names == ["PromoFull7290-001.xml", "PromoFull7290-001.xml"]
 
         asyncio.run(run_test())
 
@@ -475,17 +513,13 @@ class TestFileOutput:
                 file_link="http://example.com/a.xml",
                 file_name="PromoFull7290-001.xml",
                 file_content=first_bytes,
-                save_decision=SaveDecision.CREATED,
             )
             second = await output.save_file(
                 file_link="http://example.com/b.xml",
                 file_name="PromoFull7290-001.xml",
                 file_content=second_bytes,
-                save_decision=SaveDecision.HASH_MISMATCH,
             )
             assert first["file_name"] == second["file_name"] == "PromoFull7290-001.xml"
-            assert first["save_decision"] == SaveDecision.CREATED
-            assert second["save_decision"] == SaveDecision.HASH_MISMATCH
             assert second["content_sha256"] == content_sha256(second_bytes)
             await output.close()
             payloads = []

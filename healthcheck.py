@@ -9,7 +9,7 @@ import pytz
 
 from il_supermarket_scarper import ScraperFactory
 from il_supermarket_scarper.utils.databases import create_status_database_for_scraper
-from il_supermarket_scarper.utils.status import _now
+from il_supermarket_scarper.utils.scraping.status import _now
 
 
 def load_configuration():
