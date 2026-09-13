@@ -7,9 +7,11 @@ new submodule with __init__.py cannot be forgotten before PyPI publish.
 
 from __future__ import annotations
 
+import runpy
 import sys
 from pathlib import Path
 
+import setuptools
 from setuptools import find_packages
 
 # Roots we intend to ship (not e.g. scripts/).
@@ -24,14 +26,10 @@ def _declared_packages(repo_root: Path) -> set[str]:
     def _capture_setup(**kwargs):
         captured.update(kwargs)
 
-    import setuptools
-
     original = setuptools.setup
     setuptools.setup = _capture_setup
     try:
         # setup.py reads README/requirements relative to CWD.
-        import runpy
-
         runpy.run_path(str(repo_root / "setup.py"), run_name="__not_main__")
     finally:
         setuptools.setup = original
@@ -77,6 +75,7 @@ def check_setup_packages(repo_root: Path | None = None) -> None:
 
 
 def main() -> int:
+    """CLI entry: exit 0 when packages= is complete, else 1."""
     try:
         check_setup_packages()
     except AssertionError as exc:
