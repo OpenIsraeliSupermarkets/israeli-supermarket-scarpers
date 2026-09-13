@@ -8,10 +8,8 @@ from il_supermarket_scarper.utils import (
     fetch_file_from_ftp_to_memory,
     FileTypesFilters,
     ScrapingResult,
-    content_sha256,
-    SaveDecision,
 )
-from il_supermarket_scarper.utils.state import FilterState
+from il_supermarket_scarper.utils.scraping.state import FilterState
 from .engine import Engine
 
 
@@ -50,9 +48,10 @@ class Cerberus(Engine):
         """Process a single listing FileEntry from Cerberus."""
         entry = file_details
 
-        self.register_collected_file(
+        self.status.register_collected_file(
             file_name_collected_from_site=entry.name,
             link_collected_from_site=None,
+            entry_id=entry.entry_id,
         )
 
         async for result in self.persist_from_ftp(entry):
@@ -175,12 +174,7 @@ class Cerberus(Engine):
                 yield entry
 
     async def persist_from_ftp(self, entry):
-        """download file to memory and extract it.
-
-        Re-downloads a few times on extract failure (truncated transfer). If the
-        FTP SIZE matched and extract still fails, mark ``source_corrupt`` —
-        the remote file itself is bad, not our fetch path.
-        """
+        """Download from FTP then reuse Engine extract/persist pipeline."""
         file_name = entry.name
         downloaded = False
         extract_succefully = False
@@ -188,7 +182,6 @@ class Cerberus(Engine):
         source_corrupt = False
         error = None
         result = None
-        saved_file_name = None
         max_attempts = 3
         try:
             ext = file_name.split(".")[-1] if "." in file_name else ""
@@ -211,79 +204,32 @@ class Cerberus(Engine):
                 if ext == "gz":
                     Logger.debug(f"File size is {len(file_content)} bytes.")
 
-                (
-                    file_content,
-                    extracted_name,
-                    extract_succefully,
-                    extract_error,
-                ) = await self.storage_path.extract_if_compressed(
+                finalized = await self._finalize_extracted_content(
+                    entry,
                     file_content,
                     file_name,
-                    getattr(self.storage_path, "extract_gz", True),
+                    file_link="",
+                    extra_metadata={"source": "ftp"},
                 )
-                error = extract_error
-                if not extract_succefully:
-                    Logger.warning(
-                        f"Extract failed for {file_name} "
-                        f"(attempt {attempt}/{max_attempts}): {error}"
-                    )
-                    if attempt == max_attempts:
-                        source_corrupt = True
-                        error = (
-                            f"source corrupt after {max_attempts} downloads: "
-                            f"{error or 'extract failed'}"
-                        )
-                        Logger.error(error)
-                    continue
+                if finalized.extract_succefully:
+                    Logger.debug(f"Done persisting file {file_name}")
+                    yield finalized
+                    return
 
-                digest = content_sha256(file_content)
-                metadata = {
-                    "chain": self.chain.value,
-                    "chain_id": self.chain_id,
-                    "original_filename": file_name,
-                    "source": "ftp",
-                    "published_at": entry.published_at,
-                }
-                box = {"result": None}
-
-                async def _persist(
-                    content=file_content,
-                    name=extracted_name,
-                    meta=metadata,
-                    dig=digest,
-                ):
-                    box["result"] = await self.storage_path.save_file(
-                        file_link="",
-                        file_name=name,
-                        file_content=content,
-                        metadata=meta,
-                        save_decision=SaveDecision.CREATED,
-                        content_digest=dig,
-                    )
-
-                save_decision = await self.decide_and_persist(
-                    extracted_name,
-                    digest,
-                    entry.published_at,
-                    _persist,
-                    listing_hash=entry.listing_hash(),
+                extract_succefully = False
+                error = finalized.error
+                Logger.warning(
+                    f"Extract failed for {file_name} "
+                    f"(attempt {attempt}/{max_attempts}): {error}"
                 )
-                if box["result"] is not None:
-                    result = box["result"]
-                    result["save_decision"] = save_decision
-                else:
-                    result = {
-                        "file_name": extracted_name,
-                        "saved": True,
-                        "extract_successfully": True,
-                        "error": None,
-                        "content_sha256": digest,
-                        "save_decision": save_decision,
-                        "metadata": metadata,
-                    }
-                saved_file_name = extracted_name
-                Logger.debug(f"Done persisting file {file_name}")
-                break
+                if attempt == max_attempts:
+                    source_corrupt = True
+                    error = (
+                        f"source corrupt after {max_attempts} downloads: "
+                        f"{error or 'extract failed'}"
+                    )
+                    Logger.error(error)
+                    result = finalized
         except Exception as exception:  # pylint: disable=broad-except
             Logger.error(
                 f"Error downloading {file_name},extract_succefully={extract_succefully}"
@@ -296,11 +242,11 @@ class Cerberus(Engine):
         yield ScrapingResult(
             file_entry=entry,
             downloaded=downloaded,
-            save_decision=None if result is None else result["save_decision"],
-            extract_succefully=extract_succefully,
-            content_sha256=None if result is None else result["content_sha256"],
+            save_decision=None if result is None else result.save_decision,
+            extract_succefully=False,
+            content_sha256=None if result is None else result.content_sha256,
             restart_and_retry=restart_and_retry,
             error=error,
             source_corrupt=source_corrupt,
-            saved_file_name=saved_file_name,
+            saved_file_name=None if result is None else result.saved_file_name,
         )

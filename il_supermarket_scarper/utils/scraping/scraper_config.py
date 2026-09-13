@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 from typing import Optional
-from il_supermarket_scarper.utils.file_output import (
+from il_supermarket_scarper.utils.files.file_output import (
     FileOutput,
     DiskFileOutput,
     QueueFileOutput,
@@ -59,7 +59,7 @@ class ScraperConfig:  # pylint: disable=too-many-instance-attributes
 
         # Create disk output based on folder_name
         # pylint: disable=import-outside-toplevel
-        from il_supermarket_scarper.utils.status import get_output_folder
+        from il_supermarket_scarper.utils.scraping.status import get_output_folder
 
         folder = self.folder_name or default_folder
         if folder is None:
@@ -87,7 +87,7 @@ class ScraperConfig:  # pylint: disable=too-many-instance-attributes
         """
         if chain_name is not None:
             # pylint: disable=import-outside-toplevel
-            from il_supermarket_scarper.utils.status import get_output_folder
+            from il_supermarket_scarper.utils.scraping.status import get_output_folder
 
             storage_path = get_output_folder(chain_name, folder_name=folder_name)
             file_output = DiskFileOutput(storage_path, extract_gz=extract_gz)

@@ -7,8 +7,8 @@ import threading
 import unittest
 from unittest.mock import MagicMock, patch
 
-from il_supermarket_scarper.utils.connection import session_with_cookies
-from il_supermarket_scarper.utils.lock_utils import LockManager
+from il_supermarket_scarper.utils.network.connection import session_with_cookies
+from il_supermarket_scarper.utils.network.lock_utils import LockManager
 
 
 class TestCookieSession(unittest.TestCase):
@@ -57,7 +57,7 @@ class TestCookieSession(unittest.TestCase):
             session.cookies.get_dict.return_value = {"sid": "1"}
 
             with patch(
-                "il_supermarket_scarper.utils.connection.requests.Session",
+                "il_supermarket_scarper.utils.network.connection.requests.Session",
                 return_value=session,
             ):
                 threads = [

@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 from ftplib import error_perm
 
-from il_supermarket_scarper.utils.connection import collect_from_ftp
+from il_supermarket_scarper.utils.network.connection import collect_from_ftp
 
 
 class _FakeMlsdFtp:
@@ -53,7 +53,7 @@ class TestFtpStreaming(unittest.IsolatedAsyncioTestCase):
                 yield ("slow.xml", {"type": "file", "size": "20"})
 
         with patch(
-            "il_supermarket_scarper.utils.connection.FTP_TLS", SlowMlsd
+            "il_supermarket_scarper.utils.network.connection.FTP_TLS", SlowMlsd
         ):
             gen = collect_from_ftp("ftp.example", "user", "", "/")
             try:
@@ -90,7 +90,7 @@ class TestFtpStreaming(unittest.IsolatedAsyncioTestCase):
                 return 1
 
         with patch(
-            "il_supermarket_scarper.utils.connection.FTP_TLS", NlstOnly
+            "il_supermarket_scarper.utils.network.connection.FTP_TLS", NlstOnly
         ):
             gen = collect_from_ftp("ftp.example", "user", "", "/")
             try:
@@ -133,7 +133,7 @@ class TestFtpStreaming(unittest.IsolatedAsyncioTestCase):
                 super().close()
 
         with patch(
-            "il_supermarket_scarper.utils.connection.FTP_TLS", StuckMlsd
+            "il_supermarket_scarper.utils.network.connection.FTP_TLS", StuckMlsd
         ):
             gen = collect_from_ftp("ftp.example", "user", "", "/")
             try:
@@ -152,7 +152,7 @@ class TestFtpStreaming(unittest.IsolatedAsyncioTestCase):
                 raise OSError("cwd failed")
 
         with patch(
-            "il_supermarket_scarper.utils.connection.FTP_TLS", BoomFtp
+            "il_supermarket_scarper.utils.network.connection.FTP_TLS", BoomFtp
         ):
             gen = collect_from_ftp("ftp.example", "user", "", "/")
             try:
@@ -173,7 +173,7 @@ class TestFtpStreaming(unittest.IsolatedAsyncioTestCase):
                 yield ("also.xml.gz", {"type": "file", "size": "3"})
 
         with patch(
-            "il_supermarket_scarper.utils.connection.FTP_TLS", GlobMlsd
+            "il_supermarket_scarper.utils.network.connection.FTP_TLS", GlobMlsd
         ):
             gen = collect_from_ftp("ftp.example", "user", "", "/", arg="*.xml")
             try:
@@ -209,7 +209,7 @@ class TestFtpStreaming(unittest.IsolatedAsyncioTestCase):
                 return 10
 
         with patch(
-            "il_supermarket_scarper.utils.connection.FTP_TLS", NlstSized
+            "il_supermarket_scarper.utils.network.connection.FTP_TLS", NlstSized
         ):
             gen = collect_from_ftp(
                 "ftp.example", "user", "", "/", fetch_size=True
@@ -238,7 +238,7 @@ class TestFtpStreaming(unittest.IsolatedAsyncioTestCase):
                 callback("keep.xml")
 
         with patch(
-            "il_supermarket_scarper.utils.connection.FTP_TLS", NlstGlob
+            "il_supermarket_scarper.utils.network.connection.FTP_TLS", NlstGlob
         ):
             gen = collect_from_ftp(
                 "ftp.example", "user", "", "/", arg="*.xml"

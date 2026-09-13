@@ -10,7 +10,7 @@ from il_supermarket_scarper.utils import (
     FileTypesFilters,
     hour_files_expected_to_be_accassible,
 )
-from il_supermarket_scarper.utils.logger import Logger
+from il_supermarket_scarper.utils.core.logger import Logger
 
 
 class ScraperKind(Enum):

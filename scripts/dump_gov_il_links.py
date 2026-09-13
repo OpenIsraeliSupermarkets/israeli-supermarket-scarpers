@@ -295,7 +295,7 @@ def fetch_html(url: str) -> str:
 def fetch_via_content_api() -> str:
     """Fetch CPFTA HTML via the public gov.il content API (bypasses Cloudflare)."""
     # Local import: dump script also runs as a standalone helper.
-    from il_supermarket_scarper.utils.connection import (  # pylint: disable=import-outside-toplevel
+    from il_supermarket_scarper.utils.network.connection import (  # pylint: disable=import-outside-toplevel
         _fetch_gov_il_content_api,
         _gov_il_api_to_html,
     )

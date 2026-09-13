@@ -11,8 +11,6 @@ from il_supermarket_scarper.utils import FileEntry
 class MeshnatYosef1(WebBase):
     """scraper for meshnat yoosef"""
 
-    listing_date_format = "%Y-%m-%d %H:%M:%S"
-
     def __init__(self, file_output=None, status_database=None):
         super().__init__(
             DumpFolderNames.MESHMAT_YOSEF_1,
@@ -20,6 +18,7 @@ class MeshnatYosef1(WebBase):
             url="https://list-files.w5871031-kt.workers.dev/",
             file_output=file_output,
             status_database=status_database,
+            listing_date_format="%Y-%m-%d %H:%M:%S",
         )
 
     def get_data_from_page(self, req_res):

@@ -29,10 +29,10 @@ from requests.exceptions import (
     ChunkedEncodingError,
     ConnectTimeout,
 )
-from .logger import Logger
-from .file_entry import FileEntry
-from .retry import retry
-from .file_cache import file_cache
+from il_supermarket_scarper.utils.core.logger import Logger
+from il_supermarket_scarper.utils.files.file_entry import FileEntry
+from il_supermarket_scarper.utils.core.retry import retry
+from il_supermarket_scarper.utils.files.file_cache import file_cache
 from .lock_utils import lock_manager
 
 

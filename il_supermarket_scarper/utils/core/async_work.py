@@ -1,7 +1,7 @@
 """Bounded concurrent pull from an async source with overlapping work."""
 
 import asyncio
-from il_supermarket_scarper.utils.logger import Logger
+from il_supermarket_scarper.utils.core.logger import Logger
 
 
 def _unpack_result(result):

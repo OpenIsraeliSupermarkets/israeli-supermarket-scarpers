@@ -6,11 +6,11 @@ from unittest.mock import patch
 from il_supermarket_scarper import ScraperStability, ScraperFactory, datetime_in_tlv
 from il_supermarket_scarper.scraper_stability import ScraperKind
 from il_supermarket_scarper.scrappers.nativ_hashed import NetivHased
-from il_supermarket_scarper.utils.deprecated_scrapers import DeprecatedScrapers
-from il_supermarket_scarper.utils.file_types import FileTypesFilters
-from il_supermarket_scarper.utils.folders_name import DumpFolderNames
-from il_supermarket_scarper.utils.status import get_cpfta_retailer_hosts, href_host
-from il_supermarket_scarper.utils.file_output import DiskFileOutput
+from il_supermarket_scarper.utils.scraping.deprecated_scrapers import DeprecatedScrapers
+from il_supermarket_scarper.utils.files.file_types import FileTypesFilters
+from il_supermarket_scarper.utils.scraping.folders_name import DumpFolderNames
+from il_supermarket_scarper.utils.scraping.status import get_cpfta_retailer_hosts, href_host
+from il_supermarket_scarper.utils.files.file_output import DiskFileOutput
 
 
 def test_stable_scraper():

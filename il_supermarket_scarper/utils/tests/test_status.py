@@ -1,12 +1,12 @@
 import datetime
 import time
-from il_supermarket_scarper.utils.status import (
+from il_supermarket_scarper.utils.scraping.status import (
     get_status,
     get_status_date,
     get_statue_page,
 )
-from il_supermarket_scarper.utils.connection import disable_when_outside_israel
-from il_supermarket_scarper.utils.validation import show_text_diff, extract_main_content
+from il_supermarket_scarper.utils.network.connection import disable_when_outside_israel
+from il_supermarket_scarper.utils.core.validation import show_text_diff, extract_main_content
 
 
 @disable_when_outside_israel

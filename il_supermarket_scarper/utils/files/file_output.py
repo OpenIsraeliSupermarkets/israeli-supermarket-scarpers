@@ -4,24 +4,9 @@ import asyncio
 import hashlib
 import multiprocessing
 from abc import ABC, abstractmethod
-from enum import Enum
-from typing import Any, Dict, AsyncGenerator, Optional, Tuple
+from typing import Any, Dict, AsyncGenerator, Optional
 import os
-from .logger import Logger
-from .gzip_utils import extract_xml_from_gz_in_memory, is_compressed_content
-
-
-class SaveDecision(str, Enum):
-    """How a repeated file name was resolved before persist.
-
-    Parsers split ``FileNm`` for type, chain, store, and date. Never suffix
-    or rename; keep the original name and overwrite or re-queue in place.
-    """
-
-    CREATED = "created"  # first time this name is stored
-    REWROTE_SAME = "rewrote_same"  # same name, same sha256; skip write/send
-    HASH_MISMATCH = "hash_mismatch"  # same name, different sha256; overwrite / re-queue
-    STALE_OLDER = "stale_older"  # same name, older published_at; keep the newer file
+from il_supermarket_scarper.utils.core.logger import Logger
 
 
 def content_sha256(content: bytes) -> str:
@@ -29,40 +14,8 @@ def content_sha256(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
 
 
-def should_persist(save_decision: SaveDecision) -> bool:
-    """True when bytes should be written or sent (not a same-hash / stale no-op)."""
-    return save_decision in (SaveDecision.CREATED, SaveDecision.HASH_MISMATCH)
-
-
 class FileOutput(ABC):
     """Abstract base class for file output handlers."""
-
-    async def extract_if_compressed(
-        self, file_content: bytes, file_name: str, extract_gz: bool = True
-    ) -> Tuple[bytes, str, bool, Optional[str]]:
-        """
-        Extract compressed content if needed.
-
-        Detects compression by content magic bytes (gzip: 0x1f8b, zip: PK)
-        rather than filename extension, since some servers return compressed
-        content under filenames without .gz extension.
-
-        Returns:
-            (content, filename, extraction_success, error)
-        """
-        if not extract_gz or not is_compressed_content(file_content):
-            return file_content, file_name, True, None
-
-        try:
-            extracted = await asyncio.to_thread(
-                extract_xml_from_gz_in_memory, file_content, file_name
-            )
-            base_name = file_name[:-3] if file_name.endswith(".gz") else file_name
-            new_name = os.path.splitext(base_name)[0] + ".xml"
-            return extracted, new_name, True, None
-        except Exception as e:  # pylint: disable=broad-except
-            Logger.error(f"Failed to extract {file_name}: {e}")
-            return file_content, file_name, False, str(e)
 
     @abstractmethod
     async def save_file(
@@ -71,22 +24,20 @@ class FileOutput(ABC):
         file_name: str,
         file_content: bytes,
         metadata: Dict[str, Any] = None,
-        save_decision: SaveDecision = SaveDecision.CREATED,
         content_digest: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        Persist already-extracted bytes when ``save_decision`` requires it.
+        Persist already-extracted bytes.
 
         Args:
             file_link: The URL where the file was downloaded from
             file_name: The extracted file name
             file_content: The final (extracted) file content as bytes
             metadata: Optional metadata about the file (chain_id, store_id, etc.)
-            save_decision: Whether to write/send or skip
             content_digest: Precomputed sha256 of ``file_content``
 
         Returns:
-            Dict with keys: file_name, saved, error, content_sha256, save_decision, metadata
+            Dict with keys: file_name, saved, error, content_sha256, metadata
         """
 
     @abstractmethod
@@ -130,24 +81,19 @@ class DiskFileOutput(FileOutput):
         file_name: str,
         file_content: bytes,
         metadata: Dict[str, Any] = None,
-        save_decision: SaveDecision = SaveDecision.CREATED,
         content_digest: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Write final content to disk when ``save_decision`` requires it."""
+        """Write final content to disk."""
         saved = False
         error = None
         digest = content_digest or content_sha256(file_content)
         file_save_path = os.path.join(self.storage_path, file_name)
 
         try:
-            if should_persist(save_decision):
-                await asyncio.to_thread(
-                    self._write_file, file_save_path, file_content
-                )
+            await asyncio.to_thread(self._write_file, file_save_path, file_content)
             saved = True
             Logger.debug(
-                f"Saved {file_link} to {file_save_path} sha256={digest} "
-                f"save_decision={save_decision}"
+                f"Saved {file_link} to {file_save_path} sha256={digest}"
             )
 
         except Exception as exception:  # pylint: disable=broad-except
@@ -155,7 +101,6 @@ class DiskFileOutput(FileOutput):
             Logger.error_execption(exception)
             error = str(exception)
             digest = None
-            save_decision = None
 
         return {
             "file_name": file_name,
@@ -163,7 +108,6 @@ class DiskFileOutput(FileOutput):
             "extract_successfully": True,
             "error": error,
             "content_sha256": digest,
-            "save_decision": save_decision,
             "metadata": metadata or {},
         }
 
@@ -217,37 +161,30 @@ class QueueFileOutput(FileOutput):
         file_name: str,
         file_content: bytes,
         metadata: Dict[str, Any] = None,
-        save_decision: SaveDecision = SaveDecision.CREATED,
         content_digest: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Send file to queue when ``save_decision`` requires it."""
+        """Send file to queue."""
         saved = False
         error = None
         digest = content_digest or content_sha256(file_content)
 
         try:
-            if should_persist(save_decision):
-                message = {
-                    "file_name": file_name,
-                    "file_link": file_link,
-                    "file_content": file_content,
-                    "content_sha256": digest,
-                    "save_decision": save_decision,
-                    "metadata": metadata or {},
-                }
-                await self.queue_handler.send(message)
+            message = {
+                "file_name": file_name,
+                "file_link": file_link,
+                "file_content": file_content,
+                "content_sha256": digest,
+                "metadata": metadata or {},
+            }
+            await self.queue_handler.send(message)
             saved = True
-            Logger.debug(
-                f"Queue {file_name} sha256={digest} "
-                f"save_decision={save_decision}"
-            )
+            Logger.debug(f"Queue {file_name} sha256={digest}")
 
         except Exception as exception:  # pylint: disable=broad-except
             Logger.error(f"Error sending {file_link} to queue: {exception}")
             Logger.error_execption(exception)
             error = str(exception)
             digest = None
-            save_decision = None
 
         return {
             "file_name": file_name,
@@ -255,7 +192,6 @@ class QueueFileOutput(FileOutput):
             "extract_successfully": True,
             "error": error,
             "content_sha256": digest,
-            "save_decision": save_decision,
             "metadata": metadata or {},
         }
 

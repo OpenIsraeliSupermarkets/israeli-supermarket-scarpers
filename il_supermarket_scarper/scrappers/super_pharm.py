@@ -12,8 +12,6 @@ from il_supermarket_scarper.utils import (
 class SuperPharm(MultiPageWeb):
     """scraper for super pharm"""
 
-    listing_date_format = "%m/%d/%Y %H:%M:%S"
-
     def __init__(self, file_output=None, status_database=None):
         super().__init__(
             chain=DumpFolderNames.SUPER_PHARM,
@@ -24,6 +22,7 @@ class SuperPharm(MultiPageWeb):
             total_page_xpath='//*[@class="mvc-grid-pager"]/button[last()]/@data-page',
             total_pages_pattern=r"(\d+)$",
             page_argument="&page",
+            listing_date_format="%m/%d/%Y %H:%M:%S",
         )
 
     def collect_files_details_from_page(self, html):

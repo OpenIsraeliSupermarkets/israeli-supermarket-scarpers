@@ -1,28 +1,35 @@
 """Data type for file entries flowing through the scraper pipeline."""
 
 import hashlib
+import uuid
+from dataclasses import dataclass, field
 from datetime import datetime
-from typing import NamedTuple, Optional
+from typing import Optional
 
 
-class FileEntry(NamedTuple):
+@dataclass(frozen=True)
+class FileEntry:
     """
     Encapsulates a file listing: name, url, size, and optional publish time.
 
     Used by AsyncGenerators throughout the engine pipeline instead of raw tuples.
     ``published_at`` is ISO ``YYYY-MM-DDTHH:MM:SS`` from the site when present.
+    ``entry_id`` uniquely identifies one listing sighting / download story so the
+    same FileNm can be traced across status events even when listed twice.
     """
 
     name: str
     url: Optional[str]
     size: Optional[int]
     published_at: Optional[str] = None
+    entry_id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
     def listing_hash(self) -> str:
         """Stable sha256 of listing identity (name, url, size).
 
         Publish time is not part of identity: site date formats vary and must
         not cause a re-download. It is used at save time to keep the newer file.
+        ``entry_id`` is also excluded: it traces one story, not listing identity.
         """
         size = "" if self.size is None else str(self.size)
         payload = f"{self.name}\n{self.url}\n{size}".encode("utf-8")

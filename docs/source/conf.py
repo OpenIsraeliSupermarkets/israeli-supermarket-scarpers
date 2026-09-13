@@ -76,12 +76,15 @@ napoleon_type_aliases = None
 napoleon_attr_annotations = True
 
 # Autodoc settings
+# ignore-module-all: package __init__ re-exports (e.g. core.retry) share Sphinx
+# object IDs with same-named submodules and trip -W duplicate-object errors.
 autodoc_default_options = {
     "members": True,
     "member-order": "bysource",
     "special-members": "__init__",
     "undoc-members": True,
     "exclude-members": "__weakref__",
+    "ignore-module-all": True,
 }
 
 # Type hints settings

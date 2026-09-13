@@ -1,7 +1,7 @@
 import threading
 
 from .scrapper_runner import MainScrapperRunner
-from .utils.file_types import FileTypesFilters
+from .utils.files.file_types import FileTypesFilters
 
 
 class ScarpingTask:  # pylint: disable=too-many-instance-attributes

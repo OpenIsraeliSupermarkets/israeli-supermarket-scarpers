@@ -3,7 +3,7 @@
 import asyncio
 from unittest.mock import MagicMock, patch
 
-from il_supermarket_scarper.utils.connection import (
+from il_supermarket_scarper.utils.network.connection import (
     DEFAULT_BROWSER_USER_AGENT,
     session_with_cookies,
     url_retrieve_to_memory,
@@ -38,7 +38,7 @@ def test_url_retrieve_unescapes_html_entities_and_sends_user_agent():
         captured["headers"] = kwargs.get("headers")
         return _FakeResponse(b"gzxx")
 
-    with patch("il_supermarket_scarper.utils.connection.requests.get", fake_get):
+    with patch("il_supermarket_scarper.utils.network.connection.requests.get", fake_get):
         body = url_retrieve_to_memory(
             "https://blob.example/promo/file.gz?sv=2014-02-14&amp;sr=b&amp;sp=r"
         )
@@ -55,9 +55,9 @@ def test_wget_missing_does_not_shell_out():
 
     async def run():
         with patch(
-            "il_supermarket_scarper.utils.connection.shutil.which", return_value=None
+            "il_supermarket_scarper.utils.network.connection.shutil.which", return_value=None
         ), patch(
-            "il_supermarket_scarper.utils.connection.asyncio.create_subprocess_shell"
+            "il_supermarket_scarper.utils.network.connection.asyncio.create_subprocess_shell"
         ) as subprocess_shell:
             try:
                 await wget_file_to_memory("https://example.com/file.gz")
@@ -78,7 +78,7 @@ def test_session_with_cookies_sends_browser_user_agent():
     mock_session.get.return_value = mock_resp
 
     with patch(
-        "il_supermarket_scarper.utils.connection.requests.Session",
+        "il_supermarket_scarper.utils.network.connection.requests.Session",
         return_value=mock_session,
     ):
         session_with_cookies("https://example.com/")

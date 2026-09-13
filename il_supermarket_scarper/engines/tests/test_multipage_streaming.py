@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 from il_supermarket_scarper.engines.multipage_web import MultiPageWeb
 from il_supermarket_scarper.utils import DiskFileOutput, DumpFolderNames, FileEntry
-from il_supermarket_scarper.utils.state import FilterState
+from il_supermarket_scarper.utils.scraping.state import FilterState
 
 
 class _DummyMultiPage(MultiPageWeb):

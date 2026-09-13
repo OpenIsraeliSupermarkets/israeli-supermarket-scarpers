@@ -8,7 +8,6 @@ class Matrix(Aspx):
     (support adveanced search: follow the instrucation the page)"""
 
     utilize_date_param = False
-    listing_date_format = "%d/%m/%Y %H:%M:%S"
 
     def __init__(
         self,
@@ -19,6 +18,8 @@ class Matrix(Aspx):
         chain_hebrew_name=None,
         file_output=None,
         status_database=None,
+        listing_date_format="%d/%m/%Y %H:%M:%S",
+        listing_date_key=None,
     ):
         super().__init__(
             chain,
@@ -27,6 +28,8 @@ class Matrix(Aspx):
             aspx_page,
             file_output=file_output,
             status_database=status_database,
+            listing_date_format=listing_date_format,
+            listing_date_key=listing_date_key,
         )
         self.chain_hebrew_name = chain_hebrew_name
 

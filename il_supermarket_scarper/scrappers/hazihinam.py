@@ -27,8 +27,6 @@ from il_supermarket_scarper.utils import (
 class HaziHinam(MultiPageWeb):
     """scrper fro hazi hinam"""
 
-    listing_date_format = "%d-%m-%Y %H:%M"
-
     def __init__(self, file_output=None, status_database=None):
         super().__init__(
             chain=DumpFolderNames.HAZI_HINAM,
@@ -40,6 +38,7 @@ class HaziHinam(MultiPageWeb):
             + "' pagination-item ')])[last()]/a/@href",
             total_pages_pattern=r"p=(\d+)",
             page_argument="&p",
+            listing_date_format="%d-%m-%Y %H:%M",
         )
 
     def collect_files_details_from_page(self, html):

@@ -33,9 +33,9 @@ from playwright.sync_api import sync_playwright
 
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
 from il_supermarket_scarper.utils import DiskFileOutput, Logger, _now
-from il_supermarket_scarper.utils.connection import collect_from_ftp
+from il_supermarket_scarper.utils.network.connection import collect_from_ftp
 from il_supermarket_scarper.utils.databases import AbstractDataBase
-from il_supermarket_scarper.utils.state import FilterState
+from il_supermarket_scarper.utils.scraping.state import FilterState
 from testing_util.ui_engine import (
     UI_DEFERRED,
     UIEngine,
@@ -45,29 +45,22 @@ from testing_util.ui_engine import (
 
 
 class NoOpStatusDatabase(AbstractDataBase):
-    """In-memory status DB so prior downloads never shrink listings."""
+    """Fresh in-memory status DB (no prior verified_downloads to shrink listings)."""
 
     def __init__(self, database_name):
         super().__init__(database_name)
         self._data: Dict[str, Any] = {}
 
-    def insert_document(self, collection_name, document):
+    def _do_insert_document(self, collection_name, document):
         self._data.setdefault(collection_name, []).append(document)
         self._update_last_modified()
 
-    def insert_documents(self, collection_name, document):
-        """Append one document or a list of documents into memory."""
-        bucket = self._data.setdefault(collection_name, [])
-        if isinstance(document, list):
-            bucket.extend(document)
-        else:
-            bucket.append(document)
+    def _do_insert_documents(self, collection_name, documents):
+        self._data.setdefault(collection_name, []).extend(documents)
         self._update_last_modified()
 
-    def already_downloaded(
-        self, collection_name, query
-    ):  # pylint: disable=unused-argument
-        return False
+    def list_documents(self, collection_name):
+        return list(self._data.get(collection_name, []))
 
     def _update_last_modified(self):
         self._data.setdefault("_metadata", {})["last_modified"] = _now()

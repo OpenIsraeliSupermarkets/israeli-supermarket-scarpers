@@ -3,7 +3,7 @@
 import asyncio
 import unittest
 
-from il_supermarket_scarper.utils.async_work import stream_as_completed
+from il_supermarket_scarper.utils.core.async_work import stream_as_completed
 
 
 class TestStreamAsCompleted(unittest.IsolatedAsyncioTestCase):

@@ -3,8 +3,8 @@ from urllib.parse import parse_qs, urljoin, urlparse
 from bs4 import BeautifulSoup
 from il_supermarket_scarper.utils import FileEntry, Logger
 from il_supermarket_scarper.utils import convert_nl_size_to_bytes, UnitSize
-from il_supermarket_scarper.utils.state import FilterState
-from il_supermarket_scarper.utils.async_work import stream_as_completed
+from il_supermarket_scarper.utils.scraping.state import FilterState
+from il_supermarket_scarper.utils.core.async_work import stream_as_completed
 from .engine import Engine
 
 
@@ -19,6 +19,8 @@ class WebBase(Engine):
         max_threads=5,
         file_output=None,
         status_database=None,
+        listing_date_format=None,
+        listing_date_key=None,
     ):
         super().__init__(
             chain,
@@ -26,6 +28,8 @@ class WebBase(Engine):
             max_threads=max_threads,
             file_output=file_output,
             status_database=status_database,
+            listing_date_format=listing_date_format,
+            listing_date_key=listing_date_key,
         )
         self.url = url
         self.max_retry = 2
@@ -192,9 +196,10 @@ class WebBase(Engine):
         """Process a single listing FileEntry from WebBase."""
         entry = file_details
 
-        self.register_collected_file(
+        self.status.register_collected_file(
             file_name_collected_from_site=entry.name,
             link_collected_from_site=entry.url,
+            entry_id=entry.entry_id,
         )
 
         return await self.save_and_extract(entry)

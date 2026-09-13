@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 
 class AbstractDataBase(ABC):
-    """Abstract base class for database operations."""
+    """Abstract base class for database CRUD operations."""
 
     def __init__(self, database_name) -> None:
         self.database_name = database_name.replace(" ", "_").lower()
@@ -11,13 +11,22 @@ class AbstractDataBase(ABC):
         """Get the name of the database."""
         return self.database_name
 
-    @abstractmethod
     def insert_document(self, collection_name, document):
-        """Insert a document into a collection."""
+        """Insert a single document."""
+        self._do_insert_document(collection_name, document)
+
+    def insert_documents(self, collection_name, documents):
+        """Insert many documents."""
+        self._do_insert_documents(collection_name, documents)
 
     @abstractmethod
-    def already_downloaded(self, collection_name, query):
-        """Check if a document is already downloaded based on a query."""
+    def _do_insert_document(self, collection_name, document):
+        """Persist a single document."""
+
+    def _do_insert_documents(self, collection_name, documents):
+        """Persist many documents (default: one-by-one)."""
+        for document in documents:
+            self._do_insert_document(collection_name, document)
 
     def find_document(self, collection_name, query):  # pylint: disable=unused-argument
         """Return the first matching document, or None."""

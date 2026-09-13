@@ -7,7 +7,7 @@ from il_supermarket_scarper.utils import (
     FileTypesFilters,
     UnitSize,
 )
-from il_supermarket_scarper.utils.status import convert_unit, string_to_float
+from il_supermarket_scarper.utils.scraping.status import convert_unit, string_to_float
 
 
 # removed on 28.02.2025
@@ -54,8 +54,6 @@ class CityMarketKiryatGat(Bina):
 class CityMarketShops(MultiPageWeb):
     """scraper for city market givatayim"""
 
-    listing_date_format = "%d-%m-%Y %H:%M"
-
     def __init__(self, file_output=None, status_database=None):
         super().__init__(
             chain=DumpFolderNames.CITY_MARKET_SHOPS,
@@ -67,6 +65,7 @@ class CityMarketShops(MultiPageWeb):
             + "' pagination-item ')])[last()]/a/@href",
             total_pages_pattern=r"p=(\d+)",
             page_argument="&p",
+            listing_date_format="%d-%m-%Y %H:%M",
         )
 
     def collect_files_details_from_page(self, html):

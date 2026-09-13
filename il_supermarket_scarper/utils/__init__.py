@@ -1,15 +1,17 @@
-from .gzip_utils import (
+from .files.gzip_utils import (
     extract_xml_from_gz_in_memory,
+    extract_if_compressed,
     is_compressed_content,
     validate_gzip_integrity,
     GzipIntegrity,
+    GzipStatus,
     GZIP_OK,
     GZIP_TRUNCATED,
     GZIP_CRC_MISMATCH,
     GZIP_NOT_GZIP,
 )
-from .logger import Logger
-from .status import (
+from .core.logger import Logger
+from .scraping.status import (
     get_output_folder,
     clean_dump_folder,
     summerize_dump_folder_contant,
@@ -21,8 +23,10 @@ from .status import (
     _testing_now,
     hour_files_expected_to_be_accassible,
 )
-from .scraper_status import ScraperStatus
-from .scraper_status_contract import (
+from .scraping.scraper_status import ScraperStatus
+from .files.verified_downloads import VerifiedDownloads
+from .files.save_policy import SavePolicy, SaveDecision, should_persist
+from .scraping.scraper_status_contract import (
     FileName,
     FolderSizeInfo,
     StartedStatus,
@@ -34,8 +38,8 @@ from .scraper_status_contract import (
     VerifiedDownload,
     ScraperStatusOutput,
 )
-from .file_types import FileTypesFilters
-from .connection import (
+from .files.file_types import FileTypesFilters
+from .network.connection import (
     download_connection_retry,
     url_connection_retry,
     disable_when_outside_israel,
@@ -46,26 +50,24 @@ from .connection import (
     wget_file_to_memory,
     async_url_connection_retry,
 )
-from .loop import execute_in_parallel, multiple_page_aggregtion
-from .exceptions import RestartSessionError
-from .retry import retry_files
-from .validation import is_valid_chain_name, change_xml_encoding
-from .folders_name import DumpFolderNames
-from .deprecated_scrapers import DeprecatedScrapers
-from .status import convert_unit, UnitSize, convert_nl_size_to_bytes, string_to_float
-from .state import FilterState
-from .file_output import (
+from .core.loop import execute_in_parallel, multiple_page_aggregtion
+from .core.exceptions import RestartSessionError
+from .core.retry import retry_files
+from .core.validation import is_valid_chain_name, change_xml_encoding
+from .scraping.folders_name import DumpFolderNames
+from .scraping.deprecated_scrapers import DeprecatedScrapers
+from .scraping.status import convert_unit, UnitSize, convert_nl_size_to_bytes, string_to_float
+from .scraping.state import FilterState
+from .files.file_output import (
     FileOutput,
     DiskFileOutput,
     QueueFileOutput,
     AbstractQueueHandler,
     InMemoryQueueHandler,
-    SaveDecision,
     content_sha256,
-    should_persist,
 )
-from .scraper_config import ScraperConfig
+from .scraping.scraper_config import ScraperConfig
 from .databases import JsonDataBase, MongoDataBase
-from .scraping_result import ScrapingResult
-from .file_entry import FileEntry
-from .scraper_status_contract import *
+from .scraping.scraping_result import ScrapingResult
+from .files.file_entry import FileEntry
+from .scraping.scraper_status_contract import *
