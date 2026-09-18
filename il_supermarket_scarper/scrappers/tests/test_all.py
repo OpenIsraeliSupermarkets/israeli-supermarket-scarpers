@@ -29,7 +29,7 @@ class YaynotBitanAndCarrefourTestCase(
 
 
 class CityMarketKiryatGatTestCase(
-    make_test_case(ScraperFactory.CITY_MARKET_KIRYATGAT, 1)
+    make_test_case(ScraperFactory.CITY_MARKET_KIRYATGAT, 46)
 ):
     """Test case for CityMarketKiryatGat"""
 
