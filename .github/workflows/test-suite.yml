@@ -6,7 +6,11 @@ on:
   pull_request:
     branches: [ "main" ]
   schedule:
-    - cron: '00 17 * * *'
+    # 13:00 UTC = 16:00 IDT / 15:00 IST. laibcatalog getfiles is [] after
+    # midnight IL until ~08:00 republish; 17:00 UTC (20:00 IL) often queued
+    # past midnight on the self-hosted runner. Weekend weekly-release still
+    # sees Sat/Sun UTC.
+    - cron: '0 13 * * *'
   workflow_dispatch:
 
 concurrency:

@@ -123,14 +123,44 @@ class NetivHased(FullyStable):
         ) or (when_date is not None and _is_saturday_in_israel(when_date))
 
 
-class MahsaniAshukNewSource(FullyStable):
-    """laibcatalog mshuk getfiles returns [] on Saturday (same as the UI).
+class LaibcatalogOvernightEmpty(FullyStable):
+    """laibcatalog getfiles returns [] between midnight and morning republish.
+
+    Nightly CI is often queued past midnight IL. Tests without when_date then
+    see an empty catalog even though getbranches still lists stores. The SPA
+    lists files again after the morning drop (around 08:00 IL). Cut off at
+    08:00 so production still scrapes the rest of the morning.
+    """
+
+    empty_until_hour = 8
+
+    @classmethod
+    def overnight_empty_catalog(cls, when_date=None):
+        """Empty catalog before the morning republish, when no date filter."""
+        return when_date is None and _now().hour < cls.empty_until_hour
+
+    @classmethod
+    def failire_valid(
+        cls, when_date=None, files_types=None, utilize_date_param=True, **_
+    ):
+        return super().failire_valid(
+            when_date=when_date,
+            files_types=files_types,
+            utilize_date_param=utilize_date_param,
+        ) or cls.overnight_empty_catalog(when_date=when_date)
+
+
+class MahsaniAshukNewSource(LaibcatalogOvernightEmpty):
+    """laibcatalog mshuk getfiles returns [] on Saturday and overnight.
 
     Evidence 2026-09-04: evening CI collected Mahsani files (not in the
     failed list). Evidence 2026-09-05: getfiles?edi=7290661400001 returns
-    []; mshuk UI uses that DEFAULT_EDI and shows no files. Victory/Het
-    Cohen on the same host still publish Saturday files. CPFTA still
-    lists מחסני השוק (mshuk).
+    []; mshuk UI uses that DEFAULT_EDI and shows no files. Evidence
+    2026-09-14..17: scheduled CI after midnight IL retrieved 0 files
+    while getbranches still listed 71 stores. Evidence 2026-09-18
+    morning: mshuk SPA listed 428 files dated 08:11
+    (https://laibcatalog.co.il/mshuk/index.html). CPFTA still lists
+    מחסני השוק (mshuk).
     """
 
     @classmethod
@@ -142,11 +172,32 @@ class MahsaniAshukNewSource(FullyStable):
             if when_date is not None
             else _is_saturday_in_israel()
         )
-        return super(cls, MahsaniAshukNewSource).failire_valid(
+        return super().failire_valid(
             when_date=when_date,
             files_types=files_types,
             utilize_date_param=utilize_date_param,
         ) or saturday_gap
+
+
+class VictoryNewSource(LaibcatalogOvernightEmpty):
+    """laibcatalog victory getfiles returns [] after midnight until republish.
+
+    Evidence 2026-09-14..17: scheduled CI after midnight IL retrieved 0
+    files (getfiles JSON []) while getbranches still listed stores.
+    Evidence 2026-09-18 morning: victory SPA listed 690 files dated
+    09:07 (https://laibcatalog.co.il/victory/index.html). CPFTA still
+    lists ויקטורי.
+    """
+
+
+class HetCohenNewSource(LaibcatalogOvernightEmpty):
+    """laibcatalog hcohen getfiles returns [] after midnight until republish.
+
+    Evidence 2026-09-14..17: scheduled CI after midnight IL retrieved 0
+    files while getbranches still listed 5 stores. Evidence 2026-09-18
+    morning: hcohen SPA listed 41 files dated 08:02 including store 1
+    (https://laibcatalog.co.il/hcohen/index.html). CPFTA still lists ח. כהן.
+    """
 
 
 class CityMarketGivataim(FullyStable):
@@ -227,6 +278,37 @@ class DoNotPublishStores(FullyStable):
             files_types=files_types,
             utilize_date_param=utilize_date_param,
         ) or cls.searching_for_store_full(files_types=files_types)
+
+
+class YaynotBitanAndCarrefour(FullyStable):
+    """Carrefour per-store files for some branches publish after midnight.
+
+    Evidence 2026-09-14..17: test_scrape_one found files after midnight IL
+    but store_id=472 listed 0. Evidence 2026-09-18: prices.carrefour.co.il
+    lists store 472 (יהלומים ביתן) with files from 05:10-07:00.
+    """
+
+    empty_until_hour = 8
+
+    @classmethod
+    def searching_for_store_before_noon(cls, store_id=None, **_):
+        """Some store dumps are missing until the morning publish window."""
+        return store_id is not None and _now().hour < cls.empty_until_hour
+
+    @classmethod
+    def failire_valid(
+        cls,
+        when_date=None,
+        files_types=None,
+        utilize_date_param=True,
+        store_id=None,
+        **_,
+    ):
+        return super().failire_valid(
+            when_date=when_date,
+            files_types=files_types,
+            utilize_date_param=utilize_date_param,
+        ) or cls.searching_for_store_before_noon(store_id=store_id)
 
 
 class CityMarketShopsStores(FullyStable):
@@ -394,6 +476,9 @@ class ScraperStability(Enum):
     # COFIX = DoNotPublishStores
     NETIV_HASED = NetivHased
     MAHSANI_ASHUK_NEW_SOURCE = MahsaniAshukNewSource
+    VICTORY_NEW_SOURCE = VictoryNewSource
+    HET_COHEN_NEW_SOURCE = HetCohenNewSource
+    YAYNO_BITAN_AND_CARREFOUR = YaynotBitanAndCarrefour
     QUIK = QuikSiteIsDown
     SUPER_YUDA = SuperYuda
     YELLOW = Yellow

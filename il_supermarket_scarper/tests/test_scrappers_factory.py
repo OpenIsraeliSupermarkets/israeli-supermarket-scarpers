@@ -16,7 +16,7 @@ from il_supermarket_scarper.utils.files.file_output import DiskFileOutput
 def test_stable_scraper():
     """test sample stable scarper"""
     assert not ScraperStability.is_validate_scraper_found_no_files(
-        ScraperFactory.VICTORY_NEW_SOURCE.name
+        ScraperFactory.BAREKET.name
     )
 
 
@@ -128,9 +128,13 @@ def test_saturday_empty_listings_are_valid_for_netiv_and_mahsani():
         assert ScraperStability.is_validate_scraper_found_no_files(
             "MAHSANI_ASHUK_NEW_SOURCE"
         )
+    afternoon = datetime(2026, 9, 17, 15, 0)
     with patch(
         "il_supermarket_scarper.scraper_stability._is_saturday_in_israel",
         return_value=False,
+    ), patch(
+        "il_supermarket_scarper.scraper_stability._now",
+        return_value=afternoon,
     ):
         assert not ScraperStability.is_validate_scraper_found_no_files(
             "MAHSANI_ASHUK_NEW_SOURCE"
@@ -153,6 +157,55 @@ def test_city_market_shops_store_empty_before_noon():
     assert not ScraperStability.is_validate_scraper_found_no_files(
         "CITY_MARKET_SHOPS", files_types=FileTypesFilters.only_price()
     )
+
+
+def test_laibcatalog_empty_before_noon_without_date_filter():
+    """Victory/Het Cohen/Mahsani catalogs are empty overnight until republish."""
+    morning = datetime(2026, 9, 17, 0, 30)
+    after_republish = datetime(2026, 9, 17, 9, 0)
+    thursday = datetime_in_tlv(2026, 9, 3, 22, 0, 0)
+    for name in (
+        "VICTORY_NEW_SOURCE",
+        "HET_COHEN_NEW_SOURCE",
+        "MAHSANI_ASHUK_NEW_SOURCE",
+    ):
+        with patch(
+            "il_supermarket_scarper.scraper_stability._now", return_value=morning
+        ), patch(
+            "il_supermarket_scarper.scraper_stability._is_saturday_in_israel",
+            return_value=False,
+        ):
+            assert ScraperStability.is_validate_scraper_found_no_files(name)
+            assert not ScraperStability.is_validate_scraper_found_no_files(
+                name, when_date=thursday
+            )
+        with patch(
+            "il_supermarket_scarper.scraper_stability._now",
+            return_value=after_republish,
+        ), patch(
+            "il_supermarket_scarper.scraper_stability._is_saturday_in_israel",
+            return_value=False,
+        ):
+            assert not ScraperStability.is_validate_scraper_found_no_files(name)
+
+
+def test_yaynot_store_empty_before_noon():
+    """Carrefour store 472 files publish in the morning; other listing stays up."""
+    morning = datetime(2026, 9, 17, 0, 30)
+    after_republish = datetime(2026, 9, 17, 9, 0)
+    with patch("il_supermarket_scarper.scraper_stability._now", return_value=morning):
+        assert ScraperStability.is_validate_scraper_found_no_files(
+            "YAYNO_BITAN_AND_CARREFOUR", store_id=472
+        )
+        assert not ScraperStability.is_validate_scraper_found_no_files(
+            "YAYNO_BITAN_AND_CARREFOUR"
+        )
+    with patch(
+        "il_supermarket_scarper.scraper_stability._now", return_value=after_republish
+    ):
+        assert not ScraperStability.is_validate_scraper_found_no_files(
+            "YAYNO_BITAN_AND_CARREFOUR", store_id=472
+        )
 
 
 class TestNetivListing(unittest.IsolatedAsyncioTestCase):
