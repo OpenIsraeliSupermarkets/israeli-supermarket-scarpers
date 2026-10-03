@@ -3,6 +3,7 @@
 import unittest
 from datetime import datetime, timedelta
 
+from il_supermarket_scarper.utils.files.file_entry import FileEntry
 from il_supermarket_scarper.utils.scraping.scraper_status import ScraperStatus
 from il_supermarket_scarper.utils.scraping.scraper_status_contract import (
     CollectedStatus,
@@ -340,7 +341,7 @@ class TestScraperStatusContract(unittest.TestCase):
         )
         self.assertFalse(status.validate_file_status())
 
-    def _written_failed_event(self, **kwargs):
+    def _written_failed_event(self, file_details):
         """The exact event register_download_fail writes."""
         written = []
 
@@ -353,13 +354,17 @@ class TestScraperStatusContract(unittest.TestCase):
         try:
             raise RuntimeError("boom")
         except RuntimeError as error:
-            writer.register_download_fail(error, FILE, entry_id="e1", **kwargs)
+            writer.register_download_fail(error, file_details)
         return written[0]
 
     def test_written_failed_event_round_trips(self):
         """A failed event from the writer must load back, keeping the error."""
-        for kwargs in ({}, {"download_url": LINK}):
-            event = self._written_failed_event(**kwargs)
+        for file_details in (
+            FileEntry(name=FILE, url=LINK, size=1),
+            FileEntry(name=FILE, url=None, size=1),
+            FILE,
+        ):
+            event = self._written_failed_event(file_details)
             status = ScraperStatusOutput(
                 global_status=[], events=[event], verified_downloads=[]
             )
