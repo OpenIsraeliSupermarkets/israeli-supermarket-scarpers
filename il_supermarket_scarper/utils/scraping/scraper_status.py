@@ -4,6 +4,7 @@ from typing import Optional
 import uuid
 
 from il_supermarket_scarper.utils.databases import AbstractDataBase, JsonDataBase
+from il_supermarket_scarper.utils.files.file_entry import FileEntry
 from il_supermarket_scarper.utils.files.file_output import FileOutput
 
 from .scraping_result import ScrapingResult
@@ -111,12 +112,23 @@ class ScraperStatus:
             completed_successfully=completed_successfully,
         )
 
-    def register_download_fail(self, error, file_name: str, entry_id=None):
-        """report when the scraping in failed"""
+    def register_download_fail(self, error, file_details):
+        """report when the scraping in failed
+
+        file_details is the FileEntry the engine was processing.
+        """
+        file_name = "unknown"
+        entry_id = download_url = None
+        if isinstance(file_details, FileEntry):
+            file_name = file_details.name
+            entry_id = file_details.entry_id
+            download_url = file_details.url
+
         self._insert_event(
             ScraperStatus.FAILED,
-            error_message=str(error),
+            execption=str(error),
             traceback=traceback.format_exc(),
+            download_url=download_url,
             file_name=file_name,
             entry_id=entry_id,
         )

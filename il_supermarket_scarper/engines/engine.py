@@ -664,16 +664,6 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods,too-many-instance-
             ScrapingResult: Result of processing the file
         """
 
-    def _extract_file_name(self, file_details):
-        """Extract file name from file details for error reporting."""
-        if isinstance(file_details, FileEntry):
-            return file_details.name
-        if isinstance(file_details, str):
-            return file_details
-        if isinstance(file_details, tuple) and len(file_details) > 1:
-            return file_details[1]
-        return "unknown"
-
     async def _scrape(  # pylint: disable=too-many-locals
         self,
         state: FilterState,
@@ -700,15 +690,7 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods,too-many-instance-
                     return await self.process_file(file_details)
                 except Exception as e:  # pylint: disable=broad-except
                     Logger.error(f"Error in process_file: {e}")
-                    file_name = self._extract_file_name(file_details)
-                    entry_id = (
-                        file_details.entry_id
-                        if isinstance(file_details, FileEntry)
-                        else None
-                    )
-                    self.status.register_download_fail(
-                        e, file_name, entry_id=entry_id
-                    )
+                    self.status.register_download_fail(e, file_details)
                     return ScrapingResult(
                         file_entry=file_details,
                         downloaded=False,

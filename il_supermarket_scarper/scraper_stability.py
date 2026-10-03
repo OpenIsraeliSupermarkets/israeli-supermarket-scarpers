@@ -49,8 +49,7 @@ class FullyStable:
         # files only for that probe date—not arbitrary historical when_date.
         return (
             when_date is not None
-            and execution_time.hour >= 0
-            and execution_time.hour < hour_files_expected_to_be_accassible()
+            and 0 <= execution_time.hour < hour_files_expected_to_be_accassible()
             and when_date.date() == _testing_now().date()
         )
 
