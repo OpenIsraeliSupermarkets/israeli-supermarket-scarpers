@@ -115,20 +115,14 @@ class ScraperStatus:
     def register_download_fail(self, error, file_details):
         """report when the scraping in failed
 
-        file_details is what the engine was processing: a FileEntry, or a
-        legacy file name / tuple (which carry no url or entry id).
+        file_details is the FileEntry the engine was processing.
         """
+        file_name = "unknown"
         entry_id = download_url = None
         if isinstance(file_details, FileEntry):
             file_name = file_details.name
             entry_id = file_details.entry_id
             download_url = file_details.url
-        elif isinstance(file_details, str):
-            file_name = file_details
-        elif isinstance(file_details, tuple) and len(file_details) > 1:
-            file_name = file_details[1]
-        else:
-            file_name = "unknown"
 
         self._insert_event(
             ScraperStatus.FAILED,

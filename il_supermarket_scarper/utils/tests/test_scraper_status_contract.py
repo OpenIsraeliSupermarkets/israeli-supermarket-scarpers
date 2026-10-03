@@ -362,7 +362,6 @@ class TestScraperStatusContract(unittest.TestCase):
         for file_details in (
             FileEntry(name=FILE, url=LINK, size=1),
             FileEntry(name=FILE, url=None, size=1),
-            FILE,
         ):
             event = self._written_failed_event(file_details)
             status = ScraperStatusOutput(
