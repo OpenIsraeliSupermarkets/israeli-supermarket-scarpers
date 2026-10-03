@@ -46,7 +46,10 @@ class Wolt(WebBase):
         soup = BeautifulSoup(req_res.text, features="lxml")
         return list(
             map(
-                lambda x: (x.text, self.url.replace("index.html", x.a.attrs["href"])),
+                lambda x: (
+                    x.text,
+                    self.url.replace("index.html", x.a.attrs["href"]),  # type: ignore[union-attr]
+                ),
                 list(soup.find_all("li")),
             )
         )

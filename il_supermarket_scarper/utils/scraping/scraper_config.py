@@ -42,7 +42,7 @@ class ScraperConfig:  # pylint: disable=too-many-instance-attributes
         return isinstance(self.file_output, QueueFileOutput)
 
     def get_file_output(
-        self, chain_name: str, default_folder: str = None
+        self, chain_name: str, default_folder: Optional[str] = None
     ) -> FileOutput:
         """
         Get the file output handler for this config.
@@ -74,7 +74,7 @@ class ScraperConfig:  # pylint: disable=too-many-instance-attributes
 
     @classmethod
     def disk(
-        cls, folder_name: str, chain_name: str = None, extract_gz: bool = True, **kwargs
+        cls, folder_name: str, chain_name: Optional[str] = None, extract_gz: bool = True, **kwargs
     ) -> "ScraperConfig":
         """
         Create config for disk output.

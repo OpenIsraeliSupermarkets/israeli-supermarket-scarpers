@@ -1,3 +1,5 @@
+from typing import Any
+
 from il_supermarket_scarper.utils.scraping.status import _now
 from .base import AbstractDataBase
 
@@ -14,8 +16,8 @@ class MongoDataBase(AbstractDataBase):
 
     def __init__(self, database_name, connection_url, collection_name) -> None:
         super().__init__(database_name)
-        self.myclient = None
-        self.store_db = None
+        self.myclient: Any = None
+        self.store_db: Any = None
         self.connection_url = connection_url
         self.collection_name = collection_name
 

@@ -14,7 +14,7 @@ try:
     from decorator import decorator
 except ImportError:
 
-    def decorator(caller):
+    def decorator(caller):  # type: ignore[misc]
         """Turns caller into a decorator.
         Unlike decorator module, function signature is not preserved.
 
@@ -229,7 +229,7 @@ def __retry_files(
     num_of_retrys=1,
     logger=logging_logger,
 ):
-    retry_list = []
+    retry_list: list = []
     all_results = []
     for i in range(num_of_retrys):
         logger.info(f"File Retry: Itreation #{i},retry_list={retry_list}")

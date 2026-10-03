@@ -23,7 +23,7 @@ class FileOutput(ABC):
         file_link: str,
         file_name: str,
         file_content: bytes,
-        metadata: Dict[str, Any] = None,
+        metadata: Optional[Dict[str, Any]] = None,
         content_digest: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
@@ -80,13 +80,13 @@ class DiskFileOutput(FileOutput):
         file_link: str,
         file_name: str,
         file_content: bytes,
-        metadata: Dict[str, Any] = None,
+        metadata: Optional[Dict[str, Any]] = None,
         content_digest: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Write final content to disk."""
         saved = False
         error = None
-        digest = content_digest or content_sha256(file_content)
+        digest: Optional[str] = content_digest or content_sha256(file_content)
         file_save_path = os.path.join(self.storage_path, file_name)
 
         try:
@@ -160,13 +160,13 @@ class QueueFileOutput(FileOutput):
         file_link: str,
         file_name: str,
         file_content: bytes,
-        metadata: Dict[str, Any] = None,
+        metadata: Optional[Dict[str, Any]] = None,
         content_digest: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Send file to queue."""
         saved = False
         error = None
-        digest = content_digest or content_sha256(file_content)
+        digest: Optional[str] = content_digest or content_sha256(file_content)
 
         try:
             message = {

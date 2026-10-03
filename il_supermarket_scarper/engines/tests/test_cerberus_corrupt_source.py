@@ -17,6 +17,7 @@ class TestCerberusCorruptSource(unittest.IsolatedAsyncioTestCase):
     """persist_from_ftp must not raise when extraction fails every attempt."""
 
     async def test_truncated_gzip_yields_source_corrupt(self):
+        """3 failed extractions -> one failed result flagged source_corrupt."""
         entry = FileEntry(
             name="PriceFull7290492000005-001-512-20261003-000505.gz",
             url="",

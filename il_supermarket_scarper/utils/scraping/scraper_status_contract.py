@@ -4,7 +4,7 @@ import re
 
 from collections import defaultdict
 from datetime import datetime
-from typing import List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 from pydantic.networks import AnyUrl
 from pydantic import BaseModel, Field
 from pydantic_core import core_schema
@@ -202,7 +202,7 @@ class ScraperStatusOutput(BaseModel):
             / verified rows used by extra checks.
         """
 
-        per_file = defaultdict(
+        per_file: Dict[str, Dict[str, Any]] = defaultdict(
             lambda: {
                 "saw": False,
                 "collected": False,

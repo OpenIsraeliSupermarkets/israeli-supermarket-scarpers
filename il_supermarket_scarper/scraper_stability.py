@@ -59,7 +59,7 @@ class FullyStable:
         return when_date > date
 
     @classmethod
-    def failire_valid(cls, when_date=None, utilize_date_param=True, **_):
+    def failire_valid(cls, *, when_date=None, utilize_date_param=True, **_):
         """return true if the parser is stble"""
 
         return cls.executes_between_midnight_and_morning_and_requested_today(

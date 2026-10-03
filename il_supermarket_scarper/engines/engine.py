@@ -7,7 +7,7 @@ import shutil
 import uuid
 import datetime
 import asyncio
-from typing import AsyncGenerator, Optional
+from typing import Any, AsyncGenerator, Dict, Optional
 from il_supermarket_scarper.utils import (
     FileEntry,
     FileTypesFilters,
@@ -370,12 +370,12 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods,too-many-instance-
         files_list = stream_to_list(state, intreable)
 
         # one download per listing identity in this scrape (not per FileNm)
-        intreable_ = self.unique_listings(state, files_list)
+        unique_files = self.unique_listings(state, files_list)
 
         # filter files already downloaded
         intreable_: AsyncGenerator[FileEntry, None] = (
             self.verified.filter_already_downloaded(
-                intreable_,
+                unique_files,
                 by_function=by_function,
             )
         )
@@ -573,7 +573,7 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods,too-many-instance-
 
     async def scrape(  # pylint: disable=too-many-locals
         self,
-        state: FilterState = None,
+        state: Optional[FilterState] = None,
         limit=None,
         files_types=None,
         store_id=None,
@@ -832,7 +832,7 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods,too-many-instance-
         }
         if extra_metadata:
             metadata.update(extra_metadata)
-        box = {"result": None}
+        box: Dict[str, Any] = {"result": None}
 
         async def _persist(save_decision):
             persist_meta = dict(metadata)
@@ -856,7 +856,7 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods,too-many-instance-
             entry_id=entry.entry_id,
         )
         if box["result"] is not None:
-            result = box["result"]
+            result: Dict[str, Any] = box["result"]
             result["save_decision"] = save_decision
         else:
             result = {
@@ -902,6 +902,8 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods,too-many-instance-
         saved_file_name = None
 
         try:
+            if file_link is None:
+                raise ValueError(f"File {file_name} has no download url")
             # Determine file name with extension (case-insensitive check)
             file_name_with_ext = file_name
             file_link_lower = file_link.lower()

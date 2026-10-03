@@ -75,11 +75,13 @@ class VerifiedDownloads:
         if not listing_hash:
             return False
         self._ensure_index()
+        assert self._verified_listing_hashes is not None
         return listing_hash in self._verified_listing_hashes
 
     def known_file(self, file_name: str) -> Optional[Dict[str, Optional[str]]]:
         """Return ``{content_sha256, published_at}`` for a stored file name."""
         self._ensure_index()
+        assert self._saved_by_name is not None
         return self._saved_by_name.get(file_name)
 
     def record(

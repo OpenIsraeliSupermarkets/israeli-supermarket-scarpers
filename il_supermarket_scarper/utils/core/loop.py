@@ -1,3 +1,5 @@
+from typing import Optional
+
 import concurrent.futures
 from .logger import Logger
 
@@ -53,7 +55,7 @@ def execute_in_parallel(
 def run_tasks(
     function_to_execute,
     iterable,
-    max_threads: int = None,
+    max_threads: Optional[int] = None,
 ):
     """Run tasks in multi-thread or sequentially"""
     if max_threads:

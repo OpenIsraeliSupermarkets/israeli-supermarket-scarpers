@@ -28,6 +28,7 @@ class ScraperStatus:
         file_output: Optional[FileOutput] = None,
         status_path: Optional[str] = None,
     ) -> None:
+        self.database: AbstractDataBase
         if status_database is None:
             if status_path is None:
                 if file_output is None:
@@ -40,7 +41,7 @@ class ScraperStatus:
             self.database = JsonDataBase(database_name, status_path)
         else:
             self.database = status_database
-        self.task_id = None
+        self.task_id: Optional[str] = None
 
     def on_scraping_start(self, limit, files_types, **additional_info):
         """Report that scraping has started."""
