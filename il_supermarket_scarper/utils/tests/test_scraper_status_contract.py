@@ -347,6 +347,7 @@ class TestScraperStatusContract(unittest.TestCase):
 
         class _Db:  # pylint: disable=too-few-public-methods
             def insert_document(self, _collection, document):
+                """Record the written document."""
                 written.append(document)
 
         writer = ScraperStatus("idx", status_database=_Db())
