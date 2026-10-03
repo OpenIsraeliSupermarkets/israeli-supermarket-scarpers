@@ -71,4 +71,4 @@ CMD python -m pytest -vv -n ${PYTEST_WORKERS}
 FROM base as lint
 RUN pip install pylint mypy
 CMD pylint $(git ls-files '*.py' ':!:docs/*') --disable=E0401,R0801,R0903,W0707,C0114,E1101,R0917 \
-    && mypy il_supermarket_scarper
+    && mypy --show-traceback il_supermarket_scarper
