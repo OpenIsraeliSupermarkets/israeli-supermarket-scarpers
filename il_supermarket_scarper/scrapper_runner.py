@@ -308,7 +308,12 @@ class MainScrapperRunner:  # pylint: disable=too-many-instance-attributes
         """
         Logger.info("Shutdown requested")
         if self._shutdown_flag is not None:
-            self._shutdown_flag.value = True
+            try:
+                self._shutdown_flag.value = True
+            except (BrokenPipeError, ConnectionResetError, EOFError, OSError):
+                # Manager connection already torn down - run() is finishing or finished.
+                # This is expected when stop() is called after single_pass completion.
+                pass
         # Close outputs NOW so any consumer blocked on queue.get() unblocks
         # immediately, even before the background thread exits.
         self._close_file_outputs()
