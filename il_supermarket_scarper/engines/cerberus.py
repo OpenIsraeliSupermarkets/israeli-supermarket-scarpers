@@ -248,5 +248,5 @@ class Cerberus(Engine):
             restart_and_retry=restart_and_retry,
             error=error,
             source_corrupt=source_corrupt,
-            saved_file_name=None if result is None else result.saved_file_name,
+            saved_file_name=None if result is None else result.file_name,
         )
