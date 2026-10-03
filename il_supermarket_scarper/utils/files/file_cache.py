@@ -1,14 +1,13 @@
 import hashlib
 import os
+import sys
 import json
 import time
 from functools import wraps
 
 # fcntl is POSIX-only; skip file locking on Windows
-if os.name == "posix":
+if sys.platform != "win32":
     import fcntl
-else:
-    fcntl = None  # type: ignore[assignment]  # pylint: disable=invalid-name
 
 _CACHE_DIR = ".cache"
 
@@ -56,7 +55,7 @@ def file_cache(ttl=None):
             # Slow path: acquire exclusive per-key lock, then re-check
             os.makedirs(_CACHE_DIR, exist_ok=True)
 
-            if fcntl:
+            if sys.platform != "win32":
                 # POSIX: use file locking to prevent concurrent fetches
                 lock_path = get_lock_file(func.__name__, cache_key)
                 with open(lock_path, "w", encoding="utf-8") as lock_f:

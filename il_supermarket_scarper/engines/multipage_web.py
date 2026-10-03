@@ -212,7 +212,7 @@ class MultiPageWeb(WebBase):
         finally:
             await pages.aclose()
 
-    async def collect_files_details_from_site(  # type: ignore[override]  # pylint: disable=too-many-locals
+    async def collect_files_details_from_site(  # pylint: disable=too-many-locals
         self,
         state: FilterState,
         limit=None,
@@ -273,9 +273,7 @@ class MultiPageWeb(WebBase):
         finally:
             await listing.aclose()
 
-    def get_file_size_from_entry(  # type: ignore[override]
-        self, html, link_element
-    ):  # pylint: disable=arguments-differ,unused-argument
+    def get_file_size_from_row(self, html, link_element):  # pylint: disable=unused-argument
         """
         Extract file size from HTML element.
         For MultiPageWeb, we need to find the size in the same row as the link.

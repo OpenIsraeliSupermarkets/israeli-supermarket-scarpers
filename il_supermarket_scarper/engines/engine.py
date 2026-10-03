@@ -647,9 +647,10 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods,too-many-instance-
         min_size=None,
         max_size=None,
         random_selection=False,
-    ) -> AsyncGenerator:
+    ) -> AsyncGenerator[Any, None]:
         """Collect file details from the site.
         Should yield file details (format depends on subclass)."""
+        yield
 
     @abstractmethod
     async def process_file(self, file_details) -> ScrapingResult:

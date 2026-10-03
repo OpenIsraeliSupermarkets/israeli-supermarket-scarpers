@@ -44,15 +44,15 @@ class Wolt(WebBase):
     def get_data_from_page(self, req_res):
         """get the file list from a page"""
         soup = BeautifulSoup(req_res.text, features="lxml")
-        return list(
-            map(
-                lambda x: (
-                    x.text,
-                    self.url.replace("index.html", x.a.attrs["href"]),  # type: ignore[union-attr]
-                ),
-                list(soup.find_all("li")),
+        files = []
+        for item in soup.find_all("li"):
+            link = item.a
+            if link is None:
+                continue
+            files.append(
+                (item.text, self.url.replace("index.html", str(link.attrs["href"])))
             )
-        )
+        return files
 
     async def extract_task_from_entry(self, all_trs) -> AsyncGenerator[FileEntry, None]:
         """extract download links, file names, and file sizes from page list"""
