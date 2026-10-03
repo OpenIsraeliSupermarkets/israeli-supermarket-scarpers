@@ -21,13 +21,16 @@ class TestStatusRoundtripScenarios(unittest.IsolatedAsyncioTestCase):
         self.addCleanup(self._tmp.cleanup)
 
     async def _run(self, case, **scenario):
+        """Run one case through a scenario and load its status."""
         return await RoundtripRunner(case, self._tmp.name).run(**scenario)
 
     @staticmethod
     def _downloaded(status):
+        """The ``downloaded`` events of a loaded status."""
         return [e for e in status.events if isinstance(e, DownloadedStatus)]
 
     async def test_success(self):
+        """Listed files download and the status loads."""
         for case in ENGINE_CASES:
             with self.subTest(engine=case.engine_cls.__name__):
                 status = await self._run(case)
@@ -37,6 +40,7 @@ class TestStatusRoundtripScenarios(unittest.IsolatedAsyncioTestCase):
                 self.assertTrue(all(e.downloaded_successfully for e in downloaded))
 
     async def test_download_error(self):
+        """A swallowed download error is recorded and loads."""
         for case in ENGINE_CASES:
             with self.subTest(engine=case.engine_cls.__name__):
                 status = await self._run(case, download_error=True)
@@ -47,6 +51,7 @@ class TestStatusRoundtripScenarios(unittest.IsolatedAsyncioTestCase):
                 self.assertTrue(all(e.error_message for e in downloaded))
 
     async def test_process_file_error(self):
+        """A process_file crash writes a loadable failed event."""
         for case in ENGINE_CASES:
             with self.subTest(engine=case.engine_cls.__name__):
                 status = await self._run(

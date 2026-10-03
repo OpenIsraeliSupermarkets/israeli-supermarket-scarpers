@@ -130,6 +130,8 @@ class HttpMocker(Mocker):
 
 
 class BinaMocker(HttpMocker):
+    """Bina: JSON listing plus the Download.aspx SPath redirect."""
+
     def routes(self):
         listing = [
             {"FileNm": f"{n}.gz", "DateFile": "10:00 07/10/2024"}
@@ -143,6 +145,8 @@ class BinaMocker(HttpMocker):
 
 
 class MatrixMocker(HttpMocker):
+    """Matrix: HTML table whose rows carry the chain name."""
+
     def routes(self):
         rows = "".join(
             f'<tr><td>ח. כהן</td><td><a href="{self.FILES_HOST}/{n}.gz">dl</a></td></tr>'
@@ -153,6 +157,8 @@ class MatrixMocker(HttpMocker):
 
 
 class PublishPriceMocker(HttpMocker):
+    """PublishPrice: file list hard-coded in a page script."""
+
     def routes(self):
         files = json.dumps(
             [
@@ -171,6 +177,8 @@ class PublishPriceMocker(HttpMocker):
 
 
 class MultiPageMocker(HttpMocker):
+    """MultiPageWeb: single-page gridContainer table."""
+
     def routes(self):
         rows = "".join(
             "<tr>"
@@ -186,6 +194,8 @@ class MultiPageMocker(HttpMocker):
 
 
 class ApiMocker(HttpMocker):
+    """ApiWebEngine: getbranches and getfiles JSON endpoints."""
+
     def routes(self):
         branches = [{"branchNumber": 1}]
         files = [
@@ -203,6 +213,8 @@ class ApiMocker(HttpMocker):
 
 
 class PlainWebMocker(HttpMocker):
+    """Plain WebBase: a JSON name/url/date listing."""
+
     def routes(self):
         listing = [
             {

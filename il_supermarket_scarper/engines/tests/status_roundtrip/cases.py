@@ -35,6 +35,7 @@ class EngineCase:
 
     @property
     def scraper_cls(self):
+        """The scraper class looked up in ``ScraperFactory``."""
         return ScraperFactory[self.scraper_name].value
 
 

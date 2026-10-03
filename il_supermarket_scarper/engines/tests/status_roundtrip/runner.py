@@ -12,7 +12,7 @@ from il_supermarket_scarper.utils.scraping.scraper_status_contract import (
 from .cases import EngineCase
 
 
-class RoundtripRunner:
+class RoundtripRunner:  # pylint: disable=too-few-public-methods
     """Scrape with mocked I/O, then load the written status into the contract."""
 
     def __init__(self, case: EngineCase, tmp_dir: str):
