@@ -3,6 +3,7 @@
 import unittest
 from datetime import datetime, timedelta
 
+from il_supermarket_scarper.utils.scraping.scraper_status import ScraperStatus
 from il_supermarket_scarper.utils.scraping.scraper_status_contract import (
     CollectedStatus,
     DownloadedStatus,
@@ -338,6 +339,33 @@ class TestScraperStatusContract(unittest.TestCase):
             ],
         )
         self.assertFalse(status.validate_file_status())
+
+    def _written_failed_event(self, **kwargs):
+        """The exact event register_download_fail writes."""
+        written = []
+
+        class _Db:  # pylint: disable=too-few-public-methods
+            def insert_document(self, _collection, document):
+                written.append(document)
+
+        writer = ScraperStatus("idx", status_database=_Db())
+        writer.task_id = TASK
+        try:
+            raise RuntimeError("boom")
+        except RuntimeError as error:
+            writer.register_download_fail(error, FILE, entry_id="e1", **kwargs)
+        return written[0]
+
+    def test_written_failed_event_round_trips(self):
+        """A failed event from the writer must load back, keeping the error."""
+        for kwargs in ({}, {"download_url": LINK}):
+            event = self._written_failed_event(**kwargs)
+            status = ScraperStatusOutput(
+                global_status=[], events=[event], verified_downloads=[]
+            )
+            failed = status.events[0]
+            self.assertIsInstance(failed, FailedStatus)
+            self.assertEqual(failed.execption, "boom")
 
     def test_filename_rejects_path_separators(self):
         """FileName restores path-separator rejection."""

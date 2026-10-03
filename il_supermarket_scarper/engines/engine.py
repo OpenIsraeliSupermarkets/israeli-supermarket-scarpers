@@ -707,7 +707,14 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods,too-many-instance-
                         else None
                     )
                     self.status.register_download_fail(
-                        e, file_name, entry_id=entry_id
+                        e,
+                        file_name,
+                        entry_id=entry_id,
+                        download_url=(
+                            file_details.url
+                            if isinstance(file_details, FileEntry)
+                            else None
+                        ),
                     )
                     return ScrapingResult(
                         file_entry=file_details,

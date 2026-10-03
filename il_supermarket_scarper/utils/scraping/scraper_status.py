@@ -111,12 +111,15 @@ class ScraperStatus:
             completed_successfully=completed_successfully,
         )
 
-    def register_download_fail(self, error, file_name: str, entry_id=None):
+    def register_download_fail(
+        self, error, file_name: str, entry_id=None, download_url=None
+    ):
         """report when the scraping in failed"""
         self._insert_event(
             ScraperStatus.FAILED,
-            error_message=str(error),
+            execption=str(error),
             traceback=traceback.format_exc(),
+            download_url=download_url,
             file_name=file_name,
             entry_id=entry_id,
         )

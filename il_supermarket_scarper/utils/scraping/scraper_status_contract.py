@@ -120,7 +120,7 @@ class FailedStatus(BaseModel):
     system_timestamp: Optional[datetime] = None
     execption: str = ""
     traceback: str = ""
-    download_url: Optional[AnyUrl]
+    download_url: Optional[AnyUrl] = None
     file_name: FileName
     entry_id: Optional[str] = None
 
