@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Any, AsyncIterator
 from il_supermarket_scarper.utils import FileEntry, Logger
 
 from .web import WebBase
@@ -68,16 +69,20 @@ class Aspx(WebBase, ABC):
     @abstractmethod
     async def _get_all_possible_query_string_params(
         self, files_types=None, store_id=None, when_date=None
-    ):
-        """list all param to add to the url"""
+    ) -> AsyncIterator[Any]:
+        """list all param to add to the url (an async generator)"""
+        yield
 
     @abstractmethod
     def get_href_from_entry(self, entry):
         """get download link for entry (tr)"""
 
     @abstractmethod
-    async def _build_query_url(self, query_params, base_urls):
-        """build the url with the query params"""
+    async def _build_query_url(
+        self, query_params, base_urls
+    ) -> AsyncIterator[Any]:
+        """build the url with the query params (an async generator)"""
+        yield
 
     async def get_request_url(self, files_types=None, store_id=None, when_date=None):
         """build the request given the base url and the query params"""

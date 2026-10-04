@@ -152,6 +152,7 @@ def extract_xml_from_gz_in_memory(source_file, file_name):
                 f"gzip {integrity.status.value}: {file_name}: {integrity.detail} "
                 f"(buffer size: {len(source_file)} bytes)"
             )
+        assert integrity.uncompressed is not None
         output_buffer.write(integrity.uncompressed)
         output_buffer.seek(0)
         return output_buffer.getvalue()

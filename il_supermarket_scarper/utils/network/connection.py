@@ -15,7 +15,7 @@ from ftplib import FTP_TLS, error_perm
 
 from http.client import RemoteDisconnected
 from http.cookiejar import LoadError
-from typing import Union, List
+from typing import Any, Dict, Union, List
 from urllib.error import URLError
 from urllib3.exceptions import MaxRetryError, ReadTimeoutError
 
@@ -669,10 +669,10 @@ async def collect_from_ftp(  # pylint: disable=too-many-locals,too-many-statemen
     )
 
     loop = asyncio.get_running_loop()
-    results = asyncio.Queue()
+    results: "asyncio.Queue[Any]" = asyncio.Queue()
     sentinel = object()
     cancelled = threading.Event()
-    ftp_box = {"ftp": None}
+    ftp_box: Dict[str, Any] = {"ftp": None}
 
     def emit(name, size, published_at=None):
         if cancelled.is_set():
@@ -689,8 +689,7 @@ async def collect_from_ftp(  # pylint: disable=too-many-locals,too-many-statemen
         """Push listing entries onto the async queue as they arrive."""
         ftp = None
         try:
-            ftp = FTP_TLS(ftp_host, ftp_username, ftp_password, timeout=timeout)
-            ftp.trust_server_pasv_ipv4_address = True
+            ftp = _open_ftp_tls(ftp_host, ftp_username, ftp_password, timeout)
             ftp_box["ftp"] = ftp
             ftp.cwd(ftp_path)
             try:
@@ -776,6 +775,15 @@ async def collect_from_ftp(  # pylint: disable=too-many-locals,too-many-statemen
             await asyncio.gather(producer, return_exceptions=True)
 
 
+def _open_ftp_tls(ftp_host, ftp_username, ftp_password, timeout):
+    """Open an FTP_TLS connection that trusts the host the server advertises
+    for passive mode (some chains' servers report a private IPv4 address)."""
+    ftp = FTP_TLS(ftp_host, ftp_username, ftp_password, timeout=timeout)
+    # Not declared in the typeshed stubs for ftplib, hence setattr.
+    setattr(ftp, "trust_server_pasv_ipv4_address", True)
+    return ftp
+
+
 def _sync_ftp_download_to_memory(
     ftp_host, ftp_username, ftp_password, ftp_path, file_name, ftp_timeout
 ):
@@ -786,8 +794,7 @@ def _sync_ftp_download_to_memory(
     """
     socket.setdefaulttimeout(ftp_timeout)
     file_buffer = io.BytesIO()
-    ftp = FTP_TLS(ftp_host, ftp_username, ftp_password, timeout=ftp_timeout)
-    ftp.trust_server_pasv_ipv4_address = True
+    ftp = _open_ftp_tls(ftp_host, ftp_username, ftp_password, ftp_timeout)
     ftp.cwd(ftp_path)
     expected_size = None
     try:

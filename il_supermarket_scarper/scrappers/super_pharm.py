@@ -28,7 +28,7 @@ class SuperPharm(MultiPageWeb):
     def collect_files_details_from_page(self, html):
         links = []
         filenames = []
-        file_sizes = []
+        file_sizes: list = []
         published_ats = []
         for element in html.xpath("//tbody/tr"):  # skip header
             tds = element.xpath("./td")

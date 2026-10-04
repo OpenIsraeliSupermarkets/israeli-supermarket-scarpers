@@ -2,6 +2,7 @@ import logging
 import random
 import re
 import time
+import importlib
 import inspect
 
 from datetime import datetime
@@ -10,25 +11,27 @@ from functools import partial
 import functools
 
 
+def _simple_decorator(caller):
+    """Turns caller into a decorator.
+    Unlike decorator module, function signature is not preserved.
+
+    :param caller: caller(f, *args, **kwargs)
+    """
+
+    def decor(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            return caller(func, *args, **kwargs)
+
+        return wrapper
+
+    return decor
+
+
 try:
-    from decorator import decorator
+    decorator = importlib.import_module("decorator").decorator
 except ImportError:
-
-    def decorator(caller):
-        """Turns caller into a decorator.
-        Unlike decorator module, function signature is not preserved.
-
-        :param caller: caller(f, *args, **kwargs)
-        """
-
-        def decor(func):
-            @functools.wraps(func)
-            def wrapper(*args, **kwargs):
-                return caller(func, *args, **kwargs)
-
-            return wrapper
-
-        return decor
+    decorator = _simple_decorator
 
 
 logging_logger = logging.getLogger(__name__)
@@ -229,7 +232,7 @@ def __retry_files(
     num_of_retrys=1,
     logger=logging_logger,
 ):
-    retry_list = []
+    retry_list: list = []
     all_results = []
     for i in range(num_of_retrys):
         logger.info(f"File Retry: Itreation #{i},retry_list={retry_list}")
