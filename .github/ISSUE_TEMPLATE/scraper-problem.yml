@@ -1,0 +1,38 @@
+name: Scraper problem
+description: A scraper returns wrong, missing or broken data.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing, check the [scheduled test runs](https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers/actions/workflows/test-suite.yml?query=event%3Aschedule) and the open `[CI]` issues. Scrapers hit live portals, so a missing or empty day is often upstream.
+  - type: input
+    id: scraper
+    attributes:
+      label: Scraper / chain
+      placeholder: e.g. KESHET
+    validations:
+      required: true
+  - type: dropdown
+    id: portal
+    attributes:
+      label: Is the chain's own portal down or empty?
+      description: Open the chain's price-transparency portal in a browser and check.
+      options:
+        - Portal is down or unreachable
+        - Portal works but has no files for the day
+        - Portal works and has files, the scraper misses them
+        - I did not check
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Command, version and logs
+      render: shell

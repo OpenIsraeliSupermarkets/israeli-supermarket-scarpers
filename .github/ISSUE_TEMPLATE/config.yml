@@ -1,0 +1,9 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Is a scraper failing? Check the scheduled test status first
+    url: https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers/actions/workflows/test-suite.yml?query=event%3Aschedule
+    about: >
+      Scrapers run against live supermarket portals, and portals often publish
+      no files for a day or go down. CI already tracks each failing scraper in
+      an open [CI] issue and closes it when it passes again. Look there before
+      opening a new issue.

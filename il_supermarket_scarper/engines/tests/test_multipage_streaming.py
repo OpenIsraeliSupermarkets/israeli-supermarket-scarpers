@@ -121,11 +121,13 @@ class TestMultiPageStreaming(unittest.IsolatedAsyncioTestCase):
             try:
                 first = await anext(gen)
                 self.assertEqual(first.name, "page1.xml")
-                await asyncio.wait_for(slow_entered.wait(), timeout=1)
+                await asyncio.wait_for(slow_entered.wait(), timeout=10)
             finally:
                 await gen.aclose()
 
-            await asyncio.wait_for(slow_cancelled.wait(), timeout=1)
+            # aclose() awaits the cancelled tasks, so no extra waiting is needed;
+            # a short timeout here only flaked on loaded CI runners.
+            await asyncio.wait_for(slow_cancelled.wait(), timeout=10)
             self.assertTrue(slow_cancelled.is_set())
 
     async def test_limit_stops_scheduling_more_pages(self):

@@ -23,8 +23,12 @@ from il_supermarket_scarper.utils import (
 )
 
 
-def make_test_case(scraper_enum, store_id):
-    """create test suite for scraper"""
+def make_test_case(scraper_enum, store_id, many_files=3):
+    """create test suite for scraper
+
+    ``many_files`` is how many files ``test_scrape_three`` expects; lower it for
+    chains whose portal publishes fewer files.
+    """
 
     class TestScapers(unittest.IsolatedAsyncioTestCase):
         """class with all the tests for scraper"""
@@ -285,7 +289,7 @@ def make_test_case(scraper_enum, store_id):
 
         async def test_scrape_three(self):
             """scrape three file and make sure they exists"""
-            await self._clean_scarpe_delete(scraper_enum, limit=3)
+            await self._clean_scarpe_delete(scraper_enum, limit=many_files)
 
         async def test_scrape_promo(self):
             """scrape one promo file and make sure it exists"""
