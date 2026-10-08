@@ -129,11 +129,15 @@ async def stream_as_completed(  # pylint: disable=too-many-locals,too-many-branc
             for item in completed_items:
                 yield item
     finally:
-        if listing_task is not None:
-            listing_task.cancel()
-            await asyncio.gather(listing_task, return_exceptions=True)
-        await source.aclose()
+        # Cancel in-flight work first so a failing/slow ``source.aclose()``
+        # can never leave page tasks running.
         for task in pending:
             task.cancel()
-        if pending:
-            await asyncio.gather(*pending, return_exceptions=True)
+        if listing_task is not None:
+            listing_task.cancel()
+        leftovers = [*pending, *([listing_task] if listing_task else [])]
+        try:
+            if leftovers:
+                await asyncio.gather(*leftovers, return_exceptions=True)
+        finally:
+            await source.aclose()
