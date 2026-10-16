@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   open-daily-publish-deps-issue:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Mint GitHub App installation token
         id: app-token
