@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       outcome: ${{ steps.run.outputs.outcome }}
       version: ${{ steps.run.outputs.version }}
