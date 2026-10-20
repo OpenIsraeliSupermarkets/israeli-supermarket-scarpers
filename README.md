@@ -32,8 +32,6 @@ Notice:
 
 Running outside Israel
 ----
-Most chains' servers drop connections from non-Israeli IPs. The failure looks like a code bug but isn't: a long hang, then `TimeoutError: [Errno 110] Connection timed out` (or a refused or forbidden connection). The traceback often ends in `verified_downloads.filter_already_downloaded`, which is only the outermost wrapper around the listing. Chains on the Cerberus FTP server (`url.retail.publishedprices.co.il`) are the most common case.
-
 A weekly job tries to download one file per chain twice, from a GitHub-hosted runner outside Israel and from the project's CI machine in Israel, and publishes the comparison. A chain that works only from Israel is geo-blocked. One that fails from Israel too is broken, so please open an issue.
 
 [![Reachable from outside Israel](https://raw.githubusercontent.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers/reports/reachability/reachability.svg)](https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers/blob/reports/reachability/reachability.md)
