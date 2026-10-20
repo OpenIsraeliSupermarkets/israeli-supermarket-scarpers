@@ -2,12 +2,16 @@
 """Probe which chains can be scraped from the machine this runs on.
 
 Runs a real one-file scrape per active scraper and classifies each chain as
-``reachable``, ``blocked``, ``no_files`` or ``error``. Run on a GitHub-hosted
-runner (outside Israel) by ``.github/workflows/reachability.yml``, which
-publishes the outputs to the ``reports`` branch for the README.
+``reachable``, ``blocked``, ``no_files`` or ``error``.
+``.github/workflows/reachability.yml`` runs it on a GitHub-hosted runner
+(outside Israel) and on the self-hosted CI runner (in Israel), then publishes
+the comparison to the ``reports`` branch for the README.
 
-Outputs in ``--output-dir``: ``reachability.json``, ``reachability.md`` and
-``reachability.svg`` (a badge).
+``probe`` writes one location's results. ``report`` compares the
+outside-Israel probe with an Israeli one (from the self-hosted CI runner) and
+writes ``reachability.json``, ``reachability.md`` (side-by-side table) and
+``reachability.svg`` (a badge) to ``--output-dir``. A chain that works in
+Israel but not abroad is geo-blocked; one that fails in Israel too is broken.
 """
 
 from __future__ import annotations
@@ -173,7 +177,7 @@ async def run_probe(
 
 
 def summarize(results: List[Dict[str, Any]], runner: str) -> Dict[str, Any]:
-    """Build the JSON payload published to the reports branch."""
+    """Build one location's probe payload (the ``probe`` command's output)."""
     counts = {s: 0 for s in (REACHABLE, BLOCKED, NO_FILES, ERROR)}
     for item in results:
         counts[item["status"]] += 1
@@ -186,41 +190,120 @@ def summarize(results: List[Dict[str, Any]], runner: str) -> Dict[str, Any]:
     }
 
 
+WORKS_EVERYWHERE = "works_everywhere"
+GEO_BLOCKED = "geo_blocked"
+FAILS_IN_ISRAEL = "fails_in_israel"
+NOT_COMPARED = "not_compared"
+
+
+def verdict(israel: Optional[Dict[str, Any]], outside: Dict[str, Any]) -> str:
+    """Compare one chain's probe from Israel with the one from outside."""
+    if israel is None:
+        return NOT_COMPARED
+    if israel["status"] != REACHABLE:
+        return FAILS_IN_ISRAEL
+    if outside["status"] == REACHABLE:
+        return WORKS_EVERYWHERE
+    return GEO_BLOCKED
+
+
+def compare(
+    outside: Dict[str, Any], israel: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """Merge the outside-Israel probe with the (optional) Israeli one."""
+    israel_by_name = (
+        {item["scraper"]: item for item in israel["scrapers"]} if israel else {}
+    )
+    rows = []
+    for item in outside["scrapers"]:
+        in_israel = israel_by_name.get(item["scraper"]) if israel else None
+        rows.append(
+            {
+                "scraper": item["scraper"],
+                "outside": item,
+                "israel": in_israel,
+                "verdict": verdict(in_israel, item),
+            }
+        )
+    counts = {
+        "outside_reachable": outside["counts"][REACHABLE],
+        "israel_reachable": israel["counts"][REACHABLE] if israel else None,
+    }
+    for name in (WORKS_EVERYWHERE, GEO_BLOCKED, FAILS_IN_ISRAEL, NOT_COMPARED):
+        counts[name] = sum(1 for row in rows if row["verdict"] == name)
+    return {
+        "generated_at": _now().isoformat(),
+        "runners": {
+            "outside": outside["runner"],
+            "israel": israel["runner"] if israel else None,
+        },
+        "total": len(rows),
+        "counts": counts,
+        "scrapers": rows,
+    }
+
+
 _ICONS = {REACHABLE: "✅", BLOCKED: "⛔", NO_FILES: "⚪", ERROR: "⚠️"}
+_VERDICT_TEXT = {
+    WORKS_EVERYWHERE: "works everywhere",
+    GEO_BLOCKED: "**geo-blocked**",
+    FAILS_IN_ISRAEL: "**fails in Israel too** (not geo-blocking)",
+    NOT_COMPARED: "",
+}
+_VERDICT_ORDER = [GEO_BLOCKED, FAILS_IN_ISRAEL, NOT_COMPARED, WORKS_EVERYWHERE]
 
 
-def render_markdown(payload: Dict[str, Any]) -> str:
-    """Render the per-chain table."""
-    counts = payload["counts"]
+def _cell(probe: Optional[Dict[str, Any]]) -> str:
+    if probe is None:
+        return "not run"
+    text = f"{_ICONS[probe['status']]} {probe['status']}"
+    if probe.get("error"):
+        text += f" ({probe['error']})"
+    return text.replace("|", "\\|")
+
+
+def render_markdown(report: Dict[str, Any]) -> str:
+    """Render the side-by-side per-chain table."""
+    counts = report["counts"]
+    total = report["total"]
+    runners = report["runners"]
     lines = [
-        "# Scraper reachability from outside Israel",
+        "# Scraper reachability: Israel vs outside Israel",
         "",
-        f"Generated {payload['generated_at']} on {payload['runner']}.",
+        f"Generated {report['generated_at']}.",
+        f"Outside Israel: {runners['outside']}.",
+        f"Israel: {runners['israel'] or 'not run this time'}.",
         "",
-        f"**{counts[REACHABLE]} of {payload['total']}** chains could download a "
-        f"file from here. Blocked: {counts[BLOCKED]} (connection timed out, "
-        f"refused or forbidden). No files listed: {counts[NO_FILES]}. "
-        f"Other errors: {counts[ERROR]}.",
+        f"**{counts['outside_reachable']} of {total}** chains could download a "
+        "file from outside Israel.",
+    ]
+    if runners["israel"]:
+        lines += [
+            f"From Israel: {counts['israel_reachable']} of {total}. "
+            f"Geo-blocked (work in Israel only): {counts[GEO_BLOCKED]}. "
+            f"Failing in Israel too: {counts[FAILS_IN_ISRAEL]}.",
+        ]
+    lines += [
         "",
-        "From an Israeli IP all active chains are expected to work; see the "
-        "daily test suite.",
-        "",
-        "| Chain | Status | Seconds | Error |",
+        "| Chain | Israel | Outside Israel | Verdict |",
         "|---|---|---|---|",
     ]
-    for item in sorted(payload["scrapers"], key=lambda i: (i["status"], i["scraper"])):
-        error = (item.get("error") or "").replace("|", "\\|")
+    rows = sorted(
+        report["scrapers"],
+        key=lambda r: (_VERDICT_ORDER.index(r["verdict"]), r["scraper"]),
+    )
+    for row in rows:
         lines.append(
-            f"| {item['scraper']} | {_ICONS[item['status']]} {item['status']} "
-            f"| {item['seconds']} | {error} |"
+            f"| {row['scraper']} | {_cell(row['israel'])} "
+            f"| {_cell(row['outside'])} | {_VERDICT_TEXT[row['verdict']]} |"
         )
     return "\n".join(lines) + "\n"
 
 
-def render_badge(payload: Dict[str, Any]) -> str:
+def render_badge(report: Dict[str, Any]) -> str:
     """Render a flat shields-style SVG badge: 'outside Israel | N/M reachable'."""
-    reachable = payload["counts"][REACHABLE]
-    total = payload["total"]
+    reachable = report["counts"]["outside_reachable"]
+    total = report["total"]
     label = "outside Israel"
     value = f"{reachable}/{total} reachable"
     ratio = reachable / total if total else 0
@@ -241,54 +324,79 @@ def render_badge(payload: Dict[str, Any]) -> str:
     )
 
 
-def write_outputs(payload: Dict[str, Any], output_dir: str) -> None:
+def write_outputs(report: Dict[str, Any], output_dir: str) -> None:
     """Write the JSON, Markdown table and SVG badge."""
     os.makedirs(output_dir, exist_ok=True)
     with open(
         os.path.join(output_dir, "reachability.json"), "w", encoding="utf-8"
     ) as f:
-        json.dump(payload, f, indent=2, ensure_ascii=False)
+        json.dump(report, f, indent=2, ensure_ascii=False)
     with open(os.path.join(output_dir, "reachability.md"), "w", encoding="utf-8") as f:
-        f.write(render_markdown(payload))
+        f.write(render_markdown(report))
     with open(os.path.join(output_dir, "reachability.svg"), "w", encoding="utf-8") as f:
-        f.write(render_badge(payload))
+        f.write(render_badge(report))
 
 
-def parse_args():
-    """Parse CLI arguments."""
+def _load(path: Optional[str]) -> Optional[Dict[str, Any]]:
+    if not path or not os.path.exists(path):
+        return None
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def parse_args(argv=None):
+    """Parse CLI arguments for the ``probe`` and ``report`` commands."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
+    commands = parser.add_subparsers(dest="command", required=True)
+
+    probe = commands.add_parser("probe", help="Probe the chains from this machine")
+    probe.add_argument(
         "--scrapers",
         default="all",
         help="Comma-separated scraper names, or 'all' (default)",
     )
-    parser.add_argument(
+    probe.add_argument(
         "--timeout",
         type=float,
         default=300.0,
         help="Seconds allowed per chain (default: 300)",
     )
-    parser.add_argument(
+    probe.add_argument(
         "--concurrency", type=int, default=6, help="Chains probed at once (default: 6)"
     )
-    parser.add_argument(
+    probe.add_argument(
         "--runner",
         default=os.environ.get("REACHABILITY_RUNNER", "an unknown host"),
         help="Where this ran, shown in the report",
     )
-    parser.add_argument("--output-dir", required=True)
-    return parser.parse_args()
+    probe.add_argument("--output", required=True, help="Probe JSON to write")
 
-
-def main():
-    """Probe every scraper and write the report files."""
-    args = parse_args()
-    Logger.set_logging_level("ERROR")
-    results = asyncio.run(
-        run_probe(resolve_scrapers(args.scrapers), args.timeout, args.concurrency)
+    report = commands.add_parser("report", help="Build the report from probe files")
+    report.add_argument("--outside", required=True, help="Probe JSON from abroad")
+    report.add_argument(
+        "--israel", help="Probe JSON from an Israeli host (optional; may be missing)"
     )
-    payload = summarize(results, args.runner)
-    write_outputs(payload, args.output_dir)
+    report.add_argument("--output-dir", required=True)
+    return parser.parse_args(argv)
+
+
+def main(argv=None):
+    """Run ``probe`` (one location) or ``report`` (compare and render)."""
+    args = parse_args(argv)
+    if args.command == "probe":
+        Logger.set_logging_level("ERROR")
+        results = asyncio.run(
+            run_probe(resolve_scrapers(args.scrapers), args.timeout, args.concurrency)
+        )
+        os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
+        with open(args.output, "w", encoding="utf-8") as f:
+            json.dump(summarize(results, args.runner), f, indent=2, ensure_ascii=False)
+        print(f"Wrote probe results to {args.output}", flush=True)
+        return
+    outside = _load(args.outside)
+    if outside is None:
+        raise SystemExit(f"Missing outside-Israel probe file: {args.outside}")
+    write_outputs(compare(outside, _load(args.israel)), args.output_dir)
     print(f"Wrote reachability report to {args.output_dir}", flush=True)
 
 

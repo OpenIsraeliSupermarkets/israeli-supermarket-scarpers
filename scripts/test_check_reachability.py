@@ -110,35 +110,92 @@ class ProbeTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("no file within", result["error"])
 
 
+class CompareTests(unittest.TestCase):
+    """compare() and verdict(): Israel vs outside Israel."""
+
+    def test_verdicts(self):
+        """Geo-blocked only when the chain works from Israel."""
+        outside = _payload([reach.REACHABLE, reach.BLOCKED, reach.BLOCKED])
+        israel = _payload([reach.REACHABLE, reach.REACHABLE, reach.ERROR])
+        report = reach.compare(outside, israel)
+        verdicts = [row["verdict"] for row in report["scrapers"]]
+        self.assertEqual(
+            verdicts,
+            [reach.WORKS_EVERYWHERE, reach.GEO_BLOCKED, reach.FAILS_IN_ISRAEL],
+        )
+        self.assertEqual(report["counts"]["israel_reachable"], 2)
+        self.assertEqual(report["counts"][reach.GEO_BLOCKED], 1)
+
+    def test_israel_probe_missing(self):
+        """The report still builds when the Israeli runner didn't run."""
+        report = reach.compare(_payload([reach.REACHABLE, reach.BLOCKED]))
+        self.assertIsNone(report["runners"]["israel"])
+        self.assertEqual(report["counts"][reach.NOT_COMPARED], 2)
+        self.assertIn("not run", reach.render_markdown(report))
+
+    def test_chain_missing_from_israel_probe(self):
+        """A chain absent from the Israeli probe is not called geo-blocked."""
+        outside = _payload([reach.BLOCKED, reach.BLOCKED])
+        israel = _payload([reach.REACHABLE])
+        report = reach.compare(outside, israel)
+        self.assertEqual(report["scrapers"][1]["verdict"], reach.NOT_COMPARED)
+
+
 class RenderTests(unittest.TestCase):
-    """summarize(), render_markdown(), render_badge(), write_outputs()."""
+    """render_markdown(), render_badge(), write_outputs(), the CLI."""
 
     def test_counts_and_table(self):
-        """The table lists every chain and the headline counts match."""
-        payload = _payload([reach.REACHABLE, reach.BLOCKED, reach.BLOCKED])
-        self.assertEqual(payload["counts"][reach.BLOCKED], 2)
-        markdown = reach.render_markdown(payload)
+        """The table lists every chain side by side; geo-blocked rows first."""
+        report = reach.compare(
+            _payload([reach.REACHABLE, reach.BLOCKED, reach.BLOCKED]),
+            _payload([reach.REACHABLE, reach.REACHABLE, reach.REACHABLE]),
+        )
+        markdown = reach.render_markdown(report)
         self.assertIn("**1 of 3**", markdown)
+        self.assertIn("Geo-blocked (work in Israel only): 2", markdown)
+        self.assertIn("| Chain | Israel | Outside Israel | Verdict |", markdown)
         for i in range(3):
             self.assertIn(f"| CHAIN_{i} |", markdown)
+        self.assertLess(markdown.index("CHAIN_1"), markdown.index("CHAIN_0"))
 
     def test_badge_text_and_color(self):
         """The badge says N/M and turns red when most chains are blocked."""
-        badge = reach.render_badge(_payload([reach.REACHABLE] + [reach.BLOCKED] * 3))
+        report = reach.compare(_payload([reach.REACHABLE] + [reach.BLOCKED] * 3))
+        badge = reach.render_badge(report)
         self.assertIn("1/4 reachable", badge)
         self.assertIn("#e05d44", badge)
 
-    def test_write_outputs(self):
-        """All three report files are written and the JSON round-trips."""
-        payload = _payload([reach.REACHABLE])
+    def test_report_command_writes_outputs(self):
+        """`report` reads both probe files and writes the three outputs."""
         with tempfile.TemporaryDirectory() as tmp:
-            reach.write_outputs(payload, tmp)
+            for name, statuses in (
+                ("outside", [reach.BLOCKED]),
+                ("israel", [reach.REACHABLE]),
+            ):
+                with open(
+                    os.path.join(tmp, f"{name}.json"), "w", encoding="utf-8"
+                ) as f:
+                    json.dump(_payload(statuses), f)
+            out = os.path.join(tmp, "out")
+            reach.main(
+                [
+                    "report",
+                    "--outside",
+                    os.path.join(tmp, "outside.json"),
+                    "--israel",
+                    os.path.join(tmp, "israel.json"),
+                    "--output-dir",
+                    out,
+                ]
+            )
             self.assertEqual(
-                sorted(os.listdir(tmp)),
+                sorted(os.listdir(out)),
                 ["reachability.json", "reachability.md", "reachability.svg"],
             )
-            with open(os.path.join(tmp, "reachability.json"), encoding="utf-8") as f:
-                self.assertEqual(json.load(f)["total"], 1)
+            with open(os.path.join(out, "reachability.json"), encoding="utf-8") as f:
+                self.assertEqual(
+                    json.load(f)["scrapers"][0]["verdict"], reach.GEO_BLOCKED
+                )
 
 
 if __name__ == "__main__":

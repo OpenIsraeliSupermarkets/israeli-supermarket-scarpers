@@ -1,9 +1,11 @@
-name: Reachability Outside Israel
+name: Reachability Israel vs Outside
 
-# Probes every active scraper from a GitHub-hosted runner (outside Israel) and
-# publishes the result to the `reports` branch under reachability/, where the
-# README badge and table link point. PRs that touch the probe run it without
-# publishing.
+# Probes every active scraper twice, from a GitHub-hosted runner (outside
+# Israel) and from the self-hosted CI runner (in Israel), and compares them: a
+# chain that works only from Israel is geo-blocked, one that fails in Israel
+# too is broken. The report goes to the `reports` branch under reachability/,
+# where the README badge and table link point. PRs that touch the probe run it
+# without publishing.
 
 on:
   schedule:
@@ -27,8 +29,11 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  SCRAPERS: ${{ github.event.inputs.scrapers || 'all' }}
+
 jobs:
-  probe:
+  probe-outside:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -47,10 +52,87 @@ jobs:
 
       - name: Probe scrapers
         env:
-          REACHABILITY_RUNNER: "GitHub-hosted ubuntu-24.04 runner (outside Israel)"
+          REACHABILITY_RUNNER: "GitHub-hosted ubuntu-24.04 runner"
         run: |
-          python -m scripts.check_reachability \
-            --scrapers "${{ github.event.inputs.scrapers || 'all' }}" \
+          python -m scripts.check_reachability probe \
+            --scrapers "$SCRAPERS" --output probes/outside.json
+
+      - name: Upload probe
+        uses: actions/upload-artifact@v4
+        with:
+          name: probe-outside
+          path: probes/outside.json
+
+  probe-israel:
+    runs-on:
+      - self-hosted
+      - ci
+    timeout-minutes: 60
+    # The report still builds from the outside probe if this runner is down.
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t reachability-probe:${{ github.run_id }} --target base .
+
+      - name: Probe scrapers
+        run: |
+          mkdir -p probes
+          # Run as the runner user so the next checkout can clean probes/.
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -e REACHABILITY_RUNNER="self-hosted CI runner in Israel" \
+            -e PYTHONPATH=/work \
+            -v "$GITHUB_WORKSPACE/scripts:/work/scripts:ro" \
+            -v "$GITHUB_WORKSPACE/probes:/out" \
+            -w /out \
+            reachability-probe:${{ github.run_id }} \
+            python -m scripts.check_reachability probe \
+              --scrapers "$SCRAPERS" --output /out/israel.json
+
+      - name: Upload probe
+        uses: actions/upload-artifact@v4
+        with:
+          name: probe-israel
+          path: probes/israel.json
+
+      - name: Docker cleanup
+        if: always()
+        run: |
+          docker rmi reachability-probe:${{ github.run_id }} 2>/dev/null || true
+          docker builder prune -f 2>/dev/null || true
+
+  report:
+    needs: [probe-outside, probe-israel]
+    if: always() && needs.probe-outside.result == 'success'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Download probes
+        uses: actions/download-artifact@v4
+        with:
+          pattern: probe-*
+          path: probes
+          merge-multiple: true
+
+      - name: Build report
+        run: |
+          python -m scripts.check_reachability report \
+            --outside probes/outside.json --israel probes/israel.json \
             --output-dir reachability-out
           cat reachability-out/reachability.md >> "$GITHUB_STEP_SUMMARY"
 
@@ -62,8 +144,8 @@ jobs:
           retention-days: 30
 
   publish:
-    needs: probe
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: report
+    if: always() && needs.report.result == 'success' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     permissions:
       contents: write
