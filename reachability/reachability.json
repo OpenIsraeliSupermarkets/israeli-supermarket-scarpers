@@ -1,0 +1,546 @@
+{
+  "generated_at": "2026-10-20T09:43:44.792162+03:00",
+  "runners": {
+    "outside": "GitHub-hosted ubuntu-24.04 runner",
+    "israel": "self-hosted CI runner in Israel"
+  },
+  "total": 33,
+  "counts": {
+    "outside_reachable": 27,
+    "israel_reachable": 33,
+    "works_everywhere": 27,
+    "geo_blocked": 6,
+    "fails_in_israel": 0,
+    "not_compared": 0
+  },
+  "scrapers": [
+    {
+      "scraper": "BAREKET",
+      "outside": {
+        "scraper": "BAREKET",
+        "status": "reachable",
+        "seconds": 35.3,
+        "error": null
+      },
+      "israel": {
+        "scraper": "BAREKET",
+        "status": "reachable",
+        "seconds": 0.6,
+        "error": null
+      },
+      "verdict": "works_everywhere"
+    },
+    {
+      "scraper": "YAYNO_BITAN_AND_CARREFOUR",
+      "outside": {
+        "scraper": "YAYNO_BITAN_AND_CARREFOUR",
+        "status": "reachable",
+        "seconds": 1.3,
+        "error": null
+      },
+      "israel": {
+        "scraper": "YAYNO_BITAN_AND_CARREFOUR",
+        "status": "reachable",
+        "seconds": 0.2,
+        "error": null
+      },
+      "verdict": "works_everywhere"
+    },
+    {
+      "scraper": "CITY_MARKET_KIRYATGAT",
+      "outside": {
+        "scraper": "CITY_MARKET_KIRYATGAT",
+        "status": "reachable",
+        "seconds": 5.0,
+        "error": null
+      },
+      "israel": {
+        "scraper": "CITY_MARKET_KIRYATGAT",
+        "status": "reachable",
+        "seconds": 0.6,
+        "error": null
+      },
+      "verdict": "works_everywhere"
+    },
+    {
+      "scraper": "CITY_MARKET_SHOPS",
+      "outside": {
+        "scraper": "CITY_MARKET_SHOPS",
+        "status": "reachable",
+        "seconds": 95.6,
+        "error": null
+      },
+      "israel": {
+        "scraper": "CITY_MARKET_SHOPS",
+        "status": "reachable",
+        "seconds": 5.6,
+        "error": null
+      },
+      "verdict": "works_everywhere"
+    },
+    {
+      "scraper": "DOR_ALON",
+      "outside": {
+        "scraper": "DOR_ALON",
+        "status": "reachable",
+        "seconds": 95.6,
+        "error": null
+      },
+      "israel": {
+        "scraper": "DOR_ALON",
+        "status": "reachable",
+        "seconds": 0.5,
+        "error": null
+      },
+      "verdict": "works_everywhere"
+    },
+    {
+      "scraper": "GOOD_PHARM",
+      "outside": {
+        "scraper": "GOOD_PHARM",
+        "status": "reachable",
+        "seconds": 35.3,
+        "error": null
+      },
+      "israel": {
+        "scraper": "GOOD_PHARM",
+        "status": "reachable",
+        "seconds": 0.6,
+        "error": null
+      },
+      "verdict": "works_everywhere"
+    },
+    {
+      "scraper": "HAZI_HINAM",
+      "outside": {
+        "scraper": "HAZI_HINAM",
+        "status": "blocked",
+        "seconds": 34.0,
+        "error": "ConnectionError: Response for https://shop.hazi-hinam.co.il/Prices?d=2026-10-19&t=null&f=null, returned with status 403"
+      },
+      "israel": {
+        "scraper": "HAZI_HINAM",
+        "status": "reachable",
+        "seconds": 1.9,
+        "error": null
+      },
+      "verdict": "geo_blocked"
+    },
+    {
+      "scraper": "HET_COHEN_NEW_SOURCE",
+      "outside": {
+        "scraper": "HET_COHEN_NEW_SOURCE",
+        "status": "blocked",
+        "seconds": 30.3,
+        "error": "API request failed: HTTPSConnectionPool(host='laibcatalog.co.il', port=443): Max retries exceeded with url: /webapi/api/getbranches?edi=7290455000004 (Caused by ConnectTimeoutError(<HTTPSConnection(ho"
+      },
+      "israel": {
+        "scraper": "HET_COHEN_NEW_SOURCE",
+        "status": "reachable",
+        "seconds": 0.3,
+        "error": null
+      },
+      "verdict": "geo_blocked"
+    },
+    {
+      "scraper": "KESHET",
+      "outside": {
+        "scraper": "KESHET",
+        "status": "reachable",
+        "seconds": 62.9,
+        "error": null
+      },
+      "israel": {
+        "scraper": "KESHET",
+        "status": "reachable",
+        "seconds": 1.2,
+        "error": null
+      },
+      "verdict": "works_everywhere"
+    },
+    {
+      "scraper": "KING_STORE",
+      "outside": {
+        "scraper": "KING_STORE",
+        "status": "reachable",
+        "seconds": 65.1,
+        "error": null
+      },
+      "israel": {
+        "scraper": "KING_STORE",
+        "status": "reachable",
+        "seconds": 1.4,
+        "error": null
+      },
+      "verdict": "works_everywhere"
+    },
+    {
+      "scraper": "MAAYAN_2000",
+      "outside": {
+        "scraper": "MAAYAN_2000",
+        "status": "reachable",
+        "seconds": 64.8,
+        "error": null
+      },
+      "israel": {
+        "scraper": "MAAYAN_2000",
+        "status": "reachable",
+        "seconds": 1.4,
+        "error": null
+      },
+      "verdict": "works_everywhere"
+    },
+    {
+      "scraper": "MAHSANI_ASHUK_NEW_SOURCE",
+      "outside": {
+        "scraper": "MAHSANI_ASHUK_NEW_SOURCE",
+        "status": "blocked",
+        "seconds": 60.3,
+        "error": "API request failed: HTTPSConnectionPool(host='laibcatalog.co.il', port=443): Max retries exceeded with url: /webapi/api/getbranches?edi=7290661400001 (Caused by ConnectTimeoutError(<HTTPSConnection(ho"
+      },
+      "israel": {
+        "scraper": "MAHSANI_ASHUK_NEW_SOURCE",
+        "status": "reachable",
+        "seconds": 3.2,
+        "error": null
+      },
+      "verdict": "geo_blocked"
+    },
+    {
+      "scraper": "NETIV_HASED",
+      "outside": {
+        "scraper": "NETIV_HASED",
+        "status": "blocked",
+        "seconds": 14.4,
+        "error": "ConnectionError: Response for https://app.netiv-hesed.com/?Date=2026-10-19, returned with status 403"
+      },
+      "israel": {
+        "scraper": "NETIV_HASED",
+        "status": "reachable",
+        "seconds": 1.9,
+        "error": null
+      },
+      "verdict": "geo_blocked"
+    },
+    {
+      "scraper": "MESHMAT_YOSEF_1",
+      "outside": {
+        "scraper": "MESHMAT_YOSEF_1",
+        "status": "reachable",
+        "seconds": 1.0,
+        "error": null
+      },
+      "israel": {
+        "scraper": "MESHMAT_YOSEF_1",
+        "status": "reachable",
+        "seconds": 0.5,
+        "error": null
+      },
+      "verdict": "works_everywhere"
+    },
+    {
+      "scraper": "MESHMAT_YOSEF_2",
+      "outside": {
+        "scraper": "MESHMAT_YOSEF_2",
+        "status": "reachable",
+        "seconds": 4.5,
+        "error": null
+      },
+      "israel": {
+        "scraper": "MESHMAT_YOSEF_2",
+        "status": "reachable",
+        "seconds": 0.5,
+        "error": null
+      },
+      "verdict": "works_everywhere"
+    },
+    {
+      "scraper": "OSHER_AD",
+      "outside": {
+        "scraper": "OSHER_AD",
+        "status": "reachable",
+        "seconds": 6.0,
+        "error": null
+      },
+      "israel": {
+        "scraper": "OSHER_AD",
+        "status": "reachable",
+        "seconds": 0.4,
+        "error": null
+      },
+      "verdict": "works_everywhere"
+    },
+    {
+      "scraper": "POLIZER",
+      "outside": {
+        "scraper": "POLIZER",
+        "status": "reachable",
+        "seconds": 5.2,
+        "error": null
+      },
+      "israel": {
+        "scraper": "POLIZER",
+        "status": "reachable",
+        "seconds": 1.2,
+        "error": null
+      },
+      "verdict": "works_everywhere"
+    },
+    {
+      "scraper": "RAMI_LEVY",
+      "outside": {
+        "scraper": "RAMI_LEVY",
+        "status": "reachable",
+        "seconds": 6.3,
+        "error": null
+      },
+      "israel": {
+        "scraper": "RAMI_LEVY",
+        "status": "reachable",
+        "seconds": 1.1,
+        "error": null
+      },
+      "verdict": "works_everywhere"
+    },
+    {
+      "scraper": "SALACH_DABACH",
+      "outside": {
+        "scraper": "SALACH_DABACH",
+        "status": "reachable",
+        "seconds": 5.5,
+        "error": null
+      },
+      "israel": {
+        "scraper": "SALACH_DABACH",
+        "status": "reachable",
+        "seconds": 1.1,
+        "error": null
+      },
+      "verdict": "works_everywhere"
+    },
+    {
+      "scraper": "SHEFA_BARCART_ASHEM",
+      "outside": {
+        "scraper": "SHEFA_BARCART_ASHEM",
+        "status": "reachable",
+        "seconds": 4.7,
+        "error": null
+      },
+      "israel": {
+        "scraper": "SHEFA_BARCART_ASHEM",
+        "status": "reachable",
+        "seconds": 0.4,
+        "error": null
+      },
+      "verdict": "works_everywhere"
+    },
+    {
+      "scraper": "SHUFERSAL",
+      "outside": {
+        "scraper": "SHUFERSAL",
+        "status": "reachable",
+        "seconds": 81.5,
+        "error": null
+      },
+      "israel": {
+        "scraper": "SHUFERSAL",
+        "status": "reachable",
+        "seconds": 8.5,
+        "error": null
+      },
+      "verdict": "works_everywhere"
+    },
+    {
+      "scraper": "SHUK_AHIR",
+      "outside": {
+        "scraper": "SHUK_AHIR",
+        "status": "reachable",
+        "seconds": 4.8,
+        "error": null
+      },
+      "israel": {
+        "scraper": "SHUK_AHIR",
+        "status": "reachable",
+        "seconds": 0.4,
+        "error": null
+      },
+      "verdict": "works_everywhere"
+    },
+    {
+      "scraper": "STOP_MARKET",
+      "outside": {
+        "scraper": "STOP_MARKET",
+        "status": "reachable",
+        "seconds": 5.1,
+        "error": null
+      },
+      "israel": {
+        "scraper": "STOP_MARKET",
+        "status": "reachable",
+        "seconds": 0.3,
+        "error": null
+      },
+      "verdict": "works_everywhere"
+    },
+    {
+      "scraper": "SUPER_PHARM",
+      "outside": {
+        "scraper": "SUPER_PHARM",
+        "status": "error",
+        "seconds": 66.9,
+        "error": "got an execption:"
+      },
+      "israel": {
+        "scraper": "SUPER_PHARM",
+        "status": "reachable",
+        "seconds": 1.8,
+        "error": null
+      },
+      "verdict": "geo_blocked"
+    },
+    {
+      "scraper": "SUPER_YUDA",
+      "outside": {
+        "scraper": "SUPER_YUDA",
+        "status": "reachable",
+        "seconds": 5.7,
+        "error": null
+      },
+      "israel": {
+        "scraper": "SUPER_YUDA",
+        "status": "reachable",
+        "seconds": 0.3,
+        "error": null
+      },
+      "verdict": "works_everywhere"
+    },
+    {
+      "scraper": "SUPER_SAPIR",
+      "outside": {
+        "scraper": "SUPER_SAPIR",
+        "status": "reachable",
+        "seconds": 64.4,
+        "error": null
+      },
+      "israel": {
+        "scraper": "SUPER_SAPIR",
+        "status": "reachable",
+        "seconds": 0.3,
+        "error": null
+      },
+      "verdict": "works_everywhere"
+    },
+    {
+      "scraper": "FRESH_MARKET_AND_SUPER_DOSH",
+      "outside": {
+        "scraper": "FRESH_MARKET_AND_SUPER_DOSH",
+        "status": "reachable",
+        "seconds": 65.7,
+        "error": null
+      },
+      "israel": {
+        "scraper": "FRESH_MARKET_AND_SUPER_DOSH",
+        "status": "reachable",
+        "seconds": 0.4,
+        "error": null
+      },
+      "verdict": "works_everywhere"
+    },
+    {
+      "scraper": "TIV_TAAM",
+      "outside": {
+        "scraper": "TIV_TAAM",
+        "status": "reachable",
+        "seconds": 65.1,
+        "error": null
+      },
+      "israel": {
+        "scraper": "TIV_TAAM",
+        "status": "reachable",
+        "seconds": 0.3,
+        "error": null
+      },
+      "verdict": "works_everywhere"
+    },
+    {
+      "scraper": "VICTORY_NEW_SOURCE",
+      "outside": {
+        "scraper": "VICTORY_NEW_SOURCE",
+        "status": "blocked",
+        "seconds": 60.4,
+        "error": "API request failed: HTTPSConnectionPool(host='laibcatalog.co.il', port=443): Max retries exceeded with url: /webapi/api/getbranches?edi=7290696200003 (Caused by ConnectTimeoutError(<HTTPSConnection(ho"
+      },
+      "israel": {
+        "scraper": "VICTORY_NEW_SOURCE",
+        "status": "reachable",
+        "seconds": 0.2,
+        "error": null
+      },
+      "verdict": "geo_blocked"
+    },
+    {
+      "scraper": "YELLOW",
+      "outside": {
+        "scraper": "YELLOW",
+        "status": "reachable",
+        "seconds": 5.2,
+        "error": null
+      },
+      "israel": {
+        "scraper": "YELLOW",
+        "status": "reachable",
+        "seconds": 0.4,
+        "error": null
+      },
+      "verdict": "works_everywhere"
+    },
+    {
+      "scraper": "YOHANANOF",
+      "outside": {
+        "scraper": "YOHANANOF",
+        "status": "reachable",
+        "seconds": 5.5,
+        "error": null
+      },
+      "israel": {
+        "scraper": "YOHANANOF",
+        "status": "reachable",
+        "seconds": 0.4,
+        "error": null
+      },
+      "verdict": "works_everywhere"
+    },
+    {
+      "scraper": "ZOL_VEBEGADOL",
+      "outside": {
+        "scraper": "ZOL_VEBEGADOL",
+        "status": "reachable",
+        "seconds": 4.6,
+        "error": null
+      },
+      "israel": {
+        "scraper": "ZOL_VEBEGADOL",
+        "status": "reachable",
+        "seconds": 0.6,
+        "error": null
+      },
+      "verdict": "works_everywhere"
+    },
+    {
+      "scraper": "WOLT",
+      "outside": {
+        "scraper": "WOLT",
+        "status": "reachable",
+        "seconds": 0.8,
+        "error": null
+      },
+      "israel": {
+        "scraper": "WOLT",
+        "status": "reachable",
+        "seconds": 0.3,
+        "error": null
+      },
+      "verdict": "works_everywhere"
+    }
+  ]
+}
