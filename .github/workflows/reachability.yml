@@ -1,0 +1,100 @@
+name: Reachability Outside Israel
+
+# Probes every active scraper from a GitHub-hosted runner (outside Israel) and
+# publishes the result to the `reports` branch under reachability/, where the
+# README badge and table link point. PRs that touch the probe run it without
+# publishing.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"  # Mondays 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      scrapers:
+        description: "Comma-separated scraper names, or 'all'"
+        required: false
+        default: "all"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "scripts/check_reachability.py"
+      - ".github/workflows/reachability.yml"
+
+concurrency:
+  group: reachability-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Probe scrapers
+        env:
+          REACHABILITY_RUNNER: "GitHub-hosted ubuntu-24.04 runner (outside Israel)"
+        run: |
+          python -m scripts.check_reachability \
+            --scrapers "${{ github.event.inputs.scrapers || 'all' }}" \
+            --output-dir reachability-out
+          cat reachability-out/reachability.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: reachability
+          path: reachability-out
+          retention-days: 30
+
+  publish:
+    needs: probe
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download report
+        uses: actions/download-artifact@v4
+        with:
+          name: reachability
+          path: reachability-out
+
+      - name: Push to the reports branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          repo_url="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          if git ls-remote --exit-code --heads "$repo_url" reports >/dev/null; then
+            git clone --depth 1 --branch reports "$repo_url" reports
+          else
+            git init -b reports reports
+            git -C reports remote add origin "$repo_url"
+          fi
+          mkdir -p reports/reachability
+          cp reachability-out/* reports/reachability/
+          cd reports
+          git add reachability
+          if git diff --cached --quiet; then
+            echo "Report unchanged."
+            exit 0
+          fi
+          git commit -m "reachability: update report from run ${{ github.run_id }}"
+          git push origin reports
