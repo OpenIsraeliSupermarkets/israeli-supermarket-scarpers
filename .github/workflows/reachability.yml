@@ -80,9 +80,7 @@ jobs:
       - name: Probe scrapers
         run: |
           mkdir -p probes
-          # Run as the runner user so the next checkout can clean probes/.
           docker run --rm \
-            --user "$(id -u):$(id -g)" \
             -e REACHABILITY_RUNNER="self-hosted CI runner in Israel" \
             -e PYTHONPATH=/work \
             -v "$GITHUB_WORKSPACE/scripts:/work/scripts:ro" \
@@ -101,6 +99,11 @@ jobs:
       - name: Docker cleanup
         if: always()
         run: |
+          # The probe runs as root (python lives under /root/.pyenv); hand
+          # probes/ back to the runner user so the next checkout can clean it.
+          docker run --rm --entrypoint chown \
+            -v "$GITHUB_WORKSPACE/probes:/out" \
+            reachability-probe:${{ github.run_id }} -R "$(id -u):$(id -g)" /out || true
           docker rmi reachability-probe:${{ github.run_id }} 2>/dev/null || true
           docker builder prune -f 2>/dev/null || true
 
