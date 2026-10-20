@@ -27,8 +27,22 @@ Status: [![Scheduled Tests](https://github.com/OpenIsraeliSupermarkets/israeli-s
 
 Notice:
 - Bareket and Quik are flaky! They will not fail the testing framework, but you can still use them.
-- Some of the scrapers sites are blocked from being accessed from outside of Israel.
+- Most chains' sites block access from outside of Israel. See [Running outside Israel](#running-outside-israel).
 - Some chains (Victory, Mahsani Ashuk) have both a legacy source and a new API-based source. Use the `_NEW_SOURCE` variant (e.g. `VICTORY_NEW_SOURCE`, `MAHSANI_ASHUK_NEW_SOURCE`) if the primary scraper stops finding files.
+
+Running outside Israel
+----
+Most chains' servers drop connections from non-Israeli IPs. The failure looks like a code bug but isn't: a long hang, then `TimeoutError: [Errno 110] Connection timed out` (or a refused or forbidden connection). The traceback often ends in `verified_downloads.filter_already_downloaded`, which is only the outermost wrapper around the listing. Chains on the Cerberus FTP server (`url.retail.publishedprices.co.il`) are the most common case.
+
+A weekly job tries to download one file per chain twice, from a GitHub-hosted runner outside Israel and from the project's CI machine in Israel, and publishes the comparison. A chain that works only from Israel is geo-blocked. One that fails from Israel too is broken, so please open an issue.
+
+[![Reachable from outside Israel](https://raw.githubusercontent.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers/reports/reachability/reachability.svg)](https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers/blob/reports/reachability/reachability.md)
+
+See the [per-chain table](https://github.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers/blob/reports/reachability/reachability.md) (or the [raw JSON](https://raw.githubusercontent.com/OpenIsraeliSupermarkets/israeli-supermarket-scarpers/reports/reachability/reachability.json)). To check your own machine, run `python -m scripts.check_reachability probe --output mine.json` and then `python -m scripts.check_reachability report --outside mine.json --output-dir reachability-out` from a clone.
+
+If you are outside Israel:
+- Run the scraper on a host in Israel, or route it through an Israeli proxy.
+- Or skip scraping and use the daily published dataset on Kaggle: [erlichsefi/israeli-supermarkets-2024](https://www.kaggle.com/datasets/erlichsefi/israeli-supermarkets-2024).
 
 --------
 

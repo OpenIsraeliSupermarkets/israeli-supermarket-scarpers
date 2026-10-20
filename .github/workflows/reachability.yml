@@ -1,0 +1,185 @@
+name: Reachability Israel vs Outside
+
+# Probes every active scraper twice, from a GitHub-hosted runner (outside
+# Israel) and from the self-hosted CI runner (in Israel), and compares them: a
+# chain that works only from Israel is geo-blocked, one that fails in Israel
+# too is broken. The report goes to the `reports` branch under reachability/,
+# where the README badge and table link point. PRs that touch the probe run it
+# without publishing.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"  # Mondays 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      scrapers:
+        description: "Comma-separated scraper names, or 'all'"
+        required: false
+        default: "all"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "scripts/check_reachability.py"
+      - ".github/workflows/reachability.yml"
+
+concurrency:
+  group: reachability-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  SCRAPERS: ${{ github.event.inputs.scrapers || 'all' }}
+
+jobs:
+  probe-outside:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Probe scrapers
+        env:
+          REACHABILITY_RUNNER: "GitHub-hosted ubuntu-24.04 runner"
+        run: |
+          python -m scripts.check_reachability probe \
+            --scrapers "$SCRAPERS" --output probes/outside.json
+
+      - name: Upload probe
+        uses: actions/upload-artifact@v4
+        with:
+          name: probe-outside
+          path: probes/outside.json
+
+  probe-israel:
+    runs-on:
+      - self-hosted
+      - ci
+    timeout-minutes: 60
+    # The report still builds from the outside probe if this runner is down.
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t reachability-probe:${{ github.run_id }} --target base .
+
+      - name: Probe scrapers
+        run: |
+          mkdir -p probes
+          docker run --rm \
+            -e REACHABILITY_RUNNER="self-hosted CI runner in Israel" \
+            -e PYTHONPATH=/work \
+            -v "$GITHUB_WORKSPACE/scripts:/work/scripts:ro" \
+            -v "$GITHUB_WORKSPACE/probes:/out" \
+            -w /out \
+            reachability-probe:${{ github.run_id }} \
+            python -m scripts.check_reachability probe \
+              --scrapers "$SCRAPERS" --output /out/israel.json
+
+      - name: Upload probe
+        uses: actions/upload-artifact@v4
+        with:
+          name: probe-israel
+          path: probes/israel.json
+
+      - name: Docker cleanup
+        if: always()
+        run: |
+          # The probe runs as root (python lives under /root/.pyenv); hand
+          # probes/ back to the runner user so the next checkout can clean it.
+          docker run --rm --entrypoint chown \
+            -v "$GITHUB_WORKSPACE/probes:/out" \
+            reachability-probe:${{ github.run_id }} -R "$(id -u):$(id -g)" /out || true
+          docker rmi reachability-probe:${{ github.run_id }} 2>/dev/null || true
+          docker builder prune -f 2>/dev/null || true
+
+  report:
+    needs: [probe-outside, probe-israel]
+    if: always() && needs.probe-outside.result == 'success'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Download probes
+        uses: actions/download-artifact@v4
+        with:
+          pattern: probe-*
+          path: probes
+          merge-multiple: true
+
+      - name: Build report
+        run: |
+          python -m scripts.check_reachability report \
+            --outside probes/outside.json --israel probes/israel.json \
+            --output-dir reachability-out
+          cat reachability-out/reachability.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: reachability
+          path: reachability-out
+          retention-days: 30
+
+  publish:
+    needs: report
+    if: always() && needs.report.result == 'success' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download report
+        uses: actions/download-artifact@v4
+        with:
+          name: reachability
+          path: reachability-out
+
+      - name: Push to the reports branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          repo_url="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          if git ls-remote --exit-code --heads "$repo_url" reports >/dev/null; then
+            git clone --depth 1 --branch reports "$repo_url" reports
+          else
+            git init -b reports reports
+            git -C reports remote add origin "$repo_url"
+          fi
+          mkdir -p reports/reachability
+          cp reachability-out/* reports/reachability/
+          cd reports
+          git add reachability
+          if git diff --cached --quiet; then
+            echo "Report unchanged."
+            exit 0
+          fi
+          git commit -m "reachability: update report from run ${{ github.run_id }}"
+          git push origin reports
