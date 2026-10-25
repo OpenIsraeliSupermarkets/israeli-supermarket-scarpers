@@ -85,6 +85,9 @@ async def main():
         output_configuration={
             "output_mode": "queue",
             "queue_type": "memory",
+            # optional; 0 (default) is unbounded. A positive cap makes
+            # scrapers wait when the consumer is slower than the downloads.
+            # "max_queue_size": 8,
         },
         status_configuration={"database_type": "json", "base_path": "status_logs"},
         multiprocessing=1,
@@ -158,6 +161,7 @@ For queue output mode:
 
     docker run  -e OUTPUT_MODE="queue" \
                 -e QUEUE_TYPE="memory" \                      # 'memory' (for testing) or 'kafka'
+                -e SCRAPING_MAX_QUEUE_SIZE="8" \              # optional; 0 or unset is unbounded
                 erlichsefi/israeli-supermarket-scarpers
 
 For Kafka queue output:
@@ -194,6 +198,7 @@ The following environment variables can be used to configure the scraper:
 - `QUEUE_TYPE`: Type of queue to use (required when OUTPUT_MODE="queue")
   - `memory`: In-memory queue (useful for testing)
   - `kafka`: Apache Kafka message queue
+- `SCRAPING_MAX_QUEUE_SIZE`: Maximum messages held in the in-memory queue (default: `0`, unbounded). Same as `max_queue_size` in `output_configuration`. When the cap is reached, scrapers wait for the consumer instead of keeping every downloaded file in memory. The end-of-stream sentinel is still queued once a slot frees.
 
 
 ##### Kafka Queue

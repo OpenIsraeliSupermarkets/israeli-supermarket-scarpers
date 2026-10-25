@@ -17,7 +17,10 @@ from il_supermarket_scarper.utils.files.file_output import content_sha256
 from il_supermarket_scarper.utils.files.gzip_utils import extract_if_compressed
 from il_supermarket_scarper.utils.files.save_policy import SaveDecision, SavePolicy
 from il_supermarket_scarper.utils.files.verified_downloads import VerifiedDownloads
-from il_supermarket_scarper.utils.databases import JsonDataBase
+from il_supermarket_scarper.utils.databases import (
+    JsonDataBase,
+    create_file_output_for_scraper,
+)
 
 
 class TestFileOutput:
@@ -531,6 +534,102 @@ class TestFileOutput:
             ]
 
         asyncio.run(run_test())
+
+
+class TestBoundedMemoryQueue:
+    """Backpressure when the in-memory output queue has a max size."""
+
+    def test_bounded_queue_holds_send_until_consumed(self):
+        """A full queue waits for a consumer; the event loop stays responsive.
+
+        The third send blocks until a message is taken. Every message, then
+        the end-of-stream sentinel, arrives in send order.
+        """
+
+        async def run_test():
+            handler = InMemoryQueueHandler("bounded", maxsize=2)
+            await handler.send({"file_name": "a"})
+            await handler.send({"file_name": "b"})
+
+            third_done = asyncio.Event()
+
+            async def send_third():
+                await handler.send({"file_name": "c"})
+                third_done.set()
+
+            send_task = asyncio.create_task(send_third())
+            ticks = 0
+
+            async def keep_running():
+                nonlocal ticks
+                while not third_done.is_set():
+                    ticks += 1
+                    await asyncio.sleep(0.01)
+
+            side = asyncio.create_task(keep_running())
+            await asyncio.sleep(0.05)
+            assert ticks > 0
+            assert not third_done.is_set()
+
+            names = []
+
+            async def consume():
+                async for message in handler.get_all_messages():
+                    names.append(message["file_name"])
+
+            consumer = asyncio.create_task(consume())
+            await asyncio.wait_for(third_done.wait(), timeout=2)
+            await handler.close()
+            await asyncio.wait_for(consumer, timeout=2)
+            await send_task
+            side.cancel()
+            try:
+                await side
+            except asyncio.CancelledError:
+                pass
+            assert names == ["a", "b", "c"]
+
+        asyncio.run(run_test())
+
+    def test_max_queue_size_reaches_memory_queue(self):
+        """max_queue_size in the output config is the in-memory queue bound."""
+        bounded = create_file_output_for_scraper(
+            "BAREKET",
+            {
+                "output_mode": "queue",
+                "queue_type": "memory",
+                "max_queue_size": 2,
+            },
+        )
+        assert bounded.queue_handler.maxsize == 2
+
+        from_text = create_file_output_for_scraper(
+            "BAREKET",
+            {
+                "output_mode": "queue",
+                "queue_type": "memory",
+                "max_queue_size": "3",
+            },
+        )
+        assert from_text.queue_handler.maxsize == 3
+
+        unbounded = create_file_output_for_scraper(
+            "BAREKET",
+            {"output_mode": "queue", "queue_type": "memory"},
+        )
+        assert unbounded.queue_handler.maxsize == 0
+
+    def test_max_queue_size_rejects_negative(self):
+        """A negative cap is a configuration error, not an unbounded queue."""
+        with pytest.raises(ValueError):
+            create_file_output_for_scraper(
+                "BAREKET",
+                {
+                    "output_mode": "queue",
+                    "queue_type": "memory",
+                    "max_queue_size": -1,
+                },
+            )
 
 
 if __name__ == "__main__":

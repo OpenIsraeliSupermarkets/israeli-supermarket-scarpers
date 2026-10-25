@@ -137,6 +137,45 @@ def test_load_configuration_file_name_regex(monkeypatch):
     assert kwargs["file_name_regex"] == r"PriceFull.*"
 
 
+def test_load_configuration_max_queue_size(monkeypatch):
+    """SCRAPING_MAX_QUEUE_SIZE is forwarded as max_queue_size for memory queue output."""
+    monkeypatch.setenv("OUTPUT_MODE", "queue")
+    monkeypatch.setenv("QUEUE_TYPE", "memory")
+    monkeypatch.setenv("SCRAPING_MAX_QUEUE_SIZE", "4")
+    monkeypatch.delenv("ENABLED_SCRAPERS", raising=False)
+    monkeypatch.delenv("ENABLED_FILE_TYPES", raising=False)
+    monkeypatch.delenv("FILE_NAME_REGEX", raising=False)
+    kwargs = load_configuration()
+    assert kwargs["output_configuration"]["max_queue_size"] == 4
+
+
+def test_load_configuration_max_queue_size_defaults_unbounded(monkeypatch):
+    """An unset SCRAPING_MAX_QUEUE_SIZE keeps the in-memory queue unbounded."""
+    monkeypatch.setenv("OUTPUT_MODE", "queue")
+    monkeypatch.setenv("QUEUE_TYPE", "memory")
+    monkeypatch.delenv("SCRAPING_MAX_QUEUE_SIZE", raising=False)
+    monkeypatch.delenv("ENABLED_SCRAPERS", raising=False)
+    monkeypatch.delenv("ENABLED_FILE_TYPES", raising=False)
+    monkeypatch.delenv("FILE_NAME_REGEX", raising=False)
+    kwargs = load_configuration()
+    assert kwargs["output_configuration"]["max_queue_size"] == 0
+
+
+def test_load_configuration_invalid_max_queue_size(monkeypatch):
+    """A non-integer SCRAPING_MAX_QUEUE_SIZE is rejected."""
+    monkeypatch.setenv("OUTPUT_MODE", "queue")
+    monkeypatch.setenv("QUEUE_TYPE", "memory")
+    monkeypatch.setenv("SCRAPING_MAX_QUEUE_SIZE", "lots")
+    monkeypatch.delenv("ENABLED_SCRAPERS", raising=False)
+    monkeypatch.delenv("ENABLED_FILE_TYPES", raising=False)
+    monkeypatch.delenv("FILE_NAME_REGEX", raising=False)
+    try:
+        load_configuration()
+        assert False, "expected ValueError for invalid SCRAPING_MAX_QUEUE_SIZE"
+    except ValueError as exc:
+        assert "SCRAPING_MAX_QUEUE_SIZE" in str(exc)
+
+
 def test_load_configuration_invalid_file_name_regex(monkeypatch):
     """Invalid FILE_NAME_REGEX is rejected during configuration load."""
     monkeypatch.setenv("FILE_NAME_REGEX", "[unterminated")

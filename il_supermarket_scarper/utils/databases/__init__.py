@@ -51,6 +51,22 @@ def create_status_database_for_scraper(scraper_name, config):
     )
 
 
+def _memory_queue_maxsize(config):
+    """Return the in-memory queue bound. ``0`` means unbounded."""
+    raw = config.get("max_queue_size", 0)
+    if raw is None or raw == "":
+        raw = 0
+    try:
+        maxsize = int(raw)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            f"max_queue_size must be an integer, but got {raw}"
+        ) from exc
+    if isinstance(raw, bool) or maxsize < 0:
+        raise ValueError(f"max_queue_size must be an integer >= 0, but got {raw}")
+    return maxsize
+
+
 def create_file_output_for_scraper(scraper_name, config):
     """
     Create a file_output instance for a specific scraper based on config.
@@ -78,5 +94,10 @@ def create_file_output_for_scraper(scraper_name, config):
         queue_type = config.get("queue_type", "memory")
 
         if queue_type == "memory":
-            return QueueFileOutput(InMemoryQueueHandler(queue_name=target_folder))
+            return QueueFileOutput(
+                InMemoryQueueHandler(
+                    queue_name=target_folder,
+                    maxsize=_memory_queue_maxsize(config),
+                )
+            )
     return None
