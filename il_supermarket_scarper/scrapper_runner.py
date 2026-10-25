@@ -103,6 +103,7 @@ async def _scrape_one(  # pylint: disable=too-many-locals
     state = FilterState()
     run_count = 0
     initial_when_date = when_date
+    remaining_to_download = list(file_to_download or [])
 
     # Loop until one of the exit conditions is met
     while True:
@@ -116,7 +117,7 @@ async def _scrape_one(  # pylint: disable=too-many-locals
 
         # Run the scraper
         collected_now_count = 0
-        async for _ in scraper.scrape(
+        async for result in scraper.scrape(
             state=state,
             limit=limit,
             files_types=files_types,
@@ -127,10 +128,15 @@ async def _scrape_one(  # pylint: disable=too-many-locals
             filter_zero=False,
             min_size=min_size,
             max_size=max_size,
-            # forced names are requested once, not on every polling run
-            file_to_download=file_to_download if run_count == 1 else None,
+            file_to_download=remaining_to_download,
         ):
             collected_now_count += 1
+            if result:
+                remaining_to_download = [
+                    name
+                    for name in remaining_to_download
+                    if name not in result.file_name
+                ]
             # Check for shutdown during scraping
             if shutdown_flag and shutdown_flag.value:
                 Logger.info(f"[{chain_name}] Shutdown requested during scraping")
@@ -246,8 +252,8 @@ class MainScrapperRunner:  # pylint: disable=too-many-instance-attributes
     ):
         """run the scraper
 
-        ``file_to_download`` maps a scraper name to file names that must be
-        downloaded again (see ``Engine.scrape``).
+        ``file_to_download`` maps a scraper name to file name substrings that
+        must be downloaded again (see ``Engine.scrape``).
         """
         file_to_download = file_to_download or {}
         Logger.info(f"Limit is {limit}")

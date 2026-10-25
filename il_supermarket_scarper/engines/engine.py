@@ -7,7 +7,7 @@ import shutil
 import uuid
 import datetime
 import asyncio
-from typing import Any, AsyncGenerator, Dict, Optional
+from typing import Any, AsyncGenerator, Dict, List, Optional
 from il_supermarket_scarper.utils import (
     FileEntry,
     FileTypesFilters,
@@ -29,10 +29,7 @@ from il_supermarket_scarper.utils.databases import AbstractDataBase
 from il_supermarket_scarper.utils.core.async_work import stream_as_completed
 from il_supermarket_scarper.utils.files.gzip_utils import extract_if_compressed
 from il_supermarket_scarper.utils.files.save_policy import SavePolicy
-from il_supermarket_scarper.utils.files.verified_downloads import (
-    VerifiedDownloads,
-    normalize_dump_file_name,
-)
+from il_supermarket_scarper.utils.files.verified_downloads import VerifiedDownloads
 
 @dataclass(frozen=True)
 class LoginDetails:
@@ -147,8 +144,7 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods,too-many-instance-
         )
         self.verified = VerifiedDownloads(self.status.database)
         self.save_policy = SavePolicy(self.verified)
-        # normalized names the caller asked to download again (file_to_download)
-        self._forced_names: set = set()
+        self._forced_names: List[str] = []
         self._forced_pending: set = set()
 
         self.assigned_cookie = f"{self.chain.name}_{uuid.uuid4()}_cookies.txt"
@@ -187,10 +183,7 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods,too-many-instance-
 
     def _is_forced(self, file: FileEntry) -> bool:
         """True when ``file`` was requested through ``file_to_download``."""
-        return (
-            bool(self._forced_names)
-            and normalize_dump_file_name(file.name) in self._forced_names
-        )
+        return any(name in file.name for name in self._forced_names)
 
     def is_valid_file_empty(self, file_name):
         """
@@ -435,7 +428,9 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods,too-many-instance-
 
         async for file in intreable_:
             if self._is_forced(file):
-                self._forced_pending.discard(normalize_dump_file_name(file.name))
+                self._forced_pending.difference_update(
+                    name for name in self._forced_names if name in file.name
+                )
                 yield file
                 continue
             if limit is not None and state.file_pass_limit >= limit:
@@ -612,21 +607,19 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods,too-many-instance-
     ):
         """run the scraping logic
 
-        ``file_to_download`` lists file names to download again even when
-        already verified, outside ``when_date``, beyond ``limit``, or with an
-        unchanged hash; they are re-sent to the output so a consumer that
-        missed them sees them again.
+        ``file_to_download`` lists substrings of file names to download again
+        even when already verified, outside ``when_date``, beyond ``limit``, or
+        with an unchanged hash; they are re-sent to the output so a consumer
+        that missed them sees them again.
         """
-        self._forced_names = {
-            normalize_dump_file_name(name) for name in (file_to_download or []) if name
-        }
+        self._forced_names = file_to_download or []
         self._forced_pending = set(self._forced_names)
         self.status.on_scraping_start(
             limit=limit,
             files_types=files_types,
             store_id=store_id,
             file_name_regex=file_name_regex,
-            file_to_download=sorted(self._forced_names) or None,
+            file_to_download=file_to_download,
             when_date=when_date,
             filter_null=filter_null,
             filter_zero=filter_zero,

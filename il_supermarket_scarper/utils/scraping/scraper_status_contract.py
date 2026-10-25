@@ -257,38 +257,12 @@ class ScraperStatusOutput(BaseModel):
 
         return per_file
 
-    def _limits_respected(self, per_file: dict) -> bool:
-        """Each task downloads at most its started ``limit`` stories.
-
-        Names the task was asked to fetch again (``file_to_download``) do not
-        count toward its limit.
-        """
-        from il_supermarket_scarper.utils.files.verified_downloads import (  # pylint: disable=import-outside-toplevel
-            normalize_dump_file_name,
-        )
-
-        started = {
-            event.task_id: event
-            for event in self.global_status
-            if isinstance(event, StartedStatus)
-        }
-        stories_per_task: Dict[str, set] = defaultdict(set)
-        for key, status in per_file.items():
-            for download in status["downloads"]:
-                start = started.get(download.task_id)
-                if start is None or start.limit is None:
-                    continue
-                forced = {
-                    normalize_dump_file_name(name)
-                    for name in start.file_to_download or []
-                }
-                if normalize_dump_file_name(download.file_name) in forced:
-                    continue
-                stories_per_task[download.task_id].add(key)
-        return all(
-            len(stories) <= started[task_id].limit
-            for task_id, stories in stories_per_task.items()
-        )
+    def _started_limit(self):
+        """Return the scrape limit from started status, or None."""
+        for event in self.global_status:
+            if isinstance(event, StartedStatus):
+                return event.limit
+        return None
 
     def _has_started(self) -> bool:
         """True when at least one started global status exists."""
@@ -448,8 +422,7 @@ class ScraperStatusOutput(BaseModel):
         - Download outcomes / save_decision / verified listing_hash checks
         - No mixing of entry_id and name-only keys for the same FileNm
         - Any events or verified rows require a started global status
-        - Per task, downloaded stories must not exceed that task's started
-          ``limit``; names in its ``file_to_download`` are not counted
+        - If a started ``limit`` is set, downloaded stories must not exceed it
 
         Note: Stories that were only saw/collected but never attempted (e.g., due to limit
         constraints) are not validated, as they were never intended to be downloaded.
@@ -461,7 +434,11 @@ class ScraperStatusOutput(BaseModel):
         if not self._validate_key_hygiene(per_file):
             return False
 
+        downloaded_count = 0
+
         for status in per_file.values():
+            if status["downloaded"]:
+                downloaded_count += 1
             if (status["saw"] or status["collected"]) and not (
                 status["downloaded"] or status["failed"] or status["verified"]
             ):
@@ -470,4 +447,8 @@ class ScraperStatusOutput(BaseModel):
             if not self._story_attempt_is_valid(status):
                 return False
 
-        return self._limits_respected(per_file)
+        limit = self._started_limit()
+        if limit is not None and downloaded_count > limit:
+            return False
+
+        return True

@@ -1,10 +1,8 @@
 """file_to_download forces a verified file to be downloaded and re-queued."""
 
-import json
 import tempfile
 import unittest
 from datetime import datetime
-from pathlib import Path
 
 from il_supermarket_scarper.engines.engine import Engine
 from il_supermarket_scarper.utils import (
@@ -15,9 +13,6 @@ from il_supermarket_scarper.utils import (
     SaveDecision,
 )
 from il_supermarket_scarper.utils.databases import JsonDataBase
-from il_supermarket_scarper.utils.scraping.scraper_status_contract import (
-    ScraperStatusOutput,
-)
 from il_supermarket_scarper.utils.scraping.state import FilterState
 
 PRICE = "Price7290027600007-001-202609070100"
@@ -117,7 +112,7 @@ class TestFileToDownload(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(await _scrape(engine), [])
             self.assertEqual(engine.queue.sent, [])
 
-            results = await _scrape(engine, file_to_download=[f"{PRICE}.gz"])
+            results = await _scrape(engine, file_to_download=[PRICE])
             self.assertEqual([r.file_name for r in results], [f"{PRICE}.xml"])
             self.assertEqual(results[0].save_decision, SaveDecision.FORCED)
             self.assertEqual(engine.queue.sent, [f"{PRICE}.xml"])
@@ -130,22 +125,19 @@ class TestFileToDownload(unittest.IsolatedAsyncioTestCase):
             self.assertIsNone(started[0]["file_to_download"])
             self.assertEqual(started[-1]["file_to_download"], [PRICE])
 
-    async def test_forced_rerun_with_limit_keeps_status_valid(self):
+    async def test_forced_substring_matches_listed_name(self):
         with tempfile.TemporaryDirectory() as tmp:
             engine = _OfflineEngine(tmp, [PRICE, PROMO])
-            await _scrape(engine, limit=1)
-            first = engine.queue.sent[0].replace(".xml", "")
-            await _scrape(engine, limit=1, file_to_download=[first])
+            await _scrape(engine)
+            engine.queue.sent.clear()
 
-            (status_file,) = Path(tmp).glob("*.json")
-            status = ScraperStatusOutput(**json.loads(status_file.read_text()))
-            self.assertEqual(len(engine.queue.sent), 3)
-            self.assertTrue(status.validate_file_status())
+            results = await _scrape(engine, file_to_download=["Promo7290027600007"])
+            self.assertEqual([r.file_name for r in results], [f"{PROMO}.xml"])
 
     async def test_forced_file_ignores_date_and_limit(self):
         with tempfile.TemporaryDirectory() as tmp:
             engine = _OfflineEngine(tmp, [PRICE, OLD_PRICE, PROMO])
-            engine._forced_names = {OLD_PRICE}  # pylint: disable=protected-access
+            engine._forced_names = [OLD_PRICE]  # pylint: disable=protected-access
             engine._forced_pending = {OLD_PRICE}  # pylint: disable=protected-access
 
             async def listed():

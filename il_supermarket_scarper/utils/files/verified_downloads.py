@@ -122,13 +122,3 @@ class VerifiedDownloads:
         async for file in filelist:
             if is_forced(file) or not self.has_verified_listing(file.listing_hash()):
                 yield file
-
-
-def normalize_dump_file_name(file_name: str) -> str:
-    """Normalize a dump file name so listing, saved, and parsed names compare equal."""
-    return (
-        file_name.replace(".aspx", "")
-        .replace(".xml", "")
-        .replace(".gz", "")
-        .replace("NULL", "")
-    )

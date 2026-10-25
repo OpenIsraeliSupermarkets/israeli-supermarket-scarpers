@@ -118,8 +118,8 @@ class ScarpingTask:  # pylint: disable=too-many-instance-attributes
             single_pass (bool, optional): If True, run once and stop.
                 If False, continue running. Defaults to True.
             file_to_download (dict, optional): Maps a scraper name to file
-                names to download again even if already downloaded, outside
-                ``when_date``, beyond ``limit``, or unchanged. They are sent to
+                name substrings to download again even if already downloaded,
+                outside ``when_date``, beyond ``limit``, or unchanged. They are sent to
                 the output again, so a consumer that never handled them (for
                 example a parser) gets another chance. Defaults to None.
 
