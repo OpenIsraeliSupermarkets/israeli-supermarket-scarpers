@@ -25,9 +25,7 @@ def _saw(**kwargs):
 
 
 def _collected(**kwargs):
-    return CollectedStatus(
-        task_id=TASK, file_name=FILE, link_collected=LINK, **kwargs
-    )
+    return CollectedStatus(task_id=TASK, file_name=FILE, link_collected=LINK, **kwargs)
 
 
 def _downloaded(extracted=True, **kwargs):
@@ -213,6 +211,78 @@ class TestScraperStatusContract(unittest.TestCase):
             ],
         )
         self.assertFalse(status.validate_file_status())
+
+    def _two_task_status(self, second_forced):
+        """Same file downloaded by task-1 and again by task-2, both limit=1."""
+        events, verified = [], []
+        for task, entry in (("task-1", "e1"), ("task-2", "e2")):
+            events += [
+                SawStatus(task_id=task, file_name=FILE, link=LINK, entry_id=entry),
+                CollectedStatus(
+                    task_id=task, file_name=FILE, link_collected=LINK, entry_id=entry
+                ),
+                DownloadedStatus(
+                    task_id=task,
+                    file_name=FILE,
+                    downloaded_successfully=True,
+                    extracted_successfully=True,
+                    entry_id=entry,
+                ),
+            ]
+            verified.append(
+                VerifiedDownload(
+                    task_id=task,
+                    file_name=FILE,
+                    system_timestamp=NOW,
+                    listing_hash=entry,
+                    entry_id=entry,
+                )
+            )
+        return ScraperStatusOutput(
+            global_status=[
+                StartedStatus(task_id="task-1", limit=1),
+                StartedStatus(
+                    task_id="task-2",
+                    limit=1,
+                    file_to_download=[FILE + ".xml"] if second_forced else None,
+                ),
+            ],
+            events=events,
+            verified_downloads=verified,
+        )
+
+    def test_limit_is_per_task(self):
+        """One download per task stays within a limit of 1."""
+        status = self._two_task_status(second_forced=False)
+        self.assertTrue(status.validate_file_status())
+
+    def test_forced_downloads_do_not_count_toward_limit(self):
+        """file_to_download names are fetched on top of the task limit."""
+        status = self._two_task_status(second_forced=True)
+        other = "PromoFull7290058156016-024-399-20260907-000001"
+        status.events += [
+            SawStatus(task_id="task-2", file_name=other, link=LINK, entry_id="e3"),
+            CollectedStatus(
+                task_id="task-2", file_name=other, link_collected=LINK, entry_id="e3"
+            ),
+            DownloadedStatus(
+                task_id="task-2",
+                file_name=other,
+                downloaded_successfully=True,
+                extracted_successfully=True,
+                entry_id="e3",
+            ),
+        ]
+        status.verified_downloads.append(
+            VerifiedDownload(
+                task_id="task-2",
+                file_name=other,
+                system_timestamp=NOW,
+                listing_hash="e3",
+                entry_id="e3",
+            )
+        )
+        self.assertTrue(status.validate_file_status())
 
     def test_failed_file_needs_collected(self):
         """A failed download still needs a collected event."""

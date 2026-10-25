@@ -114,9 +114,21 @@ class VerifiedDownloads:
         self.database.insert_document(self.COLLECTION, document)
         self._on_insert(document)
 
-    async def filter_already_downloaded(self, filelist, by_function=lambda x: x):
-        """Skip listings already verified by listing_hash."""
+    async def filter_already_downloaded(
+        self, filelist, by_function=lambda x: x, is_forced=lambda file: False
+    ):
+        """Skip listings already verified by listing_hash, unless ``is_forced``."""
         del by_function
         async for file in filelist:
-            if not self.has_verified_listing(file.listing_hash()):
+            if is_forced(file) or not self.has_verified_listing(file.listing_hash()):
                 yield file
+
+
+def normalize_dump_file_name(file_name: str) -> str:
+    """Normalize a dump file name so listing, saved, and parsed names compare equal."""
+    return (
+        file_name.replace(".aspx", "")
+        .replace(".xml", "")
+        .replace(".gz", "")
+        .replace("NULL", "")
+    )

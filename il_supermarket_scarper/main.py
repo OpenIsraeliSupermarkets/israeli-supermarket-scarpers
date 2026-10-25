@@ -106,7 +106,7 @@ class ScarpingTask:  # pylint: disable=too-many-instance-attributes
         self.max_size = max_size
         self._thread = None
 
-    def start(self, limit=None, when_date=None, single_pass=True):
+    def start(self, limit=None, when_date=None, single_pass=True, file_to_download=None):
         """
         Start the scraping task in a new background thread.
 
@@ -117,6 +117,11 @@ class ScarpingTask:  # pylint: disable=too-many-instance-attributes
                 If None, downloads latest files. Defaults to None.
             single_pass (bool, optional): If True, run once and stop.
                 If False, continue running. Defaults to True.
+            file_to_download (dict, optional): Maps a scraper name to file
+                names to download again even if already downloaded, outside
+                ``when_date``, beyond ``limit``, or unchanged. They are sent to
+                the output again, so a consumer that never handled them (for
+                example a parser) gets another chance. Defaults to None.
 
         Returns:
             threading.Thread: The thread object running the scraping task.
@@ -143,6 +148,7 @@ class ScarpingTask:  # pylint: disable=too-many-instance-attributes
                 when_date=when_date,
                 min_size=self.min_size,
                 max_size=self.max_size,
+                file_to_download=file_to_download,
             )
 
         self._thread = threading.Thread(target=_run, daemon=True)

@@ -22,7 +22,7 @@ from .gzip_utils import (
     GZIP_NOT_GZIP,
 )
 from .save_policy import SavePolicy, SaveDecision, should_persist
-from .verified_downloads import VerifiedDownloads
+from .verified_downloads import VerifiedDownloads, normalize_dump_file_name
 
 __all__ = [
     "FileOutput",
@@ -48,4 +48,5 @@ __all__ = [
     "SaveDecision",
     "should_persist",
     "VerifiedDownloads",
+    "normalize_dump_file_name",
 ]

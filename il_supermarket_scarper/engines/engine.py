@@ -29,7 +29,10 @@ from il_supermarket_scarper.utils.databases import AbstractDataBase
 from il_supermarket_scarper.utils.core.async_work import stream_as_completed
 from il_supermarket_scarper.utils.files.gzip_utils import extract_if_compressed
 from il_supermarket_scarper.utils.files.save_policy import SavePolicy
-from il_supermarket_scarper.utils.files.verified_downloads import VerifiedDownloads
+from il_supermarket_scarper.utils.files.verified_downloads import (
+    VerifiedDownloads,
+    normalize_dump_file_name,
+)
 
 @dataclass(frozen=True)
 class LoginDetails:
@@ -144,6 +147,9 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods,too-many-instance-
         )
         self.verified = VerifiedDownloads(self.status.database)
         self.save_policy = SavePolicy(self.verified)
+        # normalized names the caller asked to download again (file_to_download)
+        self._forced_names: set = set()
+        self._forced_pending: set = set()
 
         self.assigned_cookie = f"{self.chain.name}_{uuid.uuid4()}_cookies.txt"
         self.storage_path: FileOutput = file_output
@@ -177,6 +183,13 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods,too-many-instance-
             url=url,
             username=getattr(self, "ftp_username", None) or None,
             password=getattr(self, "ftp_password", None) or None,
+        )
+
+    def _is_forced(self, file: FileEntry) -> bool:
+        """True when ``file`` was requested through ``file_to_download``."""
+        return (
+            bool(self._forced_names)
+            and normalize_dump_file_name(file.name) in self._forced_names
         )
 
     def is_valid_file_empty(self, file_name):
@@ -349,6 +362,10 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods,too-many-instance-
         Note:
             If random_selection is enabled, only files from the last 48 hours
             are considered for selection.
+
+            Files named in ``file_to_download`` (see ``scrape``) skip the
+            already-downloaded and date filters and do not count toward
+            ``limit``.
         """
 
         # Stream one file at a time; date filters are online.
@@ -377,6 +394,7 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods,too-many-instance-
             self.verified.filter_already_downloaded(
                 unique_files,
                 by_function=by_function,
+                is_forced=self._is_forced,
             )
         )
 
@@ -416,7 +434,13 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods,too-many-instance-
             assert limit > 0, "Limit must be greater than 0"
 
         async for file in intreable_:
+            if self._is_forced(file):
+                self._forced_pending.discard(normalize_dump_file_name(file.name))
+                yield file
+                continue
             if limit is not None and state.file_pass_limit >= limit:
+                if self._forced_pending:
+                    continue
                 # Stop consuming; caller should aclose upstream listing gens
                 # so parallel page/branch fetches can cancel.
                 break
@@ -483,7 +507,7 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods,too-many-instance-
         async for file in intreable_:
             # StoresFull7290875100001-000-202502250510'
             # Promo7290700100008-000-207-20250224-103225
-            if f"-{date_format}" in by_function(file):
+            if f"-{date_format}" in by_function(file) or self._is_forced(file):
                 yield file
 
     async def get_last_48_hours(self, by_function, intreable_):
@@ -584,13 +608,25 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods,too-many-instance-
         min_size=None,
         max_size=None,
         random_selection=False,
+        file_to_download=None,
     ):
-        """run the scraping logic"""
+        """run the scraping logic
+
+        ``file_to_download`` lists file names to download again even when
+        already verified, outside ``when_date``, beyond ``limit``, or with an
+        unchanged hash; they are re-sent to the output so a consumer that
+        missed them sees them again.
+        """
+        self._forced_names = {
+            normalize_dump_file_name(name) for name in (file_to_download or []) if name
+        }
+        self._forced_pending = set(self._forced_names)
         self.status.on_scraping_start(
             limit=limit,
             files_types=files_types,
             store_id=store_id,
             file_name_regex=file_name_regex,
+            file_to_download=sorted(self._forced_names) or None,
             when_date=when_date,
             filter_null=filter_null,
             filter_zero=filter_zero,
@@ -628,6 +664,11 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods,too-many-instance-
             Logger.error(f"Error scraping: {e}")
             completed_successfully = False
         finally:
+            if self._forced_pending:
+                Logger.warning(
+                    f"{self.chain.value}: requested files not listed on the site "
+                    f"this run: {sorted(self._forced_pending)}"
+                )
             self.status.on_scrape_completed(
                 self.get_storage_path(), completed_successfully=completed_successfully
             )
@@ -855,6 +896,7 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods,too-many-instance-
             _persist,
             listing_hash=entry.listing_hash(),
             entry_id=entry.entry_id,
+            force=self._is_forced(entry),
         )
         if box["result"] is not None:
             result: Dict[str, Any] = box["result"]

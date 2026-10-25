@@ -141,6 +141,27 @@ class TestVerifiedDownloadsAndSavePolicy(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(second, SaveDecision.REWROTE_SAME)
             self.assertEqual(writes["n"], 1)
 
+    async def test_decide_and_persist_force_rewrites_same_hash(self):
+        """A forced name is persisted again even with an unchanged hash."""
+        with tempfile.TemporaryDirectory() as tmp:
+            status, verified, policy, _db = self._fixtures(tmp)
+            status.on_scraping_start(limit=None, files_types=None)
+            verified.set_task_id(status.task_id)
+            digest = content_sha256(b"<xml>x</xml>")
+            writes = {"n": 0}
+
+            async def persist(_decision):
+                writes["n"] += 1
+
+            await policy.decide_and_persist(
+                "a.xml", digest, None, persist, listing_hash="lh1"
+            )
+            forced = await policy.decide_and_persist(
+                "a.xml", digest, None, persist, listing_hash="lh1", force=True
+            )
+            self.assertEqual(forced, SaveDecision.FORCED)
+            self.assertEqual(writes["n"], 2)
+
     async def test_filter_already_downloaded_uses_set(self):
         """filter_already_downloaded skips known listing hashes."""
         with tempfile.TemporaryDirectory() as tmp:

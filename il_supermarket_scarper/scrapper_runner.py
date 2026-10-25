@@ -84,6 +84,7 @@ async def _scrape_one(  # pylint: disable=too-many-locals
     status_database=None,
     timeout_in_seconds=60 * 30,
     shutdown_flag=None,
+    file_to_download=None,
 ):
     """scrape one"""
     chain_scrapper_constractor = ScraperFactory.get(chain_scrapper_class)
@@ -126,6 +127,8 @@ async def _scrape_one(  # pylint: disable=too-many-locals
             filter_zero=False,
             min_size=min_size,
             max_size=max_size,
+            # forced names are requested once, not on every polling run
+            file_to_download=file_to_download if run_count == 1 else None,
         ):
             collected_now_count += 1
             # Check for shutdown during scraping
@@ -239,11 +242,19 @@ class MainScrapperRunner:  # pylint: disable=too-many-instance-attributes
         min_size=None,
         max_size=None,
         single_pass=True,
+        file_to_download=None,
     ):
-        """run the scraper"""
+        """run the scraper
+
+        ``file_to_download`` maps a scraper name to file names that must be
+        downloaded again (see ``Engine.scrape``).
+        """
+        file_to_download = file_to_download or {}
         Logger.info(f"Limit is {limit}")
         Logger.info(f"files_types is {files_types}")
         Logger.info(f"file_name_regex is {file_name_regex}")
+        forced_counts = {name: len(files) for name, files in file_to_download.items()}
+        Logger.info(f"file_to_download counts are {forced_counts}")
         Logger.info(f"Start scraping {self.enabled_scrapers}.")
 
         with Manager() as self._manager:
@@ -263,6 +274,9 @@ class MainScrapperRunner:  # pylint: disable=too-many-instance-attributes
                         "single_pass": single_pass,
                         "timeout_in_seconds": self.timeout_in_seconds,
                         "shutdown_flag": self._shutdown_flag,
+                        "file_to_download": list(
+                            file_to_download.get(chain_scrapper_class) or []
+                        ),
                     },
                 )
                 for chain_scrapper_class in self.enabled_scrapers
