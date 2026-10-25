@@ -4,6 +4,23 @@ import re
 from il_supermarket_scarper import ScarpingTask, ScraperFactory, FileTypesFilters
 
 
+def _max_queue_size_from_env():
+    """Read SCRAPING_MAX_QUEUE_SIZE. ``0`` means the in-memory queue is unbounded."""
+    raw_max_queue_size = os.getenv("SCRAPING_MAX_QUEUE_SIZE", "0")
+    try:
+        max_queue_size = int(raw_max_queue_size)
+    except ValueError as exc:
+        raise ValueError(
+            "SCRAPING_MAX_QUEUE_SIZE must be an integer, "
+            f"but got {raw_max_queue_size}"
+        ) from exc
+    if max_queue_size < 0:
+        raise ValueError(
+            f"SCRAPING_MAX_QUEUE_SIZE must be >= 0, but got {max_queue_size}"
+        )
+    return max_queue_size
+
+
 def load_configuration():  # pylint: disable=too-many-branches
     """load params from env variables with validation"""
     kwargs = {}
@@ -79,6 +96,7 @@ def load_configuration():  # pylint: disable=too-many-branches
             raise ValueError(f"QUEUE_TYPE must be 'memory', but got {queue_type}")
 
         output_configuration["queue_type"] = queue_type
+        output_configuration["max_queue_size"] = _max_queue_size_from_env()
 
     else:
         # Disk output configuration (default)

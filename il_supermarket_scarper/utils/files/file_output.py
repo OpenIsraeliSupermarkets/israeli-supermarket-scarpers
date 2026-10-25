@@ -266,20 +266,31 @@ class InMemoryQueueHandler(AbstractQueueHandler):
             cls._manager = multiprocessing.Manager()
         return cls._manager
 
-    def __init__(self, queue_name: str = "default"):
+    def __init__(self, queue_name: str = "default", maxsize: int = 0):
         """
         Initialize in-memory queue.
 
         Args:
             queue_name: Name of the queue
+            maxsize: Maximum queued messages. ``0`` is unbounded. A positive
+                value makes ``send`` wait until a consumer takes a message,
+                so file bytes are not buffered without limit.
         """
+        if not isinstance(maxsize, int) or isinstance(maxsize, bool) or maxsize < 0:
+            raise ValueError(f"maxsize must be an integer >= 0, but got {maxsize}")
         self.queue_name = queue_name
-        # Use Manager queue which can be pickled and shared across processes
-        self._queue = self._get_manager().Queue()
+        self.maxsize = maxsize
+        # Use Manager queue which can be pickled and shared across processes.
+        # maxsize is applied on the manager server; put() blocks when full.
+        self._queue = self._get_manager().Queue(maxsize)
 
     async def send(self, message: Dict[str, Any]) -> None:
-        """Add message to queue (process-safe)."""
-        self._queue.put(message)
+        """Add message to queue (process-safe).
+
+        When ``maxsize`` is set, this waits for free space without blocking
+        the event loop, so other work keeps running while the consumer catches up.
+        """
+        await asyncio.to_thread(self._queue.put, message)
         Logger.debug(f"Added message to in-memory queue: {message['file_name']}")
 
     def get_queue_name(self) -> str:
@@ -287,11 +298,18 @@ class InMemoryQueueHandler(AbstractQueueHandler):
         return f"memory:{self.queue_name}"
 
     async def close(self) -> None:
-        """Signal that no more messages will be sent."""
-        self._queue.put(None)
+        """Signal that no more messages will be sent.
+
+        Waits until the sentinel is queued, including when the queue is full,
+        so a consumer still sees end-of-stream.
+        """
+        await asyncio.to_thread(self._queue.put, None)
 
     def close_sync(self) -> None:
-        """Signal that no more messages will be sent (synchronous version)."""
+        """Signal that no more messages will be sent (synchronous version).
+
+        Blocks until the sentinel is queued, including when the queue is full.
+        """
         self._queue.put(None)
 
     async def get_all_messages(self) -> AsyncGenerator[Dict[str, Any], None]:
