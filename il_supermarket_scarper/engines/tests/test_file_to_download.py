@@ -13,6 +13,7 @@ from il_supermarket_scarper.utils import (
     SaveDecision,
 )
 from il_supermarket_scarper.utils.databases import JsonDataBase
+from il_supermarket_scarper.utils.files.forced_downloads import ForcedDownloads
 from il_supermarket_scarper.utils.scraping.state import FilterState
 
 PRICE = "Price7290027600007-001-202609070100"
@@ -101,6 +102,7 @@ class TestFileToDownload(unittest.IsolatedAsyncioTestCase):
     """Verified files are skipped unless requested through file_to_download."""
 
     async def test_forced_file_is_downloaded_and_requeued(self):
+        """A verified file is re-downloaded with FORCED and re-queued."""
         with tempfile.TemporaryDirectory() as tmp:
             engine = _OfflineEngine(tmp, [PRICE, PROMO])
             await _scrape(engine)
@@ -126,6 +128,7 @@ class TestFileToDownload(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(started[-1]["file_to_download"], [PRICE])
 
     async def test_forced_substring_matches_listed_name(self):
+        """A substring of the listed name is enough to force it."""
         with tempfile.TemporaryDirectory() as tmp:
             engine = _OfflineEngine(tmp, [PRICE, PROMO])
             await _scrape(engine)
@@ -135,10 +138,10 @@ class TestFileToDownload(unittest.IsolatedAsyncioTestCase):
             self.assertEqual([r.file_name for r in results], [f"{PROMO}.xml"])
 
     async def test_forced_file_ignores_date_and_limit(self):
+        """Forced files pass the date filter and do not count toward limit."""
         with tempfile.TemporaryDirectory() as tmp:
             engine = _OfflineEngine(tmp, [PRICE, OLD_PRICE, PROMO])
-            engine._forced_names = [OLD_PRICE]  # pylint: disable=protected-access
-            engine._forced_pending = {OLD_PRICE}  # pylint: disable=protected-access
+            engine.forced = ForcedDownloads([OLD_PRICE])
 
             async def listed():
                 for name in engine.names:
@@ -158,14 +161,13 @@ class TestFileToDownload(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(state.file_pass_limit, 1)
 
     async def test_unlisted_forced_file_is_left_pending(self):
+        """A requested file the site never lists stays pending."""
         with tempfile.TemporaryDirectory() as tmp:
             engine = _OfflineEngine(tmp, [PRICE])
             results = await _scrape(engine, file_to_download=[OLD_PRICE])
 
             self.assertEqual([r.file_name for r in results], [f"{PRICE}.xml"])
-            self.assertEqual(
-                engine._forced_pending, {OLD_PRICE}  # pylint: disable=protected-access
-            )
+            self.assertEqual(engine.forced.pending, {OLD_PRICE})
 
 
 if __name__ == "__main__":
