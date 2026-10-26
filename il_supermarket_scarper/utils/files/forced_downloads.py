@@ -1,4 +1,4 @@
-"""Files the caller asked to download again (``file_to_download``)."""
+"""Files the caller asked to download again (``re_download``)."""
 
 from typing import Iterable, List, Optional, Set
 

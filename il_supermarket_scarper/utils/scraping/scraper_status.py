@@ -43,14 +43,13 @@ class ScraperStatus:
             self.database = status_database
         self.task_id: Optional[str] = None
 
-    def on_scraping_start(self, limit, files_types, **additional_info):
+    def on_scraping_start(self, limit, **additional_info):
         """Report that scraping has started."""
         self.task_id = str(uuid.uuid4())
 
         self._insert_global_status(
             ScraperStatus.STARTED,
             limit=limit,
-            files_requested=files_types,
             **additional_info,
         )
 

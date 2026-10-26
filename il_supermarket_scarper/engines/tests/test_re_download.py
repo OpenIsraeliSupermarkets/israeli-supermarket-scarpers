@@ -1,4 +1,4 @@
-"""file_to_download forces a verified file to be downloaded and re-queued."""
+"""re_download forces a verified file to be downloaded and re-queued."""
 
 import tempfile
 import unittest
@@ -9,6 +9,7 @@ from il_supermarket_scarper.utils import (
     AbstractQueueHandler,
     DumpFolderNames,
     FileEntry,
+    FileTypesFilters,
     QueueFileOutput,
     SaveDecision,
 )
@@ -99,7 +100,7 @@ async def _scrape(engine, **kwargs):
 
 
 class TestFileToDownload(unittest.IsolatedAsyncioTestCase):
-    """Verified files are skipped unless requested through file_to_download."""
+    """Verified files are skipped unless requested through re_download."""
 
     async def test_forced_file_is_downloaded_and_requeued(self):
         """A verified file is re-downloaded with FORCED and re-queued."""
@@ -114,7 +115,7 @@ class TestFileToDownload(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(await _scrape(engine), [])
             self.assertEqual(engine.queue.sent, [])
 
-            results = await _scrape(engine, file_to_download=[PRICE])
+            results = await _scrape(engine, re_download=[PRICE])
             self.assertEqual([r.file_name for r in results], [f"{PRICE}.xml"])
             self.assertEqual(results[0].save_decision, SaveDecision.FORCED)
             self.assertEqual(engine.queue.sent, [f"{PRICE}.xml"])
@@ -124,8 +125,8 @@ class TestFileToDownload(unittest.IsolatedAsyncioTestCase):
                 for doc in engine.status.database.list_documents("global_status")
                 if doc["status"] == "started"
             ]
-            self.assertIsNone(started[0]["file_to_download"])
-            self.assertEqual(started[-1]["file_to_download"], [PRICE])
+            self.assertIsNone(started[0]["re_download"])
+            self.assertEqual(started[-1]["re_download"], [PRICE])
 
     async def test_forced_substring_matches_listed_name(self):
         """A substring of the listed name is enough to force it."""
@@ -134,8 +135,23 @@ class TestFileToDownload(unittest.IsolatedAsyncioTestCase):
             await _scrape(engine)
             engine.queue.sent.clear()
 
-            results = await _scrape(engine, file_to_download=["Promo7290027600007"])
+            results = await _scrape(engine, re_download=["Promo7290027600007"])
             self.assertEqual([r.file_name for r in results], [f"{PROMO}.xml"])
+
+    async def test_re_download_outside_files_types_is_not_downloaded(self):
+        """files_types pre-filter the request; re_download does not widen it."""
+        with tempfile.TemporaryDirectory() as tmp:
+            engine = _OfflineEngine(tmp, [PRICE, PROMO])
+            await _scrape(engine)
+            engine.queue.sent.clear()
+
+            results = await _scrape(
+                engine,
+                files_types=[FileTypesFilters.PROMO_FILE.name],
+                re_download=[PRICE],
+            )
+            self.assertEqual(results, [])
+            self.assertEqual(engine.forced.pending, {PRICE})
 
     async def test_forced_file_ignores_date_and_limit(self):
         """Forced files pass the date filter and do not count toward limit."""
@@ -164,7 +180,7 @@ class TestFileToDownload(unittest.IsolatedAsyncioTestCase):
         """A requested file the site never lists stays pending."""
         with tempfile.TemporaryDirectory() as tmp:
             engine = _OfflineEngine(tmp, [PRICE])
-            results = await _scrape(engine, file_to_download=[OLD_PRICE])
+            results = await _scrape(engine, re_download=[OLD_PRICE])
 
             self.assertEqual([r.file_name for r in results], [f"{PRICE}.xml"])
             self.assertEqual(engine.forced.pending, {OLD_PRICE})

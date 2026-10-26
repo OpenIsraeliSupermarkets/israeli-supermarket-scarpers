@@ -593,17 +593,17 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods,too-many-instance-
         min_size=None,
         max_size=None,
         random_selection=False,
-        file_to_download=None,
+        re_download=None,
     ):
-        """run the scraping logic; files matching ``file_to_download`` (name
-        substrings) are downloaded again despite verified/date/limit/same-hash."""
-        self.forced = ForcedDownloads(file_to_download)
+        """run the scraping logic; files matching ``re_download`` (name substrings)
+        are downloaded again despite verified/date/limit/same-hash, but only if
+        listed: ``files_types``/``store_id`` pre-filter the request to the site."""
+        self.forced = ForcedDownloads(re_download)
         self.status.on_scraping_start(
             limit=limit,
-            files_types=files_types,
             store_id=store_id,
             file_name_regex=file_name_regex,
-            file_to_download=file_to_download,
+            re_download=re_download,
             when_date=when_date,
             filter_null=filter_null,
             filter_zero=filter_zero,

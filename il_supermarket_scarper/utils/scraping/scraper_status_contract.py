@@ -56,10 +56,9 @@ class StartedStatus(BaseModel):
     status: str = "started"
     system_timestamp: Optional[datetime] = None
     limit: Optional[int] = None
-    files_requested: Optional[List[str]] = None
     store_id: Optional[int] = None
     file_name_regex: Optional[str] = None
-    file_to_download: Optional[List[str]] = None
+    re_download: Optional[List[str]] = None
     when_date: Optional[datetime] = None
     filter_null: bool = False
     filter_zero: bool = False

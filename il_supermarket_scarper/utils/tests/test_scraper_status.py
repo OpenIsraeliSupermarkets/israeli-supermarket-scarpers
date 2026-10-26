@@ -122,7 +122,7 @@ class TestVerifiedDownloadsAndSavePolicy(unittest.IsolatedAsyncioTestCase):
         """Second same-hash persist does not rewrite bytes."""
         with tempfile.TemporaryDirectory() as tmp:
             status, verified, policy, _db = self._fixtures(tmp)
-            status.on_scraping_start(limit=None, files_types=None)
+            status.on_scraping_start(limit=None)
             verified.set_task_id(status.task_id)
             payload = b"<xml>x</xml>"
             digest = content_sha256(payload)
@@ -145,7 +145,7 @@ class TestVerifiedDownloadsAndSavePolicy(unittest.IsolatedAsyncioTestCase):
         """A forced name is persisted again even with an unchanged hash."""
         with tempfile.TemporaryDirectory() as tmp:
             status, verified, policy, _db = self._fixtures(tmp)
-            status.on_scraping_start(limit=None, files_types=None)
+            status.on_scraping_start(limit=None)
             verified.set_task_id(status.task_id)
             digest = content_sha256(b"<xml>x</xml>")
             writes = {"n": 0}
@@ -190,7 +190,7 @@ class TestVerifiedDownloadsAndSavePolicy(unittest.IsolatedAsyncioTestCase):
         """Verified rows store the extracted on-disk file name."""
         with tempfile.TemporaryDirectory() as tmp:
             status, verified, policy, db = self._fixtures(tmp)
-            status.on_scraping_start(limit=None, files_types=None)
+            status.on_scraping_start(limit=None)
             verified.set_task_id(status.task_id)
 
             async def persist(_decision):
@@ -215,7 +215,7 @@ class TestVerifiedDownloadsAndSavePolicy(unittest.IsolatedAsyncioTestCase):
         """Saw/collected/downloaded/verified rows share the FileEntry entry_id."""
         with tempfile.TemporaryDirectory() as tmp:
             status, verified, policy, db = self._fixtures(tmp)
-            status.on_scraping_start(limit=None, files_types=None)
+            status.on_scraping_start(limit=None)
             verified.set_task_id(status.task_id)
             entry = FileEntry(
                 name="PromoFull7290-001", url="http://x/a", size=1, entry_id="story-9"
