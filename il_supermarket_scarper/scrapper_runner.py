@@ -84,6 +84,7 @@ async def _scrape_one(  # pylint: disable=too-many-locals
     status_database=None,
     timeout_in_seconds=60 * 30,
     shutdown_flag=None,
+    re_download=None,
 ):
     """scrape one"""
     chain_scrapper_constractor = ScraperFactory.get(chain_scrapper_class)
@@ -102,6 +103,7 @@ async def _scrape_one(  # pylint: disable=too-many-locals
     state = FilterState()
     run_count = 0
     initial_when_date = when_date
+    remaining_re_download = list(re_download or [])
 
     # Loop until one of the exit conditions is met
     while True:
@@ -115,7 +117,7 @@ async def _scrape_one(  # pylint: disable=too-many-locals
 
         # Run the scraper
         collected_now_count = 0
-        async for _ in scraper.scrape(
+        async for result in scraper.scrape(
             state=state,
             limit=limit,
             files_types=files_types,
@@ -126,8 +128,15 @@ async def _scrape_one(  # pylint: disable=too-many-locals
             filter_zero=False,
             min_size=min_size,
             max_size=max_size,
+            re_download=remaining_re_download,
         ):
             collected_now_count += 1
+            if result:
+                remaining_re_download = [
+                    name
+                    for name in remaining_re_download
+                    if name not in result.file_name
+                ]
             # Check for shutdown during scraping
             if shutdown_flag and shutdown_flag.value:
                 Logger.info(f"[{chain_name}] Shutdown requested during scraping")
@@ -239,11 +248,21 @@ class MainScrapperRunner:  # pylint: disable=too-many-instance-attributes
         min_size=None,
         max_size=None,
         single_pass=True,
+        re_download=None,
     ):
-        """run the scraper"""
+        """run the scraper
+
+        ``re_download`` maps a scraper name to file name substrings that must
+        be downloaded again (see ``Engine.scrape``). Files outside
+        ``files_types`` are not downloaded: the types pre-filter the request
+        sent to the site.
+        """
+        re_download = re_download or {}
         Logger.info(f"Limit is {limit}")
         Logger.info(f"files_types is {files_types}")
         Logger.info(f"file_name_regex is {file_name_regex}")
+        forced_counts = {name: len(files) for name, files in re_download.items()}
+        Logger.info(f"re_download counts are {forced_counts}")
         Logger.info(f"Start scraping {self.enabled_scrapers}.")
 
         with Manager() as self._manager:
@@ -263,6 +282,9 @@ class MainScrapperRunner:  # pylint: disable=too-many-instance-attributes
                         "single_pass": single_pass,
                         "timeout_in_seconds": self.timeout_in_seconds,
                         "shutdown_flag": self._shutdown_flag,
+                        "re_download": list(
+                            re_download.get(chain_scrapper_class) or []
+                        ),
                     },
                 )
                 for chain_scrapper_class in self.enabled_scrapers

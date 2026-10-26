@@ -21,11 +21,16 @@ class SaveDecision(str, Enum):
     REWROTE_SAME = "rewrote_same"  # same name, same sha256; skip write/send
     HASH_MISMATCH = "hash_mismatch"  # same name, different sha256; overwrite / re-queue
     STALE_OLDER = "stale_older"  # same name, older published_at; keep the newer file
+    FORCED = "forced"  # caller asked for this name; write / re-queue regardless
 
 
 def should_persist(save_decision: SaveDecision) -> bool:
     """True when bytes should be written or sent (not a same-hash / stale no-op)."""
-    return save_decision in (SaveDecision.CREATED, SaveDecision.HASH_MISMATCH)
+    return save_decision in (
+        SaveDecision.CREATED,
+        SaveDecision.HASH_MISMATCH,
+        SaveDecision.FORCED,
+    )
 
 
 class SavePolicy:
@@ -50,13 +55,27 @@ class SavePolicy:
         file_name: str,
         digest: str,
         published_at: Optional[str] = None,
+        force: bool = False,
     ) -> SaveDecision:
         """Decide whether to persist bytes for ``file_name``.
 
         Unknown name → CREATED. Older published_at → STALE_OLDER.
         Same digest → REWROTE_SAME. Else → HASH_MISMATCH.
         Missing dates allow overwrite when digests differ.
+        With ``force``, a decision that would skip the write becomes FORCED.
         """
+        decision = self._resolve(file_name, digest, published_at)
+        if force and not should_persist(decision):
+            Logger.info(f"{file_name} was requested again; re-queueing ({decision.value})")
+            return SaveDecision.FORCED
+        return decision
+
+    def _resolve(
+        self,
+        file_name: str,
+        digest: str,
+        published_at: Optional[str],
+    ) -> SaveDecision:
         known = self.verified.known_file(file_name)
         if known is None:
             return SaveDecision.CREATED
@@ -88,6 +107,7 @@ class SavePolicy:
         persist,
         listing_hash: Optional[str] = None,
         entry_id: Optional[str] = None,
+        force: bool = False,
     ) -> SaveDecision:
         """Lock by name, decide, optionally persist, then record verified.
 
@@ -97,7 +117,7 @@ class SavePolicy:
         lock = await self._lock_for_name(file_name)
         async with lock:
             save_decision = self.resolve_save_decision(
-                file_name, digest, published_at
+                file_name, digest, published_at, force=force
             )
             if should_persist(save_decision):
                 await persist(save_decision)

@@ -28,6 +28,7 @@ from il_supermarket_scarper.utils.scraping.state import FilterState
 from il_supermarket_scarper.utils.databases import AbstractDataBase
 from il_supermarket_scarper.utils.core.async_work import stream_as_completed
 from il_supermarket_scarper.utils.files.gzip_utils import extract_if_compressed
+from il_supermarket_scarper.utils.files.forced_downloads import ForcedDownloads
 from il_supermarket_scarper.utils.files.save_policy import SavePolicy
 from il_supermarket_scarper.utils.files.verified_downloads import VerifiedDownloads
 
@@ -144,6 +145,7 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods,too-many-instance-
         )
         self.verified = VerifiedDownloads(self.status.database)
         self.save_policy = SavePolicy(self.verified)
+        self.forced = ForcedDownloads()
 
         self.assigned_cookie = f"{self.chain.name}_{uuid.uuid4()}_cookies.txt"
         self.storage_path: FileOutput = file_output
@@ -377,6 +379,7 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods,too-many-instance-
             self.verified.filter_already_downloaded(
                 unique_files,
                 by_function=by_function,
+                is_forced=self.forced.matches,
             )
         )
 
@@ -416,7 +419,13 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods,too-many-instance-
             assert limit > 0, "Limit must be greater than 0"
 
         async for file in intreable_:
+            if self.forced.matches(file):
+                self.forced.mark_listed(file)
+                yield file
+                continue
             if limit is not None and state.file_pass_limit >= limit:
+                if self.forced.pending:
+                    continue
                 # Stop consuming; caller should aclose upstream listing gens
                 # so parallel page/branch fetches can cancel.
                 break
@@ -483,7 +492,7 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods,too-many-instance-
         async for file in intreable_:
             # StoresFull7290875100001-000-202502250510'
             # Promo7290700100008-000-207-20250224-103225
-            if f"-{date_format}" in by_function(file):
+            if f"-{date_format}" in by_function(file) or self.forced.matches(file):
                 yield file
 
     async def get_last_48_hours(self, by_function, intreable_):
@@ -584,13 +593,17 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods,too-many-instance-
         min_size=None,
         max_size=None,
         random_selection=False,
+        re_download=None,
     ):
-        """run the scraping logic"""
+        """run the scraping logic; files matching ``re_download`` (name substrings)
+        are downloaded again despite verified/date/limit/same-hash, but only if
+        listed: ``files_types``/``store_id`` pre-filter the request to the site."""
+        self.forced = ForcedDownloads(re_download)
         self.status.on_scraping_start(
             limit=limit,
-            files_types=files_types,
             store_id=store_id,
             file_name_regex=file_name_regex,
+            re_download=re_download,
             when_date=when_date,
             filter_null=filter_null,
             filter_zero=filter_zero,
@@ -628,6 +641,11 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods,too-many-instance-
             Logger.error(f"Error scraping: {e}")
             completed_successfully = False
         finally:
+            if self.forced.pending:
+                Logger.warning(
+                    f"{self.chain.value}: requested files not listed on the site "
+                    f"this run: {sorted(self.forced.pending)}"
+                )
             self.status.on_scrape_completed(
                 self.get_storage_path(), completed_successfully=completed_successfully
             )
@@ -855,6 +873,7 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods,too-many-instance-
             _persist,
             listing_hash=entry.listing_hash(),
             entry_id=entry.entry_id,
+            force=self.forced.matches(entry),
         )
         if box["result"] is not None:
             result: Dict[str, Any] = box["result"]

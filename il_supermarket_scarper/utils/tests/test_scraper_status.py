@@ -122,7 +122,7 @@ class TestVerifiedDownloadsAndSavePolicy(unittest.IsolatedAsyncioTestCase):
         """Second same-hash persist does not rewrite bytes."""
         with tempfile.TemporaryDirectory() as tmp:
             status, verified, policy, _db = self._fixtures(tmp)
-            status.on_scraping_start(limit=None, files_types=None)
+            status.on_scraping_start(limit=None)
             verified.set_task_id(status.task_id)
             payload = b"<xml>x</xml>"
             digest = content_sha256(payload)
@@ -140,6 +140,27 @@ class TestVerifiedDownloadsAndSavePolicy(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(first, SaveDecision.CREATED)
             self.assertEqual(second, SaveDecision.REWROTE_SAME)
             self.assertEqual(writes["n"], 1)
+
+    async def test_decide_and_persist_force_rewrites_same_hash(self):
+        """A forced name is persisted again even with an unchanged hash."""
+        with tempfile.TemporaryDirectory() as tmp:
+            status, verified, policy, _db = self._fixtures(tmp)
+            status.on_scraping_start(limit=None)
+            verified.set_task_id(status.task_id)
+            digest = content_sha256(b"<xml>x</xml>")
+            writes = {"n": 0}
+
+            async def persist(_decision):
+                writes["n"] += 1
+
+            await policy.decide_and_persist(
+                "a.xml", digest, None, persist, listing_hash="lh1"
+            )
+            forced = await policy.decide_and_persist(
+                "a.xml", digest, None, persist, listing_hash="lh1", force=True
+            )
+            self.assertEqual(forced, SaveDecision.FORCED)
+            self.assertEqual(writes["n"], 2)
 
     async def test_filter_already_downloaded_uses_set(self):
         """filter_already_downloaded skips known listing hashes."""
@@ -169,7 +190,7 @@ class TestVerifiedDownloadsAndSavePolicy(unittest.IsolatedAsyncioTestCase):
         """Verified rows store the extracted on-disk file name."""
         with tempfile.TemporaryDirectory() as tmp:
             status, verified, policy, db = self._fixtures(tmp)
-            status.on_scraping_start(limit=None, files_types=None)
+            status.on_scraping_start(limit=None)
             verified.set_task_id(status.task_id)
 
             async def persist(_decision):
@@ -194,7 +215,7 @@ class TestVerifiedDownloadsAndSavePolicy(unittest.IsolatedAsyncioTestCase):
         """Saw/collected/downloaded/verified rows share the FileEntry entry_id."""
         with tempfile.TemporaryDirectory() as tmp:
             status, verified, policy, db = self._fixtures(tmp)
-            status.on_scraping_start(limit=None, files_types=None)
+            status.on_scraping_start(limit=None)
             verified.set_task_id(status.task_id)
             entry = FileEntry(
                 name="PromoFull7290-001", url="http://x/a", size=1, entry_id="story-9"
