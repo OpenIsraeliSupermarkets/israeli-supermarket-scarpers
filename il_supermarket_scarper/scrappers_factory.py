@@ -89,18 +89,9 @@ class ScraperFactory(Enum):
         return scraper_name in DeprecatedScrapers.names()
 
     @classmethod
-    def all_active(cls, limit=None, files_types=None, when_date=None):
+    def all_active(cls):
         """get all the scarpers and filter disabled scrapers"""
-        return (
-            member
-            for member in cls
-            if cls.is_scraper_enabled(
-                member,
-                limit=limit,
-                files_types=files_types,
-                when_date=when_date,
-            )
-        )
+        return (member for member in cls if cls.is_scraper_enabled(member))
 
     @classmethod
     def sample(cls, n=1):
@@ -108,27 +99,17 @@ class ScraperFactory(Enum):
         return random.sample(cls.all_scrapers_name(), n)
 
     @classmethod
-    def all_scrapers(cls, limit=None, files_types=None, when_date=None):
+    def all_scrapers(cls):
         """list all scrapers possible to use"""
-        return [
-            e.value
-            for e in ScraperFactory.all_active(
-                limit=limit, files_types=files_types, when_date=when_date
-            )
-        ]
+        return [e.value for e in ScraperFactory.all_active()]
 
     @classmethod
-    def all_scrapers_name(cls, limit=None, files_types=None, when_date=None):
+    def all_scrapers_name(cls):
         """get the class name of all listed scrapers"""
-        return [
-            e.name
-            for e in ScraperFactory.all_active(
-                limit=limit, files_types=files_types, when_date=when_date
-            )
-        ]
+        return [e.name for e in ScraperFactory.all_active()]
 
     @classmethod
-    def get(cls, class_name, limit=None, files_types=None, when_date=None):
+    def get(cls, class_name):
         """get a scraper by class name"""
 
         enum = None
@@ -140,22 +121,18 @@ class ScraperFactory(Enum):
         if enum is None:
             raise ValueError(f"class_names {class_name} not found")
 
-        if not cls.is_scraper_enabled(
-            enum, limit=limit, files_types=files_types, when_date=when_date
-        ):
+        if not cls.is_scraper_enabled(enum):
             return None
         return enum.value
 
     @classmethod
-    def is_scraper_enabled(cls, enum, limit=None, files_types=None, when_date=None):
+    def is_scraper_enabled(cls, enum):
         """True unless the scraper is deprecated or named in DISABLED_SCRAPPERS.
 
-        ``limit``, ``files_types``, and ``when_date`` stay in the signature for
-        callers. An empty listing does not disable the scraper. Treat "no files"
-        as a failure only when
-        ``ScraperStability.is_validate_scraper_found_no_files`` is false.
+        An empty listing does not disable the scraper. Treat "no files" as a
+        failure only when ``ScraperStability.is_validate_scraper_found_no_files``
+        is false.
         """
-        del limit, files_types, when_date
         if cls.is_deprecated(enum.name):
             return False
         env_var_value = os.environ.get("DISABLED_SCRAPPERS")

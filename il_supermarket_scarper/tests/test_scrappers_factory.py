@@ -20,14 +20,10 @@ def test_stable_scraper():
     )
 
 
-def test_empty_listing_rules_do_not_disable_scrapers():
-    """A known-empty window stays in all_active; it is not a disable."""
-    saturday = datetime_in_tlv(2026, 9, 5, 22, 0, 0)
+def test_listed_scrapers_stay_enabled():
+    """Every non-deprecated scraper is active, including always-failing ones."""
     listed = set(ScraperFactory.all_listed_scrappers())
-    assert set(ScraperFactory.all_scrapers_name(when_date=saturday)) == listed
-    assert set(
-        ScraperFactory.all_scrapers_name(files_types=FileTypesFilters.only_store())
-    ) == listed
+    assert set(ScraperFactory.all_scrapers_name()) == listed
     for name in ScraperStability.get_always_failing_scrapers():
         assert ScraperFactory.is_scraper_enabled(ScraperFactory[name])
 
