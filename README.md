@@ -114,6 +114,33 @@ asyncio.run(main())
 Please notice!
 Since new files are constantly uploaded by the supermarket to their site, you will only get the current snapshot. In order to keep getting data, you will need to run this code more than one time to get the newly uploaded files.
 
+Stability check
+----
+The factory still runs a chain when its site is known to publish nothing for that call (Saturday, or before the morning file drop). An empty result is a failure only when you decide it is. Import `ScraperStability` and pass the same arguments you passed to `scrape`:
+
+```python
+from il_supermarket_scarper import ScraperFactory, ScraperStability
+
+name = "VICTORY_NEW_SOURCE"
+scraper_cls = ScraperFactory.get(name)
+
+# after scrape(limit=..., files_types=..., store_id=..., when_date=...)
+empty_is_expected = ScraperStability.is_validate_scraper_found_no_files(
+    name,
+    limit=limit,
+    files_types=files_types,
+    store_id=store_id,
+    when_date=when_date,
+    utilize_date_param=scraper_cls.utilize_date_param,
+)
+if file_count == 0 and not empty_is_expected:
+    raise RuntimeError(f"{name} produced no files")
+```
+
+`when_date` is the execution time of that run. Rules that allow an empty listing (a Saturday gap, a catalog that is empty until the morning republish) read that timestamp. `True` means zero files are expected for this call. `False` means zero files should be reported.
+
+Deprecated chains and names listed in `DISABLED_SCRAPPERS` are still left out of `ScraperFactory.all_scrapers_name()`.
+
 Quick start
 -----------
 
