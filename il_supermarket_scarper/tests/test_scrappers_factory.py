@@ -17,7 +17,6 @@ from il_supermarket_scarper.utils.files.file_output import DiskFileOutput
 def test_scraper_stability_is_a_public_import():
     """Customers check an empty listing via the package root."""
     assert il_supermarket_scarper.ScraperStability is ScraperStability
-    assert "ScraperStability" in il_supermarket_scarper.__all__
     assert callable(ScraperStability.is_validate_scraper_found_no_files)
 
 

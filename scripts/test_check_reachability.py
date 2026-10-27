@@ -5,6 +5,7 @@ import json
 import os
 import tempfile
 import unittest
+from datetime import datetime
 from unittest import mock
 
 from il_supermarket_scarper.utils import Logger
@@ -141,8 +142,11 @@ class ProbeTests(unittest.IsolatedAsyncioTestCase):
                 for _item in ():
                     yield _item
 
+        when_date = datetime(2026, 9, 17, 0, 30)
         with mock.patch.object(
             reach.ScraperFactory, "get", return_value=_Empty
+        ), mock.patch.object(
+            reach, "_now", return_value=when_date
         ), mock.patch.object(
             reach.ScraperStability,
             "is_validate_scraper_found_no_files",
@@ -151,7 +155,10 @@ class ProbeTests(unittest.IsolatedAsyncioTestCase):
             result = await reach.probe_scraper("VICTORY_NEW_SOURCE", timeout=5)
         self.assertEqual(result["status"], reach.EXPECTED_EMPTY)
         expected.assert_called_once_with(
-            "VICTORY_NEW_SOURCE", limit=1, utilize_date_param=True
+            "VICTORY_NEW_SOURCE",
+            limit=1,
+            when_date=when_date,
+            utilize_date_param=True,
         )
 
 

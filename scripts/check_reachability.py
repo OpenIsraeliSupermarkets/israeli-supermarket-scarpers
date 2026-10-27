@@ -91,11 +91,14 @@ def classify(downloaded: int, errors: List[str], timed_out: bool) -> str:
     return NO_FILES
 
 
-def listing_expected_empty(scraper_name: str, scraper_cls, limit: int = 1) -> bool:
+def listing_expected_empty(
+    scraper_name: str, scraper_cls, limit: int = 1, when_date=None
+) -> bool:
     """True when a clean empty listing is a known gap, not a broken scraper."""
     return ScraperStability.is_validate_scraper_found_no_files(
         scraper_name,
         limit=limit,
+        when_date=when_date,
         utilize_date_param=getattr(scraper_cls, "utilize_date_param", False),
     )
 
@@ -121,6 +124,7 @@ async def probe_scraper(scraper_name: str, timeout: float) -> Dict[str, Any]:
     _CURRENT_ERRORS.set(errors)
     downloaded = 0
     timed_out = False
+    when_date = _now()
     start = time.perf_counter()
     scraper_cls = ScraperFactory.get(scraper_name)
     if scraper_cls is None:
@@ -154,7 +158,9 @@ async def probe_scraper(scraper_name: str, timeout: float) -> Dict[str, Any]:
     status = classify(downloaded, errors, timed_out)
     # Decide at probe time. The report can be rendered hours later, when the
     # empty-window rule would no longer match.
-    if status == NO_FILES and listing_expected_empty(scraper_name, scraper_cls):
+    if status == NO_FILES and listing_expected_empty(
+        scraper_name, scraper_cls, when_date=when_date
+    ):
         status = EXPECTED_EMPTY
     error = short_error(errors)
     if timed_out and error is None:
