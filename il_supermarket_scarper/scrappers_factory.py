@@ -2,7 +2,6 @@ import random
 import os
 from enum import Enum
 import il_supermarket_scarper.scrappers as all_scrappers
-from il_supermarket_scarper.scraper_stability import ScraperStability
 from il_supermarket_scarper.utils.scraping.deprecated_scrapers import DeprecatedScrapers
 
 
@@ -149,7 +148,14 @@ class ScraperFactory(Enum):
 
     @classmethod
     def is_scraper_enabled(cls, enum, limit=None, files_types=None, when_date=None):
-        """get scraper value base on the enum value, if it disabled, return None"""
+        """True unless the scraper is deprecated or named in DISABLED_SCRAPPERS.
+
+        ``limit``, ``files_types``, and ``when_date`` stay in the signature for
+        callers. An empty listing does not disable the scraper. Treat "no files"
+        as a failure only when
+        ``ScraperStability.is_validate_scraper_found_no_files`` is false.
+        """
+        del limit, files_types, when_date
         if cls.is_deprecated(enum.name):
             return False
         env_var_value = os.environ.get("DISABLED_SCRAPPERS")
@@ -157,13 +163,4 @@ class ScraperFactory(Enum):
             disabled_scrappers = list(map(str.strip, env_var_value.split(",")))
             if enum.name in disabled_scrappers:
                 return False
-        #
-        if ScraperStability.is_validate_scraper_found_no_files(
-            enum.name,
-            limit=limit,
-            files_types=files_types,
-            when_date=when_date,
-            utilize_date_param=enum.value.utilize_date_param,
-        ):
-            return False
         return True

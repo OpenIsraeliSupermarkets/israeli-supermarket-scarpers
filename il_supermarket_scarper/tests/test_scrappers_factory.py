@@ -20,22 +20,16 @@ def test_stable_scraper():
     )
 
 
-def test_not_active():
-    """Always-failing factory scrapers are skipped in production (all_active)."""
-    test_date = datetime_in_tlv(2024, 12, 12, 0, 0, 0)
-    all_listed = set(ScraperFactory.all_listed_scrappers())
-    all_active = set(ScraperFactory.all_scrapers_name(when_date=test_date))
-
-    expected_not_active = (
-        set(ScraperStability.get_always_failing_scrapers()) & all_listed
-    )
-    actual_not_active = all_listed - all_active
-
-    assert actual_not_active == expected_not_active, (
-        f"Not-active scrapers mismatch. "
-        f"Expected: {expected_not_active}, "
-        f"Actual: {actual_not_active}."
-    )
+def test_empty_listing_rules_do_not_disable_scrapers():
+    """A known-empty window stays in all_active; it is not a disable."""
+    saturday = datetime_in_tlv(2026, 9, 5, 22, 0, 0)
+    listed = set(ScraperFactory.all_listed_scrappers())
+    assert set(ScraperFactory.all_scrapers_name(when_date=saturday)) == listed
+    assert set(
+        ScraperFactory.all_scrapers_name(files_types=FileTypesFilters.only_store())
+    ) == listed
+    for name in ScraperStability.get_always_failing_scrapers():
+        assert ScraperFactory.is_scraper_enabled(ScraperFactory[name])
 
 
 def test_scraper_kinds():

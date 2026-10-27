@@ -109,6 +109,51 @@ class ProbeTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["status"], reach.BLOCKED)
         self.assertIn("no file within", result["error"])
 
+    async def test_clean_empty_listing_is_no_files(self):
+        """A clean empty scrape is a missing-file failure."""
+
+        class _Empty:  # pylint: disable=too-few-public-methods
+            utilize_date_param = False
+
+            def __init__(self, **_):
+                """Accept the scraper constructor arguments."""
+
+            async def scrape(self, limit=None):  # pylint: disable=unused-argument
+                """List nothing and raise nothing."""
+                for _item in ():
+                    yield _item
+
+        with mock.patch.object(reach.ScraperFactory, "get", return_value=_Empty):
+            result = await reach.probe_scraper("EMPTY", timeout=5)
+        self.assertEqual(result["status"], reach.NO_FILES)
+
+    async def test_known_empty_listing_is_not_a_failure(self):
+        """A stability rule turns a clean empty scrape into expected_empty."""
+
+        class _Empty:  # pylint: disable=too-few-public-methods
+            utilize_date_param = True
+
+            def __init__(self, **_):
+                """Accept the scraper constructor arguments."""
+
+            async def scrape(self, limit=None):  # pylint: disable=unused-argument
+                """List nothing and raise nothing."""
+                for _item in ():
+                    yield _item
+
+        with mock.patch.object(
+            reach.ScraperFactory, "get", return_value=_Empty
+        ), mock.patch.object(
+            reach.ScraperStability,
+            "is_validate_scraper_found_no_files",
+            return_value=True,
+        ) as expected:
+            result = await reach.probe_scraper("VICTORY_NEW_SOURCE", timeout=5)
+        self.assertEqual(result["status"], reach.EXPECTED_EMPTY)
+        expected.assert_called_once_with(
+            "VICTORY_NEW_SOURCE", limit=1, utilize_date_param=True
+        )
+
 
 class CompareTests(unittest.TestCase):
     """compare() and verdict(): Israel vs outside Israel."""
@@ -139,6 +184,20 @@ class CompareTests(unittest.TestCase):
         israel = _payload([reach.REACHABLE])
         report = reach.compare(outside, israel)
         self.assertEqual(report["scrapers"][1]["verdict"], reach.NOT_COMPARED)
+
+    def test_expected_empty_in_israel_is_not_a_failure(self):
+        """A known-empty Israel probe is not 'fails in Israel'."""
+        outside = _payload([reach.BLOCKED, reach.NO_FILES, reach.EXPECTED_EMPTY])
+        israel = _payload([reach.EXPECTED_EMPTY, reach.NO_FILES, reach.REACHABLE])
+        report = reach.compare(outside, israel)
+        verdicts = [row["verdict"] for row in report["scrapers"]]
+        self.assertEqual(
+            verdicts,
+            [reach.EXPECTED_EMPTY, reach.FAILS_IN_ISRAEL, reach.WORKS_EVERYWHERE],
+        )
+        self.assertEqual(report["counts"][reach.FAILS_IN_ISRAEL], 1)
+        self.assertEqual(report["counts"][reach.EXPECTED_EMPTY], 1)
+        self.assertIn("not a failure", reach.render_markdown(report))
 
 
 class RenderTests(unittest.TestCase):
