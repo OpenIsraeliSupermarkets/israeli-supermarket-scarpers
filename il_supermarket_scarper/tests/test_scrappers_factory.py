@@ -3,6 +3,7 @@ import unittest
 from datetime import date, datetime
 from unittest.mock import patch
 
+import il_supermarket_scarper
 from il_supermarket_scarper import ScraperStability, ScraperFactory, datetime_in_tlv
 from il_supermarket_scarper.scraper_stability import ScraperKind
 from il_supermarket_scarper.scrappers.nativ_hashed import NetivHased
@@ -11,6 +12,13 @@ from il_supermarket_scarper.utils.files.file_types import FileTypesFilters
 from il_supermarket_scarper.utils.scraping.folders_name import DumpFolderNames
 from il_supermarket_scarper.utils.scraping.status import get_cpfta_retailer_hosts, href_host
 from il_supermarket_scarper.utils.files.file_output import DiskFileOutput
+
+
+def test_scraper_stability_is_a_public_import():
+    """Customers check an empty listing via the package root."""
+    assert il_supermarket_scarper.ScraperStability is ScraperStability
+    assert "ScraperStability" in il_supermarket_scarper.__all__
+    assert callable(ScraperStability.is_validate_scraper_found_no_files)
 
 
 def test_stable_scraper():
