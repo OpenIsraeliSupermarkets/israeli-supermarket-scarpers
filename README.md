@@ -116,7 +116,9 @@ Since new files are constantly uploaded by the supermarket to their site, you wi
 
 Stability check
 ----
-The factory still runs a chain when its site is known to publish nothing for that call (Saturday, or before the morning file drop). An empty result is a failure only when you decide it is. Import `ScraperStability` and pass the same arguments you passed to `scrape`:
+A scraper that is down permanently, or that you disable for your own reason, is left out of `ScraperFactory`. Deprecated chains and names listed in `DISABLED_SCRAPPERS` are not returned by `all_scrapers_name()` or `get()`.
+
+A scraper that sometimes returns no files, or returns none only under certain conditions, stays in the factory. Use `ScraperStability` for that case. Pass the same arguments you passed to `scrape`, including `when_date` (the execution time of that run). `True` means an empty result is expected for this call.
 
 ```python
 from il_supermarket_scarper import ScraperFactory, ScraperStability
@@ -136,10 +138,6 @@ empty_is_expected = ScraperStability.is_validate_scraper_found_no_files(
 if file_count == 0 and not empty_is_expected:
     raise RuntimeError(f"{name} produced no files")
 ```
-
-`when_date` is the execution time of that run. Rules that allow an empty listing (a Saturday gap, a catalog that is empty until the morning republish) read that timestamp. `True` means zero files are expected for this call. `False` means zero files should be reported.
-
-Deprecated chains and names listed in `DISABLED_SCRAPPERS` are still left out of `ScraperFactory.all_scrapers_name()`.
 
 Quick start
 -----------
