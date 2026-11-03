@@ -6,6 +6,7 @@ from il_supermarket_scarper.utils import (
     Logger,
     collect_from_ftp,
     fetch_file_from_ftp_to_memory,
+    FtpFileMissingError,
     FileTypesFilters,
     ScrapingResult,
 )
@@ -230,6 +231,10 @@ class Cerberus(Engine):
                     )
                     Logger.error(error)
                     result = finalized
+        except FtpFileMissingError as exception:
+            # Listed but gone on the server: a restart can't fetch it (#215).
+            Logger.error(f"Error downloading {file_name}: {exception}")
+            error = str(exception)
         except Exception as exception:  # pylint: disable=broad-except
             Logger.error(
                 f"Error downloading {file_name},extract_succefully={extract_succefully}"
