@@ -258,7 +258,17 @@ def make_test_case(scraper_enum, store_id, many_files=3):
                         f"but returned {len(files_found)} files. "
                         "Update ScraperStability or the scraper URL."
                     )
-                elif not expected_empty:
+                elif expected_empty:
+                    ScraperStability.warn_if_files_found_when_empty_approved(
+                        scraper_enum.name,
+                        len(files_found),
+                        limit=limit,
+                        files_types=file_type,
+                        store_id=store_id,
+                        when_date=when_date,
+                        utilize_date_param=scraper_enum.value.utilize_date_param,
+                    )
+                else:
                     self._make_sure_filter_work(
                         files_found,
                         file_type=file_type,

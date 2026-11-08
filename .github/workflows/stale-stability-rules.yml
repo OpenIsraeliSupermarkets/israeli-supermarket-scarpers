@@ -1,0 +1,44 @@
+name: Stale stability rules
+
+# Weekly: grep the last 7 days of scheduled "Unit & Integration Tests" pytest
+# logs for STALE_STABILITY_RULE warnings (a ScraperStability rule approved
+# "no files" but the scraper returned files) and open / update / close one
+# issue. See ScraperStability.warn_if_files_found_when_empty_approved.
+
+on:
+  schedule:
+    # Mondays 07:00 UTC, after Sunday's 13:00 UTC test-suite run.
+    - cron: '0 7 * * 1'
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "How many days of scheduled test runs to scan"
+        required: false
+        default: "7"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  report:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+      issues: write
+    steps:
+      - name: Checkout scripts
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Sync stale-stability-rules issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DAYS: ${{ github.event.inputs.days || '7' }}
+        run: .github/scripts/sync_stale_stability_issue.sh

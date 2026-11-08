@@ -1,4 +1,6 @@
 # pylint: disable=arguments-differ,arguments-renamed
+import json
+import warnings
 from datetime import datetime
 from enum import Enum
 
@@ -469,6 +471,18 @@ class VictoryMovedToNewSource(DeprecatedScraper):
     """Old Victory source; gov.il lists VICTORY_NEW_SOURCE only."""
 
 
+STALE_STABILITY_RULE_MARKER = "STALE_STABILITY_RULE"
+
+
+class StaleStabilityRuleWarning(RuntimeWarning):
+    """A stability rule approved "no files" but the scraper returned files.
+
+    Not a ``UserWarning`` subclass on purpose: pytest.ini ignores those, and
+    this one must reach pytest's warnings summary so the weekly
+    stale-stability-rules workflow can grep it.
+    """
+
+
 class ScraperStability(Enum):
     """tracker for the stablity of the scraper"""
 
@@ -525,6 +539,56 @@ class ScraperStability(Enum):
                 f"datetime.now(): {datetime.now().strftime('%Y-%m-%d')}"
             )
         return expected_to_fail
+
+    @classmethod
+    def warn_if_files_found_when_empty_approved(  # pylint: disable=too-many-arguments
+        cls,
+        scraper_enum,
+        files_found,
+        limit=None,
+        files_types=None,
+        store_id=None,
+        when_date=None,
+        utilize_date_param=False,
+    ):
+        """Warn when a chain-specific rule approved "no files" but files came back.
+
+        The rule may be stale (the chain started publishing again). Only
+        scrapers registered here are checked; always-failing scrapers already
+        fail their test and deprecated ones are not run. Approval that comes
+        only from the generic ``FullyStable`` probe window is not reported.
+        Returns True if it warned.
+        """
+        if not files_found or scraper_enum not in cls.__members__:
+            return False
+        if cls.kind_of(scraper_enum) is not ScraperKind.EDGE_CASE:
+            return False
+        stabler = cls[scraper_enum].value
+        if stabler.pass_expiration_date() <= datetime.now():
+            return False
+        params = {
+            "limit": limit,
+            "files_types": files_types,
+            "store_id": store_id,
+            "when_date": when_date,
+            "utilize_date_param": utilize_date_param,
+        }
+        if not stabler.failire_valid(**params) or FullyStable.failire_valid(**params):
+            return False
+
+        payload = {
+            "scraper": scraper_enum,
+            "rule": stabler.__name__,
+            "files_found": int(files_found),
+            "files_types": list(files_types) if files_types else None,
+            "store_id": store_id,
+            "when_date": when_date.isoformat() if when_date is not None else None,
+            "limit": limit,
+        }
+        message = f"{STALE_STABILITY_RULE_MARKER} {json.dumps(payload, sort_keys=True)}"
+        Logger.warning(message)
+        warnings.warn(message, StaleStabilityRuleWarning, stacklevel=2)
+        return True
 
     @classmethod
     def kind_of(cls, name):
