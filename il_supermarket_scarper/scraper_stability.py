@@ -465,6 +465,40 @@ class DoNotPublishPromo(FullyStable):
         ) or cls.searching_for_promo_full(files_types=files_types)
 
 
+class WoltPublishesOnlyFullFiles(FullyStable):
+    """Wolt publishes full Price/Promo dumps only, no update files.
+
+    Evidence 2026-11-08: the index at
+    https://wm-gateway.wolt.com/isr-prices/public/v1/index.html lists 93 days
+    (2026-08-08 to 2026-11-08). Across them: 3186 PriceFull, 3186 PromoFull,
+    93 Stores and 0 Promo (non-full) files. Price (non-full) files appear only
+    on 2026-09-26 (88), 2026-09-27 (160) and 2026-09-28 (96). A single-type
+    scrape of [PRICE_FILE] for 2026-09-27 returns them, so the filter works.
+    Parsers nightly skipped WoltTestCase::test_parsing_prices/promo for "no
+    files downloaded" in 25 of 25 runs (2026-10-10 to 2026-11-03).
+    Approve an empty result only for a request of a single update type.
+    """
+
+    @classmethod
+    def searching_for_update_file_only(cls, files_types=None, **_):
+        """A request for only PRICE_FILE or only PROMO_FILE."""
+        return files_types in (
+            [FileTypesFilters.PRICE_FILE.name],
+            [FileTypesFilters.PROMO_FILE.name],
+        )
+
+    @classmethod
+    def failire_valid(
+        cls, when_date=None, files_types=None, utilize_date_param=True, **_
+    ):
+        """return true if the parser is stble"""
+        return super().failire_valid(
+            when_date=when_date,
+            files_types=files_types,
+            utilize_date_param=utilize_date_param,
+        ) or cls.searching_for_update_file_only(files_types=files_types)
+
+
 class VictoryMovedToNewSource(DeprecatedScraper):
     """Old Victory source; gov.il lists VICTORY_NEW_SOURCE only."""
 
@@ -489,6 +523,7 @@ class ScraperStability(Enum):
     CITY_MARKET_SHOPS = CityMarketShopsStores
     MESHMAT_YOSEF_1 = DoNotPublishPromo
     VICTORY = VictoryMovedToNewSource
+    WOLT = WoltPublishesOnlyFullFiles
     # YOHANANOF = DoNotPublishStores
 
     @classmethod
