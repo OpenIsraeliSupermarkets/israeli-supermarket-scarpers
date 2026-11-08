@@ -244,3 +244,40 @@ def test_login_details_include_credentials_when_set():
     assert ftp_with_password.url == "ftp://url.retail.publishedprices.co.il/"
     assert ftp_with_password.username == "Paz_bo"
     assert ftp_with_password.password == "paz468"
+
+
+def test_yellow_promo_update_files_are_event_driven():
+    """Yellow publishes Promo (update) files only when promotions change.
+
+    Some days have none at all, so an empty ``[PROMO_FILE]`` scrape is valid.
+    Every other Yellow promo/price request must still find files.
+    """
+    sunday_afternoon = datetime_in_tlv(2026, 11, 8, 15, 35, 0)
+    with patch(
+        "il_supermarket_scarper.scraper_stability._now",
+        return_value=sunday_afternoon,
+    ):
+        assert ScraperStability.is_validate_scraper_found_no_files(
+            "YELLOW",
+            files_types=[FileTypesFilters.PROMO_FILE.name],
+            when_date=sunday_afternoon,
+        )
+        assert ScraperStability.is_validate_scraper_found_no_files(
+            "YELLOW", files_types=[FileTypesFilters.PROMO_FILE.name], limit=10
+        )
+        for files_types in (
+            FileTypesFilters.only_promo(),
+            [FileTypesFilters.PROMO_FULL_FILE.name],
+            [FileTypesFilters.PRICE_FILE.name],
+            [FileTypesFilters.PRICE_FULL_FILE.name],
+            None,
+        ):
+            assert not ScraperStability.is_validate_scraper_found_no_files(
+                "YELLOW", files_types=files_types, when_date=sunday_afternoon
+            )
+        # The rule is Yellow's alone; other Cerberus chains must publish promos.
+        assert not ScraperStability.is_validate_scraper_found_no_files(
+            "YOHANANOF",
+            files_types=[FileTypesFilters.PROMO_FILE.name],
+            when_date=sunday_afternoon,
+        )

@@ -369,6 +369,19 @@ class Yellow(FullyStable):
     'store'. Root listing has no subdirectories. Other Yellow file types scrape
     successfully. CPFTA still lists יילו (page update 12.08.2026):
     https://www.gov.il/he/pages/cpfta_prices_regulations
+
+    Yellow publishes Promo (update) files only when promotions change, so a
+    ``[PROMO_FILE]`` scrape for a given day can be empty at any hour (issue
+    #220). Evidence from the daily Kaggle scraper status (versions 680-717,
+    2026-10-01..11-07, every file Yellow listed for the scraped day):
+    PriceFull and PromoFull (about 480 each) were listed every day, but
+    Promo files were 0 on 2026-10-31, 11-05, 11-06 and 11-07, only 2-12 on
+    10-03, 10-23, 10-28 and 10-30, and on 10-11, 10-25 and 11-01 the first
+    Promo file was at 13:00, 17:00 and 11:00 IL. Parsers CI on Sunday
+    2026-11-08 15:35 IL listed 0 for ``*promo[0-9]*20261108*`` with no FTP
+    error while PromoFull for the same day scraped. Only the exact
+    ``[PROMO_FILE]`` request is covered; PromoFull, Price and PriceFull must
+    still find files.
     """
 
     @classmethod
@@ -381,15 +394,24 @@ class Yellow(FullyStable):
         return files_types and files_types == [FileTypesFilters.STORE_FILE.name]
 
     @classmethod
+    def searching_for_promo_update(cls, files_types=None, **_):
+        """Yellow Promo (update) files appear only when promotions change."""
+        return files_types == [FileTypesFilters.PROMO_FILE.name]
+
+    @classmethod
     def failire_valid(
         cls, when_date=None, files_types=None, utilize_date_param=True, **_
     ):
         """return true if the parser is stble"""
-        return super(cls, Yellow).failire_valid(
-            when_date=when_date,
-            files_types=files_types,
-            utilize_date_param=utilize_date_param,
-        ) or cls.searching_for_store_full(files_types=files_types)
+        return (
+            super(cls, Yellow).failire_valid(
+                when_date=when_date,
+                files_types=files_types,
+                utilize_date_param=utilize_date_param,
+            )
+            or cls.searching_for_store_full(files_types=files_types)
+            or cls.searching_for_promo_update(files_types=files_types)
+        )
 
 
 class QuikSiteIsDown(DeprecatedScraper):
