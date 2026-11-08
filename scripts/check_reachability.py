@@ -2,7 +2,10 @@
 """Probe which chains can be scraped from the machine this runs on.
 
 Runs a real one-file scrape per active scraper and classifies each chain as
-``reachable``, ``blocked``, ``no_files`` or ``error``.
+``reachable``, ``blocked``, ``no_files``, ``expected_empty`` or ``error``.
+``no_files`` is a broken chain (open an issue) only when
+``ScraperStability.is_validate_scraper_found_no_files`` is false; a known-empty
+window is ``expected_empty`` instead.
 ``.github/workflows/reachability.yml`` runs it on a GitHub-hosted runner
 (outside Israel) and on the self-hosted CI runner (in Israel), then publishes
 the comparison to the ``reports`` branch for the README.
@@ -28,6 +31,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict, List, Optional
 
+from il_supermarket_scarper.scraper_stability import ScraperStability
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
 from il_supermarket_scarper.utils import DiskFileOutput, Logger
 from il_supermarket_scarper.utils.scraping.status import _now
@@ -37,6 +41,7 @@ from scripts.latency_bench import NoOpStatusDatabase, resolve_scrapers
 REACHABLE = "reachable"
 BLOCKED = "blocked"
 NO_FILES = "no_files"
+EXPECTED_EMPTY = "expected_empty"
 ERROR = "error"
 
 # Errors that mean the server never answered us or refused us outright, which
@@ -86,6 +91,18 @@ def classify(downloaded: int, errors: List[str], timed_out: bool) -> str:
     return NO_FILES
 
 
+def listing_expected_empty(
+    scraper_name: str, scraper_cls, limit: int = 1, when_date=None
+) -> bool:
+    """True when a clean empty listing is a known gap, not a broken scraper."""
+    return ScraperStability.is_validate_scraper_found_no_files(
+        scraper_name,
+        limit=limit,
+        when_date=when_date,
+        utilize_date_param=getattr(scraper_cls, "utilize_date_param", False),
+    )
+
+
 def short_error(errors: List[str]) -> Optional[str]:
     """First line of the most telling error, for the report table."""
     if not errors:
@@ -107,6 +124,7 @@ async def probe_scraper(scraper_name: str, timeout: float) -> Dict[str, Any]:
     _CURRENT_ERRORS.set(errors)
     downloaded = 0
     timed_out = False
+    when_date = _now()
     start = time.perf_counter()
     scraper_cls = ScraperFactory.get(scraper_name)
     if scraper_cls is None:
@@ -138,6 +156,12 @@ async def probe_scraper(scraper_name: str, timeout: float) -> Dict[str, Any]:
             errors.append(f"{type(exc).__name__}: {exc}")
 
     status = classify(downloaded, errors, timed_out)
+    # Decide at probe time. The report can be rendered hours later, when the
+    # empty-window rule would no longer match.
+    if status == NO_FILES and listing_expected_empty(
+        scraper_name, scraper_cls, when_date=when_date
+    ):
+        status = EXPECTED_EMPTY
     error = short_error(errors)
     if timed_out and error is None:
         error = f"no file within {int(timeout)}s"
@@ -178,7 +202,7 @@ async def run_probe(
 
 def summarize(results: List[Dict[str, Any]], runner: str) -> Dict[str, Any]:
     """Build one location's probe payload (the ``probe`` command's output)."""
-    counts = {s: 0 for s in (REACHABLE, BLOCKED, NO_FILES, ERROR)}
+    counts = {s: 0 for s in (REACHABLE, BLOCKED, NO_FILES, EXPECTED_EMPTY, ERROR)}
     for item in results:
         counts[item["status"]] += 1
     return {
@@ -200,9 +224,15 @@ def verdict(israel: Optional[Dict[str, Any]], outside: Dict[str, Any]) -> str:
     """Compare one chain's probe from Israel with the one from outside."""
     if israel is None:
         return NOT_COMPARED
+    # An expected-empty Israel probe is not a broken scraper.
+    if israel["status"] == EXPECTED_EMPTY:
+        return EXPECTED_EMPTY
     if israel["status"] != REACHABLE:
         return FAILS_IN_ISRAEL
     if outside["status"] == REACHABLE:
+        return WORKS_EVERYWHERE
+    # Abroad hit a known-empty window; Israel already downloaded a file.
+    if outside["status"] == EXPECTED_EMPTY:
         return WORKS_EVERYWHERE
     return GEO_BLOCKED
 
@@ -229,7 +259,13 @@ def compare(
         "outside_reachable": outside["counts"][REACHABLE],
         "israel_reachable": israel["counts"][REACHABLE] if israel else None,
     }
-    for name in (WORKS_EVERYWHERE, GEO_BLOCKED, FAILS_IN_ISRAEL, NOT_COMPARED):
+    for name in (
+        WORKS_EVERYWHERE,
+        GEO_BLOCKED,
+        FAILS_IN_ISRAEL,
+        EXPECTED_EMPTY,
+        NOT_COMPARED,
+    ):
         counts[name] = sum(1 for row in rows if row["verdict"] == name)
     return {
         "generated_at": _now().isoformat(),
@@ -243,14 +279,27 @@ def compare(
     }
 
 
-_ICONS = {REACHABLE: "✅", BLOCKED: "⛔", NO_FILES: "⚪", ERROR: "⚠️"}
+_ICONS = {
+    REACHABLE: "✅",
+    BLOCKED: "⛔",
+    NO_FILES: "⚪",
+    EXPECTED_EMPTY: "◌",
+    ERROR: "⚠️",
+}
 _VERDICT_TEXT = {
     WORKS_EVERYWHERE: "works everywhere",
     GEO_BLOCKED: "**geo-blocked**",
     FAILS_IN_ISRAEL: "**fails in Israel too** (not geo-blocking)",
+    EXPECTED_EMPTY: "no files (expected, not a failure)",
     NOT_COMPARED: "",
 }
-_VERDICT_ORDER = [GEO_BLOCKED, FAILS_IN_ISRAEL, NOT_COMPARED, WORKS_EVERYWHERE]
+_VERDICT_ORDER = [
+    GEO_BLOCKED,
+    FAILS_IN_ISRAEL,
+    EXPECTED_EMPTY,
+    NOT_COMPARED,
+    WORKS_EVERYWHERE,
+]
 
 
 def _cell(probe: Optional[Dict[str, Any]]) -> str:
@@ -281,7 +330,8 @@ def render_markdown(report: Dict[str, Any]) -> str:
         lines += [
             f"From Israel: {counts['israel_reachable']} of {total}. "
             f"Geo-blocked (work in Israel only): {counts[GEO_BLOCKED]}. "
-            f"Failing in Israel too: {counts[FAILS_IN_ISRAEL]}.",
+            f"Failing in Israel too: {counts[FAILS_IN_ISRAEL]}. "
+            f"No files, expected: {counts[EXPECTED_EMPTY]}.",
         ]
     lines += [
         "",

@@ -114,6 +114,31 @@ asyncio.run(main())
 Please notice!
 Since new files are constantly uploaded by the supermarket to their site, you will only get the current snapshot. In order to keep getting data, you will need to run this code more than one time to get the newly uploaded files.
 
+Stability check
+----
+A scraper that is down permanently, or that you disable for your own reason, is left out of `ScraperFactory`. Deprecated chains and names listed in `DISABLED_SCRAPPERS` are not returned by `all_scrapers_name()` or `get()`.
+
+A scraper that sometimes returns no files, or returns none only under certain conditions, stays in the factory. Use `ScraperStability` for that case. Pass the same arguments you passed to `scrape`, including `when_date` (the execution time of that run). `True` means an empty result is expected for this call.
+
+```python
+from il_supermarket_scarper import ScraperFactory, ScraperStability
+
+name = "VICTORY_NEW_SOURCE"
+scraper_cls = ScraperFactory.get(name)
+
+# after scrape(limit=..., files_types=..., store_id=..., when_date=...)
+empty_is_expected = ScraperStability.is_validate_scraper_found_no_files(
+    name,
+    limit=limit,
+    files_types=files_types,
+    store_id=store_id,
+    when_date=when_date,
+    utilize_date_param=scraper_cls.utilize_date_param,
+)
+if file_count == 0 and not empty_is_expected:
+    raise RuntimeError(f"{name} produced no files")
+```
+
 Quick start
 -----------
 
