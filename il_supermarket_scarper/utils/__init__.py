@@ -47,6 +47,7 @@ from .network.connection import (
     url_retrieve_to_memory,
     collect_from_ftp,
     fetch_file_from_ftp_to_memory,
+    FtpFileMissingError,
     wget_file_to_memory,
     async_url_connection_retry,
 )
