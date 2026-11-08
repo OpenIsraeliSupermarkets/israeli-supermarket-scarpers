@@ -13,6 +13,18 @@ from il_supermarket_scarper.utils import (
 from il_supermarket_scarper.utils.core.logger import Logger
 
 
+def requests_only(files_types, allowed):
+    """True if ``files_types`` is a non-empty request made only of ``allowed`` types.
+
+    Order and container type don't matter, so ``[PROMO_FULL_FILE]``,
+    ``[PROMO_FILE, PROMO_FULL_FILE]`` and its reverse all match the promo
+    types. ``None`` (no filter, i.e. every type) and ``[]`` never match.
+    """
+    if not files_types:
+        return False
+    return set(files_types) <= {file_type.name for file_type in allowed}
+
+
 class ScraperKind(Enum):
     """How a scraper is expected to behave in tests and production."""
 
@@ -209,7 +221,7 @@ class CityMarketGivataim(FullyStable):
     @classmethod
     def searching_for_update_promo(cls, files_types=None, **_):
         """if the execution is in saturday"""
-        return files_types and files_types == [FileTypesFilters.PROMO_FILE.name]
+        return requests_only(files_types, [FileTypesFilters.PROMO_FILE])
 
     @classmethod
     def failire_valid(
@@ -239,7 +251,7 @@ class CityMarketKiratOno(FullyStable):
     @classmethod
     def searching_for_update_promo(cls, files_types=None, **_):
         """if the execution is in saturday"""
-        return files_types and files_types == [FileTypesFilters.PROMO_FILE.name]
+        return requests_only(files_types, [FileTypesFilters.PROMO_FILE])
 
     @classmethod
     def failire_valid(
@@ -265,7 +277,7 @@ class DoNotPublishStores(FullyStable):
     @classmethod
     def searching_for_store_full(cls, files_types=None, **_):
         """if the execution is in saturday"""
-        return files_types and files_types == [FileTypesFilters.STORE_FILE.name]
+        return requests_only(files_types, [FileTypesFilters.STORE_FILE])
 
     @classmethod
     def failire_valid(
@@ -321,7 +333,7 @@ class CityMarketShopsStores(FullyStable):
     @classmethod
     def searching_for_store_before_noon(cls, files_types=None, **_):
         """Store-only scrapes before the usual publish window may be empty."""
-        if files_types != [FileTypesFilters.STORE_FILE.name]:
+        if not requests_only(files_types, [FileTypesFilters.STORE_FILE]):
             return False
         return _now().hour < hour_files_expected_to_be_accassible()
 
@@ -347,7 +359,7 @@ class SuperYuda(FullyStable):
     @classmethod
     def searching_for_store_full(cls, files_types=None, **_):
         """if the execution is in saturday"""
-        return files_types and files_types == [FileTypesFilters.STORE_FILE.name]
+        return requests_only(files_types, [FileTypesFilters.STORE_FILE])
 
     @classmethod
     def failire_valid(
@@ -378,7 +390,7 @@ class Yellow(FullyStable):
     @classmethod
     def searching_for_store_full(cls, files_types=None, **_):
         """Yellow FTP listing contains no store files."""
-        return files_types and files_types == [FileTypesFilters.STORE_FILE.name]
+        return requests_only(files_types, [FileTypesFilters.STORE_FILE])
 
     @classmethod
     def failire_valid(
@@ -439,7 +451,7 @@ class PublishOnlyStores(FullyStable):
 
 
 class DoNotPublishPromo(FullyStable):
-    """stablity for chains that doesn't pubish stores"""
+    """stablity for chains that don't publish promo files"""
 
     @classmethod
     def pass_expiration_date(cls):
@@ -447,11 +459,11 @@ class DoNotPublishPromo(FullyStable):
 
     @classmethod
     def searching_for_promo_full(cls, files_types=None, **_):
-        """if the execution is in saturday"""
-        return files_types and files_types == [
-            FileTypesFilters.PROMO_FILE.name,
-            FileTypesFilters.PROMO_FULL_FILE.name,
-        ]
+        """the request asks only for promo types (one or both, any order)"""
+        return requests_only(
+            files_types,
+            [FileTypesFilters.PROMO_FILE, FileTypesFilters.PROMO_FULL_FILE],
+        )
 
     @classmethod
     def failire_valid(

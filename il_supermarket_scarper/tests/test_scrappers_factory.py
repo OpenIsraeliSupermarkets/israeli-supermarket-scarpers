@@ -244,3 +244,54 @@ def test_login_details_include_credentials_when_set():
     assert ftp_with_password.url == "ftp://url.retail.publishedprices.co.il/"
     assert ftp_with_password.username == "Paz_bo"
     assert ftp_with_password.password == "paz468"
+
+
+def test_meshnat_yosef_promo_empty_for_any_promo_only_request():
+    """MESHMAT_YOSEF_1 doesn't publish promos: any promo-only request may be empty."""
+    promo = FileTypesFilters.PROMO_FILE.name
+    promo_full = FileTypesFilters.PROMO_FULL_FILE.name
+    for files_types in (
+        [promo],
+        [promo_full],
+        [promo, promo_full],
+        [promo_full, promo],
+        (promo_full,),
+    ):
+        assert ScraperStability.is_validate_scraper_found_no_files(
+            "MESHMAT_YOSEF_1", files_types=files_types
+        ), files_types
+
+
+def test_meshnat_yosef_promo_rule_does_not_cover_other_types():
+    """A request that includes prices or stores, or no filter, must not pass empty."""
+    afternoon = datetime(2026, 9, 17, 15, 0)
+    promo = FileTypesFilters.PROMO_FILE.name
+    with patch("il_supermarket_scarper.scraper_stability._now", return_value=afternoon):
+        for files_types in (
+            None,
+            [],
+            FileTypesFilters.only_price(),
+            FileTypesFilters.only_store(),
+            [promo, FileTypesFilters.PRICE_FILE.name],
+            FileTypesFilters.all_types(),
+        ):
+            assert not ScraperStability.is_validate_scraper_found_no_files(
+                "MESHMAT_YOSEF_1", files_types=files_types
+            ), files_types
+
+
+def test_store_only_rules_match_by_content_not_list_identity():
+    """Store-only rules accept any store-only sequence and reject mixed requests."""
+    afternoon = datetime(2026, 9, 17, 15, 0)
+    store = FileTypesFilters.STORE_FILE.name
+    with patch("il_supermarket_scarper.scraper_stability._now", return_value=afternoon):
+        for name in ("SUPER_YUDA", "YELLOW"):
+            assert ScraperStability.is_validate_scraper_found_no_files(
+                name, files_types=(store,)
+            )
+            assert not ScraperStability.is_validate_scraper_found_no_files(
+                name, files_types=[store, FileTypesFilters.PRICE_FILE.name]
+            )
+            assert not ScraperStability.is_validate_scraper_found_no_files(
+                name, files_types=None
+            )
