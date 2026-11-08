@@ -1,5 +1,6 @@
 from .main import ScarpingTask
 from .scrappers_factory import ScraperFactory
+from .scraper_stability import ScraperStability
 from .utils import (
     FileTypesFilters,
     DumpFolderNames,
@@ -14,5 +15,4 @@ from .utils import (
     SawStatus,
     FailedStatus,
     VerifiedDownload,
-    ScraperStability,
 )

@@ -71,4 +71,3 @@ from .databases import JsonDataBase, MongoDataBase
 from .scraping.scraping_result import ScrapingResult
 from .files.file_entry import FileEntry
 from .scraping.scraper_status_contract import *
-from ..scraper_stability import ScraperStability

@@ -244,4 +244,3 @@ def test_login_details_include_credentials_when_set():
     assert ftp_with_password.url == "ftp://url.retail.publishedprices.co.il/"
     assert ftp_with_password.username == "Paz_bo"
     assert ftp_with_password.password == "paz468"
-   
