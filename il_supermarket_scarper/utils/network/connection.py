@@ -53,6 +53,14 @@ exceptions = (
     LoadError,
 )
 
+
+class RequestCancelled(Exception):
+    """The caller abandoned the request (e.g. the file limit was reached).
+
+    Deliberately not in ``exceptions`` so the retry loop does not retry it.
+    """
+
+
 # FTP size-mismatch raises ValueError; include it only for FTP retries.
 ftp_exceptions = exceptions + (ValueError,)
 
@@ -109,6 +117,11 @@ def url_connection_retry(init_timeout=15):
             max_timeout=120,  # Cap timeout at 2 minutes to prevent unbounded growth
         )
         def retry_decorated_func(*args, **kwargs):
+            # A threading.Event the caller sets to abandon the request; checked
+            # before every attempt so an orphaned thread stops retrying.
+            cancel_event = kwargs.pop("cancel_event", None)
+            if cancel_event is not None and cancel_event.is_set():
+                raise RequestCancelled("request cancelled by caller")
             # Use the higher of retry's timeout or the originally requested timeout
             retry_timeout = kwargs.get("timeout", init_timeout)
             actual_timeout = max(retry_timeout, requested_timeout_ref[0])

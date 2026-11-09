@@ -1,6 +1,7 @@
 """Bounded concurrent pull from an async source with overlapping work."""
 
 import asyncio
+import threading
 from il_supermarket_scarper.utils.core.logger import Logger
 
 
@@ -17,6 +18,45 @@ def _unpack_result(result):
 def _default_error(prefix, error):
     Logger.error(f"{prefix}: {error}")
     Logger.error_execption(error)
+
+
+async def run_in_daemon_thread(func, *args, **kwargs):
+    """Run blocking ``func`` in a daemon thread; awaiting it is cancellable.
+
+    ``asyncio.to_thread`` cannot be abandoned: after the awaiting task is
+    cancelled the worker thread keeps running (retries included) and the event
+    loop waits for it on shutdown. Here a cancelled await sets a
+    ``threading.Event`` (passed to ``func`` as ``cancel_event``) so retries stop,
+    and the daemon thread is left behind without blocking loop or interpreter
+    shutdown.
+    """
+    loop = asyncio.get_running_loop()
+    future = loop.create_future()
+    cancel_event = threading.Event()
+
+    def deliver(setter, value):
+        if not future.done():
+            setter(value)
+
+    def worker():
+        try:
+            outcome = (
+                future.set_result,
+                func(*args, cancel_event=cancel_event, **kwargs),
+            )
+        except BaseException as error:  # pylint: disable=broad-exception-caught
+            outcome = (future.set_exception, error)
+        try:
+            loop.call_soon_threadsafe(deliver, *outcome)
+        except RuntimeError:
+            pass  # loop already closed: nobody is waiting for the result
+
+    threading.Thread(target=worker, daemon=True, name="CancellableRequest").start()
+    try:
+        return await future
+    except asyncio.CancelledError:
+        cancel_event.set()
+        raise
 
 
 async def stream_as_completed(  # pylint: disable=too-many-locals,too-many-branches,too-many-statements

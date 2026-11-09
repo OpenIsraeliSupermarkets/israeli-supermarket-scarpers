@@ -26,11 +26,15 @@ from il_supermarket_scarper.utils import (
 )
 from il_supermarket_scarper.utils.scraping.state import FilterState
 from il_supermarket_scarper.utils.databases import AbstractDataBase
-from il_supermarket_scarper.utils.core.async_work import stream_as_completed
+from il_supermarket_scarper.utils.core.async_work import (
+    run_in_daemon_thread,
+    stream_as_completed,
+)
 from il_supermarket_scarper.utils.files.gzip_utils import extract_if_compressed
 from il_supermarket_scarper.utils.files.forced_downloads import ForcedDownloads
 from il_supermarket_scarper.utils.files.save_policy import SavePolicy
 from il_supermarket_scarper.utils.files.verified_downloads import VerifiedDownloads
+
 
 @dataclass(frozen=True)
 class LoginDetails:
@@ -534,7 +538,7 @@ class Engine(ABC):  # pylint: disable=too-many-public-methods,too-many-instance-
         self, url, method="GET", body=None, timeout=15, headers=None
     ):
         """request resource with cookie by chain name"""
-        return await asyncio.to_thread(
+        return await run_in_daemon_thread(
             session_with_cookies,
             url,
             chain_cookie_name=self.assigned_cookie,
