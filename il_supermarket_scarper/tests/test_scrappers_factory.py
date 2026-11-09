@@ -295,3 +295,47 @@ def test_store_only_rules_match_by_content_not_list_identity():
             assert not ScraperStability.is_validate_scraper_found_no_files(
                 name, files_types=None
             )
+
+
+def test_yellow_promo_update_empty_only_on_weekend():
+    """Yellow Promo (update) files are sparse on Saturday and late on Sunday.
+
+    Only an exact ``[PROMO_FILE]`` request is approved, only on Saturday or on
+    Sunday before 18:00 IL. Weekdays and every other file type stay strict.
+    """
+    promo = [FileTypesFilters.PROMO_FILE.name]
+    saturday = datetime_in_tlv(2026, 11, 7, 15, 0, 0)
+    sunday_afternoon = datetime_in_tlv(2026, 11, 8, 15, 35, 0)
+    sunday_evening = datetime_in_tlv(2026, 11, 8, 19, 0, 0)
+    monday_noon = datetime_in_tlv(2026, 11, 9, 12, 30, 0)
+    thursday = datetime_in_tlv(2026, 11, 5, 14, 0, 0)
+
+    def approved(now, when_date, files_types=tuple(promo), name="YELLOW"):
+        with patch("il_supermarket_scarper.scraper_stability._now", return_value=now):
+            return ScraperStability.is_validate_scraper_found_no_files(
+                name, files_types=files_types, when_date=when_date, limit=10
+            )
+
+    # Saturday, any hour, and a Saturday asked for later.
+    assert approved(saturday, saturday)
+    assert approved(monday_noon, saturday)
+    # Sunday today, before 18:00 IL (the 2026-11-08 CI failure).
+    assert approved(sunday_afternoon, sunday_afternoon)
+    assert approved(sunday_afternoon, None)
+    # Sunday after 18:00, or a past Sunday, must have files.
+    assert not approved(sunday_evening, sunday_evening)
+    assert not approved(monday_noon, sunday_afternoon)
+    # Weekdays stay strict.
+    assert not approved(monday_noon, monday_noon)
+    assert not approved(thursday, thursday)
+    # Other file types and other chains stay strict on the weekend too.
+    for files_types in (
+        FileTypesFilters.only_promo(),
+        [FileTypesFilters.PROMO_FULL_FILE.name],
+        [FileTypesFilters.PRICE_FILE.name],
+        [FileTypesFilters.PRICE_FULL_FILE.name],
+        None,
+    ):
+        assert not approved(saturday, saturday, files_types=files_types)
+        assert not approved(sunday_afternoon, sunday_afternoon, files_types=files_types)
+    assert not approved(saturday, saturday, name="YOHANANOF")
