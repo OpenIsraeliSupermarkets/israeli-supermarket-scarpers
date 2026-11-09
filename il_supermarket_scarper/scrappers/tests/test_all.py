@@ -1,4 +1,5 @@
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
+from il_supermarket_scarper.utils import FileTypesFilters
 from .test_cases import make_test_case
 
 
@@ -130,6 +131,14 @@ class StopMarketTestCase(make_test_case(ScraperFactory.STOP_MARKET, 5)):
 
 class SuperPharmTestCase(make_test_case(ScraperFactory.SUPER_PHARM, 224)):
     """Test case for ScraperFactory.SUPER_PHARM."""
+
+    async def test_scrape_promo_file_alone(self):
+        """[PROMO_FILE] on its own, not paired with PROMO_FULL_FILE (#219)."""
+        await self._clean_scarpe_delete(
+            ScraperFactory.SUPER_PHARM,
+            limit=1,
+            file_type=[FileTypesFilters.PROMO_FILE.name],
+        )
 
 
 class SuperYudaTestCase(make_test_case(ScraperFactory.SUPER_YUDA, 204)):

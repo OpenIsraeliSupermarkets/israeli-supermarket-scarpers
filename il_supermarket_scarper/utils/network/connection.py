@@ -11,7 +11,7 @@ import asyncio
 import fnmatch
 import threading
 from html import unescape
-from ftplib import FTP_TLS, error_perm
+from ftplib import FTP_TLS, error_perm, error_temp
 
 from http.client import RemoteDisconnected
 from http.cookiejar import LoadError
@@ -49,7 +49,6 @@ exceptions = (
     ReadTimeoutError,
     RequestsConnectionError,
     ChunkedEncodingError,
-    error_perm,
     LoadError,
 )
 
@@ -61,8 +60,19 @@ class RequestCancelled(Exception):
     """
 
 
-# FTP size-mismatch raises ValueError; include it only for FTP retries.
-ftp_exceptions = exceptions + (ValueError,)
+# FTP-only retries: size mismatch (ValueError), 4xx replies (error_temp) and
+# 5xx replies (error_perm). error_perm is kept out of the shared tuple above
+# because no HTTP caller raises it; a 550 is short-circuited below.
+ftp_exceptions = exceptions + (ValueError, error_temp, error_perm)
+
+
+class FtpFileMissingError(FileNotFoundError):
+    """The FTP server answered 550: the listed file is no longer there."""
+
+
+def _is_ftp_missing_file(error):
+    """True for a 550 reply (file not found / unavailable) to RETR."""
+    return isinstance(error, error_perm) and str(error).strip().startswith("550")
 
 
 def download_connection_retry():
@@ -857,6 +867,12 @@ async def fetch_file_from_ftp_to_memory(  # pylint: disable=too-many-locals
             )
             return file_content
         except ftp_exceptions as error:
+            if _is_ftp_missing_file(error):
+                # Retrying can't bring the file back; fail now (#215).
+                Logger.warning(f"FTP file missing, not retrying {file_name}: {error}")
+                raise FtpFileMissingError(
+                    f"remote file missing (550): {file_name}"
+                ) from error
             _tries -= 1
             is_final_attempt = not _tries
 

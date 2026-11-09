@@ -64,8 +64,11 @@ class SuperPharm(MultiPageWeb):
             if ftype == FileTypesFilters.PRICE_FILE.name:
                 types.append("Price")
             if ftype == FileTypesFilters.PROMO_FILE.name:
-                # Site no longer exposes "Promo"; promo rows use PromoFull
-                types.append("PromoFull")
+                # Ask for the non-full category itself. Asking for
+                # "PromoFull" here listed only PromoFull* names, which the
+                # PROMO_FILE filter (no "full") then dropped, so
+                # [PROMO_FILE] alone always came back empty (issue #219).
+                types.append("Promo")
             if ftype == FileTypesFilters.PRICE_FULL_FILE.name:
                 types.append("PriceFull")
             if ftype == FileTypesFilters.PROMO_FULL_FILE.name:
