@@ -185,3 +185,19 @@ class ZolVeBegadolTestCase(make_test_case(ScraperFactory.ZOL_VEBEGADOL, 4)):
 
 class WoltTestCase(make_test_case(ScraperFactory.WOLT, 0)):
     """Test case for ScraperFactory.Wolt."""
+
+    async def test_scrape_price_update_only(self):
+        """[PRICE_FILE] alone: finds files or is approved empty (#218)."""
+        await self._clean_scarpe_delete(
+            ScraperFactory.WOLT,
+            limit=1,
+            file_type=[FileTypesFilters.PRICE_FILE.name],
+        )
+
+    async def test_scrape_promo_update_only(self):
+        """[PROMO_FILE] alone: finds files or is approved empty (#218)."""
+        await self._clean_scarpe_delete(
+            ScraperFactory.WOLT,
+            limit=1,
+            file_type=[FileTypesFilters.PROMO_FILE.name],
+        )

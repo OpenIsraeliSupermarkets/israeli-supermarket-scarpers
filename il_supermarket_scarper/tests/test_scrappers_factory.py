@@ -156,6 +156,28 @@ def test_city_market_shops_store_empty_before_noon():
     )
 
 
+def test_wolt_update_files_only_are_approved_empty():
+    """Wolt lists only full Price/Promo dumps; single update types may be empty."""
+    afternoon = datetime(2026, 11, 8, 13, 0)
+    with patch("il_supermarket_scarper.scraper_stability._now", return_value=afternoon):
+        for file_type in FileTypesFilters.all_update_files():
+            assert ScraperStability.is_validate_scraper_found_no_files(
+                "WOLT", files_types=[file_type]
+            )
+        for files_types in (
+            None,
+            FileTypesFilters.only_price(),
+            FileTypesFilters.only_promo(),
+            FileTypesFilters.only_store(),
+            [FileTypesFilters.PRICE_FULL_FILE.name],
+            [FileTypesFilters.PROMO_FULL_FILE.name],
+            FileTypesFilters.all_update_files(),
+        ):
+            assert not ScraperStability.is_validate_scraper_found_no_files(
+                "WOLT", files_types=files_types
+            )
+
+
 def test_laibcatalog_empty_before_noon_without_date_filter():
     """Victory/Het Cohen/Mahsani catalogs are empty overnight until republish."""
     morning = datetime(2026, 9, 17, 0, 30)
