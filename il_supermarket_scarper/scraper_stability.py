@@ -381,7 +381,26 @@ class Yellow(FullyStable):
     'store'. Root listing has no subdirectories. Other Yellow file types scrape
     successfully. CPFTA still lists יילו (page update 12.08.2026):
     https://www.gov.il/he/pages/cpfta_prices_regulations
+
+    Yellow publishes few or no Promo (update) files over the weekend (issue
+    #220). Evidence from the daily Kaggle scraper status (versions 600-718,
+    2026-08-07..11-08, 86 days, every file Yellow listed for the scraped
+    day):
+
+    - Saturday: 0 Promo files on 6 of 13 Saturdays (08-08, 08-15, 08-22,
+      09-19, 10-31, 11-07); most others had 2-20.
+    - Sunday: the first Promo file came at 11:00 IL or later on 8 of 13
+      Sundays (latest 17:00 on 10-25; 16:00 on 11-08, when parsers CI at
+      15:35 IL listed 0 with no FTP error), and 09-20 had none.
+    - Monday-Thursday: the first Promo file came between 06:00 and 10:00 IL
+      on 44 of 46 days. Weekday gaps (e.g. 11-05, 11-06) are sporadic, so
+      weekdays stay strict.
+
+    So an empty ``[PROMO_FILE]`` request is approved only for a Saturday, or
+    for today when today is Sunday and it is before 18:00 IL.
     """
+
+    sunday_promo_until_hour = 18
 
     @classmethod
     def pass_expiration_date(cls):
@@ -393,15 +412,36 @@ class Yellow(FullyStable):
         return requests_only(files_types, [FileTypesFilters.STORE_FILE])
 
     @classmethod
+    def weekend_promo_gap(cls, when_date=None, files_types=None, **_):
+        """Promo (update) files are sparse on Saturday and late on Sunday."""
+        if files_types is None or list(files_types) != [
+            FileTypesFilters.PROMO_FILE.name
+        ]:
+            return False
+        now = _now()
+        day = when_date if when_date is not None else now
+        if _is_saturday_in_israel(day):
+            return True
+        return (
+            day.weekday() == 6
+            and day.date() == now.date()
+            and now.hour < cls.sunday_promo_until_hour
+        )
+
+    @classmethod
     def failire_valid(
         cls, when_date=None, files_types=None, utilize_date_param=True, **_
     ):
         """return true if the parser is stble"""
-        return super(cls, Yellow).failire_valid(
-            when_date=when_date,
-            files_types=files_types,
-            utilize_date_param=utilize_date_param,
-        ) or cls.searching_for_store_full(files_types=files_types)
+        return (
+            super(cls, Yellow).failire_valid(
+                when_date=when_date,
+                files_types=files_types,
+                utilize_date_param=utilize_date_param,
+            )
+            or cls.searching_for_store_full(files_types=files_types)
+            or cls.weekend_promo_gap(when_date=when_date, files_types=files_types)
+        )
 
 
 class QuikSiteIsDown(DeprecatedScraper):
