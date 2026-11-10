@@ -1,9 +1,14 @@
 """Tests for bounded concurrent listing/work overlap."""
 
 import asyncio
+import threading
+import time
 import unittest
 
-from il_supermarket_scarper.utils.core.async_work import stream_as_completed
+from il_supermarket_scarper.utils.core.async_work import (
+    run_in_daemon_thread,
+    stream_as_completed,
+)
 
 
 class TestStreamAsCompleted(unittest.IsolatedAsyncioTestCase):
@@ -76,3 +81,45 @@ class TestStreamAsCompleted(unittest.IsolatedAsyncioTestCase):
             await gen.aclose()
 
         self.assertEqual(rest, ["second"])
+
+
+class TestRunInDaemonThread(unittest.IsolatedAsyncioTestCase):
+    """Cancelling the await must not leave the caller waiting on the thread."""
+
+    async def test_returns_result_and_passes_cancel_event(self):
+        """A normal call returns the function result."""
+
+        def func(value, cancel_event=None):
+            assert not cancel_event.is_set()
+            return value * 2
+
+        self.assertEqual(await run_in_daemon_thread(func, 21), 42)
+
+    async def test_propagates_exception(self):
+        """Errors from the thread surface to the awaiting task."""
+
+        def func(cancel_event=None):  # pylint: disable=unused-argument
+            raise RuntimeError("boom")
+
+        with self.assertRaises(RuntimeError):
+            await run_in_daemon_thread(func)
+
+    async def test_cancel_sets_event_and_returns_immediately(self):
+        """Cancelling sets the event; the slow thread does not block the caller."""
+        started = threading.Event()
+        seen = {}
+
+        def func(cancel_event=None):
+            started.set()
+            seen["event"] = cancel_event
+            cancel_event.wait(timeout=30)  # stands in for a hung request
+            return "late"
+
+        task = asyncio.create_task(run_in_daemon_thread(func))
+        await asyncio.to_thread(started.wait, 5)
+        begin = time.monotonic()
+        task.cancel()
+        with self.assertRaises(asyncio.CancelledError):
+            await task
+        self.assertLess(time.monotonic() - begin, 1)
+        self.assertTrue(seen["event"].is_set())
