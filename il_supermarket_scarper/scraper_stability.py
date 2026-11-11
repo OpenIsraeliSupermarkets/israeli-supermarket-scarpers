@@ -4,6 +4,8 @@ import warnings
 from datetime import datetime
 from enum import Enum
 
+import requests
+
 from il_supermarket_scarper.utils import (
     _now,
     _testing_now,
@@ -519,6 +521,73 @@ class DoNotPublishPromo(FullyStable):
         ) or cls.searching_for_promo_full(files_types=files_types)
 
 
+class MeshnatYosef1WorkerOutage(DoNotPublishPromo):
+    """Meshnat Yosef 1's Cloudflare Worker listing sometimes throws (issue #229).
+
+    The scraper lists files from https://list-files.w5871031-kt.workers.dev/.
+    Evidence 2026-11-09 20:24 and 21:38 UTC: CI run 42685615848 got HTTP 500
+    on every attempt and all 5 listing tests failed; a direct curl at 21:40
+    UTC got ``error code: 1101`` (Cloudflare "Worker threw exception").
+    Evidence 2026-11-10 20:46 UTC: main run 42894721038 got the Cloudflare
+    1101 page on all 4 retries for ``test_scrape_file_today`` while the other
+    Meshnat Yosef 1 tests in that run passed. Evidence 2026-11-11 06:30 UTC:
+    15 of 15 requests returned 200 with that day's PriceFull and Stores files,
+    and all 7 MeshnatYosef1TestCase tests passed. The source is live, its
+    worker fails intermittently on their side.
+
+    Empty results are approved only while the worker is failing right now:
+    the rule probes the listing URL and approves when it answers 5xx or with
+    a Cloudflare worker-exception body. A healthy listing that returns no
+    files, or any other failure, is not covered. Expires on its own date,
+    separate from the promo rule.
+    """
+
+    listing_url = "https://list-files.w5871031-kt.workers.dev/"
+    worker_error_markers = ("error code: 1101", "Worker threw exception")
+    probe_timeout_seconds = 20
+
+    @classmethod
+    def outage_expiration_date(cls):
+        """the worker-outage approval expires before the promo rule"""
+        return datetime(2026, 12, 31)
+
+    @classmethod
+    def listing_worker_failing(cls):
+        """True if the listing worker answers 5xx or a worker-exception body."""
+        try:
+            response = requests.get(cls.listing_url, timeout=cls.probe_timeout_seconds)
+        except requests.RequestException as error:
+            Logger.warning(f"Meshnat Yosef 1 listing probe failed to connect: {error}")
+            return False
+        body = response.text or ""
+        failing = response.status_code >= 500 or any(
+            marker in body for marker in cls.worker_error_markers
+        )
+        if failing:
+            Logger.warning(
+                f"Meshnat Yosef 1 listing worker is failing: "
+                f"status {response.status_code}, body {body[:80]!r}"
+            )
+        return failing
+
+    @classmethod
+    def failire_valid(
+        cls, when_date=None, files_types=None, utilize_date_param=True, **_
+    ):
+        # DoNotPublishPromo calls super() with its own name as the instance,
+        # so call it directly rather than through super(cls, ...).
+        if DoNotPublishPromo.failire_valid(
+            when_date=when_date,
+            files_types=files_types,
+            utilize_date_param=utilize_date_param,
+        ):
+            return True
+        return (
+            cls.outage_expiration_date() > datetime.now()
+            and cls.listing_worker_failing()
+        )
+
+
 class WoltPublishesOnlyFullFiles(FullyStable):
     """Wolt publishes full Price/Promo dumps only, no update files.
 
@@ -587,7 +656,7 @@ class ScraperStability(Enum):
     # CITY_MARKET_KIRYATONO = CityMarketKiratOno
     # CITY_MARKET_KIRYATGAT = CityMarketKiratGat  # recovered 2026-08-30: bina portal lists files
     CITY_MARKET_SHOPS = CityMarketShopsStores
-    MESHMAT_YOSEF_1 = DoNotPublishPromo
+    MESHMAT_YOSEF_1 = MeshnatYosef1WorkerOutage
     VICTORY = VictoryMovedToNewSource
     WOLT = WoltPublishesOnlyFullFiles
     # YOHANANOF = DoNotPublishStores
