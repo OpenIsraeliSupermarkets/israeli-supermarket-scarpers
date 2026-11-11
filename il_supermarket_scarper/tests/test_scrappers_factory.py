@@ -1,11 +1,17 @@
 import tempfile
 import unittest
 from datetime import date, datetime
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
+
+import requests
 
 import il_supermarket_scarper
 from il_supermarket_scarper import ScraperStability, ScraperFactory, datetime_in_tlv
-from il_supermarket_scarper.scraper_stability import ScraperKind
+from il_supermarket_scarper.scraper_stability import (
+    DoNotPublishPromo,
+    MeshnatYosef1WorkerOutage,
+    ScraperKind,
+)
 from il_supermarket_scarper.scrappers.nativ_hashed import NetivHased
 from il_supermarket_scarper.utils.scraping.deprecated_scrapers import DeprecatedScrapers
 from il_supermarket_scarper.utils.files.file_types import FileTypesFilters
@@ -288,7 +294,11 @@ def test_meshnat_yosef_promo_rule_does_not_cover_other_types():
     """A request that includes prices or stores, or no filter, must not pass empty."""
     afternoon = datetime(2026, 9, 17, 15, 0)
     promo = FileTypesFilters.PROMO_FILE.name
-    with patch("il_supermarket_scarper.scraper_stability._now", return_value=afternoon):
+    with patch(
+        "il_supermarket_scarper.scraper_stability._now", return_value=afternoon
+    ), patch.object(
+        MeshnatYosef1WorkerOutage, "listing_worker_failing", return_value=False
+    ):
         for files_types in (
             None,
             [],
@@ -300,6 +310,69 @@ def test_meshnat_yosef_promo_rule_does_not_cover_other_types():
             assert not ScraperStability.is_validate_scraper_found_no_files(
                 "MESHMAT_YOSEF_1", files_types=files_types
             ), files_types
+
+
+def _probe_response(status_code, text):
+    response = MagicMock()
+    response.status_code = status_code
+    response.text = text
+    return response
+
+
+def test_meshnat_yosef_worker_outage_approves_empty_only_while_failing():
+    """#229: empty is approved while the listing worker throws, not otherwise."""
+    afternoon = datetime(2026, 11, 10, 15, 0)
+    probe = "il_supermarket_scarper.scraper_stability.requests.get"
+    price = FileTypesFilters.only_price()
+    with patch("il_supermarket_scarper.scraper_stability._now", return_value=afternoon):
+        for failing in (
+            _probe_response(500, "<title>Worker threw exception</title>"),
+            _probe_response(200, "error code: 1101"),
+            _probe_response(503, ""),
+        ):
+            with patch(probe, return_value=failing):
+                assert ScraperStability.is_validate_scraper_found_no_files(
+                    "MESHMAT_YOSEF_1", files_types=price
+                )
+        for healthy in (
+            _probe_response(200, '[{"type":"PriceFull","name":"x"}]'),
+            _probe_response(200, "[]"),
+            _probe_response(404, "not found"),
+        ):
+            with patch(probe, return_value=healthy):
+                assert not ScraperStability.is_validate_scraper_found_no_files(
+                    "MESHMAT_YOSEF_1", files_types=price
+                )
+        with patch(probe, side_effect=requests.ConnectionError("refused")):
+            assert not ScraperStability.is_validate_scraper_found_no_files(
+                "MESHMAT_YOSEF_1", files_types=price
+            )
+
+
+def test_meshnat_yosef_worker_outage_expires():
+    """After the outage expiration date a failing worker is a test failure again."""
+    afternoon = datetime(2026, 11, 10, 15, 0)
+    with patch(
+        "il_supermarket_scarper.scraper_stability._now", return_value=afternoon
+    ), patch.object(
+        MeshnatYosef1WorkerOutage, "listing_worker_failing", return_value=True
+    ), patch.object(
+        MeshnatYosef1WorkerOutage,
+        "outage_expiration_date",
+        return_value=datetime(2000, 1, 1),
+    ):
+        assert not ScraperStability.is_validate_scraper_found_no_files(
+            "MESHMAT_YOSEF_1", files_types=FileTypesFilters.only_price()
+        )
+
+
+def test_meshnat_yosef_worker_outage_rule_is_scoped_to_meshnat_yosef_1():
+    """The probe is only consulted for MESHMAT_YOSEF_1."""
+    assert ScraperStability["MESHMAT_YOSEF_1"].value is MeshnatYosef1WorkerOutage
+    assert issubclass(MeshnatYosef1WorkerOutage, DoNotPublishPromo)
+    for name, member in ScraperStability.__members__.items():
+        if name != "MESHMAT_YOSEF_1":
+            assert not issubclass(member.value, MeshnatYosef1WorkerOutage), name
 
 
 def test_store_only_rules_match_by_content_not_list_identity():
