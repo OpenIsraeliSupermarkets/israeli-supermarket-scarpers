@@ -41,12 +41,13 @@ class JsonDataBase(AbstractDataBase):
 
         # Load existing data from the file
         if os.path.exists(file_path):
+            corrupted = False
             with open(file_path, "r", encoding="utf-8") as file:
                 try:
                     data = json.load(file)
                 except json.JSONDecodeError:
-                    data = None
-            if data is None:
+                    corrupted = True
+            if corrupted:
                 backup = self._quarantine_corrupt_file(file_path)
                 Logger.error(
                     f"File {file_path} is corrupted; moved it to {backup} "
