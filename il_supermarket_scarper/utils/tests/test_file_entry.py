@@ -1,5 +1,6 @@
 """Parse one listing date with the caller's format. Never scan keys or dump names."""
 
+import hashlib
 import tempfile
 import unittest
 
@@ -39,6 +40,57 @@ class TestFileEntryId(unittest.TestCase):
         a = FileEntry(name="a.xml", url="http://x/a", size=1, entry_id="one")
         b = FileEntry(name="a.xml", url="http://x/a", size=1, entry_id="two")
         self.assertEqual(a.listing_hash(), b.listing_hash())
+
+
+class TestListingHashSignedBlobUrl(unittest.TestCase):
+    """Azure blob SAS signatures rotate; they must not change listing identity."""
+
+    BLOB = (
+        "https://pricesprodpublic.blob.core.windows.net/stores/"
+        "Stores7290027600007-000-20261116-020.gz"
+    )
+    NAME = "Stores7290027600007-000-20261116-020.gz"
+
+    def test_blob_url_differing_only_in_signature_hashes_the_same(self):
+        """Two listings that differ only in ``sig``/``se`` are the same file."""
+        a = FileEntry(
+            name=self.NAME,
+            url=self.BLOB + "?sv=2014-02-14&sr=b&sig=6jDYCxAAA%3D"
+            "&se=2026-11-16T13%3A50%3A45Z&sp=r",
+            size=1234,
+        )
+        b = FileEntry(
+            name=self.NAME,
+            url=self.BLOB + "?sv=2014-02-14&sr=b&sig=2%2BbYu5BBB%3D"
+            "&se=2026-11-16T13%3A55%3A45Z&sp=r",
+            size=1234,
+        )
+        self.assertEqual(a.listing_hash(), b.listing_hash())
+
+    def test_blob_url_still_distinguishes_path_and_size(self):
+        """Path and size remain part of identity on blob URLs."""
+        base = FileEntry(name=self.NAME, url=self.BLOB + "?sig=x", size=1)
+        other_size = FileEntry(name=self.NAME, url=self.BLOB + "?sig=x", size=2)
+        other_path = FileEntry(
+            name=self.NAME, url=self.BLOB.replace("-020", "-021") + "?sig=x", size=1
+        )
+        self.assertNotEqual(base.listing_hash(), other_size.listing_hash())
+        self.assertNotEqual(base.listing_hash(), other_path.listing_hash())
+
+    def test_non_blob_url_with_query_hashes_as_before(self):
+        """Other hosts keep the full URL, query included, byte for byte."""
+        url = "https://prices.example.co.il/Download?file=a.gz&token=1"
+        entry = FileEntry(name="a.gz", url=url, size=7)
+        expected = hashlib.sha256(f"a.gz\n{url}\n7".encode("utf-8")).hexdigest()
+        self.assertEqual(entry.listing_hash(), expected)
+        changed = FileEntry(name="a.gz", url=url.replace("token=1", "token=2"), size=7)
+        self.assertNotEqual(entry.listing_hash(), changed.listing_hash())
+
+    def test_missing_url_and_size_hash_as_before(self):
+        """``None`` url/size keep their legacy payload."""
+        entry = FileEntry(name="a.gz", url=None, size=None)
+        expected = hashlib.sha256("a.gz\nNone\n".encode("utf-8")).hexdigest()
+        self.assertEqual(entry.listing_hash(), expected)
 
 
 class TestParsePublishedAt(unittest.TestCase):
