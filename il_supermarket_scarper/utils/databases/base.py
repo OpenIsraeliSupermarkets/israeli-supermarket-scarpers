@@ -36,6 +36,13 @@ class AbstractDataBase(ABC):
         """Return all documents in a collection (empty list if missing)."""
         return []
 
+    def remove_orphaned_temp_files(
+        self, min_age_seconds=0
+    ):  # pylint: disable=unused-argument
+        """Remove leftovers of writes whose process was killed. No-op by default;
+        file-backed databases override it. Returns the removed paths."""
+        return []
+
     @abstractmethod
     def get_last_modified(self):
         """Get the last modified timestamp when scraper last wrote to this database."""

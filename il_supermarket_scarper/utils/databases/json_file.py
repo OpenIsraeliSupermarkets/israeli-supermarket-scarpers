@@ -1,5 +1,7 @@
 import os
 import json
+import glob
+import time
 import tempfile
 from datetime import datetime
 import pytz
@@ -17,7 +19,48 @@ class JsonDataBase(AbstractDataBase):
         self.base_path = base_path
         self.database_file = f"{self.database_name}.json"
         self._ensure_db_directory_exists()
+        self.remove_orphaned_temp_files(
+            min_age_seconds=self.ORPHAN_TEMP_MIN_AGE_SECONDS
+        )
         self._ensure_db_file_exists()
+
+    # A temp file this old cannot belong to a write that is still running
+    # (a write takes milliseconds), so it is safe to remove on open even if
+    # another process has the same database open.
+    ORPHAN_TEMP_MIN_AGE_SECONDS = 60
+
+    def _temp_file_pattern(self):
+        """Glob for this database's atomic-write temp files (see mkstemp below)."""
+        return os.path.join(
+            glob.escape(self.base_path), f".{glob.escape(self.database_file)}.*.tmp"
+        )
+
+    def remove_orphaned_temp_files(self, min_age_seconds=0):
+        """Remove temp files left by a write whose process was killed.
+
+        A SIGTERM/SIGKILL between ``mkstemp`` and ``os.replace`` in
+        ``_atomic_write_json`` leaves ``.<db>.json.<random>.tmp`` behind; the
+        database file itself is intact. Only this database's temp files are
+        touched. With ``min_age_seconds=0`` call this only when no writer is
+        alive (e.g. after the worker pool was terminated). Returns the removed
+        paths.
+        """
+        removed = []
+        now = time.time()
+        for path in glob.glob(self._temp_file_pattern()):
+            try:
+                if now - os.path.getmtime(path) < min_age_seconds:
+                    continue
+                os.remove(path)
+            except FileNotFoundError:
+                continue
+            removed.append(path)
+        if removed:
+            Logger.warning(
+                f"Removed {len(removed)} orphaned temp file(s) of "
+                f"{self._get_database_file_path()} left by a killed write"
+            )
+        return removed
 
     def _ensure_db_directory_exists(self):
         """Ensure the base directory for the JSON database exists."""

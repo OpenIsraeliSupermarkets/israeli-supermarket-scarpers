@@ -302,11 +302,24 @@ class MainScrapperRunner:  # pylint: disable=too-many-instance-attributes
                         break
                     async_result.wait(timeout=1.0)
                 result = async_result.get() if async_result.ready() else []
+            # The pool is closed and every worker has exited, so no write is in
+            # flight: drop temp files of writes that terminate() cut short.
+            self._remove_orphaned_status_temp_files()
         self._manager = None
         self._shutdown_flag = None
         self._pool = None
         self._close_file_outputs()
         return result
+
+    def _remove_orphaned_status_temp_files(self):
+        """Remove temp files left in status databases by killed workers."""
+        for database in self._status_databases.values():
+            if database is None:
+                continue
+            try:
+                database.remove_orphaned_temp_files()
+            except OSError as e:
+                Logger.warning(f"Could not remove orphaned status temp files: {e}")
 
     def _close_file_outputs(self):
         """Send end-of-stream sentinel to every queue output so consumers unblock."""

@@ -114,14 +114,16 @@ class TestJsonDataBaseSigkill(unittest.TestCase):
         with tempfile.TemporaryDirectory() as base:
             seed_rows = 5000
             _seed(JsonDataBase("chain", base), seed_rows)
-            writer = textwrap.dedent(f"""
+            writer = textwrap.dedent(
+                f"""
                 from il_supermarket_scarper.utils.databases import JsonDataBase
                 db = JsonDataBase("chain", {base!r})
                 i = 0
                 while True:
                     db.insert_document({COLLECTION!r}, {{"file_name": f"n{{i}}.gz"}})
                     i += 1
-                """)
+                """
+            )
             path = os.path.join(base, "chain.json")
             for _ in range(3):
                 with subprocess.Popen([sys.executable, "-c", writer]) as proc:
@@ -132,6 +134,91 @@ class TestJsonDataBaseSigkill(unittest.TestCase):
                     rows = json.load(file)[COLLECTION]
                 self.assertGreaterEqual(len(rows), seed_rows)
             self.assertEqual([n for n in os.listdir(base) if ".corrupt-" in n], [])
+
+
+class TestOrphanedTempFiles(unittest.TestCase):
+    """Temp files left by a killed write are cleaned up (issue #238)."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()  # pylint: disable=consider-using-with
+        self.base = self._tmp.name
+        self.db = JsonDataBase("bareket", self.base)
+        _seed(self.db, 3)
+        self.db_path = os.path.join(self.base, "bareket.json")
+        self.before = _read_bytes(self.db_path)
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def _touch(self, name, age_seconds=0):
+        path = os.path.join(self.base, name)
+        with open(path, "w", encoding="utf-8") as file:
+            file.write('{"partial": ')
+        stamp = time.time() - age_seconds
+        os.utime(path, (stamp, stamp))
+        return path
+
+    def test_removes_orphan_and_keeps_database(self):
+        """An orphan of this DB is removed; the DB file is left byte-for-byte."""
+        orphan = self._touch(".bareket.json.knmujupm.tmp")
+        removed = self.db.remove_orphaned_temp_files()
+        self.assertEqual(removed, [orphan])
+        self.assertEqual(_leftovers(self.base), [])
+        self.assertEqual(_read_bytes(self.db_path), self.before)
+
+    def test_leaves_unrelated_files(self):
+        """Other databases' temp files and other files are never touched."""
+        names = [
+            ".shufersal.json.abcd.tmp",
+            "bareket.json.tmp",
+            ".bareket.json.corrupt-20261116",
+            "notes.tmp",
+        ]
+        for name in names:
+            self._touch(name, age_seconds=3600)
+        self.assertEqual(self.db.remove_orphaned_temp_files(), [])
+        for name in names:
+            self.assertTrue(os.path.exists(os.path.join(self.base, name)), name)
+
+    def test_open_removes_old_orphan_but_keeps_fresh_temp(self):
+        """On open, only temp files past the safety margin are removed."""
+        old = self._touch(".bareket.json.old1.tmp", age_seconds=3600)
+        fresh = self._touch(".bareket.json.new1.tmp", age_seconds=0)
+        JsonDataBase("bareket", self.base)
+        self.assertFalse(os.path.exists(old))
+        self.assertTrue(os.path.exists(fresh))
+        self.assertEqual(_read_bytes(self.db_path), self.before)
+
+    @unittest.skipUnless(hasattr(signal, "SIGKILL"), "needs SIGKILL")
+    def test_sigkill_mid_write_orphan_is_removed_on_next_open(self):
+        """End to end: a write killed before os.replace leaves an orphan that
+        the next open removes (once past the margin); no rows are lost."""
+        script = textwrap.dedent(
+            f"""
+            import os, signal
+            from il_supermarket_scarper.utils.databases import json_file
+            def die(*_a, **_k):
+                os.kill(os.getpid(), signal.SIGKILL)
+            json_file.os.replace = die
+            db = json_file.JsonDataBase("bareket", {self.base!r})
+            db.insert_document("{COLLECTION}", {{"file_name": "new.gz"}})
+            """
+        )
+        proc = subprocess.run(
+            [sys.executable, "-c", script],
+            cwd=os.getcwd(),
+            env={**os.environ, "PYTHONPATH": os.getcwd()},
+            check=False,
+        )
+        self.assertEqual(proc.returncode, -signal.SIGKILL)
+        orphans = _leftovers(self.base)
+        self.assertEqual(len(orphans), 1)
+        self.assertEqual(_read_bytes(self.db_path), self.before)
+
+        with mock.patch.object(JsonDataBase, "ORPHAN_TEMP_MIN_AGE_SECONDS", 0):
+            db = JsonDataBase("bareket", self.base)
+        self.assertEqual(_leftovers(self.base), [])
+        self.assertEqual(len(db.list_documents(COLLECTION)), 3)
 
 
 if __name__ == "__main__":
