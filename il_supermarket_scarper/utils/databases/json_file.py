@@ -1,5 +1,6 @@
 import os
 import json
+import tempfile
 from datetime import datetime
 import pytz
 from il_supermarket_scarper.utils.network.lock_utils import lock_by_string
@@ -27,8 +28,7 @@ class JsonDataBase(AbstractDataBase):
         """Ensure the database file exists."""
         file_path = self._get_database_file_path()
         if not os.path.exists(file_path):
-            with open(file_path, "w", encoding="utf-8") as file:
-                json.dump({}, file)  # Initialize with an empty dict
+            self._atomic_write_json(file_path, {})  # Initialize with an empty dict
 
     def _get_database_file_path(self):
         """Get the full path to the database JSON file."""
@@ -41,20 +41,95 @@ class JsonDataBase(AbstractDataBase):
 
         # Load existing data from the file
         if os.path.exists(file_path):
+            corrupted = False
             with open(file_path, "r", encoding="utf-8") as file:
                 try:
                     data = json.load(file)
                 except json.JSONDecodeError:
-                    Logger.warning(f"File {file_path} is corrupted, resetting it.")
-                    data = {}
+                    corrupted = True
+            if corrupted:
+                backup = self._quarantine_corrupt_file(file_path)
+                Logger.error(
+                    f"File {file_path} is corrupted; moved it to {backup} "
+                    "and starting from an empty database."
+                )
+                data = {}
         return data
 
-    def _write_database(self, data):
-        """Write data to the JSON database file."""
-        file_path = self._get_database_file_path()
+    @staticmethod
+    def _quarantine_corrupt_file(file_path):
+        """Move an unreadable database file aside so the next write cannot
+        overwrite it. Returns the backup path."""
+        stamp = datetime.now().strftime("%Y%m%dT%H%M%S%f")
+        backup = f"{file_path}.corrupt-{stamp}"
+        os.replace(file_path, backup)
+        return backup
 
-        with open(file_path, "w", encoding="utf-8") as file:
-            json.dump(dict(sorted(data.items())), file, default=str, indent=4)
+    @staticmethod
+    def _atomic_write_json(file_path, data, **dump_kwargs):
+        """Write ``data`` as JSON to ``file_path`` so that a reader sees either
+        the old file or the new one, never a partial one.
+
+        The JSON goes to a temp file in the same directory, is flushed and
+        fsynced, then ``os.replace``-d onto the target (atomic on POSIX and
+        Windows). If anything fails before the replace, the temp file is
+        removed and the previous file is left untouched.
+        """
+        directory = os.path.dirname(os.path.abspath(file_path))
+        fd, tmp_path = tempfile.mkstemp(
+            dir=directory, prefix=f".{os.path.basename(file_path)}.", suffix=".tmp"
+        )
+        try:
+            # mkstemp creates the file 0600; keep the mode a plain open() gave.
+            os.chmod(tmp_path, JsonDataBase._target_mode(file_path))
+            with os.fdopen(fd, "w", encoding="utf-8") as file:
+                json.dump(data, file, **dump_kwargs)
+                file.flush()
+                os.fsync(file.fileno())
+            os.replace(tmp_path, file_path)
+        except BaseException:
+            try:
+                os.remove(tmp_path)
+            except FileNotFoundError:
+                pass
+            raise
+        JsonDataBase._fsync_directory(directory)
+
+    @staticmethod
+    def _target_mode(file_path):
+        """Mode of the existing file, else the umask default for a new one."""
+        try:
+            return os.stat(file_path).st_mode & 0o777
+        except FileNotFoundError:
+            umask = os.umask(0)
+            os.umask(umask)
+            return 0o666 & ~umask
+
+    @staticmethod
+    def _fsync_directory(directory):
+        """Best-effort fsync of the directory so the rename survives a power
+        loss. Not supported on Windows; failures are ignored."""
+        if not hasattr(os, "O_DIRECTORY"):
+            return
+        try:
+            dir_fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY)
+        except OSError:
+            return
+        try:
+            os.fsync(dir_fd)
+        except OSError:
+            pass
+        finally:
+            os.close(dir_fd)
+
+    def _write_database(self, data):
+        """Write data to the JSON database file atomically."""
+        self._atomic_write_json(
+            self._get_database_file_path(),
+            dict(sorted(data.items())),
+            default=str,
+            indent=4,
+        )
 
     @lock_by_string()
     def _do_insert_documents(self, collection_name, documents):
