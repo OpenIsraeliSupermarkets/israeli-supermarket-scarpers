@@ -4,7 +4,7 @@ import hashlib
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional
+from typing import FrozenSet, Optional, Tuple
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 # Signed (pre-authorised) download links carry a signature and an expiry in the
@@ -15,7 +15,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 # Each scheme is (marker, params, prefixes): the scheme applies only when the
 # marker parameter is present, so ordinary URLs that happen to use a short
 # name such as ``st`` or ``sp`` keep their full query and their old hash.
-_SIGNED_URL_SCHEMES = (
+_SIGNED_URL_SCHEMES: Tuple[Tuple[str, FrozenSet[str], Tuple[str, ...]], ...] = (
     # Azure Storage SAS: ?sv=…&sr=b&sig=…&se=…&sp=r
     (
         "sig",
