@@ -1,5 +1,6 @@
 """Parse one listing date with the caller's format. Never scan keys or dump names."""
 
+import hashlib
 import tempfile
 import unittest
 
@@ -39,6 +40,105 @@ class TestFileEntryId(unittest.TestCase):
         a = FileEntry(name="a.xml", url="http://x/a", size=1, entry_id="one")
         b = FileEntry(name="a.xml", url="http://x/a", size=1, entry_id="two")
         self.assertEqual(a.listing_hash(), b.listing_hash())
+
+
+def _legacy_hash(name, url, size):
+    """The listing hash as computed before signed URLs were handled."""
+    size = "" if size is None else str(size)
+    return hashlib.sha256(f"{name}\n{url}\n{size}".encode("utf-8")).hexdigest()
+
+
+class TestListingHashSignedUrls(unittest.TestCase):
+    """Rotating signed-URL parameters must not change listing identity."""
+
+    BLOB = (
+        "https://pricesprodpublic.blob.core.windows.net/stores/"
+        "Stores7290027600007-000-20261116-020.gz"
+    )
+    NAME = "Stores7290027600007-000-20261116-020.gz"
+
+    def _same(self, url_a, url_b, size=1234):
+        a = FileEntry(name=self.NAME, url=url_a, size=size)
+        b = FileEntry(name=self.NAME, url=url_b, size=size)
+        return a.listing_hash() == b.listing_hash()
+
+    def test_azure_sas_differing_only_in_signature_hashes_the_same(self):
+        """Shufersal: two listings that differ only in ``sig``/``se``."""
+        self.assertTrue(
+            self._same(
+                self.BLOB + "?sv=2014-02-14&sr=b&sig=6jDYCxAAA%3D"
+                "&se=2026-11-16T13%3A50%3A45Z&sp=r",
+                self.BLOB + "?sv=2014-02-14&sr=b&sig=2%2BbYu5BBB%3D"
+                "&se=2026-11-16T13%3A55%3A45Z&sp=r",
+            )
+        )
+
+    def test_s3_presigned_differing_only_in_signature_hashes_the_same(self):
+        """AWS SigV4 presigned links drop every ``X-Amz-*`` parameter."""
+        base = "https://bucket.s3.amazonaws.com/" + self.NAME
+        self.assertTrue(
+            self._same(
+                base + "?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20261116T1300Z"
+                "&X-Amz-Expires=300&X-Amz-Signature=aaa",
+                base + "?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20261116T1305Z"
+                "&X-Amz-Expires=300&X-Amz-Signature=bbb",
+            )
+        )
+
+    def test_cloudfront_signed_differing_only_in_signature_hashes_the_same(self):
+        """CloudFront drops Expires, Signature and Key-Pair-Id."""
+        base = "https://d111.cloudfront.net/" + self.NAME
+        self.assertTrue(
+            self._same(
+                base + "?Expires=1&Signature=aaa&Key-Pair-Id=K1",
+                base + "?Expires=2&Signature=bbb&Key-Pair-Id=K1",
+            )
+        )
+
+    def test_signed_url_keeps_non_signing_params(self):
+        """Other query parameters on a signed URL are still identity."""
+        self.assertFalse(
+            self._same(
+                self.BLOB + "?file=a&sig=x&se=1",
+                self.BLOB + "?file=b&sig=y&se=2",
+            )
+        )
+
+    def test_signed_url_still_distinguishes_path_and_size(self):
+        """Path and size remain part of identity on signed URLs."""
+        base = FileEntry(name=self.NAME, url=self.BLOB + "?sig=x", size=1)
+        other_size = FileEntry(name=self.NAME, url=self.BLOB + "?sig=x", size=2)
+        other_path = FileEntry(
+            name=self.NAME, url=self.BLOB.replace("-020", "-021") + "?sig=x", size=1
+        )
+        self.assertNotEqual(base.listing_hash(), other_size.listing_hash())
+        self.assertNotEqual(base.listing_hash(), other_path.listing_hash())
+
+    def test_unsigned_urls_hash_exactly_as_before(self):
+        """No signature marker: the full URL is hashed byte for byte, as before.
+
+        Covers the URL shapes our engines list today (Bina ``FileNm=``,
+        query-string downloads) and short names such as ``st``/``sp``/``se``
+        used without a signature, so no other chain re-downloads.
+        """
+        cases = [
+            ("a.gz", "http://supersapir.binaprojects.com/Download.aspx?FileNm=a.gz", 7),
+            ("a.gz", "https://prices.example.co.il/Download?file=a.gz&token=1", 7),
+            ("a.gz", "https://example.co.il/f?st=1&sp=r&se=2&Expires=3", None),
+            ("a.gz", "https://example.co.il/f/a.gz", 7),
+            ("a.gz", None, None),
+        ]
+        for name, url, size in cases:
+            with self.subTest(url=url):
+                self.assertEqual(
+                    FileEntry(name=name, url=url, size=size).listing_hash(),
+                    _legacy_hash(name, url, size),
+                )
+
+    def test_unsigned_url_query_still_changes_hash(self):
+        """Without a signature marker a changed query is a different listing."""
+        url = "https://prices.example.co.il/Download?file=a.gz&token=1"
+        self.assertFalse(self._same(url, url.replace("token=1", "token=2")))
 
 
 class TestParsePublishedAt(unittest.TestCase):
