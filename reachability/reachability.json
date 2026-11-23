@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-11-16T17:10:14.410223+02:00",
+  "generated_at": "2026-11-23T19:41:01.197135+02:00",
   "runners": {
     "outside": "GitHub-hosted ubuntu-24.04 runner",
     "israel": "self-hosted CI runner in Israel"
   },
   "total": 33,
   "counts": {
-    "outside_reachable": 25,
-    "israel_reachable": 33,
-    "works_everywhere": 25,
+    "outside_reachable": 24,
+    "israel_reachable": 32,
+    "works_everywhere": 24,
     "geo_blocked": 8,
-    "fails_in_israel": 0,
+    "fails_in_israel": 1,
     "expected_empty": 0,
     "not_compared": 0
   },
@@ -20,7 +20,7 @@
       "outside": {
         "scraper": "BAREKET",
         "status": "reachable",
-        "seconds": 5.5,
+        "seconds": 37.9,
         "error": null
       },
       "israel": {
@@ -36,7 +36,7 @@
       "outside": {
         "scraper": "YAYNO_BITAN_AND_CARREFOUR",
         "status": "blocked",
-        "seconds": 300.0,
+        "seconds": 300.1,
         "error": "no file within 300s"
       },
       "israel": {
@@ -52,13 +52,13 @@
       "outside": {
         "scraper": "CITY_MARKET_KIRYATGAT",
         "status": "reachable",
-        "seconds": 5.3,
+        "seconds": 7.6,
         "error": null
       },
       "israel": {
         "scraper": "CITY_MARKET_KIRYATGAT",
         "status": "reachable",
-        "seconds": 0.7,
+        "seconds": 0.8,
         "error": null
       },
       "verdict": "works_everywhere"
@@ -68,13 +68,13 @@
       "outside": {
         "scraper": "CITY_MARKET_SHOPS",
         "status": "reachable",
-        "seconds": 37.5,
+        "seconds": 98.0,
         "error": null
       },
       "israel": {
         "scraper": "CITY_MARKET_SHOPS",
         "status": "reachable",
-        "seconds": 11.0,
+        "seconds": 18.2,
         "error": null
       },
       "verdict": "works_everywhere"
@@ -83,30 +83,30 @@
       "scraper": "DOR_ALON",
       "outside": {
         "scraper": "DOR_ALON",
-        "status": "reachable",
-        "seconds": 97.6,
-        "error": null
+        "status": "error",
+        "seconds": 37.9,
+        "error": "Error collecting file details: [Errno -3] Temporary failure in name resolution"
       },
       "israel": {
         "scraper": "DOR_ALON",
         "status": "reachable",
-        "seconds": 0.9,
+        "seconds": 0.5,
         "error": null
       },
-      "verdict": "works_everywhere"
+      "verdict": "geo_blocked"
     },
     {
       "scraper": "GOOD_PHARM",
       "outside": {
         "scraper": "GOOD_PHARM",
         "status": "reachable",
-        "seconds": 35.8,
+        "seconds": 7.2,
         "error": null
       },
       "israel": {
         "scraper": "GOOD_PHARM",
         "status": "reachable",
-        "seconds": 0.9,
+        "seconds": 0.8,
         "error": null
       },
       "verdict": "works_everywhere"
@@ -116,13 +116,13 @@
       "outside": {
         "scraper": "HAZI_HINAM",
         "status": "blocked",
-        "seconds": 30.5,
-        "error": "Error resolving listing root: Response for https://shop.hazi-hinam.co.il/Prices?d=2026-11-16&t=null&f=null, returned with status 403"
+        "seconds": 30.7,
+        "error": "Error resolving listing root: Response for https://shop.hazi-hinam.co.il/Prices?d=2026-11-22&t=null&f=null, returned with status 403"
       },
       "israel": {
         "scraper": "HAZI_HINAM",
         "status": "reachable",
-        "seconds": 1.5,
+        "seconds": 2.9,
         "error": null
       },
       "verdict": "geo_blocked"
@@ -148,13 +148,13 @@
       "outside": {
         "scraper": "KESHET",
         "status": "reachable",
-        "seconds": 65.5,
+        "seconds": 64.0,
         "error": null
       },
       "israel": {
         "scraper": "KESHET",
         "status": "reachable",
-        "seconds": 0.6,
+        "seconds": 0.4,
         "error": null
       },
       "verdict": "works_everywhere"
@@ -164,13 +164,13 @@
       "outside": {
         "scraper": "KING_STORE",
         "status": "reachable",
-        "seconds": 64.0,
+        "seconds": 64.2,
         "error": null
       },
       "israel": {
         "scraper": "KING_STORE",
         "status": "reachable",
-        "seconds": 0.7,
+        "seconds": 0.5,
         "error": null
       },
       "verdict": "works_everywhere"
@@ -180,13 +180,13 @@
       "outside": {
         "scraper": "MAAYAN_2000",
         "status": "reachable",
-        "seconds": 64.0,
+        "seconds": 65.8,
         "error": null
       },
       "israel": {
         "scraper": "MAAYAN_2000",
         "status": "reachable",
-        "seconds": 0.7,
+        "seconds": 0.4,
         "error": null
       },
       "verdict": "works_everywhere"
@@ -201,11 +201,11 @@
       },
       "israel": {
         "scraper": "MAHSANI_ASHUK_NEW_SOURCE",
-        "status": "reachable",
-        "seconds": 0.7,
+        "status": "no_files",
+        "seconds": 0.1,
         "error": null
       },
-      "verdict": "geo_blocked"
+      "verdict": "fails_in_israel"
     },
     {
       "scraper": "NETIV_HASED",
@@ -213,12 +213,12 @@
         "scraper": "NETIV_HASED",
         "status": "blocked",
         "seconds": 14.4,
-        "error": "Error listing files from URL: Response for https://app.netiv-hesed.com/?Date=2026-11-14, returned with status 403"
+        "error": "Error listing files from URL: Response for https://app.netiv-hesed.com/?Date=2026-11-22, returned with status 403"
       },
       "israel": {
         "scraper": "NETIV_HASED",
         "status": "reachable",
-        "seconds": 2.1,
+        "seconds": 2.3,
         "error": null
       },
       "verdict": "geo_blocked"
@@ -228,13 +228,13 @@
       "outside": {
         "scraper": "MESHMAT_YOSEF_1",
         "status": "error",
-        "seconds": 15.1,
+        "seconds": 15.3,
         "error": "Error listing files from URL: Response for https://list-files.w5871031-kt.workers.dev/, returned with status 500"
       },
       "israel": {
         "scraper": "MESHMAT_YOSEF_1",
         "status": "reachable",
-        "seconds": 1.9,
+        "seconds": 2.0,
         "error": null
       },
       "verdict": "geo_blocked"
@@ -244,13 +244,13 @@
       "outside": {
         "scraper": "MESHMAT_YOSEF_2",
         "status": "reachable",
-        "seconds": 4.9,
+        "seconds": 5.4,
         "error": null
       },
       "israel": {
         "scraper": "MESHMAT_YOSEF_2",
         "status": "reachable",
-        "seconds": 0.7,
+        "seconds": 0.5,
         "error": null
       },
       "verdict": "works_everywhere"
@@ -260,7 +260,7 @@
       "outside": {
         "scraper": "OSHER_AD",
         "status": "reachable",
-        "seconds": 7.4,
+        "seconds": 7.3,
         "error": null
       },
       "israel": {
@@ -276,13 +276,13 @@
       "outside": {
         "scraper": "POLIZER",
         "status": "reachable",
-        "seconds": 6.9,
+        "seconds": 7.0,
         "error": null
       },
       "israel": {
         "scraper": "POLIZER",
         "status": "reachable",
-        "seconds": 1.3,
+        "seconds": 1.5,
         "error": null
       },
       "verdict": "works_everywhere"
@@ -292,13 +292,13 @@
       "outside": {
         "scraper": "RAMI_LEVY",
         "status": "reachable",
-        "seconds": 8.6,
+        "seconds": 8.7,
         "error": null
       },
       "israel": {
         "scraper": "RAMI_LEVY",
         "status": "reachable",
-        "seconds": 1.3,
+        "seconds": 1.5,
         "error": null
       },
       "verdict": "works_everywhere"
@@ -308,13 +308,13 @@
       "outside": {
         "scraper": "SALACH_DABACH",
         "status": "reachable",
-        "seconds": 7.2,
+        "seconds": 7.0,
         "error": null
       },
       "israel": {
         "scraper": "SALACH_DABACH",
         "status": "reachable",
-        "seconds": 1.3,
+        "seconds": 0.3,
         "error": null
       },
       "verdict": "works_everywhere"
@@ -324,13 +324,13 @@
       "outside": {
         "scraper": "SHEFA_BARCART_ASHEM",
         "status": "reachable",
-        "seconds": 4.9,
+        "seconds": 5.4,
         "error": null
       },
       "israel": {
         "scraper": "SHEFA_BARCART_ASHEM",
         "status": "reachable",
-        "seconds": 0.7,
+        "seconds": 0.5,
         "error": null
       },
       "verdict": "works_everywhere"
@@ -340,13 +340,13 @@
       "outside": {
         "scraper": "SHUFERSAL",
         "status": "reachable",
-        "seconds": 2.1,
+        "seconds": 2.0,
         "error": null
       },
       "israel": {
         "scraper": "SHUFERSAL",
         "status": "reachable",
-        "seconds": 1.6,
+        "seconds": 1.4,
         "error": null
       },
       "verdict": "works_everywhere"
@@ -356,13 +356,13 @@
       "outside": {
         "scraper": "SHUK_AHIR",
         "status": "reachable",
-        "seconds": 4.8,
+        "seconds": 8.7,
         "error": null
       },
       "israel": {
         "scraper": "SHUK_AHIR",
         "status": "reachable",
-        "seconds": 0.7,
+        "seconds": 0.6,
         "error": null
       },
       "verdict": "works_everywhere"
@@ -372,7 +372,7 @@
       "outside": {
         "scraper": "STOP_MARKET",
         "status": "reachable",
-        "seconds": 7.1,
+        "seconds": 7.4,
         "error": null
       },
       "israel": {
@@ -388,13 +388,13 @@
       "outside": {
         "scraper": "SUPER_PHARM",
         "status": "error",
-        "seconds": 68.3,
+        "seconds": 67.5,
         "error": "Error resolving listing root: Response for http://prices.super-pharm.co.il/?, returned with status 247"
       },
       "israel": {
         "scraper": "SUPER_PHARM",
         "status": "reachable",
-        "seconds": 1.8,
+        "seconds": 1.6,
         "error": null
       },
       "verdict": "geo_blocked"
@@ -404,13 +404,13 @@
       "outside": {
         "scraper": "SUPER_YUDA",
         "status": "reachable",
-        "seconds": 7.4,
+        "seconds": 67.3,
         "error": null
       },
       "israel": {
         "scraper": "SUPER_YUDA",
         "status": "reachable",
-        "seconds": 0.8,
+        "seconds": 0.5,
         "error": null
       },
       "verdict": "works_everywhere"
@@ -420,13 +420,13 @@
       "outside": {
         "scraper": "SUPER_SAPIR",
         "status": "reachable",
-        "seconds": 67.2,
+        "seconds": 6.9,
         "error": null
       },
       "israel": {
         "scraper": "SUPER_SAPIR",
         "status": "reachable",
-        "seconds": 0.6,
+        "seconds": 0.8,
         "error": null
       },
       "verdict": "works_everywhere"
@@ -436,13 +436,13 @@
       "outside": {
         "scraper": "FRESH_MARKET_AND_SUPER_DOSH",
         "status": "reachable",
-        "seconds": 64.0,
+        "seconds": 66.1,
         "error": null
       },
       "israel": {
         "scraper": "FRESH_MARKET_AND_SUPER_DOSH",
         "status": "reachable",
-        "seconds": 0.9,
+        "seconds": 0.6,
         "error": null
       },
       "verdict": "works_everywhere"
@@ -452,13 +452,13 @@
       "outside": {
         "scraper": "TIV_TAAM",
         "status": "reachable",
-        "seconds": 65.0,
+        "seconds": 65.2,
         "error": null
       },
       "israel": {
         "scraper": "TIV_TAAM",
         "status": "reachable",
-        "seconds": 0.7,
+        "seconds": 0.5,
         "error": null
       },
       "verdict": "works_everywhere"
@@ -474,7 +474,7 @@
       "israel": {
         "scraper": "VICTORY_NEW_SOURCE",
         "status": "reachable",
-        "seconds": 0.7,
+        "seconds": 0.3,
         "error": null
       },
       "verdict": "geo_blocked"
@@ -484,13 +484,13 @@
       "outside": {
         "scraper": "YELLOW",
         "status": "reachable",
-        "seconds": 7.7,
+        "seconds": 7.4,
         "error": null
       },
       "israel": {
         "scraper": "YELLOW",
         "status": "reachable",
-        "seconds": 0.8,
+        "seconds": 0.5,
         "error": null
       },
       "verdict": "works_everywhere"
@@ -506,7 +506,7 @@
       "israel": {
         "scraper": "YOHANANOF",
         "status": "reachable",
-        "seconds": 0.6,
+        "seconds": 0.4,
         "error": null
       },
       "verdict": "works_everywhere"
@@ -516,7 +516,7 @@
       "outside": {
         "scraper": "ZOL_VEBEGADOL",
         "status": "reachable",
-        "seconds": 5.2,
+        "seconds": 7.0,
         "error": null
       },
       "israel": {
@@ -532,13 +532,13 @@
       "outside": {
         "scraper": "WOLT",
         "status": "reachable",
-        "seconds": 0.9,
+        "seconds": 1.0,
         "error": null
       },
       "israel": {
         "scraper": "WOLT",
         "status": "reachable",
-        "seconds": 0.5,
+        "seconds": 0.4,
         "error": null
       },
       "verdict": "works_everywhere"
