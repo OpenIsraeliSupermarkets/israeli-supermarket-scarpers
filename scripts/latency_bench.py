@@ -18,7 +18,7 @@ from typing import Any, Dict, List
 
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
 from il_supermarket_scarper.utils import DiskFileOutput, Logger
-from il_supermarket_scarper.utils.databases import JsonDataBase
+from il_supermarket_scarper.utils.databases import AbstractDataBase, JsonDataBase
 from il_supermarket_scarper.utils.scraping.status import _now
 
 
@@ -28,6 +28,33 @@ def resolve_scrapers(spec: str) -> List[str]:
     if spec.lower() == "all":
         return ScraperFactory.all_scrapers_name()
     return [name.strip() for name in spec.split(",") if name.strip()]
+
+
+class NoOpStatusDatabase(AbstractDataBase):
+    """In-memory status DB. Not used by the benchmark (it would hide a slow
+    status-DB write path, #243); kept for scripts/check_reachability.py."""
+
+    def __init__(self, database_name):
+        super().__init__(database_name)
+        self._data: Dict[str, Any] = {}
+
+    def _do_insert_document(self, collection_name, document):
+        self._data.setdefault(collection_name, []).append(document)
+        self._update_last_modified()
+
+    def _do_insert_documents(self, collection_name, documents):
+        self._data.setdefault(collection_name, []).extend(documents)
+        self._update_last_modified()
+
+    def list_documents(self, collection_name):
+        return list(self._data.get(collection_name, []))
+
+    def _update_last_modified(self):
+        """Stamp in-memory last-modified metadata."""
+        self._data.setdefault("_metadata", {})["last_modified"] = _now()
+
+    def get_last_modified(self):
+        return self._data.get("_metadata", {}).get("last_modified")
 
 
 def seeded_status_database(scraper_name: str, folder: str, seed: int):
