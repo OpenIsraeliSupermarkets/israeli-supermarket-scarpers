@@ -1,7 +1,9 @@
 name: Latency Compare (main vs PR)
 
-# Benchmarks every active chain (20 files each) on main vs the PR branch.
-# Flags scrapers that are >10% slower. Advisory only — does not block merges.
+# Benchmarks every active chain (20 files each) on main vs the PR branch, with
+# the real JSON status DB pre-filled like a day in prod (#243).
+# Fails the PR when the median chain is >10% slower; single chains >10%
+# slower are only listed (one live site can be slow by chance).
 # Uses the repo default branch name "main" (not "master").
 
 on:
@@ -29,15 +31,15 @@ env:
   LATENCY_LIMIT: ${{ github.event.inputs.limit || '20' }}
   LATENCY_MAX_REGRESSION: ${{ github.event.inputs.max_regression || '0.10' }}
   LATENCY_SCRAPERS: all
-  LATENCY_SOFT_FAIL: "1"
+  LATENCY_MAX_MEDIAN_REGRESSION: "0.10"
+  LATENCY_STATUS_SEED: "5000"
+  LATENCY_SOFT_FAIL: "0"
 
 jobs:
   compare:
     runs-on:
       - self-hosted
       - ci
-    # Non-mandatory: workflow is reported as neutral/success even on regressions.
-    continue-on-error: true
     steps:
       - name: Checkout PR branch
         uses: actions/checkout@v4
@@ -74,6 +76,7 @@ jobs:
             -e LATENCY_GIT_SHA="${{ github.event.pull_request.base.sha || 'main' }}" \
             -e LATENCY_LIMIT="${LATENCY_LIMIT}" \
             -e LATENCY_SCRAPERS="${LATENCY_SCRAPERS}" \
+            -e LATENCY_STATUS_SEED="${LATENCY_STATUS_SEED}" \
             -v "$GITHUB_WORKSPACE/branch/scripts:/bench:ro" \
             -v "$GITHUB_WORKSPACE/latency-out:/out" \
             latency-bench:main \
@@ -89,6 +92,7 @@ jobs:
             -e LATENCY_GIT_SHA="${{ github.sha }}" \
             -e LATENCY_LIMIT="${LATENCY_LIMIT}" \
             -e LATENCY_SCRAPERS="${LATENCY_SCRAPERS}" \
+            -e LATENCY_STATUS_SEED="${LATENCY_STATUS_SEED}" \
             -v "$GITHUB_WORKSPACE/branch/scripts:/bench:ro" \
             -v "$GITHUB_WORKSPACE/latency-out:/out" \
             latency-bench:branch \
@@ -103,7 +107,8 @@ jobs:
             --base "$GITHUB_WORKSPACE/latency-out/main.json" \
             --branch "$GITHUB_WORKSPACE/latency-out/branch.json" \
             --max-regression "${LATENCY_MAX_REGRESSION}" \
-            --soft-fail \
+            --max-median-regression "${LATENCY_MAX_MEDIAN_REGRESSION}" \
+            --no-soft-fail \
             --summary "$GITHUB_WORKSPACE/latency-out/summary.md"
 
       - name: Upload latency artifacts
