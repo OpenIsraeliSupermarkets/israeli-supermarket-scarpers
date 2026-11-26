@@ -114,14 +114,16 @@ class TestJsonDataBaseSigkill(unittest.TestCase):
         with tempfile.TemporaryDirectory() as base:
             seed_rows = 5000
             _seed(JsonDataBase("chain", base), seed_rows)
-            writer = textwrap.dedent(f"""
+            writer = textwrap.dedent(
+                f"""
                 from il_supermarket_scarper.utils.databases import JsonDataBase
                 db = JsonDataBase("chain", {base!r})
                 i = 0
                 while True:
                     db.insert_document({COLLECTION!r}, {{"file_name": f"n{{i}}.gz"}})
                     i += 1
-                """)
+                """
+            )
             path = os.path.join(base, "chain.json")
             for _ in range(3):
                 with subprocess.Popen([sys.executable, "-c", writer]) as proc:
@@ -132,6 +134,35 @@ class TestJsonDataBaseSigkill(unittest.TestCase):
                     rows = json.load(file)[COLLECTION]
                 self.assertGreaterEqual(len(rows), seed_rows)
             self.assertEqual([n for n in os.listdir(base) if ".corrupt-" in n], [])
+
+
+class TestJsonDataBaseWriteCost(unittest.TestCase):
+    """Each status write is on the hot path of every download (#241)."""
+
+    def test_one_write_per_insert_with_last_modified(self):
+        """An insert rewrites the file once, and that write carries the timestamp."""
+        with tempfile.TemporaryDirectory() as base:
+            db = JsonDataBase("chain", base)
+            with mock.patch.object(
+                JsonDataBase,
+                "_write_database",
+                autospec=True,
+                side_effect=JsonDataBase._write_database,  # pylint: disable=protected-access
+            ) as write:
+                db.insert_document(COLLECTION, {"file_name": "a.gz"})
+                db.insert_documents(COLLECTION, [{"file_name": "b.gz"}])
+            self.assertEqual(write.call_count, 2)
+            self.assertIsNotNone(db.get_last_modified())
+            for call in write.call_args_list:
+                self.assertIn("last_modified", call.args[1]["_metadata"])
+
+    def test_no_fsync_on_write(self):
+        """Atomic replace only: fsync made prod scraping about 2x slower."""
+        with tempfile.TemporaryDirectory() as base:
+            db = JsonDataBase("chain", base)
+            with mock.patch.object(json_file.os, "fsync") as fsync:
+                db.insert_document(COLLECTION, {"file_name": "a.gz"})
+            fsync.assert_not_called()
 
 
 if __name__ == "__main__":
