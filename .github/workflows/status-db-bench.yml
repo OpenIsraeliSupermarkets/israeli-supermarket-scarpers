@@ -1,0 +1,68 @@
+name: Status DB benchmark (main vs PR)
+
+# Times the JSON status DB write path (scripts/bench_status_db.py) on main and
+# on the PR, alternating runs in the same job, and fails the PR when it is
+# more than 15% and 5 ms per insert slower (#243). Offline: no network.
+# The PR's benchmark scripts run against both code trees.
+
+on:
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+concurrency:
+  group: status-db-bench-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  bench:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          path: branch
+
+      - name: Checkout main (base)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r branch/requirements.txt
+
+      # Alternate main / PR so drift on the runner hits both sides equally
+      - name: Benchmark main and PR
+        run: |
+          mkdir -p out
+          for i in 1 2 3; do
+            for side in main branch; do
+              (cd /tmp && PYTHONPATH="$GITHUB_WORKSPACE/$side" \
+                python "$GITHUB_WORKSPACE/branch/scripts/bench_status_db.py" \
+                  --existing 5000 --inserts 200 --repeat 1 --label "$side" \
+                  --output "$GITHUB_WORKSPACE/out/${side}_$i.json")
+            done
+          done
+
+      - name: Compare
+        run: |
+          python branch/scripts/compare_status_db_bench.py \
+            --base out/main_*.json --branch out/branch_*.json \
+            --summary "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: status-db-bench
+          path: out/
