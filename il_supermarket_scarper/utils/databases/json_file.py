@@ -70,10 +70,15 @@ class JsonDataBase(AbstractDataBase):
         """Write ``data`` as JSON to ``file_path`` so that a reader sees either
         the old file or the new one, never a partial one.
 
-        The JSON goes to a temp file in the same directory, is flushed and
-        fsynced, then ``os.replace``-d onto the target (atomic on POSIX and
-        Windows). If anything fails before the replace, the temp file is
-        removed and the previous file is left untouched.
+        The JSON goes to a temp file in the same directory, then is
+        ``os.replace``-d onto the target (atomic on POSIX and Windows). If
+        anything fails before the replace, the temp file is removed and the
+        previous file is left untouched.
+
+        No fsync (#241): a killed process can't leave a partial file, because
+        the replace happens only after the temp file is closed. fsync only
+        protects against power loss, and doing it on every status write made
+        prod scraping and parsing about twice as slow.
         """
         directory = os.path.dirname(os.path.abspath(file_path))
         fd, tmp_path = tempfile.mkstemp(
@@ -84,8 +89,6 @@ class JsonDataBase(AbstractDataBase):
             os.chmod(tmp_path, JsonDataBase._target_mode(file_path))
             with os.fdopen(fd, "w", encoding="utf-8") as file:
                 json.dump(data, file, **dump_kwargs)
-                file.flush()
-                os.fsync(file.fileno())
             os.replace(tmp_path, file_path)
         except BaseException:
             try:
@@ -93,7 +96,6 @@ class JsonDataBase(AbstractDataBase):
             except FileNotFoundError:
                 pass
             raise
-        JsonDataBase._fsync_directory(directory)
 
     @staticmethod
     def _target_mode(file_path):
@@ -106,21 +108,9 @@ class JsonDataBase(AbstractDataBase):
             return 0o666 & ~umask
 
     @staticmethod
-    def _fsync_directory(directory):
-        """Best-effort fsync of the directory so the rename survives a power
-        loss. Not supported on Windows; failures are ignored."""
-        if not hasattr(os, "O_DIRECTORY"):
-            return
-        try:
-            dir_fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY)
-        except OSError:
-            return
-        try:
-            os.fsync(dir_fd)
-        except OSError:
-            pass
-        finally:
-            os.close(dir_fd)
+    def _stamp_last_modified(data):
+        """Set `_metadata.last_modified` to now, in the data about to be written."""
+        data.setdefault("_metadata", {})["last_modified"] = _now().isoformat()
 
     def _write_database(self, data):
         """Write data to the JSON database file atomically."""
@@ -138,8 +128,9 @@ class JsonDataBase(AbstractDataBase):
         if collection_name not in data:
             data[collection_name] = []
         data[collection_name].extend(documents)
+        # One write per insert: the timestamp goes in with the data (#241)
+        self._stamp_last_modified(data)
         self._write_database(data)
-        self._update_last_modified()
 
     @lock_by_string()
     def _do_insert_document(self, collection_name, document):
@@ -148,8 +139,9 @@ class JsonDataBase(AbstractDataBase):
         if collection_name not in data:
             data[collection_name] = []
         data[collection_name].append(document)
+        # One write per insert: the timestamp goes in with the data (#241)
+        self._stamp_last_modified(data)
         self._write_database(data)
-        self._update_last_modified()
 
     def find_document(self, collection_name, query):
         """Return the first matching document, or None."""
@@ -177,11 +169,8 @@ class JsonDataBase(AbstractDataBase):
     def _update_last_modified(self):
         """Update the last modified timestamp to current time."""
         data = self._read_database()
-        if "_metadata" not in data:
-            data["_metadata"] = {}
-        # Store as ISO format string for reliable parsing
-        now = _now()
-        data["_metadata"]["last_modified"] = now.isoformat()
+        # Stored as an ISO format string for reliable parsing
+        self._stamp_last_modified(data)
         self._write_database(data)
 
     def get_last_modified(self):
