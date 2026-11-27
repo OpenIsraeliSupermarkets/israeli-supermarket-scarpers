@@ -18,7 +18,7 @@ from typing import Any, Dict, List
 
 from il_supermarket_scarper.scrappers_factory import ScraperFactory
 from il_supermarket_scarper.utils import DiskFileOutput, Logger
-from il_supermarket_scarper.utils.databases import AbstractDataBase
+from il_supermarket_scarper.utils.databases import AbstractDataBase, JsonDataBase
 from il_supermarket_scarper.utils.scraping.status import _now
 
 
@@ -31,7 +31,8 @@ def resolve_scrapers(spec: str) -> List[str]:
 
 
 class NoOpStatusDatabase(AbstractDataBase):
-    """In-memory status DB to avoid disk I/O skewing latency."""
+    """In-memory status DB. Not used by the benchmark (it would hide a slow
+    status-DB write path, #243); kept for scripts/check_reachability.py."""
 
     def __init__(self, database_name):
         super().__init__(database_name)
@@ -56,10 +57,35 @@ class NoOpStatusDatabase(AbstractDataBase):
         return self._data.get("_metadata", {}).get("last_modified")
 
 
-async def bench_scraper(scraper_name: str, limit: int) -> Dict[str, Any]:
+def seeded_status_database(scraper_name: str, folder: str, seed: int):
+    """The real JSON status DB, pre-filled with `seed` events.
+
+    Prod writes every download into a status file that already holds a day of
+    events, and each write rewrites the whole file. A benchmark on an empty or
+    in-memory DB can't see a slower write path (#243: 1.1.2's per-write fsync
+    halved prod scraping and the old NoOp DB hid it).
+    """
+    database = JsonDataBase(scraper_name, base_path=folder)
+    if seed:
+        database.insert_documents(
+            "events",
+            [
+                {
+                    "event": "downloaded",
+                    "file_name": f"PriceFull0000000000000-001-{i:03d}-20261126-020000.gz",
+                    "status": "ok",
+                    "size": 460822,
+                    "when": "2026-11-26T04:25:45+02:00",
+                }
+                for i in range(seed)
+            ],
+        )
+    return database
+
+
+async def bench_scraper(scraper_name: str, limit: int, seed: int) -> Dict[str, Any]:
     """Run one scraper and return wall-clock metrics."""
     Logger.set_logging_level("ERROR")
-    status_db = NoOpStatusDatabase(database_name=scraper_name)
     files_ok = 0
     files_total = 0
     error = None
@@ -75,8 +101,11 @@ async def bench_scraper(scraper_name: str, limit: int) -> Dict[str, Any]:
                 "downloaded_ok": 0,
             }
 
+        status_db = seeded_status_database(
+            scraper_name, os.path.join(tmp, "status"), seed
+        )
         scraper = scraper_cls(
-            file_output=DiskFileOutput(storage_path=tmp),
+            file_output=DiskFileOutput(storage_path=os.path.join(tmp, "dumps")),
             status_database=status_db,
         )
         start = time.perf_counter()
@@ -100,12 +129,12 @@ async def bench_scraper(scraper_name: str, limit: int) -> Dict[str, Any]:
     }
 
 
-async def run_benchmark(scrapers: List[str], limit: int) -> Dict[str, Any]:
+async def run_benchmark(scrapers: List[str], limit: int, seed: int) -> Dict[str, Any]:
     """Benchmark all scrapers sequentially (stable network contention)."""
     results = []
     for name in scrapers:
         print(f"Benchmarking {name} (limit={limit})...", flush=True)
-        results.append(await bench_scraper(name, limit))
+        results.append(await bench_scraper(name, limit, seed))
         print(
             f"  -> {results[-1]['time']:.2f}s "
             f"files={results[-1]['files']} ok={results[-1]['downloaded_ok']} "
@@ -118,6 +147,7 @@ async def run_benchmark(scrapers: List[str], limit: int) -> Dict[str, Any]:
         "ref_label": os.environ.get("LATENCY_REF_LABEL", "unknown"),
         "git_sha": os.environ.get("LATENCY_GIT_SHA", ""),
         "limit": limit,
+        "status_seed": seed,
         "scrapers": results,
         "total_time": round(total, 3),
         "timestamp": _now().isoformat(),
@@ -139,6 +169,13 @@ def parse_args():
         help="Files per scraper (default: 20)",
     )
     parser.add_argument(
+        "--status-seed",
+        type=int,
+        default=int(os.environ.get("LATENCY_STATUS_SEED", "5000")),
+        help="Events already in each scraper's status DB, like a day in prod "
+        "(default: 5000)",
+    )
+    parser.add_argument(
         "--output",
         required=True,
         help="Path to write JSON results",
@@ -150,7 +187,7 @@ def main():
     """Run the latency benchmark and write JSON results."""
     args = parse_args()
     scrapers = resolve_scrapers(args.scrapers)
-    payload = asyncio.run(run_benchmark(scrapers, args.limit))
+    payload = asyncio.run(run_benchmark(scrapers, args.limit, args.status_seed))
     os.makedirs(os.path.dirname(os.path.abspath(args.output)) or ".", exist_ok=True)
     with open(args.output, "w", encoding="utf-8") as handle:
         json.dump(payload, handle, indent=2)
